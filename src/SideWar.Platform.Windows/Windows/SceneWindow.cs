@@ -72,6 +72,8 @@ public sealed class SceneWindow : IDisposable
     }
 
     internal Action<uint>? MessageObserver { get; set; }
+    /// <summary>Registration point for HotkeyService (T1.12): receives the WM_HOTKEY id.</summary>
+    internal Action<int>? HotkeyHandler { get; set; }
 
     public void SetBounds(PixelRect bounds)
     {
@@ -159,6 +161,9 @@ public sealed class SceneWindow : IDisposable
                 case PInvoke.WM_NCACTIVATE:
                     Debug.WriteLine($"SceneWindow activation diagnostic: {message:X}");
                     break;
+                case PInvoke.WM_HOTKEY:
+                    window?.HotkeyHandler?.Invoke((int)wParam.Value);
+                    return new LRESULT(0);
                 case PInvoke.WM_DISPLAYCHANGE:
                     window?.owner.ZOrder.Request();
                     break;

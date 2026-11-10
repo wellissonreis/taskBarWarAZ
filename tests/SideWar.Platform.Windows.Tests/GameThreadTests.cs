@@ -11,6 +11,7 @@ using Xunit;
 namespace SideWar.Platform.Windows.Tests;
 
 [Trait("Env", "WindowsInteractive")]
+[Collection("SceneWindowClass")] // The SideWar.Scene class is process-wide: GameThread tests must not overlap.
 public sealed class GameThreadTests
 {
     private sealed record TestCommand : IGameCommand;

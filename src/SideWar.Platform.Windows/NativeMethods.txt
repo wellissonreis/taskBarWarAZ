@@ -72,3 +72,13 @@ SIZE
 RECT
 FindWindowW
 IsWindowVisible
+RegisterHotKey
+UnregisterHotKey
+HOT_KEY_MODIFIERS
+Shell_NotifyIconW
+NOTIFY_ICON_MESSAGE
+NOTIFY_ICON_DATA_FLAGS
+RegisterWindowMessageW
+LoadIconW
+IDI_APPLICATION
+DestroyIcon
