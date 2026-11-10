@@ -178,7 +178,7 @@ T3.4 a T3.8 compartilham contratos de `SimState`: **não paralelizar entre si** 
 | T6.5 | `EventScheduler`, pico de demanda e caixas de suprimentos | SDD-26 RF-26.2, RF-26.3, RF-26.11, RF-26.12 | Sonnet | WSL | CA-26.1, CA-26.5, CA-26.6 |
 | T6.6 🟡 parte A | Chefe com pergunta Azure, `QuestionLedger`, banco `questions.json` e validador | RF-26.4 a RF-26.10 | Sonnet | WSL | CA-26.2 a CA-26.4, CA-26.7, CA-26.8 |
 | T6.7 | `PrestigeService` ("Migrar", regiões) e `MissionService` | SDD-27 RF-27.10, RF-27.11, RF-27.13 | Sonnet | WSL | CA-27.8, CA-27.9 |
-| T6.8 | `ProfileStore` e `SessionStore` (`OfflineSnapshot`) com schemas versionados e migrações | SDD-14 RF-14.5, RF-14.6, RF-14.10, RF-25.11 | Sonnet | WSL | CA-14.1, CA-14.4, CA-14.6, CA-25.9 |
+| T6.8 ✅ | `ProfileStore` e `SessionStore` (`OfflineSnapshot`) com schemas versionados e migrações | SDD-14 RF-14.5, RF-14.6, RF-14.10, RF-25.11 | Sonnet | WSL | CA-14.1, CA-14.4, CA-14.6, CA-25.9 |
 | T6.9 | Gatilhos de save, limite de gravações e integração de sessão/suspensão/logoff com o offline | SDD-14 RF-14.7, RF-14.8, SDD-07 | Sonnet | Windows | CA-14.5, CA-07.2, CA-07.5 |
 | T6.10 | Teste de kill do processo em loop | SDD-14 | Sonnet | Windows | CA-14.2 |
 | T6.11 | Ligar as abas Missões e Migrar, banners, caixas e card de pergunta aos serviços reais | SDD-24, SDD-26 | Sonnet | Windows | CA-26.9, CA-24.7, CA-24.8 |

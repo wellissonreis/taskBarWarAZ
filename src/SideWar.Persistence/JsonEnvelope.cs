@@ -35,8 +35,8 @@ public static class JsonEnvelope
         return buf.ToArray();
     }
 
-    /// <summary>Valida tamanho, JSON, schema, versão e hash. O chamador é dono do JsonDocument retornado.</summary>
-    public static EnvelopeReadResult Read(ReadOnlySpan<byte> utf8, string expectedSchema, int supportedVersion)
+    /// <summary>Valida tamanho, JSON, schema, versão (entre <c>minSupportedVersion</c>, o início da cadeia de migrações, e <c>supportedVersion</c>) e hash. O chamador é dono do JsonDocument retornado.</summary>
+    public static EnvelopeReadResult Read(ReadOnlySpan<byte> utf8, string expectedSchema, int supportedVersion, int minSupportedVersion = 1)
     {
         if (utf8.Length > MaxReadBytes) return Fail("tamanho acima de 1 MB");
         JsonDocument doc;
@@ -50,7 +50,7 @@ public static class JsonEnvelope
         if (!root.TryGetProperty("schemaVersion", out var v) || !v.TryGetInt32(out var version))
             return Dispose(doc, "schemaVersion ausente");
         if (version > supportedVersion) return Dispose(doc, "schemaVersion futura");
-        if (version < 1) return Dispose(doc, "schemaVersion sem migração registrada");
+        if (version < minSupportedVersion) return Dispose(doc, "schemaVersion sem migração registrada");
         if (!root.TryGetProperty("payload", out var payload) || payload.ValueKind != JsonValueKind.Object)
             return Dispose(doc, "payload ausente");
         if (!root.TryGetProperty("contentHash", out var h) || h.ValueKind != JsonValueKind.String
