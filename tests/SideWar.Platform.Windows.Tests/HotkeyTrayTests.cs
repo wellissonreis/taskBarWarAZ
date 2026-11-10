@@ -77,6 +77,47 @@ public sealed class HotkeyTrayTests
         Assert.True(again);
     }
 
+    [Fact]
+    public async Task TogglePauseAndCustomAndInvalidBindingsFromParameter()
+    {
+        var (game, host) = await StartGame();
+        await using var _ = game;
+        var bindings = new Dictionary<HotkeyAction, string>
+        {
+            [HotkeyAction.TogglePause] = "ctrl+shift+alt+F11",
+            [HotkeyAction.ToggleVisibility] = "Ctrl+Nope",
+        };
+        var conflicts = new List<(HotkeyAction, string)>();
+        var service = await OnGame(game, () =>
+        {
+            var s = new HotkeyService(game, game.Scene, game, _ => { }, bindings);
+            s.Conflict += (a, m) => conflicts.Add((a, m));
+            return s;
+        });
+        Assert.False(await OnGame(game, service.Register));
+        Assert.Equal(HotkeyStatus.Registered, service.GetStatus(HotkeyAction.ToggleInteractive)); // default Ctrl+Alt+G
+        Assert.Equal(HotkeyStatus.Registered, service.GetStatus(HotkeyAction.TogglePause));
+        Assert.Equal(HotkeyStatus.Unavailable, service.GetStatus(HotkeyAction.ToggleVisibility));
+        Assert.Equal("ctrl+shift+alt+F11", service.GetBinding(HotkeyAction.TogglePause));
+        Assert.Equal("Ctrl+Alt+P", HotkeyService.Describe(HotkeyAction.TogglePause));
+        Assert.Contains(conflicts, c => c.Item1 == HotkeyAction.ToggleVisibility && c.Item2.StartsWith("Atalho inválido", StringComparison.Ordinal));
+
+        await OnGame(game, () =>
+        {
+            foreach (var a in new[] { HotkeyAction.TogglePause, HotkeyAction.ToggleVisibility })
+                PInvoke.SendMessage(new HWND(game.Scene.Handle), PInvoke.WM_HOTKEY, (WPARAM)(nuint)HotkeyService.IdFor(a), default);
+            return 0;
+        });
+        await WaitFor(() => { lock (host.Commands) return host.Commands.Count >= 1; });
+        await Task.Delay(100, TestContext.Current.CancellationToken);
+        lock (host.Commands)
+        {
+            Assert.Single(host.Commands); // invalid-binding action posts nothing
+            Assert.Equal(new HotkeyCommand(HotkeyAction.TogglePause), host.Commands[0].Command);
+        }
+        await OnGame(game, () => { service.Dispose(); return 0; });
+    }
+
     /// <summary>Another "app": a thread-bound RegisterHotKey of Ctrl+Alt+G/H, held until released.</summary>
     private static (Action Release, bool Ok) HoldChords()
     {
