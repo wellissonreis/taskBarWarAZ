@@ -44,15 +44,52 @@ public sealed partial class SimState
     }
 
     /// <summary>
-    /// PONTO DE DANO (T3.6 completa): hoje aplica <c>max(1, floor(dano(nível) − armadura))</c> e grava <c>LastHit</c>.
-    /// T3.6 troca o corpo pela ordem fixa de ADR-031 (super hit, Canhão×runner, chilled, pico, armadura), Gelo, splash,
-    /// Scale Set e eventos <c>Hit</c>/<c>SuperHit</c>/<c>Splash</c>. A assinatura (torre por ref, índice do alvo) é o contrato.
+    /// Acerto instantâneo (RF-11.6, ADR-027): super hit do Raio (contador por torre, só acertos reais), Scale Set
+    /// (bônus por Raios ativos, reavaliado a cada disparo), dano na ordem de ADR-031, Gelo (chilled e lentidão com piso) e
+    /// splash do Canhão (raio e fator de rules.json). Emite <c>Hit</c>, <c>SuperHit</c> e <c>Splash</c>. Não remove mortos (T3.8).
     /// </summary>
     private void ApplyInstantHit(SimContext ctx, ref Tower tower, int enemyIndex)
     {
+        var rules = ctx.Rules;
         ref var enemy = ref Enemies.At(enemyIndex);
-        double d = ctx.BaseDamage(tower.Type, tower.Level) - enemy.Armor;
-        enemy.Hp -= Math.Max(1.0, Math.Floor(d));
+        double baseDmg = ctx.BaseDamage(tower.Type, tower.Level);
+        if (tower.Type == TowerType.ScaleSet)
+            baseDmg *= 1.0 + ctx.Tower(TowerType.ScaleSet).DamageBonusPerBolt * CountActiveBolts();
+
+        bool superHit = false;
+        if (tower.Type == TowerType.Bolt && ++tower.Hits >= rules.BoltSuperHitEvery)
+        {
+            tower.Hits = 0;
+            superHit = true;
+        }
+
+        double dmg = ComputeDamage(ctx, tower.Type, baseDmg, superHit ? rules.BoltSuperHitMultiplier : 1.0, in enemy);
+        enemy.Hp -= dmg;
         enemy.LastHit = tower.Type;
+        float cx = enemy.X;
+        Events.Add(new SimEvent(SimEventType.Hit, cx, 0f, dmg, (int)tower.Type));
+        if (superHit) Events.Add(new SimEvent(SimEventType.SuperHit, cx, 0f, dmg, (int)tower.Type));
+
+        if (tower.Type == TowerType.Frost)
+        {
+            enemy.Flags |= EnemyFlags.Chilled;
+            enemy.Speed = MathF.Min(enemy.Speed,
+                MathF.Max(enemy.Speed * (float)rules.FrostSlowFactor, enemy.SpawnSpeed * (float)rules.FrostSlowFloor));
+        }
+        else if (tower.Type == TowerType.Cannon)
+        {
+            float radius = (float)rules.SplashRadius;
+            int others = 0;
+            for (int i = 0; i < Enemies.Capacity; i++)
+            {
+                if (i == enemyIndex || !Enemies.IsAlive(i)) continue;
+                ref var o = ref Enemies.At(i);
+                if (!(o.Hp > 0) || MathF.Abs(o.X - cx) > radius) continue;
+                o.Hp -= ComputeDamage(ctx, TowerType.Cannon, baseDmg, rules.SplashFactor, in o);
+                o.LastHit = TowerType.Cannon;
+                others++;
+            }
+            Events.Add(new SimEvent(SimEventType.Splash, cx, 0f, radius, others));
+        }
     }
 }

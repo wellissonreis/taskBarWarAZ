@@ -111,7 +111,7 @@ Ordem: T1.1, T1.2, T1.3 e T1.7 (paralelas, escopos disjuntos) → T1.4 → T1.5 
 | T3.3 ✅ | `IdleWaveBuilder`: HP, ouro, XP e mistura por onda; chefes nas ondas 20, 40, 60, 80 e 100 | RF-27.6, RF-27.7, SDD-12 | Sonnet | WSL | CA-12.2, CA-27.3, CA-27.4 |
 | T3.4 ✅ | `SimState`, handles e stores O(1); layout da faixa como estado (`LayoutChanged` entre ticks, ADR-026) | SDD-11 RF-11.3 | Sonnet | WSL | CA-11.1 |
 | T3.5 ✅ | Ordem do tick, mira 1D por slots e **acerto instantâneo** (ADR-027) | SDD-11 | Sonnet | WSL | CA-11.1 |
-| T3.6 | Dano, armadura, chilled, splash, super hit e eventos (números de dano) | SDD-11 | Sonnet | WSL | CA-11.1 |
+| T3.6 ✅ | Dano, armadura, chilled, splash, super hit e eventos (números de dano) | SDD-11 | Sonnet | WSL | CA-11.1 |
 | T3.7 | Comandos (construir, melhorar), `LayoutChanged` e `StateHash` | SDD-11, RF-27.5 | Sonnet | WSL | CA-11.1, CA-27.2 |
 | T3.8 | Núcleo, queda e recuo; fases, estrelas, XP e nível; conclusão de fase | RF-27.8, RF-27.9 | Sonnet | WSL | CA-27.5 a CA-27.7 |
 | T3.9 ✅ | Economia mínima de SDD-13 (stub) e `stageTopic` em `stages.json` — absorvida: stageTopic entregue na T3.1; stub IEconomy migrado para a série T3.5–T3.8 | SDD-13 RF-13.3 | Haiku | WSL | CA-27.6 |
