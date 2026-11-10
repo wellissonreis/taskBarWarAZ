@@ -90,7 +90,7 @@ Ordem: T1.1, T1.2, T1.3 e T1.7 (paralelas, escopos disjuntos) → T1.4 → T1.5 
 
 | Tarefa | Descrição (um commit) | Ficha/RF | Modelo | Amb. | Critérios |
 |---|---|---|---|---|---|
-| T2.1 | `FullscreenClassifier` (puro) com fixtures reais e testes de tabela | SDD-06 | Sonnet | WSL | CA-06.1 |
+| T2.1 ✅ | `FullscreenClassifier` (puro) com fixtures reais e testes de tabela | SDD-06 | Sonnet | WSL | CA-06.1 |
 | T2.2 | `FullscreenWatcher` por eventos (`SetWinEventHook`), histerese, `SameMonitor`; oculta faixa, widget e hotspots | SDD-06, RF-23.11 | Sonnet | Windows | CA-06.3, CA-06.4, CA-22.9 |
 | T2.3 ✅ | `AppStateMachine`, `HiddenReason`/`PauseReason` e testes de transições | SDD-07 | Sonnet | WSL | CA-07.1 |
 | T2.4 | `AtomicFileWriter` + `SettingsStore` (schema versionado, `.bak`, `corrupt\`) | RF-14.2, RF-14.3, RF-14.4, RF-14.9 | Sonnet | WSL | CA-14.2, CA-14.3 (Settings) |

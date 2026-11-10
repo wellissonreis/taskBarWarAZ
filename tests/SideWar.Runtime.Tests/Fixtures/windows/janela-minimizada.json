@@ -1,0 +1,34 @@
+{
+  "Synthetic": true,
+  "Name": "janela-minimizada",
+  "Quns": "AcceptsNotifications",
+  "Expected": "NotFullscreen",
+  "Hwnd": 133692,
+  "ProcessId": 4242,
+  "ClassName": "Chrome_WidgetWin_1",
+  "Style": 369164288,
+  "ExStyle": 256,
+  "IsZoomed": false,
+  "IsIconic": true,
+  "IsVisible": true,
+  "IsCloaked": false,
+  "Frame": {
+    "Left": -32000,
+    "Top": -32000,
+    "Right": -31840,
+    "Bottom": -31972
+  },
+  "MonitorDevice": "\\\\.\\DISPLAY1",
+  "MonitorBounds": {
+    "Left": 0,
+    "Top": 0,
+    "Right": 1920,
+    "Bottom": 1080
+  },
+  "MonitorWork": {
+    "Left": 0,
+    "Top": 0,
+    "Right": 1920,
+    "Bottom": 1040
+  }
+}
