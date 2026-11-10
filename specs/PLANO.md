@@ -114,7 +114,7 @@ Ordem: T1.1, T1.2, T1.3 e T1.7 (paralelas, escopos disjuntos) → T1.4 → T1.5 
 | T3.6 | Dano, armadura, chilled, splash, super hit e eventos (números de dano) | SDD-11 | Sonnet | WSL | CA-11.1 |
 | T3.7 | Comandos (construir, melhorar), `LayoutChanged` e `StateHash` | SDD-11, RF-27.5 | Sonnet | WSL | CA-11.1, CA-27.2 |
 | T3.8 | Núcleo, queda e recuo; fases, estrelas, XP e nível; conclusão de fase | RF-27.8, RF-27.9 | Sonnet | WSL | CA-27.5 a CA-27.7 |
-| T3.9 | Economia mínima de SDD-13 (stub) e `stageTopic` em `stages.json` | SDD-13 RF-13.3 | Haiku | WSL | CA-27.6 |
+| T3.9 ✅ | Economia mínima de SDD-13 (stub) e `stageTopic` em `stages.json` — absorvida: stageTopic entregue na T3.1; stub IEconomy migrado para a série T3.5–T3.8 | SDD-13 RF-13.3 | Haiku | WSL | CA-27.6 |
 | T3.10 | `SanityBot` idle e 3 partidas de replay (uma de 200 ondas, com `LayoutChanged`) | SDD-11, SDD-12, RF-27.15 | Sonnet | WSL | CA-11.2, CA-12.3, CA-27.11 |
 | T3.11 | Integração do `GameHost` com a simulação (passo fixo de 30 Hz, ondas automáticas) | SDD-10 | Sonnet | WSL | CA-10.2, CA-10.3 |
 | T3.12 | Benchmarks de simulação (tick médio e p99, alocação) | SDD-17, P-13 | Haiku | WSL | CA-11.3 (indicativo) |
