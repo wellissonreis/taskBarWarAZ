@@ -1,0 +1,98 @@
+{
+  "Synthetic": true,
+  "Evidence": "No Windows capture or validation",
+  "Height": 32,
+  "Start": 500,
+  "Count": 6,
+  "Widgets": false,
+  "Nodes": [
+    {
+      "ClassName": "",
+      "ParentClassName": "",
+      "AutomationId": "StartButton",
+      "Rect": {
+        "Left": 500,
+        "Top": 868,
+        "Right": 544,
+        "Bottom": 900
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-5",
+      "Rect": {
+        "Left": 788,
+        "Top": 868,
+        "Right": 832,
+        "Bottom": 900
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-4",
+      "Rect": {
+        "Left": 740,
+        "Top": 868,
+        "Right": 784,
+        "Bottom": 900
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-3",
+      "Rect": {
+        "Left": 692,
+        "Top": 868,
+        "Right": 736,
+        "Bottom": 900
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-2",
+      "Rect": {
+        "Left": 644,
+        "Top": 868,
+        "Right": 688,
+        "Bottom": 900
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-1",
+      "Rect": {
+        "Left": 596,
+        "Top": 868,
+        "Right": 640,
+        "Bottom": 900
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-0",
+      "Rect": {
+        "Left": 548,
+        "Top": 868,
+        "Right": 592,
+        "Bottom": 900
+      }
+    },
+    {
+      "ClassName": "SystemTray.Clock",
+      "ParentClassName": "",
+      "AutomationId": "",
+      "Rect": {
+        "Left": 1240,
+        "Top": 868,
+        "Right": 1440,
+        "Bottom": 900
+      }
+    }
+  ]
+}

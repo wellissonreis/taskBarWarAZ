@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0-windows10.0.22000.0</TargetFramework>
+    <!-- Win32 pointer APIs require architecture-specific metadata; distribution is win-x64 (SDD-18). -->
+    <CsWin32PlatformTarget>x64</CsWin32PlatformTarget>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
   </PropertyGroup>
   <ItemGroup>

@@ -1,0 +1,208 @@
+{
+  "Synthetic": true,
+  "Evidence": "No Windows capture or validation",
+  "Height": 48,
+  "Start": 100,
+  "Count": 16,
+  "Widgets": false,
+  "Nodes": [
+    {
+      "ClassName": "",
+      "ParentClassName": "",
+      "AutomationId": "StartButton",
+      "Rect": {
+        "Left": 100,
+        "Top": 852,
+        "Right": 144,
+        "Bottom": 900
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-15",
+      "Rect": {
+        "Left": 868,
+        "Top": 852,
+        "Right": 912,
+        "Bottom": 900
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-14",
+      "Rect": {
+        "Left": 820,
+        "Top": 852,
+        "Right": 864,
+        "Bottom": 900
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-13",
+      "Rect": {
+        "Left": 772,
+        "Top": 852,
+        "Right": 816,
+        "Bottom": 900
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-12",
+      "Rect": {
+        "Left": 724,
+        "Top": 852,
+        "Right": 768,
+        "Bottom": 900
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-11",
+      "Rect": {
+        "Left": 676,
+        "Top": 852,
+        "Right": 720,
+        "Bottom": 900
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-10",
+      "Rect": {
+        "Left": 628,
+        "Top": 852,
+        "Right": 672,
+        "Bottom": 900
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-9",
+      "Rect": {
+        "Left": 580,
+        "Top": 852,
+        "Right": 624,
+        "Bottom": 900
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-8",
+      "Rect": {
+        "Left": 532,
+        "Top": 852,
+        "Right": 576,
+        "Bottom": 900
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-7",
+      "Rect": {
+        "Left": 484,
+        "Top": 852,
+        "Right": 528,
+        "Bottom": 900
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-6",
+      "Rect": {
+        "Left": 436,
+        "Top": 852,
+        "Right": 480,
+        "Bottom": 900
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-5",
+      "Rect": {
+        "Left": 388,
+        "Top": 852,
+        "Right": 432,
+        "Bottom": 900
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-4",
+      "Rect": {
+        "Left": 340,
+        "Top": 852,
+        "Right": 384,
+        "Bottom": 900
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-3",
+      "Rect": {
+        "Left": 292,
+        "Top": 852,
+        "Right": 336,
+        "Bottom": 900
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-2",
+      "Rect": {
+        "Left": 244,
+        "Top": 852,
+        "Right": 288,
+        "Bottom": 900
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-1",
+      "Rect": {
+        "Left": 196,
+        "Top": 852,
+        "Right": 240,
+        "Bottom": 900
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-0",
+      "Rect": {
+        "Left": 148,
+        "Top": 852,
+        "Right": 192,
+        "Bottom": 900
+      }
+    },
+    {
+      "ClassName": "SystemTray.Clock",
+      "ParentClassName": "",
+      "AutomationId": "",
+      "Rect": {
+        "Left": 1240,
+        "Top": 852,
+        "Right": 1440,
+        "Bottom": 900
+      }
+    }
+  ]
+}
