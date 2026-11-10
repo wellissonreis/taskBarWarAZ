@@ -42,15 +42,15 @@ Convenções das tarefas: **Modelo** sugerido (Haiku para mecânico/repetitivo; 
 
 | Tarefa | Descrição (um commit) | Ficha/RF | Modelo | Amb. | Critérios |
 |---|---|---|---|---|---|
-| T0.1 | `git init`, `.gitignore`, `.gitattributes`, `.editorconfig` | SDD-02 | Haiku | WSL | CA-02.1 |
-| T0.2 | `global.json` | RF-02.2 | Haiku | WSL | CA-02.1 |
-| T0.3 | `Directory.Build.props` (nullable, warnings como erro, LangVersion, EnableWindowsTargeting) | SDD-01 | Sonnet | WSL | CA-01.1 |
-| T0.4 | `Directory.Packages.props` só com os pacotes de RNF-01.3, versões fixas | RNF-01.3 | Sonnet | WSL | CA-01.4 |
-| T0.5 | Solução `SideWar.slnx` e projetos `src/` vazios com as referências de SDD-01 | SDD-01 | Sonnet | WSL | CA-01.1 |
-| T0.6 | Projetos de teste vazios e teste de arquitetura (referências proibidas) | SDD-01, SDD-17 | Sonnet | WSL | CA-01.2 |
-| T0.7 | Scripts WSL (`build.sh`, `test.sh`, `bench.sh`, `sync-to-windows.sh`, `win.sh`) | SDD-02 | Haiku | WSL | CA-02.2, CA-02.3 |
-| T0.8 | Scripts Windows (`build.ps1`, `test.ps1`, `run.ps1`, esqueletos de `measure-perf.ps1`/`publish.ps1`) | SDD-02 | Haiku | Windows | CA-02.3 |
-| T0.9 | `README.md` da raiz (pré-requisitos RF-02.1) e `specs/evidencias/E0.md` (RF-02.6) | SDD-02 | Haiku | WSL+Windows | CA-02.4, CA-01.3 |
+| T0.1 ✅ | `git init`, `.gitignore`, `.gitattributes`, `.editorconfig` | SDD-02 | Haiku | WSL | CA-02.1 |
+| T0.2 ✅ | `global.json` | RF-02.2 | Haiku | WSL | CA-02.1 |
+| T0.3 ✅ | `Directory.Build.props` (nullable, warnings como erro, LangVersion, EnableWindowsTargeting) | SDD-01 | Sonnet | WSL | CA-01.1 |
+| T0.4 ✅ | `Directory.Packages.props` só com os pacotes de RNF-01.3, versões fixas | RNF-01.3 | Sonnet | WSL | CA-01.4 |
+| T0.5 ✅ | Solução `SideWar.slnx` e projetos `src/` vazios com as referências de SDD-01 | SDD-01 | Sonnet | WSL | CA-01.1 |
+| T0.6 ✅ | Projetos de teste vazios e teste de arquitetura (referências proibidas) | SDD-01, SDD-17 | Sonnet | WSL | CA-01.2 |
+| T0.7 ✅ | Scripts WSL (`build.sh`, `test.sh`, `bench.sh`, `sync-to-windows.sh`, `win.sh`) | SDD-02 | Haiku | WSL | CA-02.2, CA-02.3 |
+| T0.8 ✅ | Scripts Windows (`build.ps1`, `test.ps1`, `run.ps1`, esqueletos de `measure-perf.ps1`/`publish.ps1`) | SDD-02 | Haiku | Windows | CA-02.3 |
+| T0.9 ✅ | `README.md` da raiz (pré-requisitos RF-02.1) e `specs/evidencias/E0.md` (RF-02.6) | SDD-02 | Haiku | WSL+Windows | CA-02.4, CA-01.3 |
 
 **Aprovação:** CA-01.1 a CA-01.4, CA-02.1 a CA-02.4. **Evidência obrigatória:** `specs/evidencias/E0.md` com saída de `build.sh`, `test.sh` e `win.sh build.ps1` (mostrando `dotnet.exe` e `C:\dev\sidewar`).
 
@@ -64,13 +64,13 @@ Ordem: T1.1, T1.2, T1.3 e T1.7 (paralelas, escopos disjuntos) → T1.4 → T1.5 
 
 | Tarefa | Descrição (um commit) | Ficha/RF | Modelo | Amb. | Critérios |
 |---|---|---|---|---|---|
-| T1.1 | `RenderPolicy` e `FixedStepper` em `Core` com `FakeClock` e testes de tabela (sem 2×, ADR-031) | SDD-10 RF-10.5, RF-10.7 | Sonnet | WSL | CA-10.1 a CA-10.3 |
-| T1.2 | `SceneLayout.Compute` (puro) e testes de tabela de monitores/DPI/barra | SDD-22 RF-22.2, SDD-05 | Sonnet | WSL | CA-05.1, CA-22.1 |
-| T1.3 | `NativeMethods.txt` + CsWin32 e utilitários Win32 base | SDD-03, ADR-005 | Sonnet | WSL (compila) | CA-03.5 (base) |
-| T1.4 | GameThread e laço `MsgWaitForMultipleObjectsEx` com waitable timer; contador de wakes | RF-03.1, RF-03.4, RF-03.7, RF-03.8 | Sonnet | Windows | CA-03.3, CA-03.4 |
-| T1.5 | `SceneWindow` (janela da faixa): estilos `LAYERED\|TOOLWINDOW\|NOACTIVATE\|TOPMOST`, sem taskbar/Alt+Tab, sem transições DWM, reafirmação de topmost | RF-03.2, RF-03.5, RF-03.6, RF-22.1 | Sonnet | Windows | CA-03.1, CA-03.2, CA-03.5, CA-22.3 |
+| T1.1 ✅ | `RenderPolicy` e `FixedStepper` em `Core` com `FakeClock` e testes de tabela (sem 2×, ADR-031) | SDD-10 RF-10.5, RF-10.7 | Sonnet | WSL | CA-10.1 a CA-10.3 |
+| T1.2 ✅ | `SceneLayout.Compute` (puro) e testes de tabela de monitores/DPI/barra | SDD-22 RF-22.2, SDD-05 | Sonnet | WSL | CA-05.1, CA-22.1 |
+| T1.3 ✅ | `NativeMethods.txt` + CsWin32 e utilitários Win32 base | SDD-03, ADR-005 | Sonnet | WSL (compila) | CA-03.5 (base) |
+| T1.4 ✅ | GameThread e laço `MsgWaitForMultipleObjectsEx` com waitable timer; contador de wakes | RF-03.1, RF-03.4, RF-03.7, RF-03.8 | Sonnet | Windows | CA-03.3, CA-03.4 |
+| T1.5 ✅ | `SceneWindow` (janela da faixa): estilos `LAYERED\|TOOLWINDOW\|NOACTIVATE\|TOPMOST`, sem taskbar/Alt+Tab, sem transições DWM, reafirmação de topmost | RF-03.2, RF-03.5, RF-03.6, RF-22.1 | Sonnet | Windows | CA-03.1, CA-03.2, CA-03.5, CA-22.3 |
 | T1.6 | `LayeredSurface` + `IOverlaySurface` e **quadro de teste animado** a 30 fps, alfa pré-multiplicado | RF-08.1, RF-08.9, RF-08.10 | Sonnet | Windows | CA-08.1, CA-08.2 |
-| T1.7 | `TaskbarClassifier` e `SlotMap` puros (fixtures `centro`, `esquerda`, `com-widgets`, `muitos-apps`, `pequena`) e fallback de 8 slots | SDD-21 RF-21.1, RF-21.4, RF-21.5, RF-21.7, RF-21.8 | Sonnet | WSL | CA-21.1, CA-21.5, CA-21.6 |
+| T1.7 ✅ | `TaskbarClassifier` e `SlotMap` puros (fixtures `centro`, `esquerda`, `com-widgets`, `muitos-apps`, `pequena`) e fallback de 8 slots | SDD-21 RF-21.1, RF-21.4, RF-21.5, RF-21.7, RF-21.8 | Sonnet | WSL | CA-21.1, CA-21.5, CA-21.6 |
 | T1.8 | `TaskbarProbe` (UIA somente leitura, thread MTA `SideWar.Shell`), `TaskbarService`, gatilhos por evento sem polling e **`--dump-taskbar`** | SDD-21 RF-21.2, RF-21.3, RF-21.6, RF-21.9 | Sonnet | Windows | CA-21.2, CA-21.3, CA-21.4, CA-21.7 a CA-21.9 |
 | T1.9 | **Janela do widget vazia** (420×48 DIP) acima da barra: owner = faixa, geometria na zona livre ou fallback, z-order sobre `Shell_TrayWnd`, sem `TRANSPARENT` | RF-03.9, RF-23.1, RF-23.2, RF-23.10, RF-23.11 | Sonnet | Windows | CA-23.1, CA-23.3, CA-23.7 |
 | T1.10 | Geometria por monitor, DPI PMv2 (manifesto), reação a `WM_DPICHANGED`/`WM_DISPLAYCHANGE`/barra de tarefas | SDD-05 | Sonnet | Windows | CA-05.2 a CA-05.5 |
