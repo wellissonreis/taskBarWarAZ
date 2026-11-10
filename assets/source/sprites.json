@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "sprites": [
+    { "id": "tower.bolt",     "file": "design/tower-bolt.png",    "worldWidth": 44, "pivot": [0.5, 1.0], "trim": false },
+    { "id": "tower.frost",    "file": "design/tower-frost.png",   "worldWidth": 39, "pivot": [0.5, 1.0], "trim": false },
+    { "id": "tower.cannon",   "file": "design/tower-cannon.png",  "worldWidth": 45, "pivot": [0.5, 1.0], "trim": false },
+    { "id": "tower.scaleset", "file": "design/tower-scaleset.png","worldWidth": 44, "pivot": [0.5, 1.0], "trim": false, "placeholder": true },
+    { "id": "slot.empty",     "file": "design/slot-empty.png",    "worldWidth": 42, "pivot": [0.5, 1.0], "trim": false },
+    { "id": "core",           "file": "design/core.png",          "worldWidth": 84, "pivot": [0.5, 1.0], "trim": false },
+    { "id": "portal",         "file": "design/portal.png",        "worldWidth": 68, "pivot": [0.5, 1.0], "trim": false },
+    { "id": "enemy.grunt",    "file": "design/enemy-scout.png",   "worldWidth": 23, "pivot": [0.5, 1.0], "trim": false },
+    { "id": "enemy.runner",   "file": "design/enemy-drone.png",   "worldWidth": 38, "pivot": [0.5, 1.0], "trim": false },
+    { "id": "enemy.swarm",    "file": "design/enemy-crawler.png", "worldWidth": 36, "pivot": [0.5, 1.0], "trim": false },
+    { "id": "enemy.armored",  "file": "design/enemy-shield.png",  "worldWidth": 32, "pivot": [0.5, 1.0], "trim": false },
+    { "id": "enemy.tank",     "file": "design/enemy-brute.png",   "worldWidth": 43, "pivot": [0.5, 1.0], "trim": false },
+    { "id": "enemy.boss",     "file": "design/enemy-boss.png",    "worldWidth": 68, "pivot": [0.5, 1.0], "trim": false },
+    { "id": "supply.crate",   "file": "design/supply-crate.png",  "worldWidth": 45, "pivot": [0.5, 1.0], "trim": false }
+  ]
+}
