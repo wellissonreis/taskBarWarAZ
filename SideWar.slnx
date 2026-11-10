@@ -1,0 +1,16 @@
+<Solution>
+  <Project Path="src/SideWar.Core/SideWar.Core.csproj" />
+  <Project Path="src/SideWar.Runtime/SideWar.Runtime.csproj" />
+  <Project Path="src/SideWar.Persistence/SideWar.Persistence.csproj" />
+  <Project Path="src/SideWar.Rendering/SideWar.Rendering.csproj" />
+  <Project Path="src/SideWar.Platform.Windows/SideWar.Platform.Windows.csproj" />
+  <Project Path="src/SideWar.App/SideWar.App.csproj" />
+  <Project Path="tests/SideWar.Core.Tests/SideWar.Core.Tests.csproj" />
+  <Project Path="tests/SideWar.Runtime.Tests/SideWar.Runtime.Tests.csproj" />
+  <Project Path="tests/SideWar.Persistence.Tests/SideWar.Persistence.Tests.csproj" />
+  <Project Path="tests/SideWar.Rendering.Tests/SideWar.Rendering.Tests.csproj" />
+  <Project Path="tests/SideWar.Platform.Windows.Tests/SideWar.Platform.Windows.Tests.csproj" />
+  <Project Path="tests/SideWar.App.SmokeTests/SideWar.App.SmokeTests.csproj" />
+  <Project Path="tools/SideWar.AssetPipeline/SideWar.AssetPipeline.csproj" />
+  <Project Path="bench/SideWar.Benchmarks/SideWar.Benchmarks.csproj" />
+</Solution>

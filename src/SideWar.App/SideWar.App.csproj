@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.22000.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
+    <UseWPF>true</UseWPF>
+    <OutputType>WinExe</OutputType>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../SideWar.Core/SideWar.Core.csproj" />
+    <ProjectReference Include="../SideWar.Runtime/SideWar.Runtime.csproj" />
+    <ProjectReference Include="../SideWar.Persistence/SideWar.Persistence.csproj" />
+    <ProjectReference Include="../SideWar.Rendering/SideWar.Rendering.csproj" />
+    <ProjectReference Include="../SideWar.Platform.Windows/SideWar.Platform.Windows.csproj" />
+  </ItemGroup>
+</Project>
