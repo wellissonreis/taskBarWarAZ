@@ -44,6 +44,7 @@ public sealed class GameThread : IGameCommandSink, IAsyncDisposable
     public SceneWindow Scene { get; private set; } = null!;
     public ZOrderCoordinator ZOrder { get; private set; } = null!;
     public DockController Dock { get; private set; } = null!;
+    public SceneModeController Mode { get; private set; } = null!;
     public ValueTask DisposeAsync() => new(StopAsync());
 
     public Task Ready => ready.Task;
@@ -173,6 +174,7 @@ public sealed class GameThread : IGameCommandSink, IAsyncDisposable
             ZOrder = new ZOrderCoordinator(this);
             Scene = new SceneWindow(this);
             Dock = new DockController(this);
+            Mode = new SceneModeController(this);
             bool abandoned;
             lock (gate) abandoned = !accepting;
             if (abandoned)
@@ -197,10 +199,12 @@ public sealed class GameThread : IGameCommandSink, IAsyncDisposable
                 Guard(() => host.OnWake(clock));
                 Guard(() => ZOrder.OnWake(clock.NowTicks));
                 Guard(() => Dock.OnWake(clock.NowTicks));
+                Guard(() => Mode.OnWake(clock.NowTicks));
                 long? next = null;
                 Guard(() => next = host.NextDeadline);
                 if (ZOrder.NextDeadline is { } zDeadline) next = next is { } hDeadline ? Math.Min(hDeadline, zDeadline) : zDeadline;
                 if (Dock.NextDeadline is { } dDeadline) next = next is { } nDeadline ? Math.Min(nDeadline, dDeadline) : dDeadline;
+                if (Mode.NextDeadline is { } mDeadline) next = next is { } kDeadline ? Math.Min(kDeadline, mDeadline) : mDeadline;
                 if (next is { } deadline)
                 {
                     var delay = TimeSpan.FromSeconds(Math.Max(0, ((double)deadline - clock.NowTicks) / clock.TicksPerSecond));

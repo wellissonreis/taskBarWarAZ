@@ -93,6 +93,7 @@ public sealed class SceneWindow : IDisposable
         IsVisible = true;
         Widget?.OnSceneShown();
         owner.ZOrder.ReassertNow();
+        owner.Mode?.OnSceneShown();
     }
 
     public void Hide()
@@ -102,6 +103,7 @@ public sealed class SceneWindow : IDisposable
         IsVisible = false;
         Widget?.OnSceneHidden();
         owner.ZOrder.Cancel();
+        owner.Mode?.OnSceneHidden(); // hidden → Passive (SDD-04 RF-04.2)
     }
 
     private unsafe void SetDwm(DWMWINDOWATTRIBUTE attribute, int value) =>
@@ -151,6 +153,7 @@ public sealed class SceneWindow : IDisposable
             if (pointer != 0) window = (SceneWindow?)GCHandle.FromIntPtr(pointer).Target;
             window?.MessageObserver?.Invoke(message);
             window?.owner.Dock?.OnSystemMessage(message, wParam.Value, lParam.Value); // SDD-05 RF-05.6
+            window?.owner.Mode?.OnMessage(hwnd, message, wParam.Value, lParam.Value); // SDD-04 RF-04.3
             switch (message)
             {
                 case PInvoke.WM_MOUSEACTIVATE: return new LRESULT((nint)PInvoke.MA_NOACTIVATE);

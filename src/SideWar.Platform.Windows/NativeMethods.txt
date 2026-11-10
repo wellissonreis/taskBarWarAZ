@@ -131,3 +131,9 @@ SetThreadDpiAwarenessContext
 GetThreadDpiAwarenessContext
 AreDpiAwarenessContextsEqual
 DPI_AWARENESS_CONTEXT
+GetCursorPos
+TRACKMOUSEEVENT
+TRACKMOUSEEVENT_FLAGS
+SetCursorPos
+WindowFromPoint
+GetAncestor
