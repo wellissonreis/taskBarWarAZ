@@ -1,0 +1,925 @@
+{
+  "provisional": true,
+  "questions": [
+    {
+      "id": "cloud-1",
+      "stageTopic": "Computação em nuvem",
+      "kind": "mandatory",
+      "problem": "Uma equipe quer pagar apenas pelos recursos que usar, sem comprar servidores. Qual característica da nuvem descreve isso?",
+      "options": [
+        {
+          "text": "Pagamento conforme o uso",
+          "correct": true,
+          "explanation": "Na nuvem o modelo de consumo cobra pelo que é usado, trocando investimento inicial por custo variável."
+        },
+        {
+          "text": "Compra antecipada de hardware",
+          "correct": false,
+          "explanation": "Comprar hardware antecipado é o modelo local (on-premises), não o da nuvem."
+        },
+        {
+          "text": "Contrato fixo de capacidade por 5 anos",
+          "correct": false,
+          "explanation": "Capacidade fixa e de longo prazo contradiz a ideia de pagar só pelo uso."
+        }
+      ]
+    },
+    {
+      "id": "cloud-2",
+      "stageTopic": "Computação em nuvem",
+      "kind": "mandatory",
+      "problem": "Qual benefício a nuvem oferece ao permitir criar recursos em minutos por autoatendimento?",
+      "options": [
+        {
+          "text": "Eliminação de qualquer falha",
+          "correct": false,
+          "explanation": "Nenhum provedor elimina todas as falhas; a nuvem ajuda a projetar para tolerá-las."
+        },
+        {
+          "text": "Agilidade",
+          "correct": true,
+          "explanation": "Provisionar rapidamente por autoatendimento dá agilidade para experimentar e entregar."
+        },
+        {
+          "text": "Menor latência garantida em qualquer lugar",
+          "correct": false,
+          "explanation": "A latência depende da distância e da rede; a nuvem não a garante."
+        }
+      ]
+    },
+    {
+      "id": "cloud-3",
+      "stageTopic": "Computação em nuvem",
+      "kind": "transfer",
+      "problem": "Uma loja tem pico de acessos só em datas festivas e hoje mantém servidores ociosos o resto do ano. Qual vantagem da nuvem resolve isso?",
+      "options": [
+        {
+          "text": "Comprar mais servidores físicos",
+          "correct": false,
+          "explanation": "Mais servidores físicos aumentam a ociosidade fora do pico."
+        },
+        {
+          "text": "Desligar o negócio fora das festas",
+          "correct": false,
+          "explanation": "Não é solução técnica; a nuvem permite ajustar, não parar o negócio."
+        },
+        {
+          "text": "Escalar a capacidade conforme a demanda",
+          "correct": true,
+          "explanation": "Ajustar a capacidade à demanda evita ociosidade fora do pico."
+        }
+      ]
+    },
+    {
+      "id": "deploy-1",
+      "stageTopic": "Modelos de implantação",
+      "kind": "mandatory",
+      "problem": "Qual modelo de nuvem usa recursos compartilhados de um provedor, acessados pela internet por vários clientes?",
+      "options": [
+        {
+          "text": "Nuvem pública",
+          "correct": true,
+          "explanation": "Na nuvem pública o provedor é dono da infraestrutura e a divide entre clientes."
+        },
+        {
+          "text": "Nuvem privada",
+          "correct": false,
+          "explanation": "Na nuvem privada a infraestrutura é dedicada a uma única organização."
+        },
+        {
+          "text": "Data center local sem nuvem",
+          "correct": false,
+          "explanation": "Um data center local sem nuvem não oferece autoatendimento nem recursos compartilhados."
+        }
+      ]
+    },
+    {
+      "id": "deploy-2",
+      "stageTopic": "Modelos de implantação",
+      "kind": "mandatory",
+      "problem": "Uma empresa mantém dados sensíveis em seu data center e usa a nuvem pública para o restante. Que modelo é esse?",
+      "options": [
+        {
+          "text": "Multinuvem sem integração",
+          "correct": false,
+          "explanation": "Multinuvem usa vários provedores públicos; o cenário descreve local mais pública."
+        },
+        {
+          "text": "Nuvem híbrida",
+          "correct": true,
+          "explanation": "Híbrida combina infraestrutura local/privada com nuvem pública."
+        },
+        {
+          "text": "Nuvem pública pura",
+          "correct": false,
+          "explanation": "Pública pura não mantém parte do ambiente no data center da empresa."
+        }
+      ]
+    },
+    {
+      "id": "deploy-3",
+      "stageTopic": "Modelos de implantação",
+      "kind": "transfer",
+      "problem": "Um órgão precisa de controle total e isolamento de sua infraestrutura, mas quer o modelo de autoatendimento da nuvem. Qual é o mais adequado?",
+      "options": [
+        {
+          "text": "Nuvem pública compartilhada",
+          "correct": false,
+          "explanation": "Na pública a infraestrutura é compartilhada entre clientes."
+        },
+        {
+          "text": "Apenas planilhas locais",
+          "correct": false,
+          "explanation": "Planilhas locais não entregam o modelo de nuvem."
+        },
+        {
+          "text": "Nuvem privada",
+          "correct": true,
+          "explanation": "A privada dedica a infraestrutura a uma organização, com isolamento e controle."
+        }
+      ]
+    },
+    {
+      "id": "iaas-1",
+      "stageTopic": "IaaS",
+      "kind": "mandatory",
+      "problem": "Qual modelo oferece máquinas virtuais, rede e armazenamento, deixando o sistema operacional sob responsabilidade do cliente?",
+      "options": [
+        {
+          "text": "IaaS",
+          "correct": true,
+          "explanation": "Em IaaS o cliente gerencia SO, runtime e aplicações sobre a infraestrutura do provedor."
+        },
+        {
+          "text": "SaaS",
+          "correct": false,
+          "explanation": "Em SaaS o provedor gerencia tudo, inclusive a aplicação."
+        },
+        {
+          "text": "PaaS",
+          "correct": false,
+          "explanation": "Em PaaS o provedor também gerencia o sistema operacional."
+        }
+      ]
+    },
+    {
+      "id": "iaas-2",
+      "stageTopic": "IaaS",
+      "kind": "mandatory",
+      "problem": "Uma empresa quer migrar um servidor legado sem alterar o código, mantendo controle do sistema operacional. Qual serviço serve melhor?",
+      "options": [
+        {
+          "text": "Função sem servidor",
+          "correct": false,
+          "explanation": "Funções exigem adaptar o código ao modelo de execução."
+        },
+        {
+          "text": "Máquina virtual (IaaS)",
+          "correct": true,
+          "explanation": "Uma VM permite replicar o ambiente legado com controle do SO."
+        },
+        {
+          "text": "Aplicativo SaaS pronto",
+          "correct": false,
+          "explanation": "SaaS substitui a aplicação em vez de migrá-la sem alteração."
+        }
+      ]
+    },
+    {
+      "id": "iaas-3",
+      "stageTopic": "IaaS",
+      "kind": "transfer",
+      "problem": "Quem é responsável por aplicar patches do sistema operacional em uma VM de IaaS?",
+      "options": [
+        {
+          "text": "O provedor da nuvem",
+          "correct": false,
+          "explanation": "O provedor cuida do host físico e do hipervisor, não do SO convidado."
+        },
+        {
+          "text": "Ninguém",
+          "correct": false,
+          "explanation": "Patches são necessários para a segurança; alguém precisa aplicá-los."
+        },
+        {
+          "text": "O cliente",
+          "correct": true,
+          "explanation": "Em IaaS o SO convidado é responsabilidade do cliente."
+        }
+      ]
+    },
+    {
+      "id": "paas-1",
+      "stageTopic": "PaaS",
+      "kind": "mandatory",
+      "problem": "Qual modelo permite implantar código sem gerenciar o sistema operacional e a infraestrutura subjacente?",
+      "options": [
+        {
+          "text": "PaaS",
+          "correct": true,
+          "explanation": "PaaS entrega plataforma gerenciada; o cliente cuida do código e dos dados."
+        },
+        {
+          "text": "IaaS",
+          "correct": false,
+          "explanation": "Em IaaS o cliente ainda gerencia o SO."
+        },
+        {
+          "text": "On-premises",
+          "correct": false,
+          "explanation": "No local, o cliente gerencia tudo."
+        }
+      ]
+    },
+    {
+      "id": "paas-2",
+      "stageTopic": "PaaS",
+      "kind": "mandatory",
+      "problem": "Uma equipe quer focar no desenvolvimento do aplicativo, sem se preocupar com patches e servidores. O que escolher?",
+      "options": [
+        {
+          "text": "Um data center próprio",
+          "correct": false,
+          "explanation": "Um data center próprio aumenta a carga operacional."
+        },
+        {
+          "text": "Uma plataforma gerenciada (PaaS)",
+          "correct": true,
+          "explanation": "A plataforma gerenciada abstrai servidores e patches."
+        },
+        {
+          "text": "VMs em IaaS",
+          "correct": false,
+          "explanation": "VMs exigem gerenciar SO e patches."
+        }
+      ]
+    },
+    {
+      "id": "paas-3",
+      "stageTopic": "PaaS",
+      "kind": "transfer",
+      "problem": "Em um serviço PaaS de hospedagem web, qual item continua sendo do cliente?",
+      "options": [
+        {
+          "text": "O hardware dos servidores",
+          "correct": false,
+          "explanation": "O hardware é do provedor."
+        },
+        {
+          "text": "O sistema operacional do host",
+          "correct": false,
+          "explanation": "O SO do host é gerenciado pelo provedor em PaaS."
+        },
+        {
+          "text": "O código e os dados da aplicação",
+          "correct": true,
+          "explanation": "Mesmo em PaaS, aplicação e dados são do cliente."
+        }
+      ]
+    },
+    {
+      "id": "paas-4",
+      "stageTopic": "PaaS",
+      "kind": "transfer",
+      "problem": "Qual é uma desvantagem típica de PaaS em relação a IaaS?",
+      "options": [
+        {
+          "text": "Menos controle sobre o ambiente subjacente",
+          "correct": true,
+          "explanation": "A plataforma gerenciada limita o controle fino do ambiente."
+        },
+        {
+          "text": "Exige gerenciar patches do SO",
+          "correct": false,
+          "explanation": "Em PaaS o provedor gerencia os patches do SO."
+        },
+        {
+          "text": "Exige comprar servidores",
+          "correct": false,
+          "explanation": "PaaS não exige compra de servidores."
+        }
+      ]
+    },
+    {
+      "id": "saas-1",
+      "stageTopic": "SaaS",
+      "kind": "mandatory",
+      "problem": "Qual modelo entrega um aplicativo pronto, acessado pelo navegador, sem que o cliente gerencie infraestrutura?",
+      "options": [
+        {
+          "text": "PaaS",
+          "correct": false,
+          "explanation": "Em PaaS o cliente ainda traz o próprio código."
+        },
+        {
+          "text": "SaaS",
+          "correct": true,
+          "explanation": "Em SaaS o provedor gerencia aplicação e infraestrutura."
+        },
+        {
+          "text": "IaaS",
+          "correct": false,
+          "explanation": "Em IaaS o cliente instala e gerencia o que roda."
+        }
+      ]
+    },
+    {
+      "id": "saas-2",
+      "stageTopic": "SaaS",
+      "kind": "mandatory",
+      "problem": "Qual é um exemplo típico de SaaS?",
+      "options": [
+        {
+          "text": "Uma máquina virtual com Linux",
+          "correct": false,
+          "explanation": "Uma VM é IaaS."
+        },
+        {
+          "text": "Um banco de dados criado do zero em servidor próprio",
+          "correct": false,
+          "explanation": "Servidor próprio é on-premises."
+        },
+        {
+          "text": "Um serviço de e-mail corporativo hospedado",
+          "correct": true,
+          "explanation": "E-mail hospedado é um aplicativo pronto entregue como serviço."
+        }
+      ]
+    },
+    {
+      "id": "saas-3",
+      "stageTopic": "SaaS",
+      "kind": "transfer",
+      "problem": "Em SaaS, qual responsabilidade permanece com o cliente?",
+      "options": [
+        {
+          "text": "Seus dados e o controle de acesso dos usuários",
+          "correct": true,
+          "explanation": "Mesmo em SaaS, dados e identidades/acessos são do cliente."
+        },
+        {
+          "text": "Atualizar o código do aplicativo",
+          "correct": false,
+          "explanation": "O provedor atualiza o aplicativo."
+        },
+        {
+          "text": "Manter o hardware",
+          "correct": false,
+          "explanation": "O hardware é do provedor."
+        }
+      ]
+    },
+    {
+      "id": "saas-4",
+      "stageTopic": "SaaS",
+      "kind": "transfer",
+      "problem": "Uma empresa pequena não tem equipe de TI e precisa de um sistema de gestão pronto. Qual modelo se encaixa?",
+      "options": [
+        {
+          "text": "Construir tudo localmente",
+          "correct": false,
+          "explanation": "Construir localmente exige ainda mais equipe."
+        },
+        {
+          "text": "SaaS",
+          "correct": true,
+          "explanation": "SaaS dispensa operar infraestrutura e plataforma."
+        },
+        {
+          "text": "IaaS",
+          "correct": false,
+          "explanation": "IaaS exige equipe para operar SO e aplicação."
+        }
+      ]
+    },
+    {
+      "id": "shared-1",
+      "stageTopic": "Responsabilidade compartilhada",
+      "kind": "mandatory",
+      "problem": "No modelo de responsabilidade compartilhada, quem é sempre responsável pelos dados do cliente?",
+      "options": [
+        {
+          "text": "O provedor",
+          "correct": false,
+          "explanation": "O provedor protege a infraestrutura, não decide sobre seus dados."
+        },
+        {
+          "text": "O fabricante do navegador",
+          "correct": false,
+          "explanation": "Não faz parte do modelo."
+        },
+        {
+          "text": "O cliente",
+          "correct": true,
+          "explanation": "Dados, identidades e dispositivos são sempre do cliente."
+        }
+      ]
+    },
+    {
+      "id": "shared-2",
+      "stageTopic": "Responsabilidade compartilhada",
+      "kind": "mandatory",
+      "problem": "Quem é responsável pela segurança física dos data centers na nuvem pública?",
+      "options": [
+        {
+          "text": "O provedor da nuvem",
+          "correct": true,
+          "explanation": "A segurança física é sempre do provedor em qualquer modelo de nuvem."
+        },
+        {
+          "text": "O cliente",
+          "correct": false,
+          "explanation": "O cliente não tem acesso físico aos data centers do provedor."
+        },
+        {
+          "text": "O governo local",
+          "correct": false,
+          "explanation": "Não é a divisão do modelo de responsabilidade compartilhada."
+        }
+      ]
+    },
+    {
+      "id": "shared-3",
+      "stageTopic": "Responsabilidade compartilhada",
+      "kind": "transfer",
+      "problem": "À medida que se passa de IaaS para PaaS e SaaS, o que acontece com as responsabilidades do cliente?",
+      "options": [
+        {
+          "text": "Ficam idênticas",
+          "correct": false,
+          "explanation": "Elas variam conforme o modelo."
+        },
+        {
+          "text": "Diminuem, pois o provedor assume mais camadas",
+          "correct": true,
+          "explanation": "Quanto mais gerenciado o serviço, mais camadas o provedor assume."
+        },
+        {
+          "text": "Aumentam em todas as camadas",
+          "correct": false,
+          "explanation": "Ocorre o oposto."
+        }
+      ]
+    },
+    {
+      "id": "shared-4",
+      "stageTopic": "Responsabilidade compartilhada",
+      "kind": "transfer",
+      "problem": "Qual responsabilidade é do cliente em todos os modelos (IaaS, PaaS, SaaS)?",
+      "options": [
+        {
+          "text": "Manter o hipervisor",
+          "correct": false,
+          "explanation": "O hipervisor é do provedor."
+        },
+        {
+          "text": "Instalar a rede física",
+          "correct": false,
+          "explanation": "Rede física é do provedor."
+        },
+        {
+          "text": "Gerenciar contas e acessos de seus usuários",
+          "correct": true,
+          "explanation": "Identidade e acesso é do cliente em todos os modelos."
+        }
+      ]
+    },
+    {
+      "id": "consume-1",
+      "stageTopic": "Consumo",
+      "kind": "mandatory",
+      "problem": "Como funciona a cobrança no modelo baseado em consumo?",
+      "options": [
+        {
+          "text": "Paga-se pelo que se usa",
+          "correct": true,
+          "explanation": "Cobra-se por uso medido, sem custo antecipado de hardware."
+        },
+        {
+          "text": "Paga-se um valor fixo independentemente do uso",
+          "correct": false,
+          "explanation": "Isso é preço fixo, não consumo."
+        },
+        {
+          "text": "Paga-se só na compra do hardware",
+          "correct": false,
+          "explanation": "Isso é o modelo de capital (CapEx)."
+        }
+      ]
+    },
+    {
+      "id": "consume-2",
+      "stageTopic": "Consumo",
+      "kind": "mandatory",
+      "problem": "Qual tipo de gasto está associado ao modelo de consumo da nuvem?",
+      "options": [
+        {
+          "text": "Nenhum custo",
+          "correct": false,
+          "explanation": "A nuvem tem custos, medidos pelo uso."
+        },
+        {
+          "text": "Despesa operacional (OpEx)",
+          "correct": true,
+          "explanation": "No consumo o custo é recorrente e variável, tratado como OpEx."
+        },
+        {
+          "text": "Despesa de capital (CapEx)",
+          "correct": false,
+          "explanation": "CapEx envolve compras antecipadas de ativos."
+        }
+      ]
+    },
+    {
+      "id": "consume-3",
+      "stageTopic": "Consumo",
+      "kind": "transfer",
+      "problem": "Uma VM de teste ficou ligada o mês todo sem uso. Qual boa prática evitaria o gasto?",
+      "options": [
+        {
+          "text": "Aumentar o tamanho da VM",
+          "correct": false,
+          "explanation": "Isso aumentaria o custo."
+        },
+        {
+          "text": "Criar mais VMs de teste",
+          "correct": false,
+          "explanation": "Isso multiplicaria o custo."
+        },
+        {
+          "text": "Desligar ou desalocar recursos ociosos",
+          "correct": true,
+          "explanation": "No consumo, recursos ociosos ligados continuam gerando custo."
+        }
+      ]
+    },
+    {
+      "id": "consume-4",
+      "stageTopic": "Consumo",
+      "kind": "transfer",
+      "problem": "Qual ferramenta ajuda a estimar o custo de uma solução antes de implantá-la?",
+      "options": [
+        {
+          "text": "Uma calculadora de preços",
+          "correct": true,
+          "explanation": "Calculadoras de preços estimam custos de um desenho antes da implantação."
+        },
+        {
+          "text": "Um balanceador de carga",
+          "correct": false,
+          "explanation": "Balanceador distribui tráfego, não estima custos."
+        },
+        {
+          "text": "Uma regra de firewall",
+          "correct": false,
+          "explanation": "Firewall filtra tráfego, não estima custos."
+        }
+      ]
+    },
+    {
+      "id": "vscale-1",
+      "stageTopic": "Escala vertical",
+      "kind": "mandatory",
+      "problem": "O que é escala vertical?",
+      "options": [
+        {
+          "text": "Reduzir o número de usuários",
+          "correct": false,
+          "explanation": "Não é escala."
+        },
+        {
+          "text": "Aumentar CPU ou memória de um recurso existente",
+          "correct": true,
+          "explanation": "Escalar para cima significa dar mais capacidade à mesma instância."
+        },
+        {
+          "text": "Adicionar mais instâncias em paralelo",
+          "correct": false,
+          "explanation": "Isso é escala horizontal."
+        }
+      ]
+    },
+    {
+      "id": "vscale-2",
+      "stageTopic": "Escala vertical",
+      "kind": "mandatory",
+      "problem": "Qual é um limite típico da escala vertical?",
+      "options": [
+        {
+          "text": "Exige reescrever todo o código",
+          "correct": false,
+          "explanation": "Em geral dispensa mudar a arquitetura."
+        },
+        {
+          "text": "Só funciona em data center local",
+          "correct": false,
+          "explanation": "Funciona em nuvem também."
+        },
+        {
+          "text": "Há um tamanho máximo de máquina",
+          "correct": true,
+          "explanation": "A instância tem teto de CPU e memória."
+        }
+      ]
+    },
+    {
+      "id": "vscale-3",
+      "stageTopic": "Escala vertical",
+      "kind": "transfer",
+      "problem": "Um banco de dados em uma única VM está lento por falta de memória. Qual ação é escala vertical?",
+      "options": [
+        {
+          "text": "Mudar para uma VM com mais memória",
+          "correct": true,
+          "explanation": "Trocar para um tamanho maior é escalar para cima."
+        },
+        {
+          "text": "Criar uma segunda VM idêntica atrás de um balanceador",
+          "correct": false,
+          "explanation": "Isso é escala horizontal."
+        },
+        {
+          "text": "Apagar dados antigos sem avaliar",
+          "correct": false,
+          "explanation": "Não é escala."
+        }
+      ]
+    },
+    {
+      "id": "vscale-4",
+      "stageTopic": "Escala vertical",
+      "kind": "transfer",
+      "problem": "Qual efeito costuma acompanhar a escala vertical de uma VM?",
+      "options": [
+        {
+          "text": "Reduz o custo sempre",
+          "correct": false,
+          "explanation": "Máquinas maiores geralmente custam mais."
+        },
+        {
+          "text": "Pode exigir reinício e ter um ponto único de falha",
+          "correct": true,
+          "explanation": "A instância maior segue sendo uma só, com possível reinício."
+        },
+        {
+          "text": "Elimina qualquer ponto único de falha",
+          "correct": false,
+          "explanation": "Continua sendo uma única instância."
+        }
+      ]
+    },
+    {
+      "id": "vscale-5",
+      "stageTopic": "Escala vertical",
+      "kind": "transfer",
+      "problem": "Quando a escala vertical é a escolha mais simples?",
+      "options": [
+        {
+          "text": "Quando se precisa de capacidade ilimitada",
+          "correct": false,
+          "explanation": "O teto da instância impede isso."
+        },
+        {
+          "text": "Quando já existem dezenas de réplicas",
+          "correct": false,
+          "explanation": "Isso já é escala horizontal."
+        },
+        {
+          "text": "Quando a aplicação não foi feita para rodar em várias instâncias",
+          "correct": true,
+          "explanation": "Aplicações com estado local não se distribuem facilmente."
+        }
+      ]
+    },
+    {
+      "id": "hscale-1",
+      "stageTopic": "Escala horizontal",
+      "kind": "mandatory",
+      "problem": "O que é escala horizontal?",
+      "options": [
+        {
+          "text": "Adicionar mais instâncias para dividir a carga",
+          "correct": true,
+          "explanation": "Escalar para fora distribui a carga em várias instâncias."
+        },
+        {
+          "text": "Aumentar a memória de uma instância",
+          "correct": false,
+          "explanation": "Isso é escala vertical."
+        },
+        {
+          "text": "Trocar de região",
+          "correct": false,
+          "explanation": "Não é escala."
+        }
+      ]
+    },
+    {
+      "id": "hscale-2",
+      "stageTopic": "Escala horizontal",
+      "kind": "mandatory",
+      "problem": "Qual componente costuma distribuir o tráfego entre as instâncias na escala horizontal?",
+      "options": [
+        {
+          "text": "Um certificado digital",
+          "correct": false,
+          "explanation": "Ele autentica, não distribui tráfego."
+        },
+        {
+          "text": "Um balanceador de carga",
+          "correct": true,
+          "explanation": "O balanceador reparte as requisições entre as instâncias."
+        },
+        {
+          "text": "Uma calculadora de preços",
+          "correct": false,
+          "explanation": "Ela estima custos."
+        }
+      ]
+    },
+    {
+      "id": "hscale-3",
+      "stageTopic": "Escala horizontal",
+      "kind": "transfer",
+      "problem": "Qual benefício a escala horizontal traz além de capacidade?",
+      "options": [
+        {
+          "text": "Menos instâncias para gerenciar",
+          "correct": false,
+          "explanation": "Há mais instâncias, não menos."
+        },
+        {
+          "text": "Dispensa qualquer balanceamento",
+          "correct": false,
+          "explanation": "Normalmente exige distribuir o tráfego."
+        },
+        {
+          "text": "Maior disponibilidade, pois a falha de uma instância não derruba tudo",
+          "correct": true,
+          "explanation": "Várias instâncias reduzem o ponto único de falha."
+        }
+      ]
+    },
+    {
+      "id": "hscale-4",
+      "stageTopic": "Escala horizontal",
+      "kind": "transfer",
+      "problem": "Que característica da aplicação facilita a escala horizontal?",
+      "options": [
+        {
+          "text": "Ser sem estado local (stateless)",
+          "correct": true,
+          "explanation": "Sem estado local, qualquer instância atende qualquer requisição."
+        },
+        {
+          "text": "Guardar sessão no disco de uma única VM",
+          "correct": false,
+          "explanation": "Isso prende o usuário a uma instância."
+        },
+        {
+          "text": "Depender de um único servidor",
+          "correct": false,
+          "explanation": "Impede distribuir a carga."
+        }
+      ]
+    },
+    {
+      "id": "hscale-5",
+      "stageTopic": "Escala horizontal",
+      "kind": "transfer",
+      "problem": "Uma API recebe cada vez mais requisições e uma só VM já está no limite de tamanho. Qual caminho adequado?",
+      "options": [
+        {
+          "text": "Pedir aos usuários que acessem menos",
+          "correct": false,
+          "explanation": "Não é solução de arquitetura."
+        },
+        {
+          "text": "Adicionar mais instâncias atrás de um balanceador",
+          "correct": true,
+          "explanation": "Quando o teto vertical foi atingido, escala-se horizontalmente."
+        },
+        {
+          "text": "Escalar verticalmente indefinidamente",
+          "correct": false,
+          "explanation": "Há um limite máximo de tamanho."
+        }
+      ]
+    },
+    {
+      "id": "elastic-1",
+      "stageTopic": "Elasticidade",
+      "kind": "mandatory",
+      "problem": "O que é elasticidade na nuvem?",
+      "options": [
+        {
+          "text": "Comprar capacidade para o pior caso",
+          "correct": false,
+          "explanation": "Isso gera ociosidade."
+        },
+        {
+          "text": "Manter capacidade sempre fixa",
+          "correct": false,
+          "explanation": "É o oposto de elástico."
+        },
+        {
+          "text": "Ajustar a capacidade automaticamente conforme a demanda",
+          "correct": true,
+          "explanation": "A elasticidade aumenta e reduz recursos de acordo com a carga."
+        }
+      ]
+    },
+    {
+      "id": "elastic-2",
+      "stageTopic": "Elasticidade",
+      "kind": "mandatory",
+      "problem": "Qual é a diferença entre escalabilidade e elasticidade?",
+      "options": [
+        {
+          "text": "Elasticidade ajusta para mais e para menos, de forma automática",
+          "correct": true,
+          "explanation": "Elasticidade acompanha a demanda nos dois sentidos."
+        },
+        {
+          "text": "São sinônimos exatos",
+          "correct": false,
+          "explanation": "Escalabilidade é a capacidade de crescer; elasticidade é crescer e encolher com a demanda."
+        },
+        {
+          "text": "Elasticidade só reduz recursos",
+          "correct": false,
+          "explanation": "Ela também aumenta."
+        }
+      ]
+    },
+    {
+      "id": "elastic-3",
+      "stageTopic": "Elasticidade",
+      "kind": "transfer",
+      "problem": "O tráfego de um site cai de madrugada. Como a elasticidade ajuda no custo?",
+      "options": [
+        {
+          "text": "Impede qualquer cobrança",
+          "correct": false,
+          "explanation": "Ainda há cobrança pelo que está em uso."
+        },
+        {
+          "text": "Reduz instâncias quando a carga cai",
+          "correct": true,
+          "explanation": "Menos instâncias ativas significam menos consumo cobrado."
+        },
+        {
+          "text": "Mantém o máximo de instâncias o dia todo",
+          "correct": false,
+          "explanation": "Isso desperdiça recursos."
+        }
+      ]
+    },
+    {
+      "id": "elastic-4",
+      "stageTopic": "Elasticidade",
+      "kind": "transfer",
+      "problem": "Qual recurso aplica regras para aumentar ou diminuir instâncias com base em métricas como CPU?",
+      "options": [
+        {
+          "text": "Backup manual",
+          "correct": false,
+          "explanation": "Backup copia dados, não ajusta capacidade."
+        },
+        {
+          "text": "Um domínio DNS",
+          "correct": false,
+          "explanation": "DNS resolve nomes."
+        },
+        {
+          "text": "Escala automática (autoscaling)",
+          "correct": true,
+          "explanation": "O autoscaling usa métricas e regras para ajustar a quantidade de instâncias."
+        }
+      ]
+    },
+    {
+      "id": "elastic-5",
+      "stageTopic": "Elasticidade",
+      "kind": "transfer",
+      "problem": "Uma promoção relâmpago causa picos imprevisíveis. Qual abordagem protege a experiência e o custo?",
+      "options": [
+        {
+          "text": "Escala automática com limites mínimo e máximo",
+          "correct": true,
+          "explanation": "Escala automática acompanha o pico e os limites controlam o custo."
+        },
+        {
+          "text": "Capacidade fixa dimensionada para o pico o ano inteiro",
+          "correct": false,
+          "explanation": "Gera ociosidade e custo."
+        },
+        {
+          "text": "Capacidade fixa dimensionada para o dia comum",
+          "correct": false,
+          "explanation": "Falha no pico."
+        }
+      ]
+    }
+  ]
+}
