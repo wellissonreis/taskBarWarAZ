@@ -5,6 +5,8 @@
   <ItemGroup>
     <EmbeddedResource Include="Assets/atlas.png" LogicalName="SideWar.Rendering.Assets.atlas.png" />
     <EmbeddedResource Include="Assets/atlas.json" LogicalName="SideWar.Rendering.Assets.atlas.json" />
+    <EmbeddedResource Include="Fonts/*.ttf" LogicalName="SideWar.Rendering.Fonts.%(Filename)%(Extension)" />
+    <None Include="Fonts/LICENSE-*.txt" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../SideWar.Core/SideWar.Core.csproj" />

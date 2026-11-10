@@ -134,7 +134,7 @@ T3.4 a T3.8 compartilham contratos de `SimState`: **não paralelizar entre si** 
 | T4.2 ✅ | `AssetPipeline` (atlas, manifesto) com hash estável | SDD-09 | Sonnet | WSL | CA-09.1, CA-09.2 |
 | T4.3 ✅ | `ScaledSpriteCache.Bake` e `PlaceholderAtlas` (+ T4.3b: atlas embutido com fallback de placeholder) | SDD-09 | Sonnet | WSL | CA-09.3, CA-09.4 |
 | T4.4 ✅ | `Palette` (tokens), sombra dura e contraste | SDD-20 RF-20.1, RF-20.8 | Sonnet | WSL | CA-20.1, CA-20.3, CA-20.7 |
-| T4.5 | Fontes (`Edging = Alias`, tamanho físico inteiro) e ícones vetoriais | SDD-20 | Sonnet | WSL | CA-20.2, CA-20.4, CA-20.5 |
+| T4.5 ✅ | Fontes (`Edging = Alias`, tamanho físico inteiro) e ícones vetoriais | SDD-20 | Sonnet | WSL | CA-20.2, CA-20.4, CA-20.5 |
 | T4.6 | `SceneGeometry` e camadas de cena (núcleo, torres por slot, portal, inimigos, números de dano) | SDD-22 RF-22.4, RF-22.5 | Sonnet | WSL | CA-22.2 |
 | T4.7 ✅ | Animações (`adMarch`, `adBlink`, `adPulse`, `adBob`) e `reducedMotion` | SDD-20, RF-22.10 | Sonnet | WSL | CA-20.6, CA-22.8 |
 | T4.8 | Golden images `strip-present`, `strip-away`, `strip-peak`, `strip-boss`, `strip-fallback`, `strip-empty-slots` a 100% e 150% | SDD-22 CA-22.7, SDD-17 RF-17.3 | Sonnet | WSL | CA-22.7, CA-08.3 |
