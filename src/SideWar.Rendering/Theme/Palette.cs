@@ -166,6 +166,21 @@ public static class Palette
     /// <summary>Token <c>sombra-texto</c> (#000000).</summary>
     public static readonly SKColor SombraTexto = new(0x00, 0x00, 0x00);
 
+    /// <summary>Cores do <c>PlaceholderAtlas</c> (T4.3): provisorias ate o atlas embutido definitivo; fora dos tokens de SDD-20.</summary>
+    public static class Placeholder
+    {
+        public static readonly SKColor TowerBolt = new(0x53, 0xd9, 0xf2);
+        public static readonly SKColor TowerFrost = new(0x9d, 0xea, 0xff);
+        public static readonly SKColor TowerCannon = new(0xff, 0xb3, 0x6d);
+        public static readonly SKColor TowerScaleSet = new(0xb4, 0x8c, 0xff);
+        public static readonly SKColor SlotEmpty = new(0x3a, 0x43, 0x58);
+        public static readonly SKColor Core = new(0x6a, 0x76, 0x90);
+        public static readonly SKColor Portal = new(0x8a, 0x5c, 0xff);
+        public static readonly SKColor SupplyCrate = new(0xd9, 0xa4, 0x41);
+        public static readonly SKColor Enemy = new(0xc0, 0x4a, 0x56);
+        public static readonly SKColor Edge = new(0x10, 0x14, 0x20);
+    }
+
     /// <summary>Hover: canal x 1,08, arredondado, teto 255 (RF-20.1).</summary>
     public static SKColor Hover(SKColor c) =>
         new(Scale(c.Red), Scale(c.Green), Scale(c.Blue), c.Alpha);
