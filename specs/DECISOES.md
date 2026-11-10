@@ -234,6 +234,13 @@ Para alterar uma decisão aceita, é preciso registrar uma nova ADR com justific
 - **Resolve:** DP-22.10, DP-23.2, DP-23.6 e DP-26.5; fixa a condição do poll de DP-21.1.
 - **Refina:** ADR-023 (poll condicionado) e ADR-030.
 
+### ADR-033: `IOverlaySurface` em Runtime sem SkiaSharp (quadro BGRA bruto)
+
+- **Status:** decidido pelo Tech Lead (ficha T1.6), revisável pelo usuário.
+- **Motivo:** SDD-01 RF-01.6 declarava `SKCanvas BeginFrame()` em `SideWar.Runtime`, o que contradiz RF-01.7 e o `ArchitectureTests` (Runtime não referencia SkiaSharp) e o grafo de projetos (Platform.Windows só referencia Runtime).
+- **Decisão:** `IOverlaySurface` fica em `SideWar.Runtime` sem Skia: `PixelSize Size`, `float Scale`, `OverlayFrame BeginFrame()`, `void EndFrame(PixelRect? dirty)`, `void SetOpacity(byte constantAlpha)`. `OverlayFrame` é `readonly struct` com `nint Pixels`, `int Width`, `int Height`, `int RowBytes`, formato fixo BGRA8888 com alfa pré-multiplicado, válido só entre `BeginFrame` e `EndFrame`. `LayeredSurface` (Platform.Windows, RF-08.1) devolve os bits do DIB. O Skia fica em `SideWar.Rendering`: um adaptador (`SkiaFrameCanvas`) cria e cacheia `SKSurface.Create(SKImageInfo(w, h, Bgra8888, Premul), Pixels, RowBytes)` por buffer, sem alocar em regime.
+- **Alternativas descartadas:** `IOverlaySurface` só em Platform.Windows (Runtime perde a porta); SkiaSharp em Runtime (altera ArchitectureTests e a regra de camadas).
+
 ---
 
 ## Decisões pendentes (dependem do usuário)

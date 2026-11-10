@@ -7,6 +7,7 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/SideWar.Platform.Windows/SideWar.Platform.Windows.csproj" />
+    <ProjectReference Include="../../src/SideWar.Rendering/SideWar.Rendering.csproj" />
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />

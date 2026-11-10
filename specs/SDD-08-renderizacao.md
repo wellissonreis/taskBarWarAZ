@@ -33,14 +33,14 @@ Desenhar a cena (faixa de 96 DIP, SDD-22), o widget HUD (SDD-23) e as janelas la
   - `CreateCompatibleDC(null)`;
   - `CreateDIBSection` (32 bpp, `BI_RGB`, altura **negativa** para top-down);
   - `SelectObject`;
-  - cria a `SKSurface` sobre `ppvBits` com `rowBytes = width*4`.
-- `BeginFrame()` devolve o `SKCanvas`. O conteúdo anterior **é mantido** (para atualização parcial, RF-08.7).
+  - guarda `ppvBits` e `rowBytes = width*4` (a `SKSurface` fica no adaptador `SkiaFrameCanvas` de Rendering, ADR-033).
+- `BeginFrame()` devolve o `OverlayFrame` (ponteiro, largura, altura e `RowBytes` do DIB; BGRA8888 pré-multiplicado; o `SkiaFrameCanvas` o envolve num `SKCanvas`, ADR-033). O conteúdo anterior **é mantido** (para atualização parcial, RF-08.7).
 - `EndFrame(PixelRect? dirty)`:
-  - `canvas.Flush()`, `GdiFlush()`;
+  - `GdiFlush()` (o `SkiaFrameCanvas` já terá feito `canvas.Flush()`);
   - `UpdateLayeredWindowIndirect` com `UPDATELAYEREDWINDOWINFO { cbSize, hdcDst=null, pptDst=posição, psize, hdcSrc=memDC, pptSrc=(0,0), crKey=0, pblend={AC_SRC_OVER,0,constAlpha,AC_SRC_ALPHA}, dwFlags=ULW_ALPHA, prcDirty=dirty? }`;
   - se a chamada falhar com `prcDirty`, repetir sem `prcDirty` e registrar no log uma vez.
 - `SetOpacity(byte)`: o mesmo Update, sem redesenho e sem `prcDirty`.
-- `Release()` (chamado por `ReleaseCaches`, SDD-07): libera `SKSurface`, DIB e DC. O próximo `BeginFrame` recria.
+- `Release()` (chamado por `ReleaseCaches`, SDD-07): libera DIB e DC (o adaptador descarta a `SKSurface` ao ver outro buffer). O próximo `BeginFrame` recria.
 - **Uma superfície por janela.** A mesma classe serve à cena, ao widget HUD, ao selo de ausente, aos banners, às caixas, ao painel e aos cards, cada um com a sua instância (DIB, DC e `SKSurface` próprios, tamanho da própria janela) e o seu `SourceConstantAlpha`. Superfícies de janelas ocultas são liberadas com `Release()` (RF-08.10). A HandleWindow deixou de existir (ADR-028; o widget HUD a substitui).
 
 ### RF-08.2: Camadas

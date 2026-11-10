@@ -127,6 +127,13 @@ public sealed class GameThreadTests
             host.OnWakeAction = _ => { if (Interlocked.Increment(ref failures) == 1) throw new InvalidOperationException("wake"); };
             game.Post(() => { });
             Assert.Equal(42, await OnGame(game, () => 42).WaitAsync(TimeSpan.FromSeconds(3), TestContext.Current.CancellationToken));
+            // The wake failure is reported on the iteration after the action; poll instead of racing it.
+            var deadline = DateTime.UtcNow.AddSeconds(3);
+            while (DateTime.UtcNow < deadline)
+            {
+                lock (errors) if (errors.Any(e => e.Message == "wake")) break;
+                await Task.Delay(10, TestContext.Current.CancellationToken);
+            }
             lock (errors)
             {
                 Assert.Contains(errors, e => e.Message == "action");

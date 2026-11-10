@@ -131,11 +131,12 @@ acorda (timer | evento | mensagem)
 public interface IClock { long NowTicks { get; } double TicksPerSecond { get; } }        // Stopwatch no Windows; FakeClock nos testes
 public interface IGameCommandSink { void Post(IGameCommand command); }
 public interface IUiBridge { void Publish(UiNotification n); }                           // T-Game → T-UI
-public interface IOverlaySurface {                                                       // implementada por Platform.Windows
+public interface IOverlaySurface {                                                       // implementada por Platform.Windows (ADR-033: sem Skia em Runtime)
     PixelSize Size { get; }  float Scale { get; }
-    SKCanvas BeginFrame();   void EndFrame(PixelRect? dirty);                            // Present
+    OverlayFrame BeginFrame();   void EndFrame(PixelRect? dirty);                        // Present
     void SetOpacity(byte constantAlpha);                                                 // SourceConstantAlpha
 }
+public readonly struct OverlayFrame { nint Pixels; int Width; int Height; int RowBytes; } // BGRA8888 pré-multiplicado, válido entre BeginFrame e EndFrame; o Skia o envolve em Rendering (SkiaFrameCanvas)
 public interface IWindowEnvironment {                                                    // eventos do SO normalizados
     event Action<VisibilitySignal> VisibilitySignal;     // fullscreen, lock, display off, suspend, resume
     event Action<DisplayTopologyChanged> TopologyChanged;
