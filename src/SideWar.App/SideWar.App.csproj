@@ -5,6 +5,7 @@
     <UseWPF>true</UseWPF>
     <OutputType>WinExe</OutputType>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <StartupObject>SideWar.App.Program</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../SideWar.Core/SideWar.Core.csproj" />
