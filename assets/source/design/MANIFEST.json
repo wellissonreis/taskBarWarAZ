@@ -1,0 +1,200 @@
+{
+  "version": 1,
+  "source": "https://claude.ai/artifact/4cgwgCrocRoYpYEcmzeTF5",
+  "exportedAt": "2026-11-10",
+  "entries": [
+    {
+      "id": "7876da3e6e78fb4707a23e01e62f6bfe",
+      "file": "tower-bolt.png",
+      "displayDip": [
+        44,
+        44
+      ],
+      "pixels": [
+        88,
+        88
+      ],
+      "sha256": "61a945b7e37cc12ba24a27e3c1b5885ac95b81e39adf3e2e2c4bcf25d3a2fb73",
+      "role": "Torre Raio"
+    },
+    {
+      "id": "a6621b80f8e0703e2b1589c2f29ffb9f",
+      "file": "tower-frost.png",
+      "displayDip": [
+        39,
+        44
+      ],
+      "pixels": [
+        78,
+        88
+      ],
+      "sha256": "0c2b6ce2f5b1b6b505a32f85e53d5684f828d54362b9593384918c4eaf97f82f",
+      "role": "Torre Gelo"
+    },
+    {
+      "id": "dd161558f3ec662a35934c4b3ef2ba70",
+      "file": "tower-cannon.png",
+      "displayDip": [
+        45,
+        44
+      ],
+      "pixels": [
+        91,
+        88
+      ],
+      "sha256": "b3230345d208d526c6d77dc0a29ad3e50b83e3e072f7acf56c272e84a4e0dd42",
+      "role": "Torre Canhão"
+    },
+    {
+      "id": "268ba6a35d360775ffe7c94341033a1d",
+      "file": "slot-empty.png",
+      "displayDip": [
+        42,
+        26
+      ],
+      "pixels": [
+        85,
+        52
+      ],
+      "sha256": "13bbfe8c7a0b5cfa82c93996db50ff6919438620fc78fae718cf3111b28f5623",
+      "role": "Slot vazio"
+    },
+    {
+      "id": "19329f44a48eaf461324b83ac27582d5",
+      "file": "core.png",
+      "displayDip": [
+        84,
+        56
+      ],
+      "pixels": [
+        168,
+        112
+      ],
+      "sha256": "0c912bc6008171fa9af1a80f5966ce675c6dbd51b57b81f4274b79dd6fb13069",
+      "role": "Núcleo"
+    },
+    {
+      "id": "b825e950b868cc0d3e51f91e73e38462",
+      "file": "portal.png",
+      "displayDip": [
+        68,
+        52
+      ],
+      "pixels": [
+        137,
+        104
+      ],
+      "sha256": "76b2320ad8b1f1c517b190e8b41f0cdd0dc6e3365da5073a29538e2b00045f07",
+      "role": "Portal"
+    },
+    {
+      "id": "5208805dc38aec3f98f1e0af4861a263",
+      "file": "enemy-boss.png",
+      "displayDip": [
+        68,
+        52
+      ],
+      "pixels": [
+        136,
+        104
+      ],
+      "sha256": "26d928efef91c3bfde68b3735eb04217ed2745611becba728e0cf8c8c124dd54",
+      "role": "Chefe"
+    },
+    {
+      "id": "ad2f6943f64c22b20bef7d6f3a7d8fac",
+      "file": "supply-crate.png",
+      "displayDip": [
+        45,
+        24
+      ],
+      "pixels": [
+        90,
+        48
+      ],
+      "sha256": "1ee99bccee771ba25dc69b688c93f93e279f0a68a966634f3f3202fa23e85b9f",
+      "role": "Caixa de suprimentos"
+    },
+    {
+      "id": "2a01dfce08f7cf4828fa9d3f09f82316",
+      "file": "enemy-scout.png",
+      "displayDip": [
+        23,
+        26
+      ],
+      "pixels": [
+        47,
+        52
+      ],
+      "sha256": "422d74ba4b3fe81d9db6bbef9ca4a87b677ab7cefef2c84be790c49bd4506ff7",
+      "role": "Scout (grunt)"
+    },
+    {
+      "id": "77ebb775d3628025a44ef8f79c2ff41e",
+      "file": "enemy-drone.png",
+      "displayDip": [
+        38,
+        22
+      ],
+      "pixels": [
+        77,
+        44
+      ],
+      "sha256": "68f4826ab73b0ed5eb0ebf1ee5d11c8e7011ffee8fd78e95a164e9e6f90519d7",
+      "role": "Drone (runner)"
+    },
+    {
+      "id": "b96d1508c27374dfbbe1f29736f2876d",
+      "file": "enemy-crawler.png",
+      "displayDip": [
+        36,
+        22
+      ],
+      "pixels": [
+        72,
+        44
+      ],
+      "sha256": "fa8167946263f32cfe7508bb2f87192d7bf129537c380d7bee6cf4ff8c354b11",
+      "role": "Crawler (swarm)"
+    },
+    {
+      "id": "dc8cc7e7f1039d49e39b2ccb15bf7b26",
+      "file": "enemy-shield.png",
+      "displayDip": [
+        32,
+        30
+      ],
+      "pixels": [
+        65,
+        60
+      ],
+      "sha256": "c5c063c5ae929f8525ce633308e232ee3a58527b72778fabaf5b95d02939767d",
+      "role": "Shield (armored)"
+    },
+    {
+      "id": "2c41c2be426c5c2fb97dec204b4b3316",
+      "file": "enemy-brute.png",
+      "displayDip": [
+        43,
+        34
+      ],
+      "pixels": [
+        87,
+        68
+      ],
+      "sha256": "0f41db9e7d06afefd61a55416a95d322cb581ff8896ac78ad25faef3ead23c69",
+      "role": "Brute (tank)"
+    },
+    {
+      "id": "tower-scaleset",
+      "file": "tower-scaleset.png",
+      "displayDip": [
+        44,
+        44
+      ],
+      "placeholder": true,
+      "role": "Torre Scale Set",
+      "note": "D-13: sem sprite próprio no design; o card do Arsenal usa o blob do slot vazio (268ba6a35d360775ffe7c94341033a1d) como substituto. Sem PNG: PlaceholderAtlas cobre (SDD-09 RF-09.6)."
+    }
+  ]
+}

@@ -249,7 +249,7 @@ Para alterar uma decisão aceita, é preciso registrar uma nova ADR com justific
 |---|---|---|---|
 | D-01 | ~~Manter o tema educativo Azure?~~ **Resolvido por ADR-024:** perguntas Azure e picos são núcleo | n/a | n/a |
 | D-02 | ~~Bordas laterais?~~ **Obsoleto:** a faixa lateral não se aplica ao novo design (ADR-020) | n/a | n/a |
-| D-03 | Direitos de uso dos assets e fontes. **Atualizado:** os assets são exportados do artefato de design (SDD-22 RF-22.9) e os TTF de Silkscreen e JetBrains Mono são fornecidos pelo usuário (ADR-025) | Aceitar a exportação do artefato e as fontes OFL fornecidas | SDD-09 (importação) e SDD-20 |
+| D-03 | Direitos de uso dos assets e fontes. **Atualizado:** os assets são exportados do artefato de design (SDD-22 RF-22.9) e os TTF de Silkscreen e JetBrains Mono são fornecidos pelo usuário (ADR-025) | Aceitar a exportação do artefato e as fontes OFL fornecidas. **Resolvida em 2026-11-10:** o usuário detém todos os direitos sobre os assets do design e sobre as fontes; referência: artefato de design `https://claude.ai/artifact/4cgwgCrocRoYpYEcmzeTF5` | ~~SDD-09 (importação) e SDD-20~~ (não bloqueia mais) |
 | D-04 | Canal de distribuição e certificado de assinatura | MVP em ZIP portátil self-contained; v1 em MSIX assinado, se houver certificado; senão, instalador Velopack ou Inno Setup | SDD-18 (após E7) |
 | D-05 | Máquina de referência para as metas de desempenho | O usuário informa CPU, GPU, RAM, build do Windows 11, monitores e DPI | Aprovação das metas medidas (SDD-16) |
 | D-06 | Áudio no desktop | Pós-MVP, desligado por padrão, com buffers PCM sintetizados | Seção de áudio de SDD-15 |

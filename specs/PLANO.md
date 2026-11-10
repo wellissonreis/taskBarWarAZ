@@ -130,7 +130,7 @@ T3.4 a T3.8 compartilham contratos de `SimState`: **não paralelizar entre si** 
 
 | Tarefa | Descrição (um commit) | Ficha/RF | Modelo | Amb. | Critérios |
 |---|---|---|---|---|---|
-| T4.1 | Exportação dos 13 PNG do design para `assets/source/design/` com `MANIFEST.json` (Scale Set placeholder, D-13) | SDD-22 RF-22.9 | Haiku | WSL | CA-22.10, CA-09.6 |
+| T4.1 ✅ | Exportação dos 13 PNG do design para `assets/source/design/` com `MANIFEST.json` (Scale Set placeholder, D-13) | SDD-22 RF-22.9 | Haiku | WSL | CA-22.10, CA-09.6 |
 | T4.2 ✅ | `AssetPipeline` (atlas, manifesto) com hash estável | SDD-09 | Sonnet | WSL | CA-09.1, CA-09.2 |
 | T4.3 ✅ | `ScaledSpriteCache.Bake` e `PlaceholderAtlas` | SDD-09 | Sonnet | WSL | CA-09.3, CA-09.4 |
 | T4.4 ✅ | `Palette` (tokens), sombra dura e contraste | SDD-20 RF-20.1, RF-20.8 | Sonnet | WSL | CA-20.1, CA-20.3, CA-20.7 |

@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "masterScale": 3.25,
+  "width": 1000,
+  "height": 162,
+  "inputsHash": "aa91cbe64548e25250ef582e320d4fd785543c8606bb405d9c2b71db1e635a50",
+  "pixelsHash": "7dd449aa1db52ca0505f12085c956d49f0a79c53264b516ad9e8a23fdb656e29",
+  "sprites": {
+    "core": {
+      "x": 0,
+      "y": 0,
+      "w": 168,
+      "h": 112,
+      "pivotX": 0.5,
+      "pivotY": 1,
+      "worldW": 84,
+      "worldH": 56
+    },
+    "enemy.armored": {
+      "x": 799,
+      "y": 0,
+      "w": 65,
+      "h": 60,
+      "pivotX": 0.5,
+      "pivotY": 1,
+      "worldW": 32,
+      "worldH": 29.5385
+    },
+    "enemy.boss": {
+      "x": 309,
+      "y": 0,
+      "w": 136,
+      "h": 104,
+      "pivotX": 0.5,
+      "pivotY": 1,
+      "worldW": 68,
+      "worldH": 52
+    },
+    "enemy.grunt": {
+      "x": 953,
+      "y": 0,
+      "w": 47,
+      "h": 52,
+      "pivotX": 0.5,
+      "pivotY": 1,
+      "worldW": 23,
+      "worldH": 25.4468
+    },
+    "enemy.runner": {
+      "x": 92,
+      "y": 114,
+      "w": 77,
+      "h": 44,
+      "pivotX": 0.5,
+      "pivotY": 1,
+      "worldW": 38,
+      "worldH": 21.7143
+    },
+    "enemy.swarm": {
+      "x": 171,
+      "y": 114,
+      "w": 72,
+      "h": 44,
+      "pivotX": 0.5,
+      "pivotY": 1,
+      "worldW": 36,
+      "worldH": 22
+    },
+    "enemy.tank": {
+      "x": 710,
+      "y": 0,
+      "w": 87,
+      "h": 68,
+      "pivotX": 0.5,
+      "pivotY": 1,
+      "worldW": 43,
+      "worldH": 33.6092
+    },
+    "portal": {
+      "x": 170,
+      "y": 0,
+      "w": 137,
+      "h": 104,
+      "pivotX": 0.5,
+      "pivotY": 1,
+      "worldW": 68,
+      "worldH": 51.6204
+    },
+    "slot.empty": {
+      "x": 866,
+      "y": 0,
+      "w": 85,
+      "h": 52,
+      "pivotX": 0.5,
+      "pivotY": 1,
+      "worldW": 42,
+      "worldH": 25.6941
+    },
+    "supply.crate": {
+      "x": 0,
+      "y": 114,
+      "w": 90,
+      "h": 48,
+      "pivotX": 0.5,
+      "pivotY": 1,
+      "worldW": 45,
+      "worldH": 24
+    },
+    "tower.bolt": {
+      "x": 540,
+      "y": 0,
+      "w": 88,
+      "h": 88,
+      "pivotX": 0.5,
+      "pivotY": 1,
+      "worldW": 44,
+      "worldH": 44
+    },
+    "tower.cannon": {
+      "x": 447,
+      "y": 0,
+      "w": 91,
+      "h": 88,
+      "pivotX": 0.5,
+      "pivotY": 1,
+      "worldW": 45,
+      "worldH": 43.5165
+    },
+    "tower.frost": {
+      "x": 630,
+      "y": 0,
+      "w": 78,
+      "h": 88,
+      "pivotX": 0.5,
+      "pivotY": 1,
+      "worldW": 39,
+      "worldH": 44
+    }
+  }
+}

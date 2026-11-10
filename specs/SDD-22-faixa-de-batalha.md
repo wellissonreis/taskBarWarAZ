@@ -204,7 +204,7 @@ Janelas pequenas, **separadas** da cena, **sempre clicáveis** (nunca `WS_EX_TRA
   - janela = controle + **margem de 6 DIP em todos os lados** para o anel pulsante (altura 48, largura do controle + 12). Posição: `x = centroDaFaixa − larguraJanela/2`, `y = topoDaFaixa − 6` (a janela se estende 6 DIP acima da faixa, o que é permitido por ser janela separada);
   - **pico:** fundo `#f5b335`, texto `#071323`; conteúdo: ícone SVG 16×16 (seta para cima: `M8 13V3M3 8l5-5 5 5`, traço 2, cor do texto), texto **`PICO DE DEMANDA · ESCALAR ×3`**, e um chip de tempo restante (`padding 2px 6px`, fundo `#071323`, texto `#f5b335`, exemplo `0:24`); Silkscreen **12**, `letter-spacing 1px`, `gap 12`, `padding 0 16px`;
   - **chefe:** fundo `#ff5a7a`, texto `#1a0610`; texto **`CHEFE · RESPONDER PERGUNTA AZURE`**, chip com fundo `#1a0610` e texto `#ff9bb0` (exemplo `0:45`); mesma tipografia; `gap 10`, `padding 0 16px`;
-  - **anel pulsante** (nos dois): contorno de 0 a **6 DIP** para fora, `rgba(245,179,53,.7)` → `rgba(245,179,53,0)`, ciclo de **1,2 s**, `ease-in-out`. O design usa a cor **âmbar** também no banner do chefe (rosa); mantido como está (DP-22.15). Com `reducedMotion`: **sem pulso** (anel estático ausente).
+  - **anel pulsante** (nos dois): contorno de 0 a **6 DIP** para fora, `rgba(245,179,53,.7)` → `rgba(245,179,53,0)`, ciclo de **1,2 s**, `ease-in-out`. O design usa a cor **âmbar** também no banner do chefe (rosa); mantido como está (DP-22.15). Com `reducedMotion`: **anel fixo de 2 DIP** em `rgba(245,179,53,.7)` (SDD-20 RF-20.6, DP-20.4), sem animação.
   - O chip de tempo muda 1×/s.
 - **Caixa de suprimentos** (`HotspotKind.SupplyBox`):
   - controle **52 × 44**, base em `y = 96` (top 52), sem margem; sprite **45 × 24**, centralizado horizontalmente e alinhado à base do controle (`x = left + 3,5`, `y = 72`); **pisca** em opacidade 1 ↔ 0,45 em **1,1 s**, `steps(2)` por trecho (valores discretos 1; 0,725; 0,45; 0,725, trocando a cada 275 ms);
@@ -249,7 +249,7 @@ Janelas pequenas, **separadas** da cena, **sempre clicáveis** (nunca `WS_EX_TRA
 |---|---|---|
 | Presente | **30** (configurável 20/30/60, SDD-15; ADR-031 item 7) | `RenderPolicy` com `simRunning` (SDD-10 RF-10.7) |
 | Ausente | **8** (configurável 4/8; padrão 8) | cena a 0,5; o bob (125 ms por passo) coincide com 8 fps |
-| `reducedMotion` | igual ao estado | **sem bob** e **sem pulso**; números flutuantes sem subida |
+| `reducedMotion` | igual ao estado | **sem bob** e **sem animação do pulso** (anel fixo de 2 DIP, SDD-20); números flutuantes sem subida |
 | Perfil Saver (SDD-07 RF-07.5) | `min(fps do estado, 15)` | animações ambientes desligadas |
 | Oculto (SDD-06/07) | **0** | 0 frames, 0 wakes; hotspots também ocultos |
 

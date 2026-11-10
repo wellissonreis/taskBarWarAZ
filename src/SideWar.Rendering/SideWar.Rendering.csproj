@@ -3,6 +3,10 @@
     <TargetFramework>net10.0</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Assets/atlas.png" LogicalName="SideWar.Rendering.Assets.atlas.png" />
+    <EmbeddedResource Include="Assets/atlas.json" LogicalName="SideWar.Rendering.Assets.atlas.json" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="../SideWar.Core/SideWar.Core.csproj" />
     <ProjectReference Include="../SideWar.Runtime/SideWar.Runtime.csproj" />
     <PackageReference Include="SkiaSharp" />
