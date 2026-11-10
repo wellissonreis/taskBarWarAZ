@@ -1,0 +1,12 @@
+[
+  { "id": 1,  "title": "Cloud sob demanda",                "titleProvisional": false, "waves": 60,  "stageTopic": "Computação em nuvem" },
+  { "id": 2,  "title": "Onde a carga vive",                "titleProvisional": false, "waves": 60,  "stageTopic": "Modelos de implantação" },
+  { "id": 3,  "title": "Controle da máquina",              "titleProvisional": false, "waves": 60,  "stageTopic": "IaaS" },
+  { "id": 4,  "title": "Plataforma gerenciada",            "titleProvisional": false, "waves": 80,  "stageTopic": "PaaS" },
+  { "id": 5,  "title": "Aplicativo pronto",                "titleProvisional": false, "waves": 80,  "stageTopic": "SaaS" },
+  { "id": 6,  "title": "A fronteira da responsabilidade",  "titleProvisional": false, "waves": 80,  "stageTopic": "Responsabilidade compartilhada" },
+  { "id": 7,  "title": "Medir antes de gastar",            "titleProvisional": false, "waves": 80,  "stageTopic": "Consumo" },
+  { "id": 8,  "title": "Crescer para cima",                "titleProvisional": true,  "waves": 100, "stageTopic": "Escala vertical" },
+  { "id": 9,  "title": "Crescer para os lados",            "titleProvisional": true,  "waves": 100, "stageTopic": "Escala horizontal" },
+  { "id": 10, "title": "Elástico de verdade",              "titleProvisional": true,  "waves": 100, "stageTopic": "Elasticidade" }
+]

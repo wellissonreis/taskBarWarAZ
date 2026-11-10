@@ -1,0 +1,5 @@
+[
+  { "id": "brazil-south", "name": "Brazil South", "hpMultiplier": 1.0, "reservesMultiplier": 1.0, "unlock": "always", "unlockReserves": null },
+  { "id": "east-us",      "name": "East US",      "hpMultiplier": 1.4, "reservesMultiplier": 1.5, "unlock": "firstMigration", "unlockReserves": null },
+  { "id": "west-europe",  "name": "West Europe",  "hpMultiplier": 2.0, "reservesMultiplier": 2.2, "unlock": "reserves", "unlockReserves": 30 }
+]

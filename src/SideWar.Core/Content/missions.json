@@ -1,0 +1,11 @@
+{
+  "dailyCount": 4,
+  "missions": [
+    { "id": "answer-boss",    "title": "Responda 3 perguntas de chefe", "target": 3,   "reward": { "kind": "chestRare",      "amount": 1 } },
+    { "id": "scale-spikes",   "title": "Escale 5 picos de demanda",     "target": 5,   "reward": { "kind": "incomeMinutes", "amount": 10 } },
+    { "id": "stay-present",   "title": "Fique presente por 60 min",     "target": 60,  "reward": { "kind": "reserves",      "amount": 2 } },
+    { "id": "collect-crates", "title": "Colete 10 caixas de suprimentos", "target": 10, "reward": { "kind": "xp",            "amount": 500 } },
+    { "id": "defeat-enemies", "title": "Derrote 200 inimigos",          "target": 200, "reward": { "kind": "incomeMinutes", "amount": 5 } },
+    { "id": "upgrade-towers", "title": "Melhore torres 10 vezes",       "target": 10,  "reward": { "kind": "xp",            "amount": 300 } }
+  ]
+}

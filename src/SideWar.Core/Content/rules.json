@@ -1,0 +1,12 @@
+{
+  "maxEnemiesOnField": 44,
+  "slotRangeDip": 48,
+  "splashRadius": 36,
+  "splashFactor": 0.6,
+  "chilledBonus": 1.25,
+  "cannonVsRunner": 0.5,
+  "frostSlowFactor": 0.65,
+  "frostSlowFloor": 0.45,
+  "boltSuperHitEvery": 3,
+  "boltSuperHitMultiplier": 2
+}

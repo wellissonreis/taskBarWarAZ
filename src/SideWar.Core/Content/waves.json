@@ -1,0 +1,13 @@
+{
+  "count": { "base": 6, "perWaves": 3, "cap": 30 },
+  "interval": { "start": 0.85, "slope": -0.5, "floor": 0.28 },
+  "mix": [
+    { "kind": "runner",  "start": 0.08, "slope": 0.9, "cap": 0.30 },
+    { "kind": "tank",    "start": 0.18, "slope": 0.6, "cap": 0.20 },
+    { "kind": "swarm",   "start": 0.30, "slope": 0.8, "cap": 0.30 },
+    { "kind": "armored", "start": 0.45, "slope": 0.5, "cap": 0.15 }
+  ],
+  "bossEvery": 20,
+  "bossRegularFactor": 0.6,
+  "bossRegularMin": 3
+}

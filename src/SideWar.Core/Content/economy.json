@@ -1,0 +1,23 @@
+{
+  "startingCredits": 100,
+  "maxTowerLevel": 999,
+  "buildCostFactor": 1.5,
+  "upgradeCostFactor": 1.2,
+  "upgradeCostGrowth": 1.18,
+  "damageGrowth": 1.12,
+  "hpGrowth": 1.09,
+  "goldGrowth": 1.07,
+  "xpGrowth": 1.04,
+  "stageHpStep": 0.05,
+  "xpPerLevel": 45,
+  "core": { "baseHp": 100, "hpPerLevel": 5 },
+  "fallWaves": 5,
+  "waveRestSeconds": 1.4,
+  "rateWindowSeconds": 10,
+  "reservesBonus": 0.01,
+  "prestige": { "minWave": 15, "divisor": 170 },
+  "chests": {
+    "common": { "incomeMinutes": 5,  "xp": 200, "reserves": 0 },
+    "rare":   { "incomeMinutes": 15, "xp": 0,   "reserves": 1 }
+  }
+}

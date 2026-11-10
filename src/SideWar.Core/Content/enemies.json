@@ -1,0 +1,8 @@
+[
+  { "id": "grunt",   "name": "Fila comum",  "hp": 42,  "gold": 9,   "xp": 5,  "armor": 0,  "coreDamage": 1,  "speed": 45, "sprite": "enemy-scout" },
+  { "id": "runner",  "name": "Rápido",      "hp": 27,  "gold": 10,  "xp": 6,  "armor": 0,  "coreDamage": 1,  "speed": 80, "sprite": "enemy-drone" },
+  { "id": "swarm",   "name": "Fila densa",  "hp": 22,  "gold": 5,   "xp": 3,  "armor": 0,  "coreDamage": 1,  "speed": 48, "sprite": "enemy-crawler" },
+  { "id": "armored", "name": "Blindado",    "hp": 120, "gold": 18,  "xp": 10, "armor": 18, "coreDamage": 2,  "speed": 34, "sprite": "enemy-shield" },
+  { "id": "tank",    "name": "Pesado",      "hp": 120, "gold": 20,  "xp": 12, "armor": 0,  "coreDamage": 2,  "speed": 30, "sprite": "enemy-brute" },
+  { "id": "boss",    "name": "Chefe",       "hp": 620, "gold": 110, "xp": 65, "armor": 0,  "coreDamage": 10, "speed": 25, "sprite": "enemy-boss" }
+]

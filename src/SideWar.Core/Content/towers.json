@@ -1,0 +1,6 @@
+[
+  { "id": "bolt", "name": "Raio", "azureTheme": "Máquina Virtual (Azure VM)", "cost": 45, "rangeSlots": 3, "damage": 18, "interval": 0.7, "unlockStage": null, "damageBonusPerBolt": null, "strong": ["tank", "boss"], "weak": ["swarm"], "description": "Longo alcance e alvo único; a cada 3º acerto causa dano dobrado." },
+  { "id": "frost", "name": "Gelo", "azureTheme": "WAF no Application Gateway", "cost": 65, "rangeSlots": 2, "damage": 6, "interval": 0.9, "unlockStage": null, "damageBonusPerBolt": null, "strong": ["runner"], "weak": ["armored"], "description": "Reduz a velocidade dos inimigos e os deixa vulneráveis (+25% de dano das demais torres)." },
+  { "id": "cannon", "name": "Canhão", "azureTheme": "Azure DDoS Protection", "cost": 90, "rangeSlots": 2, "damage": 60, "interval": 2.1, "unlockStage": null, "damageBonusPerBolt": null, "strong": ["swarm", "grunt", "armored"], "weak": ["runner"], "description": "Dano em área contra grupos; metade do dano contra Rápidos." },
+  { "id": "scaleset", "name": "Scale Set", "azureTheme": "VM Scale Sets", "cost": 400, "rangeSlots": 3, "damage": 14, "interval": 0.7, "unlockStage": 9, "damageBonusPerBolt": 0.15, "strong": ["grunt", "swarm"], "weak": ["armored"], "description": "Cresce com a frota: +15% de dano por torre Raio ativa." }
+]
