@@ -160,7 +160,7 @@ T3.4 a T3.8 compartilham contratos de `SimState`: **não paralelizar entre si** 
 | T5.7 | Atalhos completos e `HotkeyParser` | SDD-15 RF-15.6 | Sonnet | Windows | CA-15.4 |
 | T5.8 | Menus nativos (`TrackPopupMenuEx`) e bandeja completa | SDD-15 RF-15.7, RF-15.8 | Sonnet | Windows | CA-15.5, CA-15.6 |
 | T5.9 | `SettingsWindow` (configurações editáveis, ADR-031) e `AboutWindow`, abertas só por ação do usuário | SDD-15 RF-15.9, SDD-14 RF-14.4 | Sonnet | Windows | ADR-015, CA-14.2 (Settings) |
-| T5.10 | `publish.ps1` mínimo para o ZIP interno | SDD-18 | Haiku | Windows | CA-18.1 (parcial) |
+| T5.10 ✅ | `publish.ps1` mínimo para o ZIP interno | SDD-18 | Haiku | Windows | CA-18.1 (parcial) |
 | T5.11 | Playtest, ajustes só em `content/*.json`, MTC-22/23/24 e `specs/evidencias/E5.md` | SDD-22, 23, 24, 27 | Haiku | Windows | CA-22.3, CA-23.2, CA-24.2 |
 
 **Aprovação:** CA-23.1 a CA-23.11, CA-24.1 a CA-24.16, CA-15.4 a CA-15.6. **Evidência obrigatória:** `specs/evidencias/E5.md` com a partida idle jogada só com o mouse (VS Code em foco o tempo todo, sem mudar o foco), registro dos ajustes de JSON e resultado do playtest (D-10).
