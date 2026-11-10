@@ -70,3 +70,5 @@ BI_COMPRESSION
 DIB_USAGE
 SIZE
 RECT
+FindWindowW
+IsWindowVisible

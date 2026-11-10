@@ -42,6 +42,8 @@ public sealed class ZOrderCoordinator
             SET_WINDOW_POS_FLAGS.SWP_NOACTIVATE | SET_WINDOW_POS_FLAGS.SWP_NOMOVE |
             SET_WINDOW_POS_FLAGS.SWP_NOSIZE | SET_WINDOW_POS_FLAGS.SWP_NOOWNERZORDER))
             throw Win32Error.LastError("SetWindowPos(topmost)");
+        // RF-23.10 order: scene, then widget (panel and cards join here later), so upper ones stay above.
+        owner.Scene.Widget?.Reassert();
         ReassertionCount++;
     }
 }

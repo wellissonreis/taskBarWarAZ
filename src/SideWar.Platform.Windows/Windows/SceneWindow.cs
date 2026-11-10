@@ -60,6 +60,17 @@ public sealed class SceneWindow : IDisposable
 
     public unsafe nint Handle { get { owner.VerifyAccess(); return (nint)handle.Value; } }
     public bool IsVisible { get; private set; }
+
+    /// <summary>The widget window, or null until <see cref="GetOrCreateWidget"/> (created on first use, RNF-03.2).</summary>
+    public WidgetWindow? Widget { get; private set; }
+
+    /// <summary>Creates the widget owned by this scene window (RF-03.9); it is destroyed before the scene.</summary>
+    public WidgetWindow GetOrCreateWidget()
+    {
+        CheckAccess();
+        return Widget ??= new WidgetWindow(owner, this);
+    }
+
     internal Action<uint>? MessageObserver { get; set; }
 
     public void SetBounds(PixelRect bounds)
@@ -77,6 +88,7 @@ public sealed class SceneWindow : IDisposable
         CheckAccess();
         PInvoke.ShowWindow(handle, SHOW_WINDOW_CMD.SW_SHOWNOACTIVATE);
         IsVisible = true;
+        Widget?.OnSceneShown();
         owner.ZOrder.ReassertNow();
     }
 
@@ -85,6 +97,7 @@ public sealed class SceneWindow : IDisposable
         CheckAccess();
         PInvoke.ShowWindow(handle, SHOW_WINDOW_CMD.SW_HIDE);
         IsVisible = false;
+        Widget?.OnSceneHidden();
         owner.ZOrder.Cancel();
     }
 
@@ -101,6 +114,12 @@ public sealed class SceneWindow : IDisposable
     {
         owner.VerifyAccess();
         if (disposed) return;
+        // Owned windows go first (RF-03.7); a failing widget keeps the scene alive rather than dangling it.
+        if (Widget is { } widget)
+        {
+            widget.Dispose();
+            Widget = null;
+        }
         // Preserve the root if native destruction failed: a live HWND must never point at freed state.
         if (!handle.IsNull && !PInvoke.DestroyWindow(handle)) throw Win32Error.LastError("DestroyWindow");
         handle = default;
