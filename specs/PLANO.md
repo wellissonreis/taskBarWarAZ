@@ -93,7 +93,7 @@ Ordem: T1.1, T1.2, T1.3 e T1.7 (paralelas, escopos disjuntos) → T1.4 → T1.5 
 | T2.1 ✅ | `FullscreenClassifier` (puro) com fixtures reais e testes de tabela | SDD-06 | Sonnet | WSL | CA-06.1 |
 | T2.2 ✅ | `FullscreenWatcher` por eventos (`SetWinEventHook`), histerese, `SameMonitor`; oculta faixa, widget e hotspots | SDD-06, RF-23.11 | Sonnet | Windows | CA-06.3, CA-06.4, CA-22.9 |
 | T2.3 ✅ | `AppStateMachine`, `HiddenReason`/`PauseReason` e testes de transições | SDD-07 | Sonnet | WSL | CA-07.1 |
-| T2.4 ✅ | `AtomicFileWriter` + `SettingsStore` (schema versionado, `.bak`, `corrupt\`) | RF-14.2, RF-14.3, RF-14.4, RF-14.9 | Sonnet | WSL | CA-14.2, CA-14.3 (Settings) |
+| T2.4 ✅ | `AtomicFileWriter` + `SettingsStore` (schema versionado, `.bak`, `corrupt\`) | RF-14.2, RF-14.3, RF-14.4, RF-14.9 | Sonnet | WSL | CA-14.2, CA-14.3 (Settings) (+ T2.4b: FakeFileSystem normaliza separadores no Windows) |
 | T2.5 | Instância única, sessão (lock/unlock, suspensão, logoff), perfis de energia e inatividade | SDD-07 | Sonnet | Windows | CA-07.2 a CA-07.5 (parcial) |
 | T2.6 | Encerramento seguro e `crash-*.txt` | SDD-07 | Sonnet | Windows | CA-07.3, CA-07.6 |
 | T2.7 | Checklists `MTC-06`, `MTC-07`, evidência E2 e medição `hidden` | SDD-06, 07, 16 | Haiku | Windows | CA-06.2, CA-07.7 |
