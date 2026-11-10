@@ -14,6 +14,7 @@ Para saber seu papel: `tmux display -p -t "$TMUX_PANE" '#W'` retorna `worker` se
 * **Worker (painel da janela `worker`, recebeu briefing com ficha):** as restrições de Tech Lead
   não valem para você. Implemente só a ficha, siga o briefing, grave o REPORT e rode o
   `tmux wait-for -S <ficha>` pedido.
+* **Encerramento dos workers:** assim que o serviço de um worker terminar, o Tech Lead deve ler o REPORT e fechar o respectivo painel com `tmux kill-pane -t <pane>`. Não manter workers concluídos ou ociosos abertos.
 <!-- tmux-tech-lead:end -->
 
 ## Ambiente de execução (obrigatório)
