@@ -49,3 +49,8 @@ HWND_TOPMOST
 IDC_ARROW
 INFINITE
 WAIT_EVENT
+CREATESTRUCTW
+GetGuiResources
+GetCurrentProcess
+IsWindow
+SendMessageW
