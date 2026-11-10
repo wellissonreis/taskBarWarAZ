@@ -88,6 +88,7 @@ public sealed class SceneWindow : IDisposable
     public void Show()
     {
         CheckAccess();
+        owner.Dock?.OnSceneShown(); // recompute layoutDirty before appearing (RF-05.6)
         PInvoke.ShowWindow(handle, SHOW_WINDOW_CMD.SW_SHOWNOACTIVATE);
         IsVisible = true;
         Widget?.OnSceneShown();
@@ -149,6 +150,7 @@ public sealed class SceneWindow : IDisposable
             var pointer = WindowLong.Get(hwnd, WINDOW_LONG_PTR_INDEX.GWLP_USERDATA);
             if (pointer != 0) window = (SceneWindow?)GCHandle.FromIntPtr(pointer).Target;
             window?.MessageObserver?.Invoke(message);
+            window?.owner.Dock?.OnSystemMessage(message, wParam.Value, lParam.Value); // SDD-05 RF-05.6
             switch (message)
             {
                 case PInvoke.WM_MOUSEACTIVATE: return new LRESULT((nint)PInvoke.MA_NOACTIVATE);

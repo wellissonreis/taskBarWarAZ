@@ -73,7 +73,7 @@ Ordem: T1.1, T1.2, T1.3 e T1.7 (paralelas, escopos disjuntos) → T1.4 → T1.5 
 | T1.7 ✅ | `TaskbarClassifier` e `SlotMap` puros (fixtures `centro`, `esquerda`, `com-widgets`, `muitos-apps`, `pequena`) e fallback de 8 slots | SDD-21 RF-21.1, RF-21.4, RF-21.5, RF-21.7, RF-21.8 | Sonnet | WSL | CA-21.1, CA-21.5, CA-21.6 |
 | T1.8 ✅ | `TaskbarProbe` (UIA somente leitura, thread MTA `SideWar.Shell`), `TaskbarService`, gatilhos por evento sem polling e **`--dump-taskbar`** | SDD-21 RF-21.2, RF-21.3, RF-21.6, RF-21.9 | Sonnet | Windows | CA-21.2, CA-21.3, CA-21.4, CA-21.7 a CA-21.9 |
 | T1.9 ✅ | **Janela do widget vazia** (420×48 DIP) acima da barra: owner = faixa, geometria na zona livre ou fallback, z-order sobre `Shell_TrayWnd`, sem `TRANSPARENT` | RF-03.9, RF-23.1, RF-23.2, RF-23.10, RF-23.11 | Sonnet | Windows | CA-23.1, CA-23.3, CA-23.7 |
-| T1.10 | Geometria por monitor, DPI PMv2 (manifesto), reação a `WM_DPICHANGED`/`WM_DISPLAYCHANGE`/barra de tarefas | SDD-05 | Sonnet | Windows | CA-05.2 a CA-05.5 |
+| T1.10 ✅ | Geometria por monitor, DPI PMv2 (manifesto), reação a `WM_DPICHANGED`/`WM_DISPLAYCHANGE`/barra de tarefas | SDD-05 | Sonnet | Windows | CA-05.2 a CA-05.5 |
 | T1.11 | Modos Passivo/Interativo só da faixa, regiões clicáveis, "peek", retorno em 8 s | SDD-04 | Sonnet | Windows | CA-04.1 a CA-04.5 |
 | T1.12 ✅ | `HotkeyService` (`ToggleInteractive`, `ToggleVisibility`) e bandeja mínima | SDD-15 RF-15.6, RF-15.7 (parciais) | Sonnet | Windows | CA-15.4 (parcial) |
 | T1.13 | Modo `--bench` (`e1-synthetic` com a faixa + widget, `hidden`, `idle-static`), CSV, diagnóstico mínimo, `baseline-wpf` | SDD-16 RF-16.2, RF-16.4, RF-16.5, P-00 | Sonnet | Windows | CA-16.1 |

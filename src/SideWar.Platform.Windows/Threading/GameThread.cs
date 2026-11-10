@@ -8,6 +8,7 @@ using SideWar.Platform.Windows.Windows;
 using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.System.Threading;
+using Windows.Win32.UI.HiDpi;
 using Windows.Win32.UI.WindowsAndMessaging;
 
 namespace SideWar.Platform.Windows.Threading;
@@ -42,6 +43,7 @@ public sealed class GameThread : IGameCommandSink, IAsyncDisposable
 
     public SceneWindow Scene { get; private set; } = null!;
     public ZOrderCoordinator ZOrder { get; private set; } = null!;
+    public DockController Dock { get; private set; } = null!;
     public ValueTask DisposeAsync() => new(StopAsync());
 
     public Task Ready => ready.Task;
@@ -166,8 +168,11 @@ public sealed class GameThread : IGameCommandSink, IAsyncDisposable
             lock (gate) wake = new AutoResetEvent(false);
             // Ensure the native message queue exists before Ready.
             PInvoke.PeekMessage(out _, default, 0, 0, PEEK_MESSAGE_REMOVE_TYPE.PM_NOREMOVE);
+            // SDD-05 RF-05.1 defense: PMv2 for this thread before any window exists (manifest is the primary source).
+            PInvoke.SetThreadDpiAwarenessContext(MonitorService.PerMonitorV2);
             ZOrder = new ZOrderCoordinator(this);
             Scene = new SceneWindow(this);
+            Dock = new DockController(this);
             bool abandoned;
             lock (gate) abandoned = !accepting;
             if (abandoned)
@@ -191,9 +196,11 @@ public sealed class GameThread : IGameCommandSink, IAsyncDisposable
                 if (stopping) break;
                 Guard(() => host.OnWake(clock));
                 Guard(() => ZOrder.OnWake(clock.NowTicks));
+                Guard(() => Dock.OnWake(clock.NowTicks));
                 long? next = null;
                 Guard(() => next = host.NextDeadline);
                 if (ZOrder.NextDeadline is { } zDeadline) next = next is { } hDeadline ? Math.Min(hDeadline, zDeadline) : zDeadline;
+                if (Dock.NextDeadline is { } dDeadline) next = next is { } nDeadline ? Math.Min(nDeadline, dDeadline) : dDeadline;
                 if (next is { } deadline)
                 {
                     var delay = TimeSpan.FromSeconds(Math.Max(0, ((double)deadline - clock.NowTicks) / clock.TicksPerSecond));

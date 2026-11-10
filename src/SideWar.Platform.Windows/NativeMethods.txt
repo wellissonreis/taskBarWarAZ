@@ -126,3 +126,8 @@ APPBARDATA
 ABM_NEW
 ABM_REMOVE
 ABN_FULLSCREENAPP
+EnumDisplayMonitors
+SetThreadDpiAwarenessContext
+GetThreadDpiAwarenessContext
+AreDpiAwarenessContextsEqual
+DPI_AWARENESS_CONTEXT
