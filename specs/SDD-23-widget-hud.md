@@ -118,7 +118,7 @@ Entradas (contrato **de SDD-21 RF-21.1**, `TaskbarLayout`): `Edge`, `TaskbarRect
 | Ausente | `AUSENTE ×0,25` | `selo-ausente` `#a9b6c8` |
 
 - O multiplicador (`×2,0`, `×1,5`, `×2,5`, `×0,25`) vem do modelo (SDD-25). O design usa ponto (`×2.0`); vale a vírgula (ADR-029, SDD-27 RF-27.2).
-- **Chip do bônus ×3 (ADR-032):** quando o banner de chefe ocupa o slot de banner com o bônus de pico ativo (SDD-26 RF-26.3, RF-26.12), o widget mostra o chip **"×3 0:59"** (contagem regressiva de 60 s) **ao lado do selo de presença**; some ao fim do bônus. Entra no `WidgetModel`.
+- **Chip do bônus ×3 (ADR-032):** quando o banner de chefe ocupa o slot de banner com o bônus de pico ativo (SDD-26 RF-26.3, RF-26.12), o widget mostra o chip **"×3 0:59"** (contagem regressiva de 60 s) **no lugar do selo de presença, no mesmo espaço** (decisão do Tech Lead na T5.2, ADR-032: o chip, ≈ 61 DIP no pior DPI, não cabe ao lado do selo; começa onde o selo começa e termina ≥ 2 DIP antes do nav); o **nome acessível continua com presença e pico** ("PRESENTE ×2,0, bônus ×3 0:59"); ao fim do bônus o selo volta. Entra no `WidgetModel`.
 - O selo é informativo: não é alvo de clique próprio (mas o clique sobre ele conta como interação, RF-23.8).
 
 ### RF-23.7: Nav de 4 botões

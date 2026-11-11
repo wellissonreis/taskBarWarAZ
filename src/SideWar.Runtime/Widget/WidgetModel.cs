@@ -28,6 +28,9 @@ public readonly record struct WidgetModel(
     /// <summary>Rótulo completo do selo para o nome acessível (D-16, UIA futuro).</summary>
     public string PresenceAccessibleName => (IsPresent ? "PRESENTE " : "AUSENTE ") + MultiplierText;
 
+    /// <summary>Nome acessível do selo/chip: presença e, com pico ativo, o bônus (o chip substitui o selo visualmente).</summary>
+    public string AccessibleName => BonusChipText is { } chip ? PresenceAccessibleName + ", bônus " + chip : PresenceAccessibleName;
+
     /// <summary>Texto do badge de Missões: vazio com contagem 0; "9+" acima de 9 (DP-23.5).</summary>
     public string BadgeText => MissionBadge <= 0 ? "" : MissionBadge > 9 ? "9+" : MissionBadge.ToString(System.Globalization.CultureInfo.InvariantCulture);
 

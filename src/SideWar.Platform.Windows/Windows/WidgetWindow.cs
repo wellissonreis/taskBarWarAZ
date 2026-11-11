@@ -4,9 +4,11 @@ using SideWar.Platform.Windows.Interop;
 using SideWar.Platform.Windows.Rendering;
 using SideWar.Platform.Windows.Threading;
 using SideWar.Runtime.Geometry;
+using SideWar.Runtime.Widget;
 using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.Graphics.Dwm;
+using Windows.Win32.UI.Input.KeyboardAndMouse;
 using Windows.Win32.UI.WindowsAndMessaging;
 
 namespace SideWar.Platform.Windows.Windows;
@@ -25,6 +27,7 @@ public sealed class WidgetWindow : IDisposable
     private ushort atom;
     private HWND handle;
     private bool disposed;
+    private bool trackingLeave;
 
     internal unsafe WidgetWindow(GameThread owner, SceneWindow scene)
     {
@@ -73,6 +76,24 @@ public sealed class WidgetWindow : IDisposable
     public PixelRect Bounds { get; private set; }
     public bool IsFallback { get; private set; }
 
+    /// <summary>Lógica de mouse (hit-test, hover, cliques; RF-23.8). Sem ela a janela só consome os cliques.</summary>
+    public WidgetInteraction? Interaction { get; set; }
+
+    /// <summary>O hover mudou (índice em <see cref="WidgetInteraction.HoverIndex"/>): o controlador redesenha.</summary>
+    public event Action? HoverChanged;
+
+    /// <summary>Clique direito dentro do widget, em coordenadas de tela (px): abrir o menu nativo (RF-23.8).</summary>
+    public event Action<int, int>? ContextMenuRequested;
+
+    /// <summary>Mostrado (quadro transparente já apresentado): o controlador desenha o conteúdo.</summary>
+    public event Action? Shown;
+
+    /// <summary>Ocultado (a superfície foi liberada): o controlador invalida o canvas.</summary>
+    public event Action? Hidden;
+
+    /// <summary>Tamanho da superfície mudou (DIB recriado no próximo quadro): redesenhar.</summary>
+    public event Action? Resized;
+
     /// <summary>Positions and sizes the widget from a computed placement (RF-23.2). Size change resizes the surface.</summary>
     public void Apply(WidgetPlacement placement)
     {
@@ -88,6 +109,7 @@ public sealed class WidgetWindow : IDisposable
         if (sizeChanged) Surface.Resize(new PixelSize(b.Width, b.Height));
         Bounds = b;
         IsFallback = placement.IsFallback;
+        if (sizeChanged) Resized?.Invoke();
     }
 
     /// <summary>Requests visibility; the widget only appears while the scene is visible.</summary>
@@ -134,6 +156,7 @@ public sealed class WidgetWindow : IDisposable
         PInvoke.ShowWindow(handle, SHOW_WINDOW_CMD.SW_SHOWNOACTIVATE);
         IsVisible = true;
         Reassert();
+        Shown?.Invoke();
     }
 
     private void HideNative()
@@ -141,7 +164,66 @@ public sealed class WidgetWindow : IDisposable
         if (handle.IsNull) return;
         PInvoke.ShowWindow(handle, SHOW_WINDOW_CMD.SW_HIDE);
         IsVisible = false;
+        trackingLeave = false;
         Surface?.Release();
+        Hidden?.Invoke();
+    }
+
+    private static int X(LPARAM l) => (short)(l.Value & 0xFFFF);
+    private static int Y(LPARAM l) => (short)((l.Value >> 16) & 0xFFFF);
+    private float Scale => Surface.Scale;
+
+    private void ApplyCursor()
+    {
+        PCWSTR id = Interaction is { HoverIndex: >= 0 } ? PInvoke.IDC_HAND : PInvoke.IDC_ARROW;
+        PInvoke.SetCursor(PInvoke.LoadCursor(default, id));
+    }
+
+    private void OnLeftDown(LPARAM l)
+    {
+        if (Interaction is null) return;
+        // Pressionamento só conta uma vez; captura apenas sobre botão do nav (RF-23.8).
+        if (Interaction.OnLeftDown(X(l) / Scale, Y(l) / Scale)) PInvoke.SetCapture(handle);
+    }
+
+    private void OnLeftUp(LPARAM l)
+    {
+        if (Interaction is null) return;
+        bool captured = Interaction.PressedIndex >= 0;
+        Interaction.OnLeftUp(X(l) / Scale, Y(l) / Scale);
+        if (captured) PInvoke.ReleaseCapture();
+    }
+
+    private void OnRightDown(LPARAM l)
+    {
+        if (Interaction is null || !Interaction.OnRightDown(X(l) / Scale, Y(l) / Scale)) return;
+        var point = new System.Drawing.Point(X(l), Y(l));
+        PInvoke.ClientToScreen(handle, ref point);
+        ContextMenuRequested?.Invoke(point.X, point.Y);
+    }
+
+    private unsafe void OnMouseMove(LPARAM l)
+    {
+        if (Interaction is null) return;
+        if (!trackingLeave)
+        {
+            var track = new TRACKMOUSEEVENT
+            {
+                cbSize = (uint)sizeof(TRACKMOUSEEVENT),
+                dwFlags = TRACKMOUSEEVENT_FLAGS.TME_LEAVE,
+                hwndTrack = handle,
+            };
+            trackingLeave = PInvoke.TrackMouseEvent(ref track);
+        }
+        if (!Interaction.OnMouseMove(X(l) / Scale, Y(l) / Scale)) return;
+        ApplyCursor(); // WM_SETCURSOR precede o MOUSEMOVE: atualiza já ao entrar/sair do botão.
+        HoverChanged?.Invoke();
+    }
+
+    private void OnMouseLeave()
+    {
+        trackingLeave = false;
+        if (Interaction?.OnLeave() == true) HoverChanged?.Invoke();
     }
 
     private unsafe void SetDwm(DWMWINDOWATTRIBUTE attribute, int value) =>
@@ -189,8 +271,28 @@ public sealed class WidgetWindow : IDisposable
                 case PInvoke.WM_MOUSEACTIVATE: return new LRESULT((nint)PInvoke.MA_NOACTIVATE);
                 case PInvoke.WM_NCHITTEST: return new LRESULT((nint)PInvoke.HTCLIENT);
                 case PInvoke.WM_SETCURSOR:
-                    PInvoke.SetCursor(PInvoke.LoadCursor(default, PInvoke.IDC_ARROW));
+                    window?.ApplyCursor();
                     return new LRESULT(1);
+                case PInvoke.WM_LBUTTONDOWN:
+                case PInvoke.WM_LBUTTONDBLCLK:
+                    window?.OnLeftDown(lParam);
+                    return new LRESULT(0);
+                case PInvoke.WM_LBUTTONUP:
+                    window?.OnLeftUp(lParam);
+                    return new LRESULT(0);
+                case PInvoke.WM_RBUTTONDOWN:
+                case PInvoke.WM_RBUTTONDBLCLK:
+                    window?.OnRightDown(lParam);
+                    return new LRESULT(0);
+                case PInvoke.WM_MOUSEMOVE:
+                    window?.OnMouseMove(lParam);
+                    return new LRESULT(0);
+                case PInvoke.WM_MOUSELEAVE:
+                    window?.OnMouseLeave();
+                    return new LRESULT(0);
+                case PInvoke.WM_CAPTURECHANGED:
+                    window?.Interaction?.OnCaptureLost();
+                    return new LRESULT(0);
                 case PInvoke.WM_SETFOCUS:
                 case PInvoke.WM_ACTIVATE:
                 case PInvoke.WM_NCACTIVATE:

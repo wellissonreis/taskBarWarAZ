@@ -67,9 +67,11 @@ public sealed class WidgetRenderer : IDisposable
         WidgetLayout layout = GetLayout(model, heightDip, dpi);
         DrawCredits(canvas, model, layout, hPx, dpi, scale);
         DrawWave(canvas, model, layout, hPx, dpi, scale);
-        DrawSeal(canvas, layout.Seal, model.SealText, model.IsPresent ? Palette.SeloPresente : Palette.SeloAusente, dpi, scale);
+        // Pico ativo: o chip ×3 substitui o selo no mesmo espaço (ADR-032); ao fim do pico o selo volta.
         if (model.BonusChipText is { } chip && layout.ChipFits)
             DrawSeal(canvas, layout.Chip, chip, Palette.Ambar, dpi, scale);
+        else
+            DrawSeal(canvas, layout.Seal, model.SealText, model.IsPresent ? Palette.SeloPresente : Palette.SeloAusente, dpi, scale);
         DrawNav(canvas, model, layout, dpi, scale);
     }
 

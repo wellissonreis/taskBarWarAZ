@@ -52,14 +52,28 @@ public sealed class WidgetRendererTests : IDisposable
         Assert.True(WidgetLayout.Slack(420, seal) >= 0, $"selo {seal} DIP estoura {WidgetLayout.Slack(420, seal)}");
     }
 
-    [Fact]
-    public void BonusChip_DoesNotFitNextToSeal_SoIsNotDrawn_PendingDecision()
+    [Theory]
+    [InlineData(96)]
+    [InlineData(120)]
+    [InlineData(144)]
+    [InlineData(168)]
+    [InlineData(192)]
+    public void BonusChip_ReplacesSeal_InTheSameSpace_AndFits(int dpi)
     {
-        // Achado: seal ×2,0 (~41 DIP) + chip "×3 0:59" (~59 DIP) + gaps estouram os 420 DIP (RF-23.3 + ADR-032).
+        // Decisão do Tech Lead (T5.2, ADR-032): no pico o chip ×3 m:ss substitui o selo; ao fim o selo volta.
         var m = Model(chip: "×3 0:59");
-        var l = _r.GetLayout(m, 46, 96);
-        Assert.False(l.ChipFits);
-        using SKBitmap b = Draw(m);
+        var l = _r.GetLayout(m, 46, dpi);
+        Assert.True(l.ChipFits, $"chip {l.Chip.W} DIP não cabe (nav em {l.Nav0.X})");
+        Assert.Equal(l.Seal.X, l.Chip.X);
+        Assert.True(l.Chip.X + l.Chip.W + WidgetLayout.ChipGap <= l.Nav0.X);
+        using SKBitmap b = Draw(m, dpi);
+        Assert.Contains(_r.LastTextBoxes, t => t.Text == "×3 0:59");
+        Assert.DoesNotContain(_r.LastTextBoxes, t => t.Text == "×2,0");
+        Assert.Contains("PRESENTE ×2,0", m.AccessibleName);
+        Assert.Contains("×3 0:59", m.AccessibleName);
+
+        using SKBitmap back = Draw(Model(), dpi);
+        Assert.Contains(_r.LastTextBoxes, t => t.Text == "×2,0");
         Assert.DoesNotContain(_r.LastTextBoxes, t => t.Text == "×3 0:59");
     }
 

@@ -19,7 +19,7 @@ public readonly record struct WidgetLayout(
     DipRect Nav2,
     DipRect Nav3)
 {
-    public const float InsetDip = 8, CreditsWidth = 78, WaveWidth = 56, ColumnGap = 12, ButtonSize = 44, ButtonGap = 2, ChipGap = 4;
+    public const float InsetDip = 8, CreditsWidth = 78, WaveWidth = 56, ColumnGap = 12, ButtonSize = 44, ButtonGap = 2, ChipGap = 2;
     public const float NavWidth = 4 * ButtonSize + 3 * ButtonGap;
 
     /// <summary>Soma das larguras fixas sem o selo: 8+78+12+56+12+12+182+8 = 368 (DP-23.1).</summary>
@@ -47,7 +47,7 @@ public readonly record struct WidgetLayout(
 
     /// <param name="sealWidthDip">Largura natural do selo (texto + 6+6 + 1+1), medida.</param>
     /// <param name="sealHeightDip">Altura do selo (linha + 4+4 + 1+1).</param>
-    /// <param name="chipWidthDip">Largura natural do chip ×3, ou 0 sem chip.</param>
+    /// <param name="chipWidthDip">Largura natural do chip ×3, ou 0 sem chip. O chip ocupa o lugar do selo; quando <see cref="ChipFits"/> o selo não é desenhado.</param>
     public static WidgetLayout Compute(float widthDip, float heightDip, float sealWidthDip, float sealHeightDip, float chipWidthDip)
     {
         float cy = heightDip / 2f;
@@ -58,8 +58,9 @@ public readonly record struct WidgetLayout(
         x += WaveWidth + ColumnGap;
         var seal = new DipRect(x, cy - sealHeightDip / 2f, sealWidthDip, sealHeightDip);
         float navX = widthDip - InsetDip - NavWidth;
-        float chipX = x + sealWidthDip + ChipGap;
-        bool fits = chipWidthDip > 0 && chipX + chipWidthDip + ColumnGap <= navX;
+        // Chip ×3 SUBSTITUI o selo no mesmo espaço (ADR-032, decisão do Tech Lead na T5.2): começa onde o selo começa.
+        float chipX = x;
+        bool fits = chipWidthDip > 0 && chipX + chipWidthDip + ChipGap <= navX;
         var chip = new DipRect(chipX, cy - sealHeightDip / 2f, chipWidthDip, sealHeightDip);
         float by = cy - ButtonSize / 2f;
         DipRect Btn(int i) => new(navX + i * (ButtonSize + ButtonGap), by, ButtonSize, ButtonSize);
