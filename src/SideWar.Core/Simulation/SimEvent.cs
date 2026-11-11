@@ -5,6 +5,9 @@ public enum SimEventType : byte
 {
     None = 0, EnemySpawned, BossSpawned, Hit, SuperHit, Splash, Kill, Leak, TowerBuilt, TowerUpgraded,
     WaveStarted, WaveCleared, LevelUp, Fall, StageCleared, LayoutChanged,
+    // SDD-26 RF-26.15 (T6.6B). A = valor (ganho, índice, correto 0/1), B = auxiliar.
+    PeakBannerShown, PeakScaled, PeakEnded, PeakIgnored, BossWaiting, BossQuestionShown, BossAnswered, BossTimeout,
+    CrateSpawned, CrateCollected, CrateExpired,
 }
 
 /// <summary>

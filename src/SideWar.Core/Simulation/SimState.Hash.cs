@@ -55,6 +55,9 @@ public sealed partial class SimState
     /// <summary>Ponto de extensão para as próximas fichas acrescentarem seções (implementar em outro arquivo partial).</summary>
     partial void HashExtraSections(ref StateHasher h);
 
+    /// <summary>Seções de SDD-26 (ledger, agendador, encontro); implementada em <c>SimState.Events.cs</c>.</summary>
+    partial void HashEventSections(ref StateHasher h);
+
     private void HashScalars(ref StateHasher h)
     {
         h.AddInt64(Tick);

@@ -21,7 +21,7 @@ public static class ContentLoader
 {
     /// <summary>Arquivos obrigatórios, em ordem alfabética ordinal (ordem do ContentHash, RF-12.1).</summary>
     public static readonly IReadOnlyList<string> FileNames =
-        ["economy.json", "enemies.json", "missions.json", "regions.json", "rules.json", "stages.json", "towers.json", "waves.json"];
+        ["economy.json", "enemies.json", "missions.json", "questions.json", "regions.json", "rules.json", "stages.json", "towers.json", "waves.json"];
 
     /// <summary>Carrega e valida o conteúdo embutido em <c>SideWar.Core</c>; lança <see cref="ContentException"/> se inválido.</summary>
     public static GameContent LoadEmbedded()
@@ -91,14 +91,17 @@ public static class ContentLoader
         var regions = Read("regions.json", ctx.RegionDefArray);
         var missions = Read("missions.json", ctx.MissionsDef);
         var economy = Read("economy.json", ctx.EconomyDef);
+        var questions = Read("questions.json", Events.QuestionJsonContext.Default.QuestionBank);
         if (errors.Count > 0)
             return new ContentLoadResult(null, errors);
 
         var content = new GameContent(rules!, towers!, enemies!, waves!, stages!, regions!, missions!, economy!,
-            ComputeHash(files));
+            questions!, ComputeHash(files));
         try
         {
             errors.AddRange(ContentValidator.Validate(content));
+            if (errors.Count == 0)
+                errors.AddRange(Events.QuestionBankValidator.Validate(content.Questions, content.Stages, content.Waves.BossEvery));
         }
         catch (NullReferenceException)
         {

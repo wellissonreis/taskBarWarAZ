@@ -34,6 +34,9 @@ public sealed class QuestionSelector(QuestionBank bank)
             used.Remove(questionId);
     }
 
+    /// <summary>Quantidade de (fase, tentativa) com perguntas usadas (0 = nada a salvar/hashear).</summary>
+    public int SetCount => _used.Count;
+
     public IReadOnlyList<string> Used(int stage, int attempt)
         => _used.TryGetValue((stage, attempt), out var u) ? [.. u] : [];
 

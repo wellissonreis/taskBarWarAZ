@@ -114,6 +114,7 @@ public sealed partial class SimState
             ref var e = ref enemies.At(i);
             if (e.X > layout.SpawnX) e.X = layout.SpawnX;
         }
+        OnLayoutAppliedForEvents();
     }
 
     /// <summary>False = SEM SLOT (a torre não dispara, não conta bônus; SDD-11 RF-11.2, ADR-032).</summary>

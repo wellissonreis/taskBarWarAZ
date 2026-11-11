@@ -1,3 +1,5 @@
+using SideWar.Core.Content;
+using SideWar.Core.Events;
 using SideWar.Core.Waves;
 
 namespace SideWar.Core.Simulation;
@@ -15,7 +17,8 @@ public sealed partial class SimState
     public int NextSpawnIndex => _nextSpawn;
 
     /// <summary>Todos os spawns da onda ativa já saíram (ou não há onda). A <c>PeakQueue</c> (SDD-26) será somada pela etapa de eventos.</summary>
-    public bool WaveFullySpawned => _plan is null || _nextSpawn >= _plan.Spawns.Length;
+    public bool WaveFullySpawned =>
+        (_plan is null || _nextSpawn >= _plan.Spawns.Length) && _peakQueue == 0 && (_sched?.ExtrasPending ?? 0) == 0;
 
     /// <summary>
     /// Monta a agenda de <see cref="Wave"/> na fase <see cref="Stage"/> e zera <c>WaveClock</c>/<c>Rest</c>.
@@ -26,6 +29,7 @@ public sealed partial class SimState
         ArgumentNullException.ThrowIfNull(ctx);
         var stages = ctx.Content.Stages;
         int stageIndex = Math.Clamp(Stage - 1, 0, stages.Length - 1);
+        _regionHp = regionHpMultiplier;
         _plan = ctx.Waves.Build(Wave, stages[stageIndex].Waves, stageIndex, regionHpMultiplier);
         _nextSpawn = 0;
         WaveClock = 0f;
@@ -45,7 +49,11 @@ public sealed partial class SimState
     /// <summary>Passo 1: avança o relógio e solta os spawns vencidos enquanto houver espaço no campo (limite 44).</summary>
     private void SpawnSystem(SimContext ctx)
     {
-        if (_plan is null) BeginWave(ctx);
+        if (_plan is null)
+        {
+            if (!_bossHold) BeginWave(ctx);
+            if (_bossHold && !ReleaseBossHold(ctx)) return;   // chefe esperando no portal (SDD-26 RF-26.4)
+        }
         var plan = _plan!;
         WaveClock += SimContext.Dt;
         int limit = ctx.Rules.MaxEnemiesOnField;
@@ -61,7 +69,17 @@ public sealed partial class SimState
     private bool SpawnEnemy(SimContext ctx, in WaveSpawn spawn)
     {
         if (!SimIds.TryEnemyKind(spawn.Enemy.Id, out var kind)) return false;
-        float speed = (float)spawn.Enemy.Speed;
+        // Acerto no chefe: HP ×0,4 derivado do ledger, consumido uma única vez no spawn (SDD-26 RF-26.7).
+        bool bonus = kind == EnemyKind.Boss && _sched is not null && Ledger.HasPendingBonus(CurrentBossKey);
+        double hp = bonus ? spawn.Hp * QuestionLedger.CorrectBossHpMultiplier : spawn.Hp;
+        if (!AddEnemy(spawn.Enemy, kind, hp)) return false;
+        if (bonus) Ledger.TryConsumeBonus(CurrentBossKey);
+        return true;
+    }
+
+    private bool AddEnemy(EnemyDef def, EnemyKind kind, double hp)
+    {
+        float speed = (float)def.Speed;
         var e = new Enemy
         {
             Id = NextId,
@@ -69,9 +87,9 @@ public sealed partial class SimState
             X = _layout.SpawnX,
             Speed = speed,
             SpawnSpeed = speed,
-            Hp = spawn.Hp,
-            MaxHp = spawn.Hp,
-            Armor = (short)spawn.Enemy.Armor,
+            Hp = hp,
+            MaxHp = hp,
+            Armor = (short)def.Armor,
             Flags = kind == EnemyKind.Boss ? EnemyFlags.Boss : EnemyFlags.None,
             LastHit = TowerType.None,
         };

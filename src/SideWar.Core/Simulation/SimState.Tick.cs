@@ -15,7 +15,7 @@ public sealed partial class SimState
         try
         {
             SpawnSystem(ctx);          // 1
-            // 2: fatores de evento (SDD-26) — fora do escopo
+            EventsSystem(ctx);         // 2 (SDD-26: pico, caixa, chefe, extras)
             TowerSystem(ctx);          // 3 (4 removido: acerto instantâneo)
             DeathSystem(ctx);          // 5
             MovementSystem(ctx);       // 6 (inclui vazamento)

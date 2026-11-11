@@ -58,4 +58,4 @@ public sealed record EconomyDef(
 /// <summary>Conteúdo completo, validado e imutável por convenção; <c>ContentHash</c> = SHA-256 hex (minúsculas).</summary>
 public sealed record GameContent(
     RulesDef Rules, TowerDef[] Towers, EnemyDef[] Enemies, WavesDef Waves, StageDef[] Stages,
-    RegionDef[] Regions, MissionsDef Missions, EconomyDef Economy, string ContentHash);
+    RegionDef[] Regions, MissionsDef Missions, EconomyDef Economy, Events.QuestionBank Questions, string ContentHash);

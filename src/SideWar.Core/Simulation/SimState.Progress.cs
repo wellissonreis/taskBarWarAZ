@@ -85,7 +85,13 @@ public sealed partial class SimState
     private void BeginWave(SimContext ctx)
     {
         BaseHp = MaxBaseHp;
-        StartWave(ctx);
+        if (HoldForBoss(ctx)) return;   // SDD-26 RF-26.4: onda de chefe só começa após a resolução
+        BeginWaveStart(ctx);
+    }
+
+    private void BeginWaveStart(SimContext ctx)
+    {
+        StartWave(ctx, _regionHp);
         if (Wave > StageWaveMax) StageWaveMax = Wave;
         Events.Add(new SimEvent(SimEventType.WaveStarted, 0f, 0f, Wave, Stage));
     }
@@ -183,6 +189,7 @@ public sealed partial class SimState
     /// </summary>
     private void CheckEnd(SimContext ctx)
     {
+        if (_bossHold) { Rest = 0f; return; }
         if (!WaveFullySpawned || Enemies.Count != 0) { Rest = 0f; return; }
         Rest += SimContext.Dt;
         if (Rest < (float)ctx.Content.Economy.WaveRestSeconds) return;
@@ -215,6 +222,7 @@ public sealed partial class SimState
         if (stageIndex + 1 < stages.Length)
         {
             Stage++;
+            StageAttempt++;
             UnlockedStage = Math.Max(UnlockedStage, Stage);
             Wave = 1;
             StageFalls = 0;
@@ -239,5 +247,6 @@ public sealed partial class SimState
             h.AddInt32(_lastBossWave[i]);
             h.AddByte(_stageStars[i]);
         }
+        HashEventSections(ref h);
     }
 }

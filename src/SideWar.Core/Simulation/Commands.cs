@@ -9,6 +9,18 @@ public sealed record UpgradeTower(int TowerId) : IGameCommand;
 /// <summary>Muda o modo de mira da torre (vale também com o jogo pausado; SDD-11 RF-11.10).</summary>
 public sealed record SetTargeting(int TowerId, Targeting Mode) : IGameCommand;
 
+/// <summary>Clique no banner de pico (SDD-26 RF-26.15).</summary>
+public sealed record ClickPeakBanner : IGameCommand;
+
+/// <summary>Abre o card da pergunta do chefe (SDD-26 RF-26.15); só registra o estado do card, sem pausar.</summary>
+public sealed record OpenBossQuestion : IGameCommand;
+
+/// <summary>Responde à pergunta do chefe com o índice da alternativa (SDD-26 RF-26.15).</summary>
+public sealed record AnswerBossQuestion(int OptionIndex) : IGameCommand;
+
+/// <summary>Clique na caixa de suprimentos (SDD-26 RF-26.15).</summary>
+public sealed record ClickSupplyCrate : IGameCommand;
+
 public enum CommandStatus : byte { Ok = 0, Rejected }
 
 /// <summary>Motivo da rejeição, na ordem de validação de SDD-27 RF-27.5.</summary>
@@ -25,6 +37,10 @@ public enum CommandReason : byte
     MaxLevel,
     Unreachable,
     InsufficientCredits,
+    /// <summary>Evento ausente, não ativo ou fora de Presente (SDD-26 RF-26.15).</summary>
+    NotAvailable,
+    /// <summary>Ledger já tem resposta para a chave (SDD-26 RF-26.7).</summary>
+    AlreadyUsed,
 }
 
 /// <summary>Resultado de um comando: <c>Missing</c> = créditos que faltam (só em <see cref="CommandReason.InsufficientCredits"/>).</summary>

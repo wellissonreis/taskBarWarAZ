@@ -22,6 +22,10 @@ public sealed partial class SimState
             UpgradeTower u => Upgrade(ctx, u),
             SetTargeting s => SetMode(s),
             LayoutChanged l => ApplyLayoutCommand(l),
+            ClickPeakBanner => ClickPeak(),
+            OpenBossQuestion => OpenBoss(),
+            AnswerBossQuestion a => AnswerBoss(ctx, a),
+            ClickSupplyCrate => ClickCrate(ctx),
             _ => CommandResult.Reject(CommandReason.UnknownCommand),
         };
     }

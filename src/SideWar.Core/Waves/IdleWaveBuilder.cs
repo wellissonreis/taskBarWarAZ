@@ -82,7 +82,7 @@ public sealed class IdleWaveBuilder
         if (boss)
             kinds.Insert(kinds.Count / 2, BossId);
 
-        var hpFactor = Pow(_economy.HpGrowth, wave - 1) * (1 + _economy.StageHpStep * stageIndex) * regionHpMultiplier;
+        var hpFactor = HpFactor(wave, stageIndex, regionHpMultiplier);
         var goldFactor = Pow(_economy.GoldGrowth, wave - 1);
         var xpFactor = Pow(_economy.XpGrowth, wave - 1);
         var interval = Interval(wave, total);
@@ -96,6 +96,10 @@ public sealed class IdleWaveBuilder
 
         return new WavePlan(wave, spawns.Length, interval, boss, spawns);
     }
+
+    /// <summary>Fator de HP da onda (RF-27.6): <c>hpGrowth^(w−1) × (1 + stageHpStep × fase) × região</c>. Usado também nos extras de pico.</summary>
+    public double HpFactor(int wave, int stageIndex, double regionHpMultiplier = 1.0)
+        => Pow(_economy.HpGrowth, wave - 1) * (1 + _economy.StageHpStep * stageIndex) * regionHpMultiplier;
 
     private static void AddGroup(List<(double, int, string)> items, int order, string kind, int count)
     {
