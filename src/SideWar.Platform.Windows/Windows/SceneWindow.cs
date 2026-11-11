@@ -111,6 +111,20 @@ public sealed class SceneWindow : IDisposable
         foreach (var child in children) child.Reassert();
     }
 
+    /// <summary>SDD-24 windows, created on first use (RF-24.1); z-order: widget, panel, offline card, question card.</summary>
+    public PanelWindow? Panel { get; private set; }
+    public OfflineCardWindow? OfflineCard { get; private set; }
+    public QuestionCardWindow? QuestionCard { get; private set; }
+    public PanelWindow GetOrCreatePanel() { CheckAccess(); return Panel ??= new PanelWindow(owner); }
+    public OfflineCardWindow GetOrCreateOfflineCard() { CheckAccess(); return OfflineCard ??= new OfflineCardWindow(owner); }
+    public QuestionCardWindow GetOrCreateQuestionCard() { CheckAccess(); return QuestionCard ??= new QuestionCardWindow(owner); }
+    internal IEnumerable<OverlayWindow> Overlays()
+    {
+        if (Panel is { } p) yield return p;
+        if (OfflineCard is { } o) yield return o;
+        if (QuestionCard is { } q) yield return q;
+    }
+
     internal Action<uint>? MessageObserver { get; set; }
     /// <summary>Registration point for HotkeyService (T1.12): receives the WM_HOTKEY id.</summary>
     internal Action<int>? HotkeyHandler { get; set; }
@@ -135,6 +149,7 @@ public sealed class SceneWindow : IDisposable
         IsVisible = true;
         Widget?.OnSceneShown();
         foreach (var child in children.ToArray()) child.OnSceneShown();
+        foreach (var overlay in Overlays()) overlay.OnSceneShown();
         owner.ZOrder.ReassertNow();
         owner.Mode?.OnSceneShown();
     }
@@ -144,6 +159,7 @@ public sealed class SceneWindow : IDisposable
         CheckAccess();
         PInvoke.ShowWindow(handle, SHOW_WINDOW_CMD.SW_HIDE);
         IsVisible = false;
+        foreach (var overlay in Overlays()) overlay.OnSceneHidden();
         Widget?.OnSceneHidden();
         foreach (var child in children.ToArray()) child.OnSceneHidden();
         owner.ZOrder.Cancel();
@@ -164,6 +180,9 @@ public sealed class SceneWindow : IDisposable
         owner.VerifyAccess();
         if (disposed) return;
         foreach (var child in children.ToArray()) child.Dispose();
+        // Un-owned SDD-24 windows first, then the owned widget.
+        foreach (var overlay in Overlays().ToArray()) overlay.Dispose();
+        Panel = null; OfflineCard = null; QuestionCard = null;
         // Owned windows go first (RF-03.7); a failing widget keeps the scene alive rather than dangling it.
         if (Widget is { } widget)
         {

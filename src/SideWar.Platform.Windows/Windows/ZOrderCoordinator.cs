@@ -45,6 +45,7 @@ public sealed class ZOrderCoordinator
         // RF-23.10 order: scene, then widget (panel and cards join here later), so upper ones stay above.
         owner.Scene.Widget?.Reassert();
         owner.Scene.ReassertChildren(); // hotspots and seal (T4.9), above the widget
+        foreach (var overlay in owner.Scene.Overlays()) overlay.Reassert(); // panel < offline card < question card (RF-24.1)
         ReassertionCount++;
     }
 }
