@@ -8,6 +8,9 @@
     <StartupObject>SideWar.App.Program</StartupObject>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="SideWar.App.SmokeTests" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="../SideWar.Core/SideWar.Core.csproj" />
     <ProjectReference Include="../SideWar.Runtime/SideWar.Runtime.csproj" />
     <ProjectReference Include="../SideWar.Persistence/SideWar.Persistence.csproj" />
