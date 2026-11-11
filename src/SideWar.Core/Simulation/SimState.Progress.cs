@@ -254,6 +254,9 @@ public sealed partial class SimState
         h.AddDouble(PresenceMultiplier);
         h.AddDouble(XpCarry);
         h.AddInt32(_farmWave);
+        h.AddInt32(RegionIndex);
+        h.AddInt32(Migrations);
+        h.AddDouble(_regionHp);
         for (int i = 1; i <= MaxStages; i++)
         {
             h.AddInt32(_lastBossWave[i]);

@@ -26,6 +26,7 @@ public sealed partial class SimState
             OpenBossQuestion => OpenBoss(),
             AnswerBossQuestion a => AnswerBoss(ctx, a),
             ClickSupplyCrate => ClickCrate(ctx),
+            MigrateTo m => Prestige.PrestigeService.Migrate(this, ctx, m.RegionIndex),
             _ => CommandResult.Reject(CommandReason.UnknownCommand),
         };
     }

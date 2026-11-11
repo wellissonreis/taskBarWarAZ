@@ -8,6 +8,8 @@ public enum SimEventType : byte
     // SDD-26 RF-26.15 (T6.6B). A = valor (ganho, índice, correto 0/1), B = auxiliar.
     PeakBannerShown, PeakScaled, PeakEnded, PeakIgnored, BossWaiting, BossQuestionShown, BossAnswered, BossTimeout,
     CrateSpawned, CrateCollected, CrateExpired,
+    /// <summary>SDD-27 RF-27.10 (T6.7): A = Reservas ganhas, B = índice da região nova.</summary>
+    Migrated,
 }
 
 /// <summary>
