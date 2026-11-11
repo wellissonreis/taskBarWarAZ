@@ -7,6 +7,9 @@
     <SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Tray/Resources/tray.ico" LogicalName="SideWar.Tray.ico" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="../SideWar.Runtime/SideWar.Runtime.csproj" />
     <PackageReference Include="SkiaSharp" />
     <PackageReference Include="Microsoft.Windows.CsWin32" PrivateAssets="all" />

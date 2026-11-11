@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using SideWar.Platform.Windows.Interop;
+using SideWar.Platform.Windows.Menus;
 using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.UI.Shell;
@@ -9,10 +10,11 @@ using Windows.Win32.UI.WindowsAndMessaging;
 namespace SideWar.Platform.Windows.Tray;
 
 /// <summary>
-/// Minimal notification-area icon (RF-15.7, partial). Must be created and disposed on a thread that
-/// pumps messages (T-UI in production). Left click raises <see cref="ToggleVisibilityRequested"/>,
-/// right click raises <see cref="MenuRequested"/> (the native menu is a later ficha); TaskbarCreated re-adds the icon.
-/// The icon is the stock application icon: the embedded .ico is out of scope.
+/// Notification-area icon (RF-15.7) with the native menu (RF-15.8). Must be created and disposed on a thread that
+/// pumps messages (T-UI in production). Left click raises <see cref="ToggleVisibilityRequested"/>; right click raises
+/// <see cref="MenuRequested"/> and, when <see cref="MenuStateProvider"/> is set, opens the native menu and raises
+/// <see cref="CommandSelected"/> (the host executes the command). TaskbarCreated re-adds the icon.
+/// The icon is the embedded .ico (16/20/24/32/48; placeholder art), falling back to the stock icon.
 /// </summary>
 public sealed class TrayIcon : IDisposable
 {
@@ -74,6 +76,13 @@ public sealed class TrayIcon : IDisposable
 
     public event Action? ToggleVisibilityRequested;
     public event Action? MenuRequested;
+    /// <summary>Raised after the native menu closes with a choice. Foreground is already restored unless the command opens a window.</summary>
+    public event Action<MenuCommand, nint>? CommandSelected;
+
+    /// <summary>Supplies the menu state at the moment the menu opens; without it the right click only raises <see cref="MenuRequested"/>.</summary>
+    public Func<MenuState>? MenuStateProvider { get; set; }
+    public bool IsMenuOpen { get; private set; }
+    public bool UsesEmbeddedIcon { get; private set; }
 
     public bool IsAdded => added;
     public string Tooltip => tooltip;
@@ -103,6 +112,29 @@ public sealed class TrayIcon : IDisposable
 
     /// <summary>Applies a tooltip held back by the 1 Hz limit once its interval elapsed.</summary>
     public bool FlushTooltip() => pendingTooltip is { } text && SetTooltip(text);
+
+    /// <summary>Shows the native menu at screen point (x, y) and raises <see cref="CommandSelected"/>. Ignored while a menu is open.</summary>
+    public unsafe MenuResult? ShowMenu(MenuState state, int x, int y)
+    {
+        CheckAccess();
+        if (IsMenuOpen) return null;
+        IsMenuOpen = true;
+        try
+        {
+            var result = NativeMenu.Show((nint)handle.Value, x, y, state);
+            if (result.Command is { } command) CommandSelected?.Invoke(command, result.PreviousForeground);
+            return result;
+        }
+        finally { IsMenuOpen = false; }
+    }
+
+    private void OpenMenuAtCursor()
+    {
+        MenuRequested?.Invoke();
+        if (MenuStateProvider is not { } provider) return;
+        PInvoke.GetCursorPos(out var point);
+        ShowMenu(provider(), point.X, point.Y);
+    }
 
     private static string Clamp(string text) => text.Length > MaxTooltip ? text[..MaxTooltip] : text;
 
@@ -136,11 +168,20 @@ public sealed class TrayIcon : IDisposable
             uID = 1,
             uFlags = NOTIFY_ICON_DATA_FLAGS.NIF_MESSAGE | NOTIFY_ICON_DATA_FLAGS.NIF_ICON | NOTIFY_ICON_DATA_FLAGS.NIF_TIP,
             uCallbackMessage = CallbackMessage,
-            hIcon = PInvoke.LoadIcon(default, PInvoke.IDI_APPLICATION),
+            hIcon = LoadIconHandle(),
         };
         tooltip.AsSpan().CopyTo(data.szTip.AsSpan());
         if (!PInvoke.Shell_NotifyIcon(message, in data))
             throw Win32Error.LastError($"Shell_NotifyIcon({message})");
+    }
+
+    private HICON? icon;
+
+    private HICON LoadIconHandle()
+    {
+        icon ??= TrayIconResource.Load(PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXSMICON));
+        UsesEmbeddedIcon = icon.Value != default;
+        return UsesEmbeddedIcon ? icon.Value : PInvoke.LoadIcon(default, PInvoke.IDI_APPLICATION);
     }
 
     public unsafe void Dispose()
@@ -157,6 +198,8 @@ public sealed class TrayIcon : IDisposable
         }
         if (!handle.IsNull) PInvoke.DestroyWindow(handle);
         handle = default;
+        if (icon is { } created && created != default) PInvoke.DestroyIcon(created);
+        icon = null;
         if (self.IsAllocated) self.Free();
         if (atom != 0)
         {
@@ -185,7 +228,7 @@ public sealed class TrayIcon : IDisposable
                     switch ((uint)(lParam.Value & 0xFFFF))
                     {
                         case PInvoke.WM_LBUTTONUP: icon.ToggleVisibilityRequested?.Invoke(); break;
-                        case PInvoke.WM_RBUTTONUP: icon.MenuRequested?.Invoke(); break;
+                        case PInvoke.WM_RBUTTONUP: icon.OpenMenuAtCursor(); break;
                     }
                     return new LRESULT(0);
                 }

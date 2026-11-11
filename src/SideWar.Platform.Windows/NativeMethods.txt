@@ -155,3 +155,13 @@ MENU_ITEM_FLAGS
 TRACK_POPUP_MENU_FLAGS
 ScreenToClient
 GetCapture
+GetCursorPos
+GetMenuItemCount
+GetMenuState
+GetMenuStringW
+GetSubMenu
+GetMenuItemID
+CreateIconFromResourceEx
+GetSystemMetrics
+SYSTEM_METRICS_INDEX
+IMAGE_FLAGS

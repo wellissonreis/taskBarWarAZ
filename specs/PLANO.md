@@ -158,7 +158,7 @@ T3.4 a T3.8 compartilham contratos de `SimState`: **não paralelizar entre si** 
 | T5.5 | Abas Missões e Migrar (visual, com dados de teste) e card de pergunta (visual) | SDD-24 | Sonnet | WSL | CA-24.7, CA-24.8, CA-24.10, CA-24.15 |
 | T5.6 | Golden images do widget, do painel e dos cards | SDD-23, SDD-24, SDD-17 | Sonnet | WSL | CA-23.4, CA-24.13 |
 | T5.7 ✅ | Atalhos completos e `HotkeyParser` | SDD-15 RF-15.6 | Sonnet | Windows | CA-15.4 |
-| T5.8 | Menus nativos (`TrackPopupMenuEx`) e bandeja completa | SDD-15 RF-15.7, RF-15.8 | Sonnet | Windows | CA-15.5, CA-15.6 |
+| T5.8 🟡 | Menus nativos (`TrackPopupMenuEx`) e bandeja completa | SDD-15 RF-15.7, RF-15.8 | Sonnet | Windows | CA-15.5, CA-15.6 (CA-15.5 foco real e CA-15.6 explorer real pendentes) |
 | T5.9 | `SettingsWindow` (configurações editáveis, ADR-031) e `AboutWindow`, abertas só por ação do usuário | SDD-15 RF-15.9, SDD-14 RF-14.4 | Sonnet | Windows | ADR-015, CA-14.2 (Settings) |
 | T5.10 ✅ | `publish.ps1` mínimo para o ZIP interno | SDD-18 | Haiku | Windows | CA-18.1 (parcial) |
 | T5.11 | Playtest, ajustes só em `content/*.json`, MTC-22/23/24 e `specs/evidencias/E5.md` | SDD-22, 23, 24, 27 | Haiku | Windows | CA-22.3, CA-23.2, CA-24.2 |
