@@ -137,3 +137,9 @@ TRACKMOUSEEVENT_FLAGS
 SetCursorPos
 WindowFromPoint
 GetAncestor
+WTSRegisterSessionNotification
+WTSUnRegisterSessionNotification
+RegisterPowerSettingNotification
+UnregisterPowerSettingNotification
+POWERBROADCAST_SETTING
+HPOWERNOTIFY

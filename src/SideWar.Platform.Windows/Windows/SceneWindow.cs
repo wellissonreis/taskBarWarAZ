@@ -74,6 +74,8 @@ public sealed class SceneWindow : IDisposable
     internal Action<uint>? MessageObserver { get; set; }
     /// <summary>Registration point for HotkeyService (T1.12): receives the WM_HOTKEY id.</summary>
     internal Action<int>? HotkeyHandler { get; set; }
+    /// <summary>Registration point for SessionPowerWatcher (T2.5): WM_WTSSESSION_CHANGE / WM_POWERBROADCAST; true = handled.</summary>
+    internal Func<uint, nuint, nint, bool>? SystemMessageHandler { get; set; }
 
     public void SetBounds(PixelRect bounds)
     {
@@ -154,6 +156,7 @@ public sealed class SceneWindow : IDisposable
             window?.MessageObserver?.Invoke(message);
             window?.owner.Dock?.OnSystemMessage(message, wParam.Value, lParam.Value); // SDD-05 RF-05.6
             window?.owner.Mode?.OnMessage(hwnd, message, wParam.Value, lParam.Value); // SDD-04 RF-04.3
+            if (window?.SystemMessageHandler?.Invoke(message, wParam.Value, lParam.Value) == true) return new LRESULT(1); // SDD-07; TRUE for PBT_*
             switch (message)
             {
                 case PInvoke.WM_MOUSEACTIVATE: return new LRESULT((nint)PInvoke.MA_NOACTIVATE);
