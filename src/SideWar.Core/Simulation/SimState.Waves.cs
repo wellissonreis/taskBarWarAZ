@@ -30,6 +30,7 @@ public sealed partial class SimState
         _nextSpawn = 0;
         WaveClock = 0f;
         Rest = 0f;
+        RefreshRewardFactors(ctx);
     }
 
     /// <summary>Descarta a agenda (queda do núcleo, SDD-27 RF-27.8; usado por T3.8).</summary>
@@ -44,7 +45,7 @@ public sealed partial class SimState
     /// <summary>Passo 1: avança o relógio e solta os spawns vencidos enquanto houver espaço no campo (limite 44).</summary>
     private void SpawnSystem(SimContext ctx)
     {
-        if (_plan is null) StartWave(ctx);
+        if (_plan is null) BeginWave(ctx);
         var plan = _plan!;
         WaveClock += SimContext.Dt;
         int limit = ctx.Rules.MaxEnemiesOnField;

@@ -18,7 +18,7 @@ public sealed class SimDamageTests
         s.Towers.Add(new Tower { Id = s.TakeId(), Type = type, SlotIndex = slot, Level = level });
 
     private static Handle AddEnemy(SimState s, float x, double hp = 1000, short armor = 0, EnemyKind kind = EnemyKind.Grunt,
-        EnemyFlags flags = EnemyFlags.None, float speed = 45f) =>
+        EnemyFlags flags = EnemyFlags.None, float speed = 0f) =>
         s.Enemies.Add(new Enemy { Id = s.TakeId(), Kind = kind, X = x, Hp = hp, MaxHp = hp, Armor = armor, Speed = speed, SpawnSpeed = 45f, Flags = flags });
 
     private static List<SimEvent> Drain(SimState s, ref long cursor)
@@ -62,7 +62,7 @@ public sealed class SimDamageTests
     {
         var s = NewState();
         AddTower(s, TowerType.Frost, 0);
-        var e = AddEnemy(s, 250f);
+        var e = AddEnemy(s, 250f, speed: 45f);
         s.Step(Ctx);
         Assert.Equal(45f * 0.65f, s.Enemies.Get(e).Speed);
         Assert.True((s.Enemies.Get(e).Flags & EnemyFlags.Chilled) != 0);
@@ -118,7 +118,7 @@ public sealed class SimDamageTests
         Assert.Equal(1000, s.Enemies.Get(outside).Hp);
         Assert.Equal(1000 - 32, s.Enemies.Get(armored).Hp);
         Assert.Equal(1000 - 18, s.Enemies.Get(runner).Hp);
-        Assert.Equal(0, s.Enemies.Get(dead).Hp);
+        Assert.False(s.Enemies.IsValid(dead));   // removido pelo DeathSystem sem receber splash
         Assert.Equal(TowerType.Cannon, s.Enemies.Get(edge).LastHit);
         var splash = Drain(s, ref c).Where(x => x.Type == SimEventType.Splash).ToList();
         Assert.Single(splash);

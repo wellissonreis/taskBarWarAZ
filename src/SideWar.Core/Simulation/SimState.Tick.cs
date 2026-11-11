@@ -17,7 +17,11 @@ public sealed partial class SimState
             SpawnSystem(ctx);          // 1
             // 2: fatores de evento (SDD-26) — fora do escopo
             TowerSystem(ctx);          // 3 (4 removido: acerto instantâneo)
-            // 5 DeathSystem, 6 MovementSystem, 7 nível/XP, 8 queda, 9 CheckEnd: T3.6/T3.8
+            DeathSystem(ctx);          // 5
+            MovementSystem(ctx);       // 6 (inclui vazamento)
+            LevelSystem(ctx);          // 7
+            FallSystem(ctx);           // 8
+            CheckEnd(ctx);             // 9
         }
         finally
         {

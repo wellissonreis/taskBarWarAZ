@@ -17,8 +17,8 @@ public sealed class SimTickTests
     private static Handle AddTower(SimState s, TowerType type, int slot, int level = 1, Targeting mode = Targeting.First) =>
         s.Towers.Add(new Tower { Id = s.TakeId(), Type = type, SlotIndex = slot, Level = level, Mode = mode });
 
-    private static Handle AddEnemy(SimState s, float x, double hp = 1000, short armor = 0, EnemyKind kind = EnemyKind.Grunt) =>
-        s.Enemies.Add(new Enemy { Id = s.TakeId(), Kind = kind, X = x, Hp = hp, MaxHp = hp, Armor = armor, Speed = 45, SpawnSpeed = 45 });
+    private static Handle AddEnemy(SimState s, float x, double hp = 1000, short armor = 0, EnemyKind kind = EnemyKind.Grunt, float speed = 0f) =>
+        s.Enemies.Add(new Enemy { Id = s.TakeId(), Kind = kind, X = x, Hp = hp, MaxHp = hp, Armor = armor, Speed = speed, SpawnSpeed = 45 });
 
     [Fact(DisplayName = "T-11.4 Mira 1D: First/Last/Strong/Weak, alcance e desempates")]
     public void Targeting_Modes()
@@ -106,7 +106,7 @@ public sealed class SimTickTests
         var weak = AddEnemy(s, 250, hp: 10);       // morre no 1º acerto (18)
         var other = AddEnemy(s, 300, hp: 1000);
         s.Step(Ctx);
-        Assert.True(s.Enemies.Get(weak).Hp <= 0);
+        Assert.False(s.Enemies.IsValid(weak));      // morreu e foi removido pelo DeathSystem (T3.8)
         Assert.Equal(1000 - 18, s.Enemies.Get(other).Hp); // t2 não mirou o morto: acertou o outro
         Assert.Equal(0.7f, s.Towers.Get(t1).Cooldown);
         Assert.Equal(0.7f, s.Towers.Get(t2).Cooldown);
@@ -166,7 +166,7 @@ public sealed class SimTickTests
         Assert.Equal(1, s.Enemies.Count);
         ref var e = ref s.Enemies.At(0);
         var spawn = s.ActivePlan!.Spawns[0];
-        Assert.Equal(1000f, e.X);
+        Assert.Equal(1000f - e.Speed * SimContext.Dt, e.X);   // nasce em SpawnX e já marcha no mesmo tick (passo 6)
         Assert.Equal(spawn.Hp, e.Hp);
         Assert.Equal(spawn.Hp, e.MaxHp);
         Assert.Equal((float)spawn.Enemy.Speed, e.Speed);
@@ -215,7 +215,7 @@ public sealed class SimTickTests
         var s = NewState();
         s.ApplyLayout(Layout(spawn: 700f));
         s.Step(Ctx);
-        Assert.Equal(700f, s.Enemies.At(0).X);
+        Assert.Equal(700f - s.Enemies.At(0).Speed * SimContext.Dt, s.Enemies.At(0).X);
     }
 
     [Fact(DisplayName = "Tick: incrementa Tick, termina mesmo se houver exceção e não aceita reentrada")]
