@@ -101,24 +101,22 @@ public sealed class OfflineCalculator
         void Round()
         {
             var working = s.Credits + Earned() - spent;
-            var budget = working <= 0 ? 0 : ToLong(Math.Floor(working * _cfg.AutoScaleBudgetFraction));
-            while (true)
+            var budget = AutoScaler.Budget(working, _cfg.AutoScaleBudgetFraction);
+            // Regra única (T6.2): o offline só monta candidatos (torres com slot) e agrega os passos por torre.
+            var cands = new List<AutoScaleCandidate>(towers.Count);
+            var index = new List<int>(towers.Count);
+            for (var i = 0; i < towers.Count; i++)
             {
-                var best = -1;
-                long bestCost = 0;
-                for (var i = 0; i < towers.Count; i++)
-                {
-                    if (towers[i].Slot is null || levels[i] >= eco.MaxTowerLevel || !_defs.TryGetValue(towers[i].Type, out var def)) continue;
-                    if (!TowerCosts.TryUpgradeCost(def.Cost, levels[i], eco.UpgradeCostFactor, eco.UpgradeCostGrowth, out var c)) continue;
-                    if (best < 0 || c < bestCost || (c == bestCost && towers[i].Id < towers[best].Id)) { best = i; bestCost = c; }
-                }
-                if (best < 0 || bestCost > budget) break;
-                budget -= bestCost;
-                spent += bestCost;
-                var id = towers[best].Id;
-                ups[id] = ups.TryGetValue(id, out var u) ? (u.Type, u.From, levels[best] + 1) : (towers[best].Type, levels[best], levels[best] + 1);
-                levels[best]++;
+                if (towers[i].Slot is null || !_defs.TryGetValue(towers[i].Type, out var def)) continue;
+                cands.Add(new AutoScaleCandidate(towers[i].Id, towers[i].Type, levels[i], def.Cost));
+                index.Add(i);
             }
+            var span = System.Runtime.InteropServices.CollectionsMarshal.AsSpan(cands);
+            var plan = AutoScaler.Plan(span, eco, budget);
+            spent += plan.Spent;
+            foreach (var step in plan.Upgrades)
+                ups[step.TowerId] = ups.TryGetValue(step.TowerId, out var u) ? (u.Type, u.From, step.ToLevel) : (step.Type, step.FromLevel, step.ToLevel);
+            for (var k = 0; k < span.Length; k++) levels[index[k]] = span[k].Level;
             dps = ComputeDps(towers, levels);
         }
 
@@ -189,7 +187,7 @@ public sealed class OfflineCalculator
 
         var level = s.Level;
         var xp = s.Xp + xpGain;
-        while (xp >= (long)level * eco.XpPerLevel) { xp -= (long)level * eco.XpPerLevel; level++; }
+        LevelRules.Advance(ref level, ref xp, eco.XpPerLevel);
 
         var upgrades = ups.Values.Select(u => new AutoUpgrade(u.Type, u.From, u.To)).ToList();
         var nUps = ups.Values.Sum(u => u.To - u.From);

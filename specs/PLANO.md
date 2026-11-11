@@ -116,7 +116,7 @@ Ordem: T1.1, T1.2, T1.3 e T1.7 (paralelas, escopos disjuntos) → T1.4 → T1.5 
 | T3.8 ✅ | Núcleo, queda e recuo; fases, estrelas, XP e nível; conclusão de fase | RF-27.8, RF-27.9 | Sonnet | WSL | CA-27.5 a CA-27.7 |
 | T3.9 ✅ | Economia mínima de SDD-13 (stub) e `stageTopic` em `stages.json` — absorvida: stageTopic entregue na T3.1; stub IEconomy migrado para a série T3.5–T3.8 | SDD-13 RF-13.3 | Haiku | WSL | CA-27.6 |
 | T3.10 | `SanityBot` idle e 3 partidas de replay (uma de 200 ondas, com `LayoutChanged`) | SDD-11, SDD-12, RF-27.15 | Sonnet | WSL | CA-11.2, CA-12.3, CA-27.11 |
-| T3.11 | Integração do `GameHost` com a simulação (passo fixo de 30 Hz, ondas automáticas) | SDD-10 | Sonnet | WSL | CA-10.2, CA-10.3 |
+| T3.11 ✅ | Integração do `GameHost` com a simulação (passo fixo de 30 Hz, ondas automáticas) | SDD-10 | Sonnet | WSL | CA-10.2, CA-10.3 (+ TU.1: integração host/eventos/ausente/offline) |
 | T3.12 | Benchmarks de simulação (tick médio e p99, alocação) | SDD-17, P-13 | Haiku | WSL | CA-11.3 (indicativo) |
 | T3.13 | Cobertura ≥ 90% do Core e `specs/evidencias/E3.md` | SDD-17 | Haiku | WSL | CA-11.4 |
 
@@ -172,8 +172,8 @@ T3.4 a T3.8 compartilham contratos de `SimState`: **não paralelizar entre si** 
 | Tarefa | Descrição (um commit) | Ficha/RF | Modelo | Amb. | Critérios |
 |---|---|---|---|---|---|
 | T6.1 ✅ | `PresenceTracker` e `PresenceMultiplier` (5 min, ×1,5/×2,0/×2,5/×0,25) | SDD-25 RF-25.1, RF-25.3 | Sonnet | WSL | CA-25.1, CA-25.2 |
-| T6.2 | Modo Ausente (simulação real a 8 fps) e `AutoScaler` | RF-25.4, RF-25.5 | Sonnet | WSL | CA-25.3, CA-25.4, CA-25.8 |
-| T6.3 | `OfflineCalculator` e `OfflineReport` (analítico, teto de 12 h) | RF-25.6 a RF-25.8 | Sonnet | WSL | CA-25.5, CA-25.6 |
+| T6.2 ✅ | Modo Ausente (simulação real a 8 fps) e `AutoScaler` | RF-25.4, RF-25.5 | Sonnet | WSL | CA-25.3, CA-25.4, CA-25.8 |
+| T6.3 ✅ | `OfflineCalculator` e `OfflineReport` (analítico, teto de 12 h) | RF-25.6 a RF-25.8 | Sonnet | WSL | CA-25.5, CA-25.6 |
 | T6.4 | Card "Bem-vindo de volta" (lógica, COLETAR ×2, recolhimento em 60 s) e aplicação do resultado (D-11) | RF-25.9, RF-25.10, SDD-24 | Sonnet | Windows | CA-25.7, CA-24.11 |
 | T6.5 ✅ | `EventScheduler`, pico de demanda e caixas de suprimentos | SDD-26 RF-26.2, RF-26.3, RF-26.11, RF-26.12 | Sonnet | WSL | CA-26.1, CA-26.5, CA-26.6 |
 | T6.6 ✅ | Chefe com pergunta Azure, `QuestionLedger`, banco `questions.json` e validador | RF-26.4 a RF-26.10 | Sonnet | WSL | CA-26.2 a CA-26.4, CA-26.7, CA-26.8 |

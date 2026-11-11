@@ -9,6 +9,34 @@ public sealed partial class SimState
 {
     private WavePlan? _plan;
     private int _nextSpawn;
+    private int _farmWave;
+
+    /// <summary>Onda repetida em farm enquanto o chefe espera em Ausente (SDD-25 RF-25.4); 0 = nenhuma. No hash.</summary>
+    public int FarmWave => _farmWave;
+
+    /// <summary>
+    /// Modo Ausente (SDD-25 RF-25.4): com a onda de chefe retida (<see cref="BossHold"/>, sem agenda ativa), joga a onda
+    /// <paramref name="wave"/> (= w − 1, vinda de <c>AbsentMode.WaveToPlay</c>) em farm. <see cref="Wave"/> e a onda máxima não
+    /// mudam; ganhos e HP seguem a onda de farm. Ao fim da onda (descanso) a retenção do chefe é reavaliada: em Ausente o
+    /// host chama de novo (loop); em Presente o encontro começa. Só entre ticks. Devolve false se não se aplica.
+    /// </summary>
+    public bool StartFarmWave(SimContext ctx, int wave)
+    {
+        ArgumentNullException.ThrowIfNull(ctx);
+        if (InTick) throw new InvalidOperationException("StartFarmWave só entre ticks.");
+        if (!_bossHold || _plan is not null || wave < 1 || wave >= Wave) return false;
+        var stages = ctx.Content.Stages;
+        int stageIndex = Math.Clamp(Stage - 1, 0, stages.Length - 1);
+        _plan = ctx.Waves.Build(wave, stages[stageIndex].Waves, stageIndex, _regionHp);
+        _nextSpawn = 0;
+        WaveClock = 0f;
+        Rest = 0f;
+        _farmWave = wave;
+        BaseHp = MaxBaseHp;
+        RefreshRewardFactors(ctx, wave);
+        Events.Add(new SimEvent(SimEventType.WaveStarted, 0f, 0f, wave, Stage));
+        return true;
+    }
 
     /// <summary>Agenda da onda ativa (null antes da primeira onda). Entra no <c>StateHash</c> (T3.7).</summary>
     public WavePlan? ActivePlan => _plan;
@@ -34,12 +62,13 @@ public sealed partial class SimState
         _nextSpawn = 0;
         WaveClock = 0f;
         Rest = 0f;
-        RefreshRewardFactors(ctx);
+        RefreshRewardFactors(ctx, Wave);
     }
 
     /// <summary>Descarta a agenda (queda do núcleo, SDD-27 RF-27.8; usado por T3.8).</summary>
     public void ClearWave()
     {
+        _farmWave = 0;
         _plan = null;
         _nextSpawn = 0;
         WaveClock = 0f;

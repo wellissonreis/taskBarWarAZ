@@ -173,7 +173,7 @@ public sealed partial class SimState
 
     private bool HoldForBoss(SimContext ctx)
     {
-        if (_sched is null || !ctx.Waves.IsBossWave(Wave) || Ledger.Has(CurrentBossKey)) return false;
+        if (_sched is null || !ctx.Waves.IsBossWave(Wave) || (Present && Ledger.Has(CurrentBossKey))) return false;   // Ausente: o chefe nunca começa (SDD-25 RF-25.4)
         ClearWave();
         _bossHold = true;
         return true;

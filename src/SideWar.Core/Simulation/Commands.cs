@@ -41,6 +41,8 @@ public enum CommandReason : byte
     NotAvailable,
     /// <summary>Ledger já tem resposta para a chave (SDD-26 RF-26.7).</summary>
     AlreadyUsed,
+    /// <summary>Sem partida em andamento (<c>RunState != InStage</c>, SDD-10 RF-10.5).</summary>
+    InvalidPhase,
 }
 
 /// <summary>Resultado de um comando: <c>Missing</c> = créditos que faltam (só em <see cref="CommandReason.InsufficientCredits"/>).</summary>

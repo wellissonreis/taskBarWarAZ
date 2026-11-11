@@ -74,11 +74,11 @@ public sealed partial class SimState
         return r;
     }
 
-    private void RefreshRewardFactors(SimContext ctx)
+    private void RefreshRewardFactors(SimContext ctx, int wave)
     {
         var eco = ctx.Content.Economy;
-        _goldFactor = IterPow(eco.GoldGrowth, Wave - 1);
-        _xpFactor = IterPow(eco.XpGrowth, Wave - 1);
+        _goldFactor = IterPow(eco.GoldGrowth, wave - 1);
+        _xpFactor = IterPow(eco.XpGrowth, wave - 1);
     }
 
     /// <summary>Início de onda "de jogo": núcleo restaurado, plano novo, evento <c>WaveStarted</c> (não usado no restore).</summary>
@@ -157,10 +157,12 @@ public sealed partial class SimState
     private void LevelSystem(SimContext ctx)
     {
         var eco = ctx.Content.Economy;
-        while (Level < int.MaxValue && Xp >= (long)Level * eco.XpPerLevel)
+        int level = Level;
+        long xp = Xp;
+        while (LevelRules.TryLevelUp(ref level, ref xp, eco.XpPerLevel))
         {
-            Xp -= (long)Level * eco.XpPerLevel;
-            Level++;
+            Xp = xp;
+            Level = level;
             MaxBaseHp = CoreHpForLevel(eco, Level);
             Events.Add(new SimEvent(SimEventType.LevelUp, 0f, 0f, Level, 0));
         }
@@ -178,6 +180,7 @@ public sealed partial class SimState
         Enemies.Clear();
         int fallback = LastBossWaveBeaten(Stage) + 1;
         Wave = Math.Max(Math.Max(Wave - ctx.Content.Economy.FallWaves, fallback), 1);
+        if (_farmWave > 0) _bossHold = false;   // queda no farm de Ausente: o recuo (≥ 5 ondas) sai da onda de chefe
         ClearWave();
         BeginWave(ctx);
         Events.Add(new SimEvent(SimEventType.Fall, 0f, 0f, Wave, Falls));
@@ -189,10 +192,18 @@ public sealed partial class SimState
     /// </summary>
     private void CheckEnd(SimContext ctx)
     {
-        if (_bossHold) { Rest = 0f; return; }
+        if (_bossHold && _farmWave == 0) { Rest = 0f; return; }
         if (!WaveFullySpawned || Enemies.Count != 0) { Rest = 0f; return; }
         Rest += SimContext.Dt;
         if (Rest < (float)ctx.Content.Economy.WaveRestSeconds) return;
+
+        if (_farmWave > 0)
+        {
+            // Fim da onda de farm (Ausente): a onda e a ondaMax não avançam; reavalia a retenção do chefe (RF-25.4).
+            Events.Add(new SimEvent(SimEventType.WaveCleared, 0f, 0f, _farmWave, Stage));
+            ClearWave();
+            return;
+        }
 
         Events.Add(new SimEvent(SimEventType.WaveCleared, 0f, 0f, Wave, Stage));
         if (_plan is { IsBoss: true } && Stage <= MaxStages && Wave > _lastBossWave[Stage])
@@ -242,6 +253,7 @@ public sealed partial class SimState
         h.AddInt32(BossQuestionsCorrect);
         h.AddDouble(PresenceMultiplier);
         h.AddDouble(XpCarry);
+        h.AddInt32(_farmWave);
         for (int i = 1; i <= MaxStages; i++)
         {
             h.AddInt32(_lastBossWave[i]);
