@@ -44,6 +44,7 @@ public sealed class ZOrderCoordinator
             throw Win32Error.LastError("SetWindowPos(topmost)");
         // RF-23.10 order: scene, then widget (panel and cards join here later), so upper ones stay above.
         owner.Scene.Widget?.Reassert();
+        owner.Scene.ReassertChildren(); // hotspots and seal (T4.9), above the widget
         ReassertionCount++;
     }
 }

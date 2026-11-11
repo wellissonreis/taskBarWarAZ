@@ -143,3 +143,5 @@ RegisterPowerSettingNotification
 UnregisterPowerSettingNotification
 POWERBROADCAST_SETTING
 HPOWERNOTIFY
+IDC_HAND
+HTTRANSPARENT

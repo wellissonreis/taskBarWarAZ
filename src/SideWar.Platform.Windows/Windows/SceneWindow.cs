@@ -71,6 +71,46 @@ public sealed class SceneWindow : IDisposable
         return Widget ??= new WidgetWindow(owner, this);
     }
 
+    private readonly List<OverlayChildWindow> children = [];
+    private HotspotWindow? banner, supplyBox;
+    private SceneSealWindow? seal;
+
+    /// <summary>Banner hotspot window (peak/boss), created on first use (RF-22.8); at most one banner at a time.</summary>
+    public HotspotWindow GetOrCreateBanner()
+    {
+        CheckAccess();
+        return banner ??= new HotspotWindow(owner, this, HotspotKind.Banner);
+    }
+
+    /// <summary>Supply box hotspot window, created on first use (RF-22.8); at most one box at a time.</summary>
+    public HotspotWindow GetOrCreateSupplyBox()
+    {
+        CheckAccess();
+        return supplyBox ??= new HotspotWindow(owner, this, HotspotKind.SupplyBox);
+    }
+
+    /// <summary>Click-through absent-mode seal window, created on first use (RF-22.7, ADR-028).</summary>
+    public SceneSealWindow GetOrCreateSeal()
+    {
+        CheckAccess();
+        return seal ??= new SceneSealWindow(owner, this);
+    }
+
+    internal void Register(OverlayChildWindow child) => children.Add(child);
+
+    internal void Unregister(OverlayChildWindow child)
+    {
+        children.Remove(child);
+        if (ReferenceEquals(child, banner)) banner = null;
+        if (ReferenceEquals(child, supplyBox)) supplyBox = null;
+        if (ReferenceEquals(child, seal)) seal = null;
+    }
+
+    internal void ReassertChildren()
+    {
+        foreach (var child in children) child.Reassert();
+    }
+
     internal Action<uint>? MessageObserver { get; set; }
     /// <summary>Registration point for HotkeyService (T1.12): receives the WM_HOTKEY id.</summary>
     internal Action<int>? HotkeyHandler { get; set; }
@@ -94,6 +134,7 @@ public sealed class SceneWindow : IDisposable
         PInvoke.ShowWindow(handle, SHOW_WINDOW_CMD.SW_SHOWNOACTIVATE);
         IsVisible = true;
         Widget?.OnSceneShown();
+        foreach (var child in children.ToArray()) child.OnSceneShown();
         owner.ZOrder.ReassertNow();
         owner.Mode?.OnSceneShown();
     }
@@ -104,6 +145,7 @@ public sealed class SceneWindow : IDisposable
         PInvoke.ShowWindow(handle, SHOW_WINDOW_CMD.SW_HIDE);
         IsVisible = false;
         Widget?.OnSceneHidden();
+        foreach (var child in children.ToArray()) child.OnSceneHidden();
         owner.ZOrder.Cancel();
         owner.Mode?.OnSceneHidden(); // hidden → Passive (SDD-04 RF-04.2)
     }
@@ -121,6 +163,7 @@ public sealed class SceneWindow : IDisposable
     {
         owner.VerifyAccess();
         if (disposed) return;
+        foreach (var child in children.ToArray()) child.Dispose();
         // Owned windows go first (RF-03.7); a failing widget keeps the scene alive rather than dangling it.
         if (Widget is { } widget)
         {

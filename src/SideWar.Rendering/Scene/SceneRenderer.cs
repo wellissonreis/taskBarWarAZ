@@ -10,7 +10,7 @@ namespace SideWar.Rendering.Scene;
 /// <summary>
 /// Camadas da cena (SDD-22 RF-22.4) desenhadas num <see cref="SKCanvas"/> a partir do <see cref="SimState"/>:
 /// núcleo + barra, slots/torres + rótulos, inimigos (bob global), números de dano, portal, chefe + barra.
-/// A linha de borda de estado, o modo ausente e os hotspots são da T4.9. Pensado para a T-Game (não thread-safe);
+/// A linha de borda de estado entra pelo parâmetro <c>edge</c> de Draw; selo e hotspots são do <see cref="HotspotRenderer"/> (T4.9). Pensado para a T-Game (não thread-safe);
 /// paints/fonts pré-criados, sem alocação por frame em regime.
 /// </summary>
 public sealed class SceneRenderer : IDisposable
@@ -107,14 +107,21 @@ public sealed class SceneRenderer : IDisposable
         return true;
     }
 
-    /// <summary>Desenha a cena (limpa o canvas para transparente antes).</summary>
-    public void Draw(SKCanvas canvas, SimState state, double now, AnimationPolicy policy)
+    /// <summary>Atlas assado deste renderizador (compartilhado com o <see cref="HotspotRenderer"/> para não duplicar memória).</summary>
+    public ScaledSpriteCache SpriteCache => _cache;
+
+    /// <summary>
+    /// Desenha a cena (limpa o canvas para transparente antes). Com <paramref name="edge"/> a linha de borda de estado
+    /// (RF-22.6) é desenhada logo após o Clear, portanto SOB os sprites (RF-22.4 item 1); nulo = sem linha.
+    /// </summary>
+    public void Draw(SKCanvas canvas, SimState state, double now, AnimationPolicy policy, StripEdgeMode? edge = null)
     {
         ArgumentNullException.ThrowIfNull(canvas);
         ArgumentNullException.ThrowIfNull(state);
         if (!_cache.IsBaked) throw new InvalidOperationException("Chame SetDpi antes de Draw.");
         _numbers.Expire(now);
         canvas.Clear(SKColors.Transparent);
+        if (edge is { } mode) StripEdge.Draw(canvas, _fill, _scale, canvas.DeviceClipBounds.Width, mode);
 
         var layout = state.Layout;
         float s = _scale;
