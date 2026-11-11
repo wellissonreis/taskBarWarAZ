@@ -113,9 +113,9 @@ public sealed class ReplayTests
         Assert.Equal(0, new SanityBot(ctx).Act(s));
     }
 
-    // Goldens do Core da T3.8 (Linux; ver specs/evidencias/T3.10.md). REGENERAR depois da T6.6B.
+    // Goldens regenerados na T6.9a sobre o Core da TU.1 (antes na T6.9a sobre TU.1: 11744330168129418410, 7214345695300152346, 1541269599807180295; T6.7 mudou o hash; antes: T3.8; 7034930283139373023, 3780424209191337524, 17563337984345861725).
     private static readonly Dictionary<string, ulong> Golden = new()
     {
-        ["bot-200"] = 7034930283139373023UL, ["manual"] = 3780424209191337524UL, ["bot-40"] = 17563337984345861725UL,
+        ["bot-200"] = 1868058130287024683UL, ["manual"] = 8001160168888604307UL, ["bot-40"] = 14429632012659513062UL,
     };
 }

@@ -115,7 +115,7 @@ Ordem: T1.1, T1.2, T1.3 e T1.7 (paralelas, escopos disjuntos) → T1.4 → T1.5 
 | T3.7 ✅ | Comandos (construir, melhorar), `LayoutChanged` e `StateHash` | SDD-11, RF-27.5 | Sonnet | WSL | CA-11.1, CA-27.2 |
 | T3.8 ✅ | Núcleo, queda e recuo; fases, estrelas, XP e nível; conclusão de fase | RF-27.8, RF-27.9 | Sonnet | WSL | CA-27.5 a CA-27.7 |
 | T3.9 ✅ | Economia mínima de SDD-13 (stub) e `stageTopic` em `stages.json` — absorvida: stageTopic entregue na T3.1; stub IEconomy migrado para a série T3.5–T3.8 | SDD-13 RF-13.3 | Haiku | WSL | CA-27.6 |
-| T3.10 | `SanityBot` idle e 3 partidas de replay (uma de 200 ondas, com `LayoutChanged`) | SDD-11, SDD-12, RF-27.15 | Sonnet | WSL | CA-11.2, CA-12.3, CA-27.11 |
+| T3.10 ✅ | `SanityBot` idle e 3 partidas de replay (uma de 200 ondas, com `LayoutChanged`) | SDD-11, SDD-12, RF-27.15 | Sonnet | WSL | CA-11.2, CA-12.3, CA-27.11 |
 | T3.11 ✅ | Integração do `GameHost` com a simulação (passo fixo de 30 Hz, ondas automáticas) | SDD-10 | Sonnet | WSL | CA-10.2, CA-10.3 (+ TU.1: integração host/eventos/ausente/offline) |
 | T3.12 | Benchmarks de simulação (tick médio e p99, alocação) | SDD-17, P-13 | Haiku | WSL | CA-11.3 (indicativo) |
 | T3.13 | Cobertura ≥ 90% do Core e `specs/evidencias/E3.md` | SDD-17 | Haiku | WSL | CA-11.4 |
@@ -179,7 +179,7 @@ T3.4 a T3.8 compartilham contratos de `SimState`: **não paralelizar entre si** 
 | T6.6 ✅ | Chefe com pergunta Azure, `QuestionLedger`, banco `questions.json` e validador | RF-26.4 a RF-26.10 | Sonnet | WSL | CA-26.2 a CA-26.4, CA-26.7, CA-26.8 |
 | T6.7 ✅ | `PrestigeService` ("Migrar", regiões) e `MissionService` | SDD-27 RF-27.10, RF-27.11, RF-27.13 | Sonnet | WSL | CA-27.8, CA-27.9 |
 | T6.8 ✅ | `ProfileStore` e `SessionStore` (`OfflineSnapshot`) com schemas versionados e migrações | SDD-14 RF-14.5, RF-14.6, RF-14.10, RF-25.11 | Sonnet | WSL | CA-14.1, CA-14.4, CA-14.6, CA-25.9 |
-| T6.9 | Gatilhos de save, limite de gravações e integração de sessão/suspensão/logoff com o offline | SDD-14 RF-14.7, RF-14.8, SDD-07 | Sonnet | Windows | CA-14.5, CA-07.2, CA-07.5 |
+| T6.9 🟡 parte A (T6.9a) | Gatilhos de save, limite de gravações e integração de sessão/suspensão/logoff com o offline | SDD-14 RF-14.7, RF-14.8, SDD-07 | Sonnet | Windows | CA-14.5, CA-07.2, CA-07.5 |
 | T6.10 | Teste de kill do processo em loop | SDD-14 | Sonnet | Windows | CA-14.2 |
 | T6.11 | Ligar as abas Missões e Migrar, banners, caixas e card de pergunta aos serviços reais | SDD-24, SDD-26 | Sonnet | Windows | CA-26.9, CA-24.7, CA-24.8 |
 | T6.12 | Fechamento de CA-07.2, CA-07.3 e CA-07.5, MTC-07, cobertura (Runtime e Persistence) e `specs/evidencias/E6.md` | SDD-07, 14, 17 | Haiku | Windows | CA-07.3, CA-17.3 |

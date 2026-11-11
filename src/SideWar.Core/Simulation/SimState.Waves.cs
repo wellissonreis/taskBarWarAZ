@@ -65,6 +65,45 @@ public sealed partial class SimState
         RefreshRewardFactors(ctx, Wave);
     }
 
+    /// <summary>Multiplicador de HP da região da última <see cref="StartWave"/> (persistido pelo SDD-14).</summary>
+    public double RegionHpMultiplier => _regionHp;
+
+    /// <summary>
+    /// Restore (SDD-14, T6.9a): reconstrói a agenda e os relógios. <paramref name="farmWave"/> &gt; 0 = onda de farm de Ausente
+    /// (<see cref="StartFarmWave"/>); <paramref name="hasPlan"/> false = sem agenda ativa (descanso/espera de chefe).
+    /// Não mexe no núcleo, em <see cref="Wave"/> nem em eventos. Chamar antes de <c>RestoreEvents</c>. Só entre ticks.
+    /// </summary>
+    public void RestoreWave(SimContext ctx, double regionHpMultiplier, bool hasPlan, int farmWave, int nextSpawn, float waveClock, float rest)
+    {
+        ArgumentNullException.ThrowIfNull(ctx);
+        if (InTick) throw new InvalidOperationException("RestoreWave só entre ticks.");
+        _regionHp = regionHpMultiplier;
+        if (!hasPlan)
+        {
+            _plan = null;
+            _nextSpawn = 0;
+            _farmWave = 0;
+            RefreshRewardFactors(ctx, Wave);
+        }
+        else if (farmWave > 0)
+        {
+            var stages = ctx.Content.Stages;
+            int stageIndex = Math.Clamp(Stage - 1, 0, stages.Length - 1);
+            _plan = ctx.Waves.Build(farmWave, stages[stageIndex].Waves, stageIndex, regionHpMultiplier);
+            _farmWave = farmWave;
+            RefreshRewardFactors(ctx, farmWave);
+            RestoreNextSpawn(nextSpawn);
+        }
+        else
+        {
+            StartWave(ctx, regionHpMultiplier);
+            _farmWave = 0;
+            RestoreNextSpawn(nextSpawn);
+        }
+        WaveClock = waveClock;
+        Rest = rest;
+    }
+
     /// <summary>Descarta a agenda (queda do núcleo, SDD-27 RF-27.8; usado por T3.8).</summary>
     public void ClearWave()
     {

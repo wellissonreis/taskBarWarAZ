@@ -75,8 +75,11 @@ internal static class StoreTestSupport
         },
         Events = new EventsData
         {
-            Boss = new BossEncounterData("q-07", 31.5, true), PeakBannerRemainingS = 12.5, PeakQueue = [0.5, 12.5],
-            PeakBonusRemainingS = null, PeakDue = true, Crate = new SupplyCrateData(700, 22.25), NextPeakInS = 480, NextCrateInS = null,
+            Enabled = true, BossHold = true, PeakQueue = 3, StageAttempt = 2,
+            Scheduler = new SchedulerData { Peak = "Offer", PeakTimer = 12.5, PeakDue = true, ExtrasPending = 4, NextExtraIn = 7.5, CrateActive = true, CrateTimer = 22.25, CrateX = 700, CrateCountdown = 200.5, PeaksClicked = 2, CratesCollected = 1 },
+            Encounter = new BossEncounterData { Stage = 3, Attempt = 2, Wave = 20, QuestionId = "q-07", ElapsedS = 13.5, CardOpen = true },
+            Ledger = [new LedgerEntryData { Stage = 1, Attempt = 1, Wave = 20, QuestionId = "q-07", OptionIndex = 2, Correct = true, BonusConsumed = true }],
+            DrawnQuestions = [new DrawnQuestionsData { Stage = 3, Attempt = 2, QuestionIds = ["q-07"] }],
         },
     };
 }

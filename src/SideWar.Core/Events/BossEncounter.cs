@@ -15,7 +15,9 @@ public sealed record BossOutcome(
 }
 
 /// <summary>Estado persistível de um encontro em espera (RF-26.5: a pergunta é regravada no restore).</summary>
-public readonly record struct BossEncounterState(LedgerKey Key, string QuestionId, double Elapsed);
+/// <remarks>T6.9a: <c>CardOpen</c>, <c>Result</c> e <c>OptionIndex</c> (encontro já resolvido, ainda não liberado) entram no snapshot porque estão no StateHash.</remarks>
+public readonly record struct BossEncounterState(LedgerKey Key, string QuestionId, double Elapsed,
+    bool CardOpen = false, BossResult? Result = null, int? OptionIndex = null);
 
 /// <summary>
 /// Encontro de chefe com pergunta (SDD-26 RF-26.4 a RF-26.10), modelo puro: sem simulação, UI ou relógio.
@@ -48,7 +50,7 @@ public sealed class BossEncounter
     public bool IsResolved => Outcome is not null;
     public bool IsActive => !IsResolved && !IsCancelled;
 
-    public BossEncounterState State => new(Key, Question.Id, Elapsed);
+    public BossEncounterState State => new(Key, Question.Id, Elapsed, CardOpen, Outcome?.Result, Outcome?.OptionIndex);
 
     /// <summary>
     /// Abre o encontro ao aparecer o banner: sorteia a pergunta (RF-26.5). Retorna <c>null</c> se o ledger já
@@ -63,15 +65,29 @@ public sealed class BossEncounter
         return new BossEncounter(selector, ledger, key, question, 0);
     }
 
-    /// <summary>Restore anterior à resposta: regrava a mesma pergunta e o tempo decorrido; null se o ledger já tem a chave.</summary>
+    /// <summary>
+    /// Restore: regrava a mesma pergunta, o tempo e o card. Sem <c>Result</c>, devolve null se o ledger já tem a chave
+    /// (como antes). Com <c>Result</c> (resolvido e ainda não liberado) reconstrói o resultado sem regravar o ledger.
+    /// </summary>
     public static BossEncounter? Restore(QuestionBank bank, QuestionSelector selector, QuestionLedger ledger,
         BossEncounterState state)
     {
-        if (ledger.Has(state.Key))
+        if (state.Result is null && ledger.Has(state.Key))
             return null;
         var question = bank.Find(state.QuestionId)
             ?? throw new InvalidOperationException($"Pergunta '{state.QuestionId}' ausente do banco.");
-        return new BossEncounter(selector, ledger, state.Key, question, state.Elapsed);
+        var e = new BossEncounter(selector, ledger, state.Key, question, state.Elapsed);
+        if (state.Result is { } r)
+        {
+            int? opt = state.OptionIndex;
+            if (opt is { } o && (uint)o >= (uint)question.Options.Length)
+                throw new InvalidOperationException("Índice de alternativa inválido no encontro restaurado.");
+            e.Outcome = new BossOutcome(r, question.Id, opt, question.CorrectIndex,
+                opt is { } i ? question.Options[i].Explanation : null, question.Options[question.CorrectIndex].Explanation);
+        }
+        else
+            e.CardOpen = state.CardOpen;
+        return e;
     }
 
     public void OpenCard()

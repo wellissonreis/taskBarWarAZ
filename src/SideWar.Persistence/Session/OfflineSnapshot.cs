@@ -99,9 +99,29 @@ public sealed record SimData
     public WaveStateData WaveState { get; init; } = new();
     public IReadOnlyList<TowerData> Towers { get; init; } = [];
     public IReadOnlyList<EnemyData> Enemies { get; init; } = [];
+
+    // ---- T6.9a: campos do StateHash que faltavam (todos aditivos, com padrão do SimState novo) ----
+    /// <summary>Quedas totais (<c>SimState.Falls</c>); <see cref="Falls"/> é a <c>StageRun.Falls</c> da passagem atual.</summary>
+    public int TotalFalls { get; init; }
+    public int UnlockedStage { get; init; } = 1;
+    public int BossQuestionsCorrect { get; init; }
+    public double PresenceMultiplier { get; init; } = 1.0;
+    public double XpCarry { get; init; }
+    public long ManualUpgrades { get; init; }
+    public double IncomePerSecond { get; init; }
+    /// <summary>Multiplicador de HP da região usado na agenda da onda (<c>SimState.RegionHpMultiplier</c>).</summary>
+    public double RegionHp { get; init; } = 1.0;
+    /// <summary>Verdadeiro = Presente (<c>SimState.Present</c>, no hash).</summary>
+    public bool Present { get; init; } = true;
+    /// <summary>Tabela por fase (estrelas e chefes vencidos, no hash). Cópia exata do SimState: o hash cobre as 32 fases e o
+    /// perfil pode estar defasado em relação à sessão, então a sessão é autossuficiente (decisão T6.9a).</summary>
+    public IReadOnlyList<StageProgressData> StageTable { get; init; } = [];
 }
 
-/// <summary>Estado da onda automática (fila, cursor, descanso de 1,4 s). O formato final depende de T3.5/T3.8 (pendência de mapeamento).</summary>
+/// <summary>
+/// Estado da onda automática. A agenda é reconstruída de (fase, onda, região) por <c>StartWave</c>; o que se grava é o cursor
+/// (<see cref="SpawnIndex"/>) e os relógios. <see cref="Queue"/>/<see cref="Cursor"/> são do formato provisório da T6.8 e não são usados.
+/// </summary>
 public sealed record WaveStateData
 {
     public IReadOnlyList<QueuedSpawnData> Queue { get; init; } = [];
@@ -109,6 +129,10 @@ public sealed record WaveStateData
     public float Clock { get; init; }
     public float Rest { get; init; }
     public int SpawnIndex { get; init; }
+    /// <summary>Há agenda ativa (false = descanso ou chefe em espera).</summary>
+    public bool HasPlan { get; init; }
+    /// <summary>Onda de farm de Ausente (SDD-25 RF-25.4); 0 = nenhuma.</summary>
+    public int FarmWave { get; init; }
 }
 
 public sealed record QueuedSpawnData(float AtS, string Kind);
@@ -140,19 +164,50 @@ public sealed record EnemyData
     public string LastHit { get; init; } = "None";
 }
 
-/// <summary>Estado dos eventos ao vivo (SDD-26). Ainda não há equivalente no SimState; o formato é provisório (pendência de mapeamento).</summary>
+/// <summary>
+/// Estado dos eventos ao vivo (SDD-26), espelho exato do que o StateHash cobre (T6.9a). Ledger e perguntas sorteadas também vão
+/// ao perfil (RF-14.5); aqui entram de novo para o restore ser atômico com o <c>StateHash</c>.
+/// </summary>
 public sealed record EventsData
 {
-    public BossEncounterData? Boss { get; init; }
-    public double? PeakBannerRemainingS { get; init; }
-    public IReadOnlyList<double> PeakQueue { get; init; } = [];
-    public double? PeakBonusRemainingS { get; init; }
-    public bool PeakDue { get; init; }
-    public SupplyCrateData? Crate { get; init; }
-    public double? NextPeakInS { get; init; }
-    public double? NextCrateInS { get; init; }
+    /// <summary>SDD-26 ligado (<c>StartEvents</c> já chamado). false = nenhum dos demais campos é usado.</summary>
+    public bool Enabled { get; init; }
+    public SchedulerData Scheduler { get; init; } = new();
+    public bool BossHold { get; init; }
+    public int PeakQueue { get; init; }
+    public BossEncounterData? Encounter { get; init; }
+    public IReadOnlyList<LedgerEntryData> Ledger { get; init; } = [];
+    public IReadOnlyList<DrawnQuestionsData> DrawnQuestions { get; init; } = [];
+    public int StageAttempt { get; init; } = 1;
 }
 
-public sealed record BossEncounterData(string QuestionId, double RemainingS, bool CardOpen);
+public sealed record SchedulerData
+{
+    public string Peak { get; init; } = "Waiting";
+    public double PeakTimer { get; init; }
+    public bool PeakDue { get; init; }
+    public bool BossActive { get; init; }
+    public bool NeedsPeakDraw { get; init; }
+    public int ExtrasPending { get; init; }
+    public double NextExtraIn { get; init; }
+    public bool CrateActive { get; init; }
+    public double CrateTimer { get; init; }
+    public int CrateX { get; init; }
+    public bool NeedsCrateDraw { get; init; }
+    public double CrateCountdown { get; init; }
+    public int PeaksClicked { get; init; }
+    public int CratesCollected { get; init; }
+}
 
-public sealed record SupplyCrateData(int X, double RemainingS);
+/// <summary>Encontro de chefe (RF-26.5: a mesma pergunta e o tempo). <c>Result</c> ≠ nulo = já resolvido e ainda não liberado.</summary>
+public sealed record BossEncounterData
+{
+    public int Stage { get; init; }
+    public int Attempt { get; init; }
+    public int Wave { get; init; }
+    public string QuestionId { get; init; } = "";
+    public double ElapsedS { get; init; }
+    public bool CardOpen { get; init; }
+    public string? Result { get; init; }
+    public int? OptionIndex { get; init; }
+}
