@@ -117,7 +117,7 @@ Ordem: T1.1, T1.2, T1.3 e T1.7 (paralelas, escopos disjuntos) → T1.4 → T1.5 
 | T3.9 ✅ | Economia mínima de SDD-13 (stub) e `stageTopic` em `stages.json` — absorvida: stageTopic entregue na T3.1; stub IEconomy migrado para a série T3.5–T3.8 | SDD-13 RF-13.3 | Haiku | WSL | CA-27.6 |
 | T3.10 ✅ | `SanityBot` idle e 3 partidas de replay (uma de 200 ondas, com `LayoutChanged`) | SDD-11, SDD-12, RF-27.15 | Sonnet | WSL | CA-11.2, CA-12.3, CA-27.11 |
 | T3.11 ✅ | Integração do `GameHost` com a simulação (passo fixo de 30 Hz, ondas automáticas) | SDD-10 | Sonnet | WSL | CA-10.2, CA-10.3 (+ TU.1: integração host/eventos/ausente/offline) |
-| T3.12 | Benchmarks de simulação (tick médio e p99, alocação) | SDD-17, P-13 | Haiku | WSL | CA-11.3 (indicativo) |
+| T3.12 ✅ | Benchmarks de simulação (tick médio e p99, alocação) | SDD-17, P-13 | Haiku | WSL | CA-11.3 (indicativo) |
 | T3.13 | Cobertura ≥ 90% do Core e `specs/evidencias/E3.md` | SDD-17 | Haiku | WSL | CA-11.4 |
 
 T3.4 a T3.8 compartilham contratos de `SimState`: **não paralelizar entre si** (seção 4). T3.1 a T3.3 podem ser paralelas.
