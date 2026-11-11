@@ -27,4 +27,7 @@ public sealed class PanelTextMetricsSkia(Typography typography) : IPanelTextMetr
         var m = f.Metrics;
         return m.Descent - m.Ascent + m.Leading;
     }
+
+    public float Ascent(PanelFont font, float sizeDip) =>
+        (float)Math.Round(-_typography.GetFont(Role(font), sizeDip, 96).Metrics.Ascent);
 }

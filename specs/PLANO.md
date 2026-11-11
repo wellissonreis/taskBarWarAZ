@@ -155,7 +155,7 @@ T3.4 a T3.8 compartilham contratos de `SimState`: **não paralelizar entre si** 
 | T5.2 🟡 | Hit-test, cursores, `NotifyInteraction`, render por evento e menu de clique direito | SDD-23 RF-23.8, RF-23.9 | Sonnet | Windows | CA-23.2, CA-23.6, CA-23.8, CA-23.9, CA-23.11 (CA Windows interativos pendentes: mouse físico, cursor, MTC-23.2/23.5, DPI) |
 | T5.3 🟡 | Três janelas layered do painel e dos cards: estilos, geometria, rolagem e hover | SDD-24 | Sonnet | Windows | CA-24.1 a CA-24.3, CA-24.9, CA-24.12, CA-24.16 (reposicionamento por DPI/DISPLAYCHANGE ainda não ligado ao host) |
 | T5.4 ✅ | Abas Arsenal e Campanha (construir, melhorar, `SEM SLOT`, auto-escala visual) | SDD-24, RF-27.5 | Sonnet | WSL | CA-24.4 a CA-24.6, CA-24.14 |
-| T5.5 | Abas Missões e Migrar (visual, com dados de teste) e card de pergunta (visual) | SDD-24 | Sonnet | WSL | CA-24.7, CA-24.8, CA-24.10, CA-24.15 |
+| T5.5 ✅ | Abas Missões e Migrar (visual, com dados de teste) e card de pergunta (visual) | SDD-24 | Sonnet | WSL | CA-24.7, CA-24.8, CA-24.10, CA-24.15 |
 | T5.6 | Golden images do widget, do painel e dos cards | SDD-23, SDD-24, SDD-17 | Sonnet | WSL | CA-23.4, CA-24.13 |
 | T5.7 ✅ | Atalhos completos e `HotkeyParser` | SDD-15 RF-15.6 | Sonnet | Windows | CA-15.4 |
 | T5.8 🟡 | Menus nativos (`TrackPopupMenuEx`) e bandeja completa | SDD-15 RF-15.7, RF-15.8 | Sonnet | Windows | CA-15.5, CA-15.6 (CA-15.5 foco real e CA-15.6 explorer real pendentes) |

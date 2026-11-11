@@ -13,6 +13,12 @@ public interface IPanelTextMetrics
 
     /// <summary>Altura de linha "normal" (ascent + descent + leading) do tamanho dado.</summary>
     float LineHeight(PanelFont font, float sizeDip);
+
+    /// <summary>
+    /// Distância do topo da caixa de linha até a linha de base (T5.5). Membro padrão para não quebrar implementações
+    /// existentes (T5.4): aproxima por 80% da altura de linha.
+    /// </summary>
+    float Ascent(PanelFont font, float sizeDip) => LineHeight(font, sizeDip) * 0.8f;
 }
 
 /// <summary>Quebra de linha por palavras (largura em DIP), usada por descrição e títulos longos.</summary>
