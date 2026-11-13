@@ -12,5 +12,6 @@
   <Project Path="tests/SideWar.Platform.Windows.Tests/SideWar.Platform.Windows.Tests.csproj" />
   <Project Path="tests/SideWar.App.SmokeTests/SideWar.App.SmokeTests.csproj" />
   <Project Path="tools/SideWar.AssetPipeline/SideWar.AssetPipeline.csproj" />
+  <Project Path="tools/SideWar.KillTarget/SideWar.KillTarget.csproj" />
   <Project Path="bench/SideWar.Benchmarks/SideWar.Benchmarks.csproj" />
 </Solution>
