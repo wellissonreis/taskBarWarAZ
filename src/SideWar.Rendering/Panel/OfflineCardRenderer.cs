@@ -19,6 +19,9 @@ public sealed class OfflineCardRenderer(Typography typography, IconCatalog icons
     private readonly SKPaint iconPaint = new() { IsAntialias = false };
 
     /// <summary>Tamanho físico da janela: caixa + margem de sombra (RF-24.2).</summary>
+    /// <summary>Falso: layout idêntico, mas nenhum glifo é desenhado (goldens "-notext").</summary>
+    public bool TextEnabled { get => p.TextEnabled; set => p.TextEnabled = value; }
+
     public (int W, int H) WindowSize => ((int)(p.Px(OfflineCardLayout.Width) + p.Px(6)), (int)(p.Px(OfflineCardLayout.Height) + p.Px(6)));
 
     private static SKColor Tone(OfflineTone t) => t switch

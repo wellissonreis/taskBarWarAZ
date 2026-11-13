@@ -12,6 +12,14 @@ public static class CampaignTabRenderer
 {
     public static void Draw(SKCanvas canvas, CampaignLayout layout, float offsetDip, float viewportDip, ArsenalCampaignPaintContext ctx)
     {
+        bool prev = D.TextSuppressed;
+        D.TextSuppressed = ctx is { TextEnabled: false };
+        try { DrawCore(canvas, layout, offsetDip, viewportDip, ctx); }
+        finally { D.TextSuppressed = prev; }
+    }
+
+    private static void DrawCore(SKCanvas canvas, CampaignLayout layout, float offsetDip, float viewportDip, ArsenalCampaignPaintContext ctx)
+    {
         ArgumentNullException.ThrowIfNull(canvas);
         ArgumentNullException.ThrowIfNull(layout);
         ArgumentNullException.ThrowIfNull(ctx);

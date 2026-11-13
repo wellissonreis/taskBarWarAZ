@@ -8,6 +8,9 @@ namespace SideWar.Rendering.Panel;
 /// <summary>Recursos de pintura das abas (T-Game): fontes, atlas pré-escalado e DPI. O dono mantém e descarta cada um.</summary>
 public sealed record ArsenalCampaignPaintContext(Typography Fonts, ScaledSpriteCache Sprites, int Dpi)
 {
+    /// <summary>Falso: layout idêntico, mas nenhum glifo é desenhado (goldens "-notext").</summary>
+    public bool TextEnabled { get; init; } = true;
+
     public float Scale => Dpi / 96f;
 }
 
@@ -41,6 +44,9 @@ internal static class ArsenalCampaignDraw
 
     [ThreadStatic] private static Kit? t_kit;
     private static Kit K => t_kit ??= new Kit();
+
+    /// <summary>Por thread, ligado por <c>ArsenalTabRenderer/CampaignTabRenderer.Draw</c> a partir de <see cref="ArsenalCampaignPaintContext.TextEnabled"/>.</summary>
+    [ThreadStatic] internal static bool TextSuppressed;
 
     /// <summary>Estrela de 5 pontas, centrada em (0,0), diâmetro 1 (DP-20.2: Silkscreen/JetBrains não têm ★☆).</summary>
     private static readonly SKPath Star = SKPath.ParseSvgPathData("M0.0000 -0.5000L0.1176 -0.1618L0.4755 -0.1545L0.1902 0.0618L0.2939 0.4045L0.0000 0.2000L-0.2939 0.4045L-0.1902 0.0618L-0.4755 -0.1545L-0.1176 -0.1618Z")!;
@@ -109,7 +115,7 @@ internal static class ArsenalCampaignDraw
         if (letterSpacingDip == 0f)
         {
             var run = kit.Runs.Get(text, font);
-            c.DrawText(run.Blob, x, y, aa);
+            if (!TextSuppressed) c.DrawText(run.Blob, x, y, aa);
             return run.Width;
         }
         float ls = MathF.Round(letterSpacingDip * s);
@@ -117,7 +123,7 @@ internal static class ArsenalCampaignDraw
         foreach (char ch in text)
         {
             var g = kit.Runs.Get(kit.Runs.Char(ch), font);
-            c.DrawText(g.Blob, x, y, aa);
+            if (!TextSuppressed) c.DrawText(g.Blob, x, y, aa);
             x += g.Width + ls;
         }
         return x - start;

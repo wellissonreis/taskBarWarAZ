@@ -20,6 +20,9 @@ public sealed class MissionsMigratePanelRenderer(Typography typography, IconCata
     private readonly PanelTextMetricsSkia tm = new(typography);
     private readonly SKPaint iconPaint = new() { IsAntialias = false };
 
+    /// <summary>Falso: layout idêntico, mas nenhum glifo é desenhado (goldens "-notext").</summary>
+    public bool TextEnabled { get => p.TextEnabled; set => p.TextEnabled = value; }
+
     /// <summary>Tamanho físico da janela: <c>round(400 × s) + round(6 × s)</c> × <c>round(548 × s) + round(6 × s)</c> (RF-24.2).</summary>
     public (int W, int H) WindowSize => ((int)(p.Px(PanelGeometry.PanelWidthDip) + p.Px(6)), (int)(p.Px(PanelGeometry.PanelHeightDip) + p.Px(6)));
 

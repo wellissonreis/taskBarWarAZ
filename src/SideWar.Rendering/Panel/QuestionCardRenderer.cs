@@ -20,6 +20,9 @@ public sealed class QuestionCardRenderer(Typography typography, IconCatalog icon
     private readonly SKPaint strokePaint = new() { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeCap = SKStrokeCap.Butt };
     private readonly SKPath minimize = SKPath.ParseSvgPathData("M3 12h10")!;
 
+    /// <summary>Falso: layout idêntico, mas nenhum glifo é desenhado (goldens "-notext").</summary>
+    public bool TextEnabled { get => p.TextEnabled; set => p.TextEnabled = value; }
+
     /// <summary>Tamanho físico da janela para a altura (DIP) do layout: caixa + margem de sombra (RF-24.2).</summary>
     public (int W, int H) WindowSize(float heightDip) => ((int)(p.Px(QuestionCardLayout.Width) + p.Px(6)), (int)(p.Px(heightDip) + p.Px(6)));
 

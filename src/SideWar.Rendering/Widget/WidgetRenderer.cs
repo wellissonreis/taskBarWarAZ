@@ -225,13 +225,16 @@ public sealed class WidgetRenderer : IDisposable
         canvas.DrawRoundRect(rect.Left, rect.Top, rect.Width, rect.Height, radius, radius, paint); // sem SKRoundRect (objeto nativo por chamada)
     }
 
+    /// <summary>Falso: layout e caixas de texto idênticos, mas nenhum glifo é desenhado (goldens "-notext").</summary>
+    public bool TextEnabled { get; set; } = true;
+
     private void DrawLine(SKCanvas canvas, string text, SKFont font, SKPaint paint, SKColor color, float x, float baseline)
     {
         x = (float)Math.Round(x);
         baseline = (float)Math.Round(baseline);
         paint.Color = color;
         var run = _runs.Get(text, font);
-        canvas.DrawText(run.Blob, x, baseline, paint);
+        if (TextEnabled) canvas.DrawText(run.Blob, x, baseline, paint);
         float w = run.Width;
         SKFontMetrics fm = font.Metrics;
         _boxes.Add(new WidgetTextBox(text, new SKRect(x, baseline + fm.Ascent, x + w, baseline + fm.Descent)));

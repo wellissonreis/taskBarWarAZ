@@ -18,6 +18,15 @@ public static class ArsenalTabRenderer
     public static void Draw(SKCanvas canvas, ArsenalLayout layout, ArsenalHit hover, float offsetDip, float viewportDip, ArsenalCampaignPaintContext ctx,
         BuildOrigin? building = null)
     {
+        bool prev = D.TextSuppressed;
+        D.TextSuppressed = ctx is { TextEnabled: false };
+        try { DrawCore(canvas, layout, hover, offsetDip, viewportDip, ctx, building); }
+        finally { D.TextSuppressed = prev; }
+    }
+
+    private static void DrawCore(SKCanvas canvas, ArsenalLayout layout, ArsenalHit hover, float offsetDip, float viewportDip, ArsenalCampaignPaintContext ctx,
+        BuildOrigin? building)
+    {
         ArgumentNullException.ThrowIfNull(canvas);
         ArgumentNullException.ThrowIfNull(layout);
         ArgumentNullException.ThrowIfNull(ctx);

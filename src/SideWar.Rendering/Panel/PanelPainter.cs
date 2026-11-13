@@ -22,6 +22,9 @@ internal sealed class PanelPainter(Typography typography, int dpi) : IDisposable
     public float Scale => dpi / 96f;
     public float OffsetY { get; set; }
 
+    /// <summary>Falso: layout idêntico, mas nenhum glifo é desenhado (goldens "-notext", comparáveis entre SOs).</summary>
+    public bool TextEnabled { get; set; } = true;
+
     public float Px(float dip) => (float)Math.Round(dip * dpi / 96.0, MidpointRounding.AwayFromZero);
 
     public SKRect Rect(DipRect r) => Rect(r.X, r.Y, r.W, r.H);
@@ -59,6 +62,7 @@ internal sealed class PanelPainter(Typography typography, int dpi) : IDisposable
     public void Text(SKCanvas c, string s, PanelFont face, float sizeDip, DipRect box, SKColor color,
         TextAlign align = TextAlign.Left, float letterSpacing = 0f)
     {
+        if (!TextEnabled) return;
         var font = Font(face, sizeDip);
         text.Color = color;
         var ls = letterSpacing * Scale;
