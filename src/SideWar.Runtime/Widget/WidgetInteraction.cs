@@ -9,12 +9,15 @@ public interface IPresenceSink
     void NotifyInteraction();
 }
 
-public enum PanelCommandKind { ToggleTab }
+public enum PanelCommandKind { ToggleTab, OpenArsenal }
 
 /// <summary>Comando do widget ao painel (SDD-23 RF-23.8; consumidor: SDD-24).</summary>
-public readonly record struct PanelCommand(PanelCommandKind Kind, WidgetTab Tab)
+public readonly record struct PanelCommand(PanelCommandKind Kind, WidgetTab Tab, int TowerId = 0)
 {
     public static PanelCommand ToggleTab(WidgetTab tab) => new(PanelCommandKind.ToggleTab, tab);
+
+    /// <summary>ADR-034: clique numa torre da cena abre o Arsenal e rola até a linha dela (uma vez, ao abrir; <c>ArsenalLayout.TryGetTowerRowTop</c>).</summary>
+    public static PanelCommand OpenArsenal(int towerId) => new(PanelCommandKind.OpenArsenal, WidgetTab.Arsenal, towerId);
 }
 
 /// <summary>Alvo do hit-test do widget (RF-23.8).</summary>

@@ -4,6 +4,7 @@ using SideWar.Rendering.Panel;
 using SideWar.Rendering.Sprites;
 using SideWar.Rendering.Text;
 using SideWar.Rendering.Theme;
+using SideWar.Runtime.Input;
 using SideWar.Runtime.Panel;
 using SkiaSharp;
 using Xunit;
@@ -92,6 +93,25 @@ public sealed class ArsenalCampaignRenderTests : IDisposable
         for (int y = 0; y < 55; y++)
             for (int x = 0; x < 400; x += 7)
                 Assert.Equal(Palette.BgPainel, b.GetPixel(x, y));
+    }
+
+    [Fact]
+    public void Arsenal_HelpCardIsMentaBoxBelowAutoCard_AndIconGetsMentaBorderWhileBuilding()
+    {
+        var ctx = Paint(96);
+        var lay = ArsenalLayout.Compute(ArsenalModelBuilder.Build(State(), Ctx, true), new PanelTextMetricsSkia(_fonts));
+        using var b = Panel(96);
+        using (var c = new SKCanvas(b)) ArsenalTabRenderer.Draw(c, lay, ArsenalHit.None, 0, 491, ctx);
+        var h = lay.HelpCard.Rect;
+        Assert.Equal(Palette.MentaBorda, At(b, 2 + h.X, 55 + h.Y + 4, 96));
+        Assert.Equal(Palette.MentaFundo, At(b, 2 + h.X + 3, 55 + h.Y + 3, 96));
+        var slot = lay.Rows[0].Slot;
+        Assert.Equal(Palette.BgTrilhoFundo, At(b, 2 + slot.X + 1, 55 + slot.Y + 1, 96));
+        using var b2 = Panel(96);
+        using (var c = new SKCanvas(b2)) ArsenalTabRenderer.Draw(c, lay, ArsenalHit.None, 0, 491, ctx, new BuildOrigin(lay.Rows[0].Model.Type));
+        Assert.Equal(Palette.Menta, At(b2, 2 + slot.X + 1, 55 + slot.Y + 1, 96));
+        var other = lay.Rows[1].Slot; // outro tipo: sem borda
+        Assert.Equal(Palette.BgTrilhoFundo, At(b2, 2 + other.X + 1, 55 + other.Y + 1, 96));
     }
 
     [Fact]

@@ -11,7 +11,8 @@ public static class PanelGeometry
 {
     public const float ShadowDip = 6f;
     public const float GapAboveStripDip = 8f;
-    public const float PanelMarginLeftDip = 16f;
+    /// <summary>ADR-034: borda direita do painel a 132 DIP da borda direita da faixa (<c>right 132</c> do Main.dc.html): <c>left = W − 532</c>.</summary>
+    public const float PanelRightInsetDip = 132f;
     public const float PanelWidthDip = 400f, PanelHeightDip = 548f;
     public const float PanelChromeHeightDip = 57f; // 2 border + 53 header + 2 border
     public const float QuestionWidthDip = 520f, QuestionHeightDip = 242f;
@@ -48,7 +49,7 @@ public static class PanelGeometry
             clamped = true;
         }
         var left = kind == OverlayKind.Panel
-            ? work.Left + Px(PanelMarginLeftDip, s)
+            ? strip.Left + Px(strip.Width / s - PanelRightInsetDip - wDip, s)
             : strip.Left + Px((strip.Width / s - wDip) / 2.0, s);
         var maxLeft = work.Right - boxW - shadow;
         if (left > maxLeft) left = maxLeft;

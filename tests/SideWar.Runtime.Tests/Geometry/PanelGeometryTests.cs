@@ -28,7 +28,7 @@ public sealed class PanelGeometryTests
         Assert.Equal(new PixelSize(Px(400), Px(548)), p.Box);
         Assert.Equal(Px(400) + shadow, p.Bounds.Width);
         Assert.Equal(Px(548) + shadow, p.Bounds.Height);
-        Assert.Equal(m.WorkArea.Left + Px(16), p.Bounds.Left);
+        Assert.Equal(strip.Left + Px(strip.Width / s - 532), p.Bounds.Left); // ADR-034: left = W − 532
         Assert.Equal(strip.Top - Px(8), p.Bounds.Bottom - shadow);
         Assert.False(p.Clamped);
         Assert.Equal(491f, p.ViewportDip, 0.6f);

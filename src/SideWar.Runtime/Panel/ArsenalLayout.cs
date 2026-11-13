@@ -1,16 +1,20 @@
 using SideWar.Runtime.Geometry;
+using SideWar.Runtime.Localization;
 
 namespace SideWar.Runtime.Panel;
 
 /// <summary>Linha do Arsenal posicionada, em coordenadas de conteúdo (x a partir do corpo, y a partir do topo do viewport, antes da rolagem).</summary>
 public sealed record ArsenalRowLayout(
     ArsenalRowModel Model, DipRect Rect, DipRect Slot, float TextX, float TextWidth,
-    float NameTop, float AzureTop, float StatsTop, DipRect Button, ArsenalHit ButtonHit);
+    float NameTop, float AzureTop, float StatsTop, DipRect Button, ArsenalHit ButtonHit, ArsenalHit IconHit);
 
 /// <summary>Card de auto-escala posicionado (RF-24.5 §5.1).</summary>
 public sealed record ArsenalAutoCardLayout(
     DipRect Rect, float TitleTop, float TitleLineHeight, string[] DescriptionLines, float DescriptionTop, float DescriptionLineHeight,
     DipRect Toggle, DipRect Box, float ToggleTextX, string ToggleText);
+
+/// <summary>Cartão de ajuda posicionado (RF-24.5 §5.1b): sem alvo de clique.</summary>
+public sealed record ArsenalHelpCardLayout(DipRect Rect, string[] Lines, float TextTop, float LineHeight);
 
 /// <summary>
 /// Layout puro da aba Arsenal (SDD-24 RF-24.3/24.5; alturas de linha dependem das medidas de texto e são calculadas a cada mudança
@@ -29,16 +33,15 @@ public sealed class ArsenalLayout
 
     public ArsenalModel Model { get; }
     public ArsenalAutoCardLayout AutoCard { get; }
-    public float? BuildLabelTop { get; }
-    public float BuildLabelHeight { get; }
+    public ArsenalHelpCardLayout HelpCard { get; }
     public IReadOnlyList<ArsenalRowLayout> Rows { get; }
 
     /// <summary>Altura total do conteúdo rolável, com o padding 14 de cima e de baixo (use em <c>PanelViewState.SetContent</c>).</summary>
     public float ContentHeight { get; }
 
-    private ArsenalLayout(ArsenalModel model, ArsenalAutoCardLayout card, float? labelTop, float labelH, IReadOnlyList<ArsenalRowLayout> rows, float height)
+    private ArsenalLayout(ArsenalModel model, ArsenalAutoCardLayout card, ArsenalHelpCardLayout help, IReadOnlyList<ArsenalRowLayout> rows, float height)
     {
-        Model = model; AutoCard = card; BuildLabelTop = labelTop; BuildLabelHeight = labelH; Rows = rows; ContentHeight = height;
+        Model = model; AutoCard = card; HelpCard = help; Rows = rows; ContentHeight = height;
     }
 
     public static ArsenalLayout Compute(ArsenalModel model, IPanelTextMetrics tm)
@@ -48,7 +51,7 @@ public sealed class ArsenalLayout
         float y = PadY;
 
         // 5.1 card de auto-escala
-        string toggleText = model.AutoScaleOn ? "ON" : "OFF";
+        string toggleText = model.AutoScaleOn ? Strings.ArsenalToggleOn : Strings.ArsenalToggleOff;
         float toggleW = Math.Max(ToggleHeight, ToggleBoxSize + 8f + tm.Width(PanelFont.Silkscreen, 10f, toggleText));
         const float innerW = ContentWidth - 2f - 24f;
         float textW = innerW - 12f - toggleW;
@@ -67,16 +70,13 @@ public sealed class ArsenalLayout
             toggle, box, toggleX + ToggleBoxSize + 8f, toggleText);
         y += cardH;
 
-        // 5.4 rótulo "CONSTRUIR NO SLOT n"
-        float? labelTop = null;
-        float labelH = 0f;
-        if (model.BuildLabel is not null)
-        {
-            y += Gap;
-            labelTop = y;
-            labelH = tm.LineHeight(PanelFont.JetBrainsMono, LabelFontSize);
-            y += labelH;
-        }
+        // 5.1b cartão de ajuda: padding 10 12, borda 1, mono 11, line-height 1,45
+        y += Gap;
+        const float helpLh = 11f * 1.45f;
+        var helpLines = PanelTextWrap.Wrap(tm, PanelFont.JetBrainsMono, 11f, ArsenalModel.HelpText, ContentWidth - 2f - 24f);
+        float helpH = helpLines.Length * helpLh + 20f + 2f;
+        var help = new ArsenalHelpCardLayout(new DipRect(PadX, y, ContentWidth, helpH), helpLines, y + 1f + 10f, helpLh);
+        y += helpH;
 
         var rows = new List<ArsenalRowLayout>(model.Rows.Count);
         foreach (var row in model.Rows)
@@ -85,7 +85,7 @@ public sealed class ArsenalLayout
             rows.Add(LayoutRow(row, y, tm));
             y += TowerRowHeight;
         }
-        return new ArsenalLayout(model, card, labelTop, labelH, rows, y + PadY);
+        return new ArsenalLayout(model, card, help, rows, y + PadY);
     }
 
     private static ArsenalRowLayout LayoutRow(ArsenalRowModel m, float y, IPanelTextMetrics tm)
@@ -105,11 +105,12 @@ public sealed class ArsenalLayout
         ArsenalHit hit = m.ButtonStyle == ArsenalButtonStyle.Locked ? ArsenalHit.None : m.Kind switch
         {
             ArsenalRowKind.Tower => ArsenalHit.Upgrade(m.TowerId),
-            ArsenalRowKind.Build => ArsenalHit.Build(m.Type, m.Slot),
+            ArsenalRowKind.NoPosition => ArsenalHit.Reposition(m.TowerId, m.Type, Strings.ArsenalBuildHint(m.Name, null)),
             _ => ArsenalHit.None,
         };
+        ArsenalHit iconHit = m.IconEnabled && m.Kind is ArsenalRowKind.Tower or ArsenalRowKind.Available ? ArsenalHit.Icon(m.Type, m.HintTitle) : ArsenalHit.None;
         return new ArsenalRowLayout(m, new DipRect(PadX, y, ContentWidth, TowerRowHeight), slot, textX, textW,
-            top, top + h1 + 3f, top + h1 + 3f + h2 + 3f, btn, hit);
+            top, top + h1 + 3f, top + h1 + 3f + h2 + 3f, btn, hit, iconHit);
     }
 
     /// <summary>Topo (conteúdo) da linha da torre de <paramref name="towerId"/>, para a rolagem automática de <c>OpenArsenal</c> (uma vez, ao abrir).</summary>
@@ -117,7 +118,7 @@ public sealed class ArsenalLayout
     {
         foreach (var r in Rows)
         {
-            if (r.Model.Kind is ArsenalRowKind.Tower or ArsenalRowKind.NoSlot && r.Model.TowerId == towerId) { top = r.Rect.Y; return true; }
+            if (r.Model.Kind is ArsenalRowKind.Tower or ArsenalRowKind.NoPosition && r.Model.TowerId == towerId) { top = r.Rect.Y; return true; }
         }
         top = 0f;
         return false;
@@ -139,6 +140,7 @@ public sealed class ArsenalLayout
         {
             if (y < r.Rect.Y) break;
             if (!r.ButtonHit.IsNone && Contains(r.Button, x, y)) return r.ButtonHit;
+            if (!r.IconHit.IsNone && Contains(r.Slot, x, y)) return r.IconHit;
         }
         return ArsenalHit.None;
     }

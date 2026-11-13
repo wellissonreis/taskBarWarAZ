@@ -1,6 +1,7 @@
 using SideWar.Rendering.Text;
 using SideWar.Rendering.Theme;
 using SideWar.Runtime.Geometry;
+using SideWar.Runtime.Input;
 using SideWar.Runtime.Panel;
 using SkiaSharp;
 using D = SideWar.Rendering.Panel.ArsenalCampaignDraw;
@@ -14,7 +15,8 @@ namespace SideWar.Rendering.Panel;
 /// </summary>
 public static class ArsenalTabRenderer
 {
-    public static void Draw(SKCanvas canvas, ArsenalLayout layout, ArsenalHit hover, float offsetDip, float viewportDip, ArsenalCampaignPaintContext ctx)
+    public static void Draw(SKCanvas canvas, ArsenalLayout layout, ArsenalHit hover, float offsetDip, float viewportDip, ArsenalCampaignPaintContext ctx,
+        BuildOrigin? building = null)
     {
         ArgumentNullException.ThrowIfNull(canvas);
         ArgumentNullException.ThrowIfNull(layout);
@@ -28,13 +30,12 @@ public static class ArsenalTabRenderer
 
         DrawAutoCard(canvas, layout.AutoCard, offsetDip, s, silk, mono);
 
-        if (layout.BuildLabelTop is { } lt && layout.Model.BuildLabel is { } label)
-            D.TextTop(canvas, label, mono(10f), ArsenalLayout.PadX, lt, s, offsetDip, Palette.TxtRotulo, 1f);
+        DrawHelpCard(canvas, layout.HelpCard, offsetDip, s, mono);
 
         foreach (var row in layout.Rows)
         {
             if (row.Rect.Y + row.Rect.H < offsetDip || row.Rect.Y > offsetDip + viewportDip) continue;
-            DrawRow(canvas, row, hover, offsetDip, s, ctx, silk, mono);
+            DrawRow(canvas, row, hover, building, offsetDip, s, ctx, silk, mono);
         }
         canvas.Restore();
     }
@@ -66,13 +67,25 @@ public static class ArsenalTabRenderer
         D.TextBaseline(c, a.ToggleText, f, D.Px(2f + a.ToggleTextX, s), D.Px(ty, s) - lh / 2f - f.Metrics.Ascent, on ? Palette.Menta : Palette.TxtRotulo, 0f, s);
     }
 
-    private static void DrawRow(SKCanvas c, ArsenalRowLayout r, ArsenalHit hover, float off, float s, ArsenalCampaignPaintContext ctx,
+    private static void DrawHelpCard(SKCanvas c, ArsenalHelpCardLayout h, float off, float s, Func<float, SKFont> mono)
+    {
+        D.Box(c, h.Rect, s, off, Palette.MentaFundo, Palette.MentaBorda);
+        var f = mono(11f);
+        for (int i = 0; i < h.Lines.Length; i++)
+            D.TextTop(c, h.Lines[i], f, h.Rect.X + 13f, h.TextTop + i * h.LineHeight, s, off, Palette.MentaTexto);
+    }
+
+    private static void DrawRow(SKCanvas c, ArsenalRowLayout r, ArsenalHit hover, BuildOrigin? building, float off, float s, ArsenalCampaignPaintContext ctx,
         Func<float, SKFont> silk, Func<float, SKFont> mono)
     {
         var m = r.Model;
         D.BeginOpacity(c, m.Opacity);
         D.Box(c, r.Rect, s, off, Palette.BgItem, Palette.BordaPainel);
-        D.Solid(c, r.Slot, s, off, Palette.BgTrilhoFundo);
+        // Ícone do tipo em construção (e da torre em reposicionamento): borda 2 DIP menta enquanto o modo dura.
+        bool active = building is { } b && m.Kind is ArsenalRowKind.Tower or ArsenalRowKind.Available or ArsenalRowKind.NoPosition
+            && b.Type == m.Type && (b.RepositionTowerId is { } rid ? rid == m.TowerId : m.Kind != ArsenalRowKind.NoPosition);
+        if (active) D.Box(c, r.Slot, s, off, Palette.BgTrilhoFundo, Palette.Menta, 2f);
+        else D.Solid(c, r.Slot, s, off, Palette.BgTrilhoFundo);
         D.DrawSprite(c, ctx.Sprites, D.SpriteFor(m.Type, m.Kind == ArsenalRowKind.Locked), D.Rect(r.Slot, s, off), ArsenalLayout.SpriteBox, s);
 
         var nf = silk(12f);

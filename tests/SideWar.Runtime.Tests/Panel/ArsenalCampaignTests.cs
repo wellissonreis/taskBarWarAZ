@@ -1,6 +1,9 @@
 using SideWar.Core.Content;
 using SideWar.Core.Simulation;
 using SideWar.Runtime.Geometry;
+using SideWar.Runtime.Input;
+using SideWar.Runtime.Localization;
+using SideWar.Runtime.Widget;
 using SideWar.Runtime.Panel;
 using Xunit;
 
@@ -62,41 +65,98 @@ public sealed class ArsenalCampaignTests
     }
 
     [Fact]
-    public void Arsenal_TowerWithoutSlot_IsNoSlotRow_AfterSlotted_NoHit()
+    public void Arsenal_TowerWithoutPosition_IsNoPositionRow_AfterPlaced_RepositionHit()
     {
         var s = NewState();
         s.Apply(Ctx, new BuildTower(TowerType.Cannon, TestLayouts.X(3)));
         s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(0)));
         s.ApplyLayout(TestLayouts.FromCenters(1000f, 94f, 10f, 980f, new[] { 200f, 260f }));
         var m = ArsenalModelBuilder.Build(s, Ctx, true);
-        Assert.Equal([ArsenalRowKind.Tower, ArsenalRowKind.NoSlot, ArsenalRowKind.Locked], m.Rows.Select(x => x.Kind).ToArray());
-        var ns = m.Rows[1];
-        Assert.Equal("SEM SLOT", ns.LevelText);
-        Assert.Equal("SEM SLOT", ns.ButtonLabel);
+        Assert.Equal([ArsenalRowKind.Tower, ArsenalRowKind.Available, ArsenalRowKind.Available, ArsenalRowKind.NoPosition, ArsenalRowKind.Locked], m.Rows.Select(x => x.Kind).ToArray());
+        var ns = m.Rows[3];
+        Assert.Equal("SEM POSIÇÃO", ns.LevelText);
+        Assert.True(ns.LevelIsSeal);
+        Assert.Equal("REPOSICIONAR", ns.ButtonLabel);
+        Assert.Equal("", ns.CostText);
+        Assert.Equal(ArsenalButtonStyle.Amber, ns.ButtonStyle);
         Assert.Equal(0.45f, ns.Opacity);
         var lay = ArsenalLayout.Compute(m, Tm);
-        Assert.True(lay.Rows[1].ButtonHit.IsNone);
-        Assert.True(lay.Rows[2].ButtonHit.IsNone);
+        Assert.Equal(ArsenalHit.Reposition(ns.TowerId, TowerType.Cannon, "CANHÃO"), lay.Rows[3].ButtonHit);
+        Assert.True(lay.Rows[3].IconHit.IsNone); // reposicionar só pelo botão
+        Assert.True(lay.Rows[4].ButtonHit.IsNone);
+        Assert.True(lay.TryGetTowerRowTop(ns.TowerId, out _));
+        var intent = ArsenalIntent.FromHit(lay.Rows[3].ButtonHit, true)!.Value;
+        Assert.Equal(ArsenalIntentKind.BeginBuildMode, intent.Kind);
+        Assert.Equal(new BuildOrigin(TowerType.Cannon, ns.TowerId), intent.Origin);
+        Assert.Null(intent.Command);
     }
 
     [Fact]
-    public void Arsenal_FocusEmptySlot_BuildsRowsWithBuildCost_AndIntentIsBuildTower()
+    public void Arsenal_HelpCard_UsesCanvasTextAndIsNotClickable()
     {
         var s = NewState();
-        s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(0))); // n = 1 → Raio 68
-        var m = ArsenalModelBuilder.Build(s, Ctx, true, focusSlot: TestLayouts.X(2)); // ADR-034: o "slot" focado passa a ser o X da posição livre (UI real: TA.11)
-        Assert.Equal(TestLayouts.X(2), m.BuildSlot);
-        var b = m.Rows.Where(r => r.Kind == ArsenalRowKind.Build).ToArray();
-        Assert.Equal(3, b.Length); // Raio, Gelo, Canhão (Scale Set bloqueado)
-        Assert.Equal("68", b[0].CostText);
-        Assert.Equal("CONSTRUIR", b[0].ButtonLabel);
+        var m = ArsenalModelBuilder.Build(s, Ctx, true);
         var lay = ArsenalLayout.Compute(m, Tm);
-        Assert.Equal(ArsenalHit.Build(TowerType.Bolt, TestLayouts.X(2)), lay.Rows[0].ButtonHit);
-        var intent = ArsenalIntent.FromHit(lay.Rows[0].ButtonHit, true);
-        Assert.Equal(new BuildTower(TowerType.Bolt, TestLayouts.X(2)), intent!.Value.Command);
-        // slot ocupado ou inexistente: sem seção de construir
-        Assert.Null(ArsenalModelBuilder.Build(s, Ctx, true, focusSlot: TestLayouts.X(0)).BuildSlot);
-        Assert.Null(ArsenalModelBuilder.Build(s, Ctx, true, focusSlot: 9).BuildSlot);
+        Assert.Equal(Strings.ArsenalHelp, string.Join(" ", lay.HelpCard.Lines));
+        Assert.StartsWith("Arraste uma torre para um espaço livre dentro da barra de tarefas", ArsenalModel.HelpText);
+        Assert.Equal(lay.AutoCard.Rect.Y + lay.AutoCard.Rect.H + 10f, lay.HelpCard.Rect.Y);
+        Assert.Equal(364f, lay.HelpCard.Rect.W);
+        Assert.Equal(lay.HelpCard.Rect.Y + lay.HelpCard.Rect.H + 10f, lay.Rows[0].Rect.Y);
+        float cx = 2f + lay.HelpCard.Rect.X + 20f, cy = 55f + lay.HelpCard.Rect.Y + 5f;
+        Assert.True(lay.Hit(cx, cy, 0f, 491f).IsNone);
+    }
+
+    [Fact]
+    public void Arsenal_UnlockedTypeWithoutTower_HasDraggableIcon_AndBuildCostInHint()
+    {
+        var s = NewState();
+        var m = ArsenalModelBuilder.Build(s, Ctx, true);
+        Assert.Equal([ArsenalRowKind.Available, ArsenalRowKind.Available, ArsenalRowKind.Available, ArsenalRowKind.Locked], m.Rows.Select(x => x.Kind).ToArray());
+        var raio = m.Rows[0];
+        Assert.True(raio.IconEnabled);
+        Assert.Equal("RAIO · 45", raio.HintTitle); // custo de construção com 0 torres
+        var lay = ArsenalLayout.Compute(m, Tm);
+        Assert.Equal(ArsenalHit.Icon(TowerType.Bolt, "RAIO · 45"), lay.Rows[0].IconHit);
+        Assert.True(lay.Rows[3].IconHit.IsNone); // Scale Set bloqueado: sem arraste
+        var slot = lay.Rows[0].Slot;
+        var hit = lay.Hit(2f + slot.X + 5f, 55f + slot.Y + 5f, 0f, 491f);
+        Assert.Equal(ArsenalHitKind.TowerIcon, hit.Kind);
+        Assert.True(ArsenalIntent.StartsOnPress(hit));
+        var intent = ArsenalIntent.FromHit(hit, true)!.Value;
+        Assert.Equal(new BuildOrigin(TowerType.Bolt), intent.Origin);
+        Assert.Equal("RAIO · 45", intent.HintTitle);
+        // T-24.15: o clique no ícone liga ao controlador (Press) e o limiar de 6 px decide armar × arrastar
+        var ctl = new BuildModeController(30);
+        var o = intent.Press(ctl, new BuildPointer(100, 100, 0, false), 0);
+        Assert.Equal(BuildPhase.Pressed, o.To);
+        Assert.Equal(new BuildOrigin(TowerType.Bolt), ctl.Origin);
+    }
+
+    [Fact]
+    public void Arsenal_IconBlocked_WithoutCredits_OrAtTowerLimit()
+    {
+        var poor = NewState(credits: 10);
+        var mp = ArsenalModelBuilder.Build(poor, Ctx, true);
+        Assert.All(mp.Rows, r => Assert.False(r.IconEnabled));
+        Assert.True(ArsenalLayout.Compute(mp, Tm).Rows[0].IconHit.IsNone);
+
+        var full = NewState(1_000_000_000_000L);
+        var layout = TestLayouts.FromCenters(1300f, 94f, 10f, 1280f, Enumerable.Range(0, 24).Select(i => 100f + 44f * i).ToArray());
+        full.ApplyLayout(layout);
+        for (int i = 0; i < TowerStore.MaxTowers; i++) Assert.True(full.Apply(Ctx, new BuildTower(TowerType.Bolt, 100 + 44 * i)).IsOk);
+        Assert.Equal(TowerStore.MaxTowers, full.Towers.Count);
+        var mf = ArsenalModelBuilder.Build(full, Ctx, true);
+        Assert.All(mf.Rows, r => Assert.False(r.IconEnabled));
+        Assert.All(ArsenalLayout.Compute(mf, Tm).Rows, r => Assert.True(r.IconHit.IsNone));
+    }
+
+    [Fact]
+    public void OpenArsenalCommand_CarriesTowerId()
+    {
+        var c = PanelCommand.OpenArsenal(7);
+        Assert.Equal(PanelCommandKind.OpenArsenal, c.Kind);
+        Assert.Equal(WidgetTab.Arsenal, c.Tab);
+        Assert.Equal(7, c.TowerId);
     }
 
     [Fact]
@@ -130,7 +190,7 @@ public sealed class ArsenalCampaignTests
         Assert.Equal(20f, lay.AutoCard.Box.W);
         var row = lay.Rows[0];
         Assert.Equal(74f, row.Rect.H);
-        Assert.Equal(lay.AutoCard.Rect.Y + lay.AutoCard.Rect.H + 10f, row.Rect.Y);
+        Assert.Equal(lay.HelpCard.Rect.Y + lay.HelpCard.Rect.H + 10f, row.Rect.Y);
         Assert.Equal(new DipRect(29, row.Rect.Y + 11, 52, 52), row.Slot);
         Assert.Equal(84f, row.Button.W);
         Assert.Equal(44f, row.Button.H);
@@ -180,8 +240,8 @@ public sealed class ArsenalCampaignTests
         s.Apply(Ctx, new BuildTower(TowerType.Frost, TestLayouts.X(0)));
         s.Apply(Ctx, new BuildTower(TowerType.Cannon, TestLayouts.X(1)));
         var m = ArsenalModelBuilder.Build(s, Ctx, true);
-        Assert.Equal("Lentidão 35% · Alc 2", m.Rows[0].Stats);
-        Assert.Equal("Dano 60 em área · Cad 2,1s", m.Rows[1].Stats);
+        Assert.Equal("Lentidão 35% · Alc 2", m.Rows.Single(r => r.Type == TowerType.Frost).Stats);
+        Assert.Equal("Dano 60 em área · Cad 2,1s", m.Rows.Single(r => r.Type == TowerType.Cannon).Stats);
     }
 
     [Fact]
