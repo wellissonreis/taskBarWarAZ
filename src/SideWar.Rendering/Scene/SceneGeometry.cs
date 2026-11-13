@@ -86,9 +86,9 @@ public static class SceneGeometry
         return new(left, TowerTop(host, barHeightDip), w, TowerHeight(host));
     }
 
-    /// <summary>Célula de clique / colisão 44 × 44 (RF-22.5): <c>top = barTop + round((H − 44)/2)</c> na barra.</summary>
+    /// <summary>Célula de clique / colisão 44 × 44 (RF-22.5): <c>top = barTop + round((H − 44)/2)</c> na barra; <c>[2, 46)</c> no Band (RF-22.3).</summary>
     public static DipRect TowerCell(TowerHost host, float centerX, float barHeightDip) =>
-        new(centerX - TowerCellSize / 2, host == TowerHost.Band ? 0f : BarTop + RoundHalfUp((barHeightDip - TowerCellSize) / 2), TowerCellSize, TowerCellSize);
+        new(centerX - TowerCellSize / 2, host == TowerHost.Band ? TowerTop(host, barHeightDip) : BarTop + RoundHalfUp((barHeightDip - TowerCellSize) / 2), TowerCellSize, TowerCellSize);
 
     /// <summary>Canto do rótulo de nível: <c>(left + w − 10, top + h − 10)</c>; o texto é só o número.</summary>
     public static (float X, float Y) TowerLabelOrigin(DipRect sprite) => (sprite.X + sprite.W - 10, sprite.Y + sprite.H - 10);

@@ -58,6 +58,14 @@ public sealed class SceneGeometryTests
         Assert.Equal(new DipRect(278, top, 44, 44), c);
     }
 
+    [Fact]
+    public void TowerCell_InBand_Is2To46_AlignedWithHitTestAndOverlay()
+    {
+        var c = SceneGeometry.TowerCell(TowerHost.Band, 300, 48); // RF-22.3: [x-22,x+22) x [2,46)
+        Assert.Equal(new DipRect(278, 2, 44, 44), c);
+        Assert.Equal(c.Y, BuildOverlayRenderer.CellTop(TowerHost.Band, 48));
+    }
+
     [Theory]
     [InlineData(TowerType.Bolt, 0, 44)]
     [InlineData(TowerType.Cannon, 0, 45)]

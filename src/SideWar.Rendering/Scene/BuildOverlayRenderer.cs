@@ -100,6 +100,14 @@ public sealed class BuildOverlayRenderer : IDisposable
 
     public int Dpi => _dpi;
 
+    /// <summary>Desenha os glifos (padrão true); false mantém o layout idêntico sem texto (golden entre SOs, SDD-17 RF-17.3).</summary>
+    public bool TextEnabled { get; set; } = true;
+
+    private void DrawRun(SKCanvas canvas, SKTextBlob blob, float x, float y, SKPaint paint)
+    {
+        if (TextEnabled) canvas.DrawText(blob, x, y, paint);
+    }
+
     /// <summary>Define o DPI (rebake do padrão listrado, do tracejado e dos sprites); chamar junto de <c>Typography.Clear()</c> em mudança de DPI.</summary>
     public void SetDpi(int dpi)
     {
@@ -145,7 +153,7 @@ public sealed class BuildOverlayRenderer : IDisposable
 
     /// <summary>Topo da célula 44 × 44 (106 com H = 48; 2 no hospedeiro Band).</summary>
     public static float CellTop(TowerHost host, float barHeightDip) =>
-        host == TowerHost.Band ? 2f : SceneGeometry.TowerCell(host, 0, barHeightDip).Y;
+        SceneGeometry.TowerCell(host, 0, barHeightDip).Y;
 
     /// <summary>
     /// Trechos livres: zona livre menos as caixas <c>[x − 22, x + 22)</c> das torres posicionadas, só trechos ≥ 44 DIP.
@@ -203,7 +211,7 @@ public sealed class BuildOverlayRenderer : IDisposable
         canvas.Save();
         canvas.ClipRect(new SKRect(tl, tt, tr, tt + line + 2 * pad1));
         _text.Color = OrangeTagText;
-        canvas.DrawText(blob, tl + pad4, tt + pad1 + R(-font.Metrics.Ascent), _text);
+        DrawRun(canvas, blob, tl + pad4, tt + pad1 + R(-font.Metrics.Ascent), _text);
         canvas.Restore();
     }
 
@@ -270,9 +278,9 @@ public sealed class BuildOverlayRenderer : IDisposable
         canvas.DrawRect(left + bw, top + bw, width - 2 * bw, height - 2 * bw, _fill);
         float x = left + bw + padX, baseTop = top + bw + padY;
         _text.Color = Green;
-        canvas.DrawText(b1, x, baseTop + (line - LineHeight(f1)) / 2 + R(-f1.Metrics.Ascent), _text);
+        DrawRun(canvas, b1, x, baseTop + (line - LineHeight(f1)) / 2 + R(-f1.Metrics.Ascent), _text);
         _text.Color = LegendText;
-        canvas.DrawText(b2, x + w1 + gap, baseTop + (line - LineHeight(f2)) / 2 + R(-f2.Metrics.Ascent), _text);
+        DrawRun(canvas, b2, x + w1 + gap, baseTop + (line - LineHeight(f2)) / 2 + R(-f2.Metrics.Ascent), _text);
     }
 
     private void DrawBanner(SKCanvas canvas, float screenWidthDip, BuildOverlayStrings st)
@@ -294,17 +302,17 @@ public sealed class BuildOverlayRenderer : IDisposable
         float baseline = top + (height - line) / 2 + R(-font.Metrics.Ascent);
         float x = left + bw + padX;
         _text.Color = Green;
-        canvas.DrawText(b1, x, baseline, _text);
+        DrawRun(canvas, b1, x, baseline, _text);
         x += w1 + gap;
         _text.Color = LegendText;
-        canvas.DrawText(b2, x, baseline, _text);
+        DrawRun(canvas, b2, x, baseline, _text);
         x += w2 + gap;
         float cy = top + (height - chipH) / 2;
         _fill.Color = ChipBorder;
         canvas.DrawRect(x, cy, chipW, chipH, _fill);
         _fill.Color = PanelFill;
         canvas.DrawRect(x + bw, cy + bw, chipW - 2 * bw, chipH - 2 * bw, _fill);
-        canvas.DrawText(b3, x + bw + chipX, cy + bw + chipY + R(-font.Metrics.Ascent), _text);
+        DrawRun(canvas, b3, x + bw + chipX, cy + bw + chipY + R(-font.Metrics.Ascent), _text);
     }
 
     private void DrawBorder(SKCanvas canvas, float l, float t, float r, float b, float widthDip, SKColor color)

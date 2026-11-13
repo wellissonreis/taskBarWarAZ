@@ -3,7 +3,7 @@ using Xunit;
 
 namespace SideWar.Rendering.Tests.Golden;
 
-/// <summary>SDD-22 CA-22.7 / SDD-08 CA-08.3 / SDD-17 RF-17.3: goldens da faixa a 100% e 150% (atlas embutido; strip-fallback usa o PlaceholderAtlas).</summary>
+/// <summary>SDD-22 CA-22.7 / SDD-08 CA-08.3 / SDD-17 RF-17.3: goldens da faixa a 100% e 150% (atlas embutido; 1920 × 152, TA.9).</summary>
 public sealed class StripGoldenTests
 {
     public static TheoryData<StripScene, int> Cases()
@@ -72,7 +72,7 @@ public sealed class StripGoldenTests
     public void Scenes_AreDistinctFromEachOther()
     {
         using var present = StripScenes.Render(StripScene.Present, 96);
-        foreach (var scene in new[] { StripScene.Away, StripScene.Peak, StripScene.Boss, StripScene.Fallback, StripScene.EmptySlots })
+        foreach (var scene in new[] { StripScene.Away, StripScene.Peak, StripScene.Boss, StripScene.Build, StripScene.Band, StripScene.Unpositioned })
         {
             using var other = StripScenes.Render(scene, 96);
             Assert.False(present.Bytes.AsSpan().SequenceEqual(other.Bytes), scene.ToString());
