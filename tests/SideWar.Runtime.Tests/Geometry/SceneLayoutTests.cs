@@ -81,7 +81,7 @@ public sealed class SceneLayoutTests
 
     private static TaskbarLayout Bar(TaskbarEdge edge, bool autoHide = false) =>
         new("DISPLAY2", edge, autoHide, default, 48, Array.Empty<AppButton>(), null,
-            default, 0, TaskbarAlignment.Center, TaskbarSource.Uia, 96);
+            default, [], 0, TaskbarAlignment.Center, TaskbarSource.Uia, 96);
 
     private static void AssertInside(PixelRect work, PixelRect actual)
     {

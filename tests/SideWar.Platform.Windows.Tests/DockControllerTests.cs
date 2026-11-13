@@ -46,7 +46,7 @@ public sealed class DockControllerTests
     }
 
     private static TaskbarLayout Bar(string device, bool autoHide = false) =>
-        new(device, TaskbarEdge.Bottom, autoHide, new DipRect(0, 1032, 1920, 48), 48, [], null, (10, 700), 1900,
+        new(device, TaskbarEdge.Bottom, autoHide, new DipRect(0, 1032, 1920, 48), 48, [], null, (10, 700), [], 1900,
             TaskbarAlignment.Left, TaskbarSource.Uia, 96);
 
     private static PixelRect WindowRect(nint hwnd)

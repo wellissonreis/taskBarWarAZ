@@ -44,7 +44,6 @@ public sealed class TaskbarTests
             Assert.Equal(i, layout.AppButtons[i].Order);
             Assert.Equal(start + 48 * (i + 1), layout.AppButtons[i].Rect.X);
         }
-        Assert.Equal(Math.Min(count, 12), SlotMap.From(layout, 1440).Count);
     }
 
     [Fact]
@@ -77,7 +76,6 @@ public sealed class TaskbarTests
         var layout = TaskbarClassifier.Classify([Node(0,"StartButton") with { Rect = Px(500,852,44,48) },
             Node(0) with { Rect = Px(548,852,44,48) }], context);
         Assert.Equal(new DipRect(548,852,44,48), layout.AppButtons[0].Rect);
-        Assert.Equal(570, SlotMap.From(layout,1440)[0].CenterXDip);
         Assert.Equal(1240,layout.TrayLeftX);
     }
 
@@ -90,7 +88,8 @@ public sealed class TaskbarTests
         var layout = TaskbarClassifier.Classify(Nodes, Context with { Edge=edge, AutoHide=autoHide, UseUia=useUia });
         Assert.Equal(TaskbarSource.Fallback,layout.Source);
         Assert.Empty(layout.AppButtons);
-        Assert.All(SlotMap.From(layout,1440), slot => Assert.True(slot.IsVirtual));
+        Assert.Empty(layout.Blocked);
+        Assert.Equal(TowerHost.Band, BuildZoneMap.From(layout, 1440, new()).Host);
     }
 
     [Fact]
@@ -98,30 +97,6 @@ public sealed class TaskbarTests
     {
         Assert.Equal(TaskbarSource.Fallback,TaskbarClassifier.Classify([Node(548)],Context).Source);
         Assert.Equal(TaskbarSource.Fallback,TaskbarClassifier.Classify([Node(500,"StartButton")],Context).Source);
-    }
-
-    [Theory]
-    [InlineData(1280)] [InlineData(1440)] [InlineData(1920)] [InlineData(2560)]
-    public void FallbackIsExact(float width)
-    {
-        var layout = TaskbarClassifier.Classify([],Context);
-        var slots = SlotMap.From(layout,width);
-        Assert.Equal(8,slots.Count);
-        for (var i=0;i<8;i++)
-            Assert.Equal(new TowerSlot(i,(420+width-200)/2-190+22+48*i,44,true),slots[i]);
-        if (width == 1440) Assert.Equal(662,slots[0].CenterXDip);
-    }
-
-    [Fact]
-    public void OrdinalSurvivesSemSlotAndReturnsAtNewPosition()
-    {
-        var layout = TaskbarClassifier.Classify(Nodes,Context);
-        const int savedOrdinal = 1;
-        Assert.Equal(618,SlotMap.Resolve(savedOrdinal,SlotMap.From(layout,1440))!.Value.CenterXDip);
-        var reduced = layout with { AppButtons = Array.AsReadOnly(new[] { layout.AppButtons[0] }) };
-        Assert.Null(SlotMap.Resolve(savedOrdinal,SlotMap.From(reduced,1440)));
-        var returned = TaskbarClassifier.Classify([Node(500,"StartButton"),Node(700),Node(800)],Context);
-        Assert.Equal(822,SlotMap.Resolve(savedOrdinal,SlotMap.From(returned,1440))!.Value.CenterXDip);
     }
 
     [Fact]
@@ -154,22 +129,6 @@ public sealed class TaskbarTests
         var layout = TaskbarClassifier.Classify([Node(100,"WidgetsButton"),
             Node(500,"StartButton"),Node(548)],Context);
         Assert.Equal((0f,100f),layout.LeftFreeZone);
-    }
-
-    [Fact]
-    public void SlotMapDefensivelyRejectsRealSlotsForIneligibleLayout()
-    {
-        var layout = TaskbarClassifier.Classify(Nodes,Context);
-        foreach (var invalid in new[] { layout with { AutoHide=true },
-            layout with { Edge=TaskbarEdge.Top }, layout with { Source=TaskbarSource.Fallback },
-            layout with { AppButtons=Array.Empty<AppButton>() } })
-        {
-            var slots = SlotMap.From(invalid,1440);
-            Assert.Equal(8,slots.Count);
-            Assert.All(slots,s => Assert.True(s.IsVirtual));
-        }
-        Assert.All(SlotMap.From(layout,1440),s => Assert.False(s.IsVirtual));
-        Assert.Equal(44,SlotMap.From(layout,1440)[0].WidthDip);
     }
 
     private static string FindRepository()

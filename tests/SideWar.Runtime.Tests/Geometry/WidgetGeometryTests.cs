@@ -10,7 +10,7 @@ public sealed class WidgetGeometryTests
         new("M", new PixelRect(left, top, left + w, top + h), new PixelRect(left, top, left + w, top + h), dpi, true, 0);
 
     private static TaskbarLayout Bar(TaskbarEdge edge, float x0, float x1, float height = 48, float barY = 1032, float barH = 48) =>
-        new("M", edge, false, new DipRect(0, barY, 1920, barH), height, [], null, (x0, x1), 1900, TaskbarAlignment.Left,
+        new("M", edge, false, new DipRect(0, barY, 1920, barH), height, [], null, (x0, x1), [], 1900, TaskbarAlignment.Left,
             TaskbarSource.Uia, 96);
 
     private static PixelRect Scene(MonitorInfo m) => SceneLayout.Compute(m, Bar(TaskbarEdge.Bottom, 0, 0));

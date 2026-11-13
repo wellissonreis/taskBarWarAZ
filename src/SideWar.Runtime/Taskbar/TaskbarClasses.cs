@@ -13,4 +13,8 @@ public static class TaskbarClasses
     // XAML app class fragment and legacy Win32 app parent, SDD-21 C3.
     public const string AppClassFragment = "TaskListButton";
     public const string AppParentClass = "MSTaskListWClass";
+
+    // SDD-21 RF-21.5 blocking margins transcribed from the canvas (DP-33.3); confirm with real fixtures.
+    public const float IconMarginDip = 4;
+    public const float TrayMarginDip = 16;
 }

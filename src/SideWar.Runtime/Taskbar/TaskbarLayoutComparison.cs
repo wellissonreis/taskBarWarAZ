@@ -11,6 +11,8 @@ public static class TaskbarLayoutComparison
         Near(a.TaskbarRect, b.TaskbarRect) && Near(a.HeightDip, b.HeightDip) &&
         Near(a.TrayLeftX, b.TrayLeftX) && Near(a.LeftFreeZone.X0, b.LeftFreeZone.X0) &&
         Near(a.LeftFreeZone.X1, b.LeftFreeZone.X1) && NearNullable(a.WidgetsButton, b.WidgetsButton) &&
+        a.Blocked.Count == b.Blocked.Count && a.Blocked.Zip(b.Blocked).All(p =>
+            p.First.Reason == p.Second.Reason && Near(p.First.X0, p.Second.X0) && Near(p.First.X1, p.Second.X1)) &&
         a.AppButtons.Count == b.AppButtons.Count &&
         a.AppButtons.Zip(b.AppButtons).All(pair => Near(pair.First.Rect, pair.Second.Rect));
 

@@ -12,19 +12,25 @@ public sealed record DumpMonitor(string DeviceName, PixelRect Bounds, PixelRect 
 
 public sealed record DumpLayout(string MonitorDevice, TaskbarEdge Edge, bool AutoHide, DipRect TaskbarRect,
     float HeightDip, DipRect[] AppButtons, DipRect? WidgetsButton, float LeftFreeX0, float LeftFreeX1,
-    float TrayLeftX, TaskbarAlignment Alignment, TaskbarSource Source, uint Dpi)
+    float TrayLeftX, TaskbarAlignment Alignment, TaskbarSource Source, uint Dpi, BlockedSpan[]? Blocked = null)
 {
     public static DumpLayout From(TaskbarLayout l) => new(l.MonitorDevice, l.Edge, l.AutoHide, l.TaskbarRect,
         l.HeightDip, l.AppButtons.Select(b => b.Rect).ToArray(), l.WidgetsButton, l.LeftFreeZone.X0,
-        l.LeftFreeZone.X1, l.TrayLeftX, l.Alignment, l.Source, l.Dpi);
+        l.LeftFreeZone.X1, l.TrayLeftX, l.Alignment, l.Source, l.Dpi, l.Blocked.ToArray());
 
     public TaskbarLayout ToLayout() => new(MonitorDevice, Edge, AutoHide, TaskbarRect, HeightDip,
         Array.AsReadOnly(AppButtons.Select((r, i) => new AppButton(i, r)).ToArray()), WidgetsButton,
-        (LeftFreeX0, LeftFreeX1), TrayLeftX, Alignment, Source, Dpi);
+        (LeftFreeX0, LeftFreeX1), Array.AsReadOnly(Blocked ?? []), TrayLeftX, Alignment, Source, Dpi);
+}
+
+/// <summary>BuildZoneMap result recorded by --dump-taskbar (RF-21.9, ADR-034); default options (useUia and towersInBar on).</summary>
+public sealed record DumpBuildZones(TowerHost Host, FreeZone[] Free, int HostTopDip, int HostHeightDip)
+{
+    public static DumpBuildZones From(BuildZones z) => new(z.Host, z.Free.ToArray(), z.HostTopDip, z.HostHeightDip);
 }
 
 public sealed record TaskbarDump(int Schema, int WindowsBuild, uint Dpi, DumpMonitor Monitor, TaskbarEdge Edge,
-    bool AutoHide, PixelRect TaskbarRectPx, DumpNode[] Nodes, DumpLayout Layout)
+    bool AutoHide, PixelRect TaskbarRectPx, DumpNode[] Nodes, DumpLayout Layout, DumpBuildZones? BuildZones = null)
 {
     public const int CurrentSchema = 1;
 
@@ -49,7 +55,9 @@ public sealed record TaskbarDump(int Schema, int WindowsBuild, uint Dpi, DumpMon
         }
         var layout = TaskbarClassifier.Classify(ToUiaNodes(labeled), context);
         return new(CurrentSchema, windowsBuild, monitor.Dpi, new(monitor.DeviceName, monitor.Bounds,
-            monitor.WorkArea, monitor.IsPrimary), edge, autoHide, taskbarRectPx, labeled, DumpLayout.From(layout));
+            monitor.WorkArea, monitor.IsPrimary), edge, autoHide, taskbarRectPx, labeled, DumpLayout.From(layout),
+            DumpBuildZones.From(BuildZoneMap.From(layout, (int)Math.Round(monitor.Bounds.Width * 96.0 / monitor.Dpi),
+                new BuildZoneOptions())));
     }
 
     public static UiaNode[] ToUiaNodes(IEnumerable<DumpNode> nodes) => nodes

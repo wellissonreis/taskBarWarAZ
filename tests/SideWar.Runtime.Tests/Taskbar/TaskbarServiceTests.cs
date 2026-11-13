@@ -196,7 +196,7 @@ public sealed class TaskbarServiceTests
         }
         Assert.Equal(TaskbarSource.Fallback, rig.Service.Current!.Value.Source);
         Assert.Empty(rig.Service.Current!.Value.AppButtons);
-        Assert.Equal(8, SlotMap.From(rig.Service.Current!.Value, 1440).Count);
+        Assert.Equal(TowerHost.Band, BuildZoneMap.From(rig.Service.Current!.Value, 1440, new()).Host);
         rig.Service.Signal(); rig.Advance(500);
         rig.Complete(4);
         Assert.Equal(0, rig.Service.ConsecutiveFailures);

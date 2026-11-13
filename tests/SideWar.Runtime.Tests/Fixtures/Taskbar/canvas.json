@@ -1,0 +1,139 @@
+{
+  "Synthetic": true,
+  "Evidence": "Synthetic from Strip.dc.html (canvas, 1920 wide, 96 DPI); no Windows capture",
+  "Height": 48,
+  "Nodes": [
+    {
+      "ClassName": "",
+      "ParentClassName": "",
+      "AutomationId": "WidgetsButton",
+      "Rect": {
+        "Left": 0,
+        "Top": 1032,
+        "Right": 188,
+        "Bottom": 1080
+      }
+    },
+    {
+      "ClassName": "",
+      "ParentClassName": "",
+      "AutomationId": "StartButton",
+      "Rect": {
+        "Left": 690,
+        "Top": 1032,
+        "Right": 734,
+        "Bottom": 1080
+      }
+    },
+    {
+      "ClassName": "",
+      "ParentClassName": "",
+      "AutomationId": "SearchButton",
+      "Rect": {
+        "Left": 740,
+        "Top": 1032,
+        "Right": 940,
+        "Bottom": 1080
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-0",
+      "Rect": {
+        "Left": 948,
+        "Top": 1032,
+        "Right": 992,
+        "Bottom": 1080
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-1",
+      "Rect": {
+        "Left": 996,
+        "Top": 1032,
+        "Right": 1040,
+        "Bottom": 1080
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-2",
+      "Rect": {
+        "Left": 1044,
+        "Top": 1032,
+        "Right": 1088,
+        "Bottom": 1080
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-3",
+      "Rect": {
+        "Left": 1092,
+        "Top": 1032,
+        "Right": 1136,
+        "Bottom": 1080
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-4",
+      "Rect": {
+        "Left": 1140,
+        "Top": 1032,
+        "Right": 1184,
+        "Bottom": 1080
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-5",
+      "Rect": {
+        "Left": 1188,
+        "Top": 1032,
+        "Right": 1232,
+        "Bottom": 1080
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-6",
+      "Rect": {
+        "Left": 1236,
+        "Top": 1032,
+        "Right": 1280,
+        "Bottom": 1080
+      }
+    },
+    {
+      "ClassName": "Taskbar.TaskListButton",
+      "ParentClassName": "",
+      "AutomationId": "app-7",
+      "Rect": {
+        "Left": 1284,
+        "Top": 1032,
+        "Right": 1328,
+        "Bottom": 1080
+      }
+    },
+    {
+      "ClassName": "SystemTray.IconStack",
+      "ParentClassName": "",
+      "AutomationId": "tray-0",
+      "Rect": {
+        "Left": 1712,
+        "Top": 1032,
+        "Right": 1900,
+        "Bottom": 1080
+      }
+    }
+  ]
+}
