@@ -57,6 +57,9 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     private WidgetRenderer? widgetRenderer;
     private WidgetFramePainter? widgetPainter;
     private WidgetController? widget;
+    private OfflineCardController? card;
+    private OfflineCardPresenter? cardPresenter;
+    private OfflineReturnCoordinator? offline;
     private TaskbarService? taskbar;
     private TaskbarProbe? probe;
     private TaskbarWatcher? watcher;
@@ -140,6 +143,19 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             widgetRenderer.Dispose();
         });
 
+        // 2b. Card "Bem-vindo de volta" (SDD-24/25, T4.10b): controlador + janelas sob demanda + coordenador no laço.
+        card = new OfflineCardController(clock);
+        persistence.RestorePending(card, runtime.State); // RF-25.11: pending/cardState do save
+        cardPresenter = new OfflineCardPresenter(game, typography, icons, card, () => runtime.Host.AutoScaleEnabled,
+            () => ScheduleWidget(now: true));
+        offline = new OfflineReturnCoordinator(runtime, card, cardPresenter, clock, log: log);
+        cardPresenter.Attach(offline);
+        widget.Interaction.OnBadgeClick = offline.BadgeClicked; // badge "+X" → ReopenFromBadge
+        if (persistence.RestoredSession is { } restored) // RF-25.6: o snapshot offline é o do save
+            offline.SetBaseline(restored.SavedUtc, restored.AutoScaleOn, restored.Presence.AutoScaleAccumSeconds);
+        loop.AddBefore(offline); // prazo de 60 s do card, tick e 45 s da pergunta (oculto = sem deadline)
+        res.Started("offline-card", cardPresenter.Dispose);
+
         // 3. Dock (SDD-05): monitor salvo, geometria da cena e do widget.
         var dock = game.Dock;
         dock.SceneSurface = surface;
@@ -216,7 +232,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     public bool SaveForShutdown()
     {
         runtime.Dispatch(runtime.App.SetPause(Runtime.Timing.PauseReason.User));
-        var (session, profile) = persistence.Encode(runtime);
+        var (session, profile) = persistence.Encode(runtime, card);
         return persistence.Write(session, profile);
     }
 
@@ -252,6 +268,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
 
     public void Hide(HiddenReason cause)
     {
+        offline?.OnHide(); // RF-25.6: snapshot offline congelado no Hide
         watcher?.Uninstall();
         taskbar?.SetVisible(false);
         game.Scene.Hide(); // Passivo, peek e z-order cancelados pela cena
@@ -261,7 +278,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
 
     public void Save(SaveTrigger trigger)
     {
-        var (session, profile) = persistence.Encode(runtime);
+        var (session, profile) = persistence.Encode(runtime, card);
         if (trigger == SaveTrigger.Suspended)
         {
             persistence.Write(session, profile); // RF-07.7: síncrono na T-Game
@@ -282,8 +299,8 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     {
         // RF-07.6 passos 1–2: reenumera e recomputa; a superfície é recriada no próximo BeginFrame.
         game.Dock.Relayout();
-        // Passo 3 (OfflineCalculator + card "Bem-vindo de volta") fica fora desta ficha: falta o aplicador
-        // OfflineResult → SimState (REPORT T4.10).
+        // Passo 3: OfflineCalculator.Compute → OfflineResultApplier.Apply (entre ticks) → card "Bem-vindo de volta" (T4.10b).
+        offline?.OnRestoreContext();
     }
 
     public void SetEcoQos(bool enabled) => log($"EcoQoS {(enabled ? "on" : "off")} requested (EcoQosController not implemented)");
@@ -393,6 +410,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         if (surface is not null) surface.Scale = scale;
         sceneRenderer?.SetDpi(dpi);
         widget?.SetDpi(dpi);
+        cardPresenter?.Relayout();
         sink.Invalidate();
         taskbar?.SetMonitor(result.Monitor);
         fullscreen?.Reconfigure(ToFullscreenMode(settings.Behavior.HideOnFullscreen), result.Monitor.DeviceName);
@@ -469,8 +487,9 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         int stage = Math.Clamp(state.Stage, 1, runtime.Content.Stages.Length);
         var inputs = new WidgetInputs(state.Credits, runtime.Host.Rate.DisplayedRate, state.Wave,
             runtime.Content.Stages[stage - 1].Waves, runtime.Presence.State, state.PresenceMultiplier,
-            BonusSecondsLeft: 0, Pending: 0, MissionBadge: 0, ActiveTab: null, HoverIndex: -1);
+            BonusSecondsLeft: 0, Pending: card?.BadgeCredits ?? 0, MissionBadge: 0, ActiveTab: null, HoverIndex: -1);
         var model = widgetModel.Update(inputs, TimeSpan.FromSeconds(now.NowTicks / now.TicksPerSecond));
+        widget.Interaction.BadgeVisible = model.PendingText != null; // SDD-23: badge "+X" clicável só quando desenhado
         widget.SetModel(model);
         // Coalescência de 500 ms só enquanto a simulação anda; pausado, o texto não muda sozinho (0 wakes, CA-23).
         if (runtime.App.SimulationRunning) ScheduleWidget(now: false);

@@ -36,6 +36,9 @@ internal sealed class SessionPersistence
 
     public long Saves { get; private set; }
 
+    /// <summary>Snapshot lido do <c>session.json</c> e restaurado com sucesso (instante, auto-escala, pendência do card); null = partida nova.</summary>
+    public SideWar.Persistence.Session.OfflineSnapshot? RestoredSession { get; private set; }
+
     /// <summary>Restaura com o contexto do runtime; sessão inválida/de outro conteúdo = partida nova (o perfil fica).</summary>
     public SimState? Restore(SimContext ctx)
     {
@@ -43,14 +46,24 @@ internal sealed class SessionPersistence
         if (loaded.Status == SessionLoadStatus.DiscardedContentMismatch) log("session: discarded (content hash mismatch); new game");
         if (loaded.Snapshot is not { } snapshot) return null;
         var restored = SimSnapshotMapper.Restore(ctx, snapshot);
-        if (restored.IsRestored) return restored.State;
+        if (restored.IsRestored)
+        {
+            RestoredSession = snapshot;
+            return restored.State;
+        }
         log($"session: restore failed ({restored.Status}: {restored.Detail}); new game");
         sessions.RejectRestored(restored.Detail ?? restored.Status.ToString());
         return null;
     }
 
+    /// <summary>Restaura <c>pending</c>/<c>cardState</c> no controlador do card (depois do runtime; semeia os ids do ledger).</summary>
+    public void RestorePending(OfflineCardController card, SimState state)
+    {
+        if (RestoredSession is { } snapshot) PendingMapper.Restore(card, snapshot, state);
+    }
+
     /// <summary>Serializa na T-Game (estado vivo). Devolve os bytes de sessão e perfil prontos para escrever.</summary>
-    public (byte[] Session, byte[] Profile) Encode(GameRuntime runtime)
+    public (byte[] Session, byte[] Profile) Encode(GameRuntime runtime, OfflineCardController? card = null)
     {
         var presence = new PresenceData
         {
@@ -65,8 +78,10 @@ internal sealed class SessionPersistence
             AutoScaleAccumSeconds = runtime.Host.AutoScaleAccumSeconds,
         };
         var profile = SimSnapshotMapper.ToProfile(runtime.State, runtime.Context, baseProfile);
+        // SDD-14 RF-14.5 / SDD-25 RF-25.11: pending + cardState vão junto da sessão (nunca se perdem ao fechar o app).
+        var (pending, cardState) = card is null ? (new PendingData(), CardStateData.Aberto) : PendingMapper.ToSession(card);
         var snapshot = SimSnapshotMapper.ToSession(runtime.State, runtime.Context, DateTime.UtcNow, presence, profile,
-            runtime.Host.AutoScaleEnabled);
+            runtime.Host.AutoScaleEnabled, pending, cardState);
         baseProfile = profile;
         var session = sessions.Encode(snapshot);
         Volatile.Write(ref lastSession, session);

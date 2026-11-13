@@ -93,6 +93,12 @@ public abstract class OverlayWindow : IDisposable
     /// <summary>Raised once per button press anywhere in the window, left or right (RF-24.11, CA-24.12). Not for hover/move/wheel.</summary>
     public Action? Interaction { get; set; }
 
+    /// <summary>Raw left button-down (client pixels), for the card windows whose hit-test lives in Runtime (T4.10b). Not for hover/move.</summary>
+    public Action<int, int>? LeftDown { get; set; }
+
+    /// <summary>Raw left button-up (client pixels), paired with <see cref="LeftDown"/>.</summary>
+    public Action<int, int>? LeftUp { get; set; }
+
     /// <summary>Raised on button-up over the same target as the button-down (not for scroll thumb/track).</summary>
     public Action<PanelHit>? Clicked { get; set; }
 
@@ -132,6 +138,13 @@ public abstract class OverlayWindow : IDisposable
         CheckAccess();
         WantsVisible = false;
         HideNative();
+    }
+
+    /// <summary>Forces a redraw of the visible window (content owned by the caller changed). No-op while hidden.</summary>
+    public void Redraw()
+    {
+        CheckAccess();
+        if (IsVisible) Render();
     }
 
     /// <summary>Redraws only if the view version changed since the last frame (RF-24.13).</summary>
@@ -241,6 +254,7 @@ public abstract class OverlayWindow : IDisposable
     {
         Interaction?.Invoke();
         if (!left) return;
+        LeftDown?.Invoke(x, y);
         var hit = HitAt(x, y);
         pressed = hit;
         if (hit == PanelHit.ScrollThumb) { PInvoke.SetCapture(handle); View.BeginDrag(TrackY(y)); }
@@ -251,6 +265,7 @@ public abstract class OverlayWindow : IDisposable
 
     private void OnLeftUp(int x, int y)
     {
+        LeftUp?.Invoke(x, y);
         var dragging = View.Dragging;
         var hit = HitAt(x, y);
         var down = pressed;

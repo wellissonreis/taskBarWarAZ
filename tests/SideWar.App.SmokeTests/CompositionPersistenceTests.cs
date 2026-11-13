@@ -4,6 +4,7 @@ using SideWar.Core;
 using SideWar.Core.Simulation;
 using SideWar.Runtime;
 using SideWar.Runtime.Composition;
+using SideWar.Runtime.Presence;
 using Xunit;
 
 namespace SideWar.App.SmokeTests;
@@ -59,5 +60,33 @@ public sealed class CompositionPersistenceTests : IDisposable
         var runtime = new GameRuntime(new GameRuntimeOptions { Clock = new ManualClock(), Restore = store.Restore });
         Assert.Null(runtime.Restored);
         Assert.Equal(1, runtime.State.Stage);
+    }
+
+    [Fact]
+    public void Pending_card_and_collapsed_state_survive_a_restart()
+    {
+        Directory.CreateDirectory(dir);
+        var clock = new ManualClock();
+        var first = new GameRuntime(new GameRuntimeOptions { Clock = clock });
+        var card = new OfflineCardController(clock);
+        var report = new OfflineReport(7200, 100_000, 3, 9, 0, 2000, 4, 5, [], 0, 0, 1, 1, 0, false);
+        var snap = new SideWar.Runtime.Presence.OfflineSnapshot(DateTime.UtcNow, 1, 9, 9, "brazil-south", 0, 1, 0, 0, 0, [], true, 0);
+        card.Present(new OfflineResult(report, snap, 90_000, 2000, true, []));
+        clock.NowTicks += 61_000;
+        card.Update(); // recolhido
+        Assert.Equal(OfflineCardState.Collapsed, card.State);
+
+        var store = new SessionPersistence(dir, "0.0.0-test", _ => { });
+        var (session, profile) = store.Encode(first, card);
+        Assert.True(store.Write(session, profile));
+
+        var reopened = new SessionPersistence(dir, "0.0.0-test", _ => { });
+        var second = new GameRuntime(new GameRuntimeOptions { Clock = new ManualClock(), Restore = reopened.Restore });
+        Assert.NotNull(reopened.RestoredSession);
+        var restored = new OfflineCardController(new ManualClock());
+        reopened.RestorePending(restored, second.State);
+        Assert.Equal(OfflineCardState.Collapsed, restored.State);
+        Assert.Equal(90_000, restored.Pending!.Credits);
+        Assert.Equal(card.Pending!.ReportId, restored.Pending.ReportId);
     }
 }
