@@ -16,7 +16,10 @@ public enum CardStateData { Aberto, Recolhido }
 public sealed record OfflineSnapshot
 {
     public const string Schema = "sidewar.session";
-    public const int SchemaVersion = 1;
+    /// <summary>v2 (ADR-034, DP-33.7): <c>anchor</c>/<c>offsetDip</c>/<c>placed</c> no lugar de <c>slotIndex</c>; <c>layout</c> com <c>width</c>, <c>host</c>, <c>freeZones</c>, <c>migratedSlots</c>.</summary>
+    public const int SchemaVersion = 2;
+    /// <summary>StateHash gravado pela migração v1→v2: o hash antigo não vale para o modelo novo, então o restore não o confere (RF-14.10).</summary>
+    public const string MigratedStateHash = "migrated-v1";
 
     /// <summary>Instante do snapshot (UTC). Obrigatório: o OfflineCalculator calcula <c>agora − SavedUtc</c>.</summary>
     public required DateTime SavedUtc { get; init; }
@@ -72,9 +75,6 @@ public sealed record LayoutData
     public float LeakX { get; init; }
     public float CoreX { get; init; }
     public float PortalX { get; init; }
-    /// <summary>Legado (ADR-020), ignorado no restore; a migração de <c>slotIndex</c> é da TA.4 (DP-33.7).</summary>
-    public IReadOnlyList<float> SlotX { get; init; } = [];
-    // ADR-034 (campos aditivos da TA.3, só para o round-trip; schema +1 e migração são da TA.4).
     public int Width { get; init; }
     public string Host { get; init; } = "Taskbar";
     public IReadOnlyList<FreeZoneData> FreeZones { get; init; } = [];
@@ -149,9 +149,7 @@ public sealed record TowerData
 {
     public int Id { get; init; }
     public string Type { get; init; } = "";
-    /// <summary>0-based. <c>≥ layout.SlotX.Count</c> = SEM SLOT (SDD-21 RF-21.8): continua gravado e volta sem custo.</summary>
-    public int SlotIndex { get; init; }
-    // ADR-034 (aditivos da TA.3; schema +1 e migração são da TA.4).
+    /// <summary>ADR-034: <c>Start</c>/<c>End</c>; <c>placed = false</c> = SEM POSIÇÃO (continua gravada e volta sem custo).</summary>
     public string Anchor { get; init; } = "Start";
     public int OffsetDip { get; init; }
     public bool Placed { get; init; }

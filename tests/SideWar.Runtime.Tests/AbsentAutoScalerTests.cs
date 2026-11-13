@@ -70,6 +70,17 @@ public sealed class AbsentAutoScalerTests
         Assert.Equal(0, s.ManualUpgrades);
     }
 
+    [Fact(DisplayName = "TA.4 auto-escala ignora torre SEM POSIÇÃO (ADR-034)")]
+    public void Skips_Unpositioned_Towers()
+    {
+        var s = NewState(1_000_000, TowerType.Bolt, TowerType.Frost);
+        s.Towers.Get(TestLayouts.TowerAt(s, 1)).Placed = false;
+        var r = AutoScaler.Run(s, Ctx, true, PresenceState.Ausente);
+        Assert.NotEmpty(r.Upgrades);
+        Assert.All(r.Upgrades, u => Assert.Equal(TowerType.Bolt, u.Type));
+        Assert.Equal(1, s.Towers.Get(TestLayouts.TowerAt(s, 1)).Level);
+    }
+
     [Fact(DisplayName = "CA-25.4 escolhe a torre de menor custo de melhoria; empate pelo menor Id")]
     public void Picks_Cheapest_Then_Lowest_Id()
     {

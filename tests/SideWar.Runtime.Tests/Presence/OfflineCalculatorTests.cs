@@ -17,7 +17,7 @@ public sealed class OfflineCalculatorTests
         params OfflineTower[] towers)
         => new(T0, stage, wave, wave, "brazil-south", reservas, 1, 0, credits, 0, towers, auto, accum);
 
-    private static OfflineTower Bolt(int id, int slot, int level = 1) => new(id, TowerType.Bolt, slot, level);
+    private static OfflineTower Bolt(int id, int slot, int level = 1) => new(id, TowerType.Bolt, true, level);
 
     private static OfflineResult Run(OfflineSnapshot s, double seconds, OfflineConfig? cfg = null)
         => Calc(cfg).Compute(s, s.SavedUtc.AddSeconds(seconds));
@@ -132,7 +132,7 @@ public sealed class OfflineCalculatorTests
     public void TowerWithoutSlot_DoesNotCountForDps()
     {
         var withSlot = Run(Snap(1, towers: Bolt(1, 0)), 100);
-        var noSlot = Run(Snap(1, towers: new OfflineTower(1, TowerType.Bolt, null, 1)), 100);
+        var noSlot = Run(Snap(1, towers: new OfflineTower(1, TowerType.Bolt, false, 1)), 100);
         Assert.True(withSlot.Report.Creditos > 0);
         Assert.Equal(0, noSlot.Report.Creditos);
     }
@@ -161,19 +161,19 @@ public sealed class OfflineCalculatorTests
     public void ScaleSet_UsesBoltBonus_AndNoSlotBoltDoesNotCount()
     {
         var c = Calc();
-        var ss = new OfflineTower(9, TowerType.ScaleSet, 2, 1);
+        var ss = new OfflineTower(9, TowerType.ScaleSet, true, 1);
         var plain = c.ComputeDps([ss], [1]);
         Assert.Equal(14 / 0.7, plain, 12);
         var two = c.ComputeDps([Bolt(1, 0), Bolt(2, 1), ss], [1, 1, 1]);
         Assert.Equal(2 * 18 / 0.7 + 14 * 1.3 / 0.7, two, 12);
-        var ghost = c.ComputeDps([new OfflineTower(1, TowerType.Bolt, null, 1), ss], [1, 1]);
+        var ghost = c.ComputeDps([new OfflineTower(1, TowerType.Bolt, false, 1), ss], [1, 1]);
         Assert.Equal(plain, ghost, 12);
     }
 
     [Fact]
     public void AutoScale_SpendsHalf_OnLowestCostTower_AndUnlocksNextWave()
     {
-        var s = Snap(1, auto: true, credits: 100_000, towers: new[] { Bolt(1, 0), new OfflineTower(2, TowerType.Frost, 1, 1) });
+        var s = Snap(1, auto: true, credits: 100_000, towers: new[] { Bolt(1, 0), new OfflineTower(2, TowerType.Frost, true, 1) });
         var on = Run(s, 3 * 3600);
         var off = Run(s with { AutoScaleOn = false }, 3 * 3600);
         Assert.True(on.Report.NMelhorias > 0);
@@ -238,7 +238,7 @@ public sealed class OfflineCalculatorTests
     [Fact]
     public void Deterministic_SameInputSameOutput()
     {
-        var s = Snap(7, auto: true, credits: 5000, towers: new[] { Bolt(1, 0, 5), new OfflineTower(2, TowerType.Cannon, 1, 3) });
+        var s = Snap(7, auto: true, credits: 5000, towers: new[] { Bolt(1, 0, 5), new OfflineTower(2, TowerType.Cannon, true, 3) });
         var a = Run(s, 7 * 3600 + 13);
         var b = Run(s, 7 * 3600 + 13);
         Assert.Equal(a.Report.Creditos, b.Report.Creditos);

@@ -2,8 +2,8 @@ using SideWar.Core.Simulation;
 
 namespace SideWar.Runtime.Presence;
 
-/// <summary>Torre do snapshot offline. <c>Slot</c> nulo = SEM SLOT (não atira nem entra no DPS, ADR-032).</summary>
-public sealed record OfflineTower(int Id, TowerType Type, int? Slot, int Level);
+/// <summary>Torre do snapshot offline. <c>Placed = false</c> = SEM POSIÇÃO (não atira, não entra no DPS nem recebe melhoria da auto-escala; ADR-034, SDD-21 RF-21.8).</summary>
+public sealed record OfflineTower(int Id, TowerType Type, bool Placed, int Level);
 
 /// <summary>
 /// Entrada do cálculo offline (SDD-25 RF-25.6), gravada no Hide, nos saves periódicos e no encerramento.

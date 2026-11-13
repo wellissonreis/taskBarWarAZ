@@ -160,7 +160,7 @@ public sealed class GameHostIntegrationTests
         for (int i = 0; i < types.Length; i++)
         {
             var t = s.Towers.Get(TestLayouts.TowerAt(s, i));
-            towers.Add(new OfflineTower(t.Id, t.Type, i, t.Level));
+            towers.Add(new OfflineTower(t.Id, t.Type, t.Placed, t.Level));
         }
 
         var simResult = AutoScaler.Run(s, Ctx, true, PresenceState.Ausente);

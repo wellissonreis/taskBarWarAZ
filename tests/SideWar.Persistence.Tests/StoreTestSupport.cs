@@ -62,15 +62,15 @@ internal static class StoreTestSupport
             Perdas = new LossesData { Picos = 16, Caixas = 40, Chefes = 1 },
         },
         CardState = CardStateData.Recolhido,
-        Layout = new LayoutData { SpawnX = 1500.5f, LeakX = 94f, CoreX = 40f, PortalX = 1560f, SlotX = [150.25f, 300f, 450.125f, 600f] },
+        Layout = new LayoutData { SpawnX = 1500.5f, LeakX = 94f, CoreX = 40f, PortalX = 1560f, Width = 1920, Host = "Band", FreeZones = [new FreeZoneData(100, 400), new FreeZoneData(500, 900)], MigratedSlots = true },
         Sim = new SimData
         {
             Tick = 18234, Stage = 3, Attempt = 2, Falls = 1, Wave = 17, OndaMax = 21, ChefesVencidos = [20],
             Credits = 312, Carry = 0.123456789012345, Xp = 40, Level = 5, BaseHp = 87, MaxBaseHp = 120, Reservas = 8, Region = "east-us",
             UnlockedTowers = ["bolt", "frost"], Rng = new RngData(ulong.MaxValue - 3, 0x1357UL | 1), NextId = 4411,
             WaveState = new WaveStateData { Queue = [new QueuedSpawnData(0.5f, "grunt"), new QueuedSpawnData(1.25f, "runner")], Cursor = 12, Clock = 8.4f, Rest = 0.7f, SpawnIndex = 12 },
-            Towers = [new TowerData { Id = 5, Type = "bolt", SlotIndex = 1, Level = 3, Cooldown = 0.12f, Mode = "First", Hits = 2 },
-                      new TowerData { Id = 6, Type = "frost", SlotIndex = 9, Level = 1, Cooldown = 0f, Mode = "Strong", Hits = 0 }], // SEM SLOT (9 ≥ 4)
+            Towers = [new TowerData { Id = 5, Type = "bolt", Anchor = "End", OffsetDip = 120, Placed = true, Level = 3, Cooldown = 0.12f, Mode = "First", Hits = 2 },
+                      new TowerData { Id = 6, Type = "frost", Anchor = "Start", OffsetDip = 0, Placed = false, Level = 1, Cooldown = 0f, Mode = "Strong", Hits = 0 }], // SEM POSIÇÃO
             Enemies = [new EnemyData { Id = 4402, Kind = "tank", X = 812.5f, Hp = 210.5, MaxHp = 480, Speed = 30.1f, SpawnSpeed = 33.2f, Armor = 2, Chilled = true, LastHit = "Frost" }],
         },
         Events = new EventsData

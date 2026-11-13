@@ -29,8 +29,10 @@ public sealed class SessionStore
         Action<string>? log = null, AtomicFileWriter? writer = null, MigrationRegistry? migrations = null)
     {
         var now = utcNow ?? (() => DateTime.UtcNow);
+        migrations ??= new MigrationRegistry();
+        SessionMigrations.RegisterBuiltIn(migrations);
         _doc = new VersionedDocumentStore<OfflineSnapshot>(fs, Path.Combine(dataDirectory, FileName), OfflineSnapshot.Schema,
-            OfflineSnapshot.SchemaVersion, migrations ?? MigrationRegistry.Empty, SessionSerializer.Read, SessionSerializer.Write,
+            OfflineSnapshot.SchemaVersion, migrations, SessionSerializer.Read, SessionSerializer.Write,
             appVersion, now, log, writer ?? new AtomicFileWriter(fs, log), new CorruptQuarantine(fs, Path.Combine(dataDirectory, "corrupt"), now, log));
     }
 

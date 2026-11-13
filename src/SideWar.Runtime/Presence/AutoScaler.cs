@@ -11,7 +11,7 @@ public sealed record AutoScaleResult(long Spent, IReadOnlyList<AutoUpgradeStep> 
     public static AutoScaleResult None { get; } = new(0, Array.Empty<AutoUpgradeStep>());
 }
 
-/// <summary>Torre candidata da auto-escala: só entram torres com slot. <c>Level</c> é atualizado por <see cref="AutoScaler.Plan"/>.</summary>
+/// <summary>Torre candidata da auto-escala: só entram torres posicionadas. <c>Level</c> é atualizado por <see cref="AutoScaler.Plan"/>.</summary>
 public struct AutoScaleCandidate(int id, TowerType type, int level, long baseCost)
 {
     public int Id { get; } = id;
@@ -85,6 +85,7 @@ public static class AutoScaler
         {
             if (!state.Towers.IsAlive(i)) continue;
             ref var t = ref state.Towers.At(i);
+            if (!t.Placed) continue; // SEM POSIÇÃO não recebe melhoria (ADR-034, SDD-25)
             cands.Add(new AutoScaleCandidate(t.Id, t.Type, t.Level, ctx.Tower(t.Type).Cost));
             slots.Add(i);
         }

@@ -3,6 +3,7 @@ using SideWar.Core.Bot;
 using SideWar.Core.Content;
 using SideWar.Core.Events;
 using SideWar.Core.Simulation;
+using SideWar.Persistence.IO;
 using SideWar.Persistence.Mapping;
 using SideWar.Persistence.Profile;
 using SideWar.Persistence.Session;
@@ -138,6 +139,52 @@ public sealed class SimSnapshotMapperTests
         Assert.Equal(RestoreStatus.StateHashMismatch, r.Status);
         r = SimSnapshotMapper.Restore(Ctx, snap with { Sim = snap.Sim with { Towers = [new TowerData { Id = 1, Type = "Nope" }] } });
         Assert.Equal(RestoreStatus.Invalid, r.Status);
+    }
+
+    [Fact(DisplayName = "TA.4 DP-33.7 save v1 com slotIndex migra, restaura SEM POSIÇÃO com pendência e AutoPlaceUnpositioned reposiciona sem perder torres")]
+    public void V1Save_Migrates_Restores_Unpositioned_And_AutoPlaces()
+    {
+        var s = NewGame();
+        var bot = new SanityBot(Ctx);
+        for (int i = 0; i < 6000 && s.Towers.Count < 3; i++) { bot.Act(s); s.Step(Ctx); }
+        Assert.True(s.Towers.Count >= 3);
+        var credits = s.Credits;
+        var levels = new List<int>();
+        for (int i = 0; i < s.Towers.Capacity; i++) if (s.Towers.IsAlive(i)) levels.Add(s.Towers.At(i).Level);
+        // Reescreve o payload atual no formato v1 (ADR-020): slotIndex/slotX, sem width/host/freeZones/anchor/offsetDip/placed.
+        var node = System.Text.Json.Nodes.JsonNode.Parse(StoreTestSupport.Json(Save(s)))!.AsObject();
+        var layout = node["layout"]!.AsObject();
+        foreach (var k in new[] { "width", "host", "freeZones", "migratedSlots" }) layout.Remove(k);
+        layout["slotX"] = new System.Text.Json.Nodes.JsonArray(150, 300);
+        int n = 0;
+        foreach (var t in node["sim"]!["towers"]!.AsArray())
+        {
+            var o = t!.AsObject();
+            foreach (var k in new[] { "anchor", "offsetDip", "placed" }) o.Remove(k);
+            o["slotIndex"] = n++;
+        }
+        var fs = new FakeFileSystem();
+        fs.Files["/data/session.json"] = StoreTestSupport.Envelope(node.ToJsonString(), OfflineSnapshot.Schema, 1);
+        var loaded = new SessionStore(fs, "/data", utcNow: () => T0).Load(Content.ContentHash);
+        Assert.Equal(SessionLoadStatus.Restored, loaded.Status);
+
+        var r = SimSnapshotMapper.Restore(Ctx, loaded.Snapshot!);
+        Assert.Equal(RestoreStatus.Restored, r.Status);
+        var m = r.State!;
+        Assert.True(m.MigratedSlotsPending);
+        Assert.Equal(credits, m.Credits);
+        Assert.Equal(levels.Count, m.Towers.Count);
+        for (int i = 0; i < m.Towers.Capacity; i++) if (m.Towers.IsAlive(i)) Assert.False(m.Towers.At(i).Placed);
+
+        Assert.True(m.Apply(Ctx, new LayoutChanged(SanityBot.FallbackLayout())).IsOk);
+        Assert.True(m.Apply(Ctx, new AutoPlaceUnpositioned()).IsOk);
+        Assert.False(m.MigratedSlotsPending);
+        int placed = 0;
+        for (int i = 0; i < m.Towers.Capacity; i++) if (m.Towers.IsAlive(i) && m.Towers.At(i).Placed) placed++;
+        Assert.Equal(levels.Count, placed); // zona de 392 DIP comporta ≥ 8 torres de 44 DIP
+        // o save regravado do estado migrado restaura com hash conferido (v2 normal)
+        var again = SimSnapshotMapper.Restore(Ctx, ThroughJson(Save(m)));
+        Assert.Equal(RestoreStatus.Restored, again.Status);
     }
 
     [Fact(DisplayName = "T6.9a ToProfile: nível, XP, Reservas, Rng, estrelas, ledger e melhorias manuais; estrelas nunca diminuem")]

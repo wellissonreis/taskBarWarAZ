@@ -11,7 +11,8 @@ internal sealed partial class SessionJsonContext : JsonSerializerContext;
 public static class SessionSerializer
 {
     public const int MaxEntities = 4096;
-    public const int MaxSlots = 12;
+    public const int MaxZones = SideWar.Core.Simulation.StripLayout.MaxFreeZones;
+    public const int MaxTowers = SideWar.Core.Simulation.TowerStore.MaxTowers;
 
     public static void Write(Utf8JsonWriter w, OfflineSnapshot s) =>
         JsonSerializer.Serialize(w, Normalize(s), SessionJsonContext.Default.OfflineSnapshot);
@@ -22,7 +23,7 @@ public static class SessionSerializer
         var s = payload.Deserialize(SessionJsonContext.Default.OfflineSnapshot) ?? throw new JsonException("payload nulo");
         if (string.IsNullOrEmpty(s.GameContentHash) || string.IsNullOrEmpty(s.StateHash)) throw new JsonException("hash ausente");
         if (s.SavedUtc == default) throw new JsonException("savedUtc ausente");
-        if (s.Layout.SlotX.Count > MaxSlots || s.Sim.Towers.Count > MaxEntities || s.Sim.Enemies.Count > MaxEntities)
+        if (s.Layout.FreeZones.Count > MaxZones || s.Sim.Towers.Count > MaxTowers || s.Sim.Enemies.Count > MaxEntities)
             throw new JsonException("listas acima do limite");
         return Normalize(s);
     }

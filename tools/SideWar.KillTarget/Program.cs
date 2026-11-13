@@ -14,7 +14,7 @@ public static class KillSnapshots
         GameContentHash = ContentHash,
         StateHash = "0123456789abcdef",
         Presence = new PresenceData(),
-        Layout = new LayoutData { SpawnX = 1500f, LeakX = 94f, CoreX = 40f, PortalX = 1560f, SlotX = [150f, 300f, 450f, 600f] },
+        Layout = new LayoutData { SpawnX = 1500f, LeakX = 94f, CoreX = 40f, PortalX = 1560f, Width = 1920, FreeZones = [new FreeZoneData(100, 700)] },
         Sim = new SimData
         {
             Tick = tick,

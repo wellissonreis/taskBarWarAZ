@@ -280,7 +280,7 @@ public static class SimSnapshotMapper
         else s.Ledger.Restore(ledger);
 
         string actual = FormatStateHash(s.ComputeStateHash());
-        if (!string.Equals(actual, snap.StateHash, StringComparison.OrdinalIgnoreCase))
+        if (snap.StateHash != OfflineSnapshot.MigratedStateHash && !string.Equals(actual, snap.StateHash, StringComparison.OrdinalIgnoreCase))
             return new(RestoreStatus.StateHashMismatch, null, $"StateHash {actual} ≠ gravado {snap.StateHash}");
         return new(RestoreStatus.Restored, s, null, d.Region, d.UnlockedTowers);
     }

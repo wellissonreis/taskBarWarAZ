@@ -30,18 +30,18 @@ public sealed class OfflineCalculator
     /// <summary>Critério de vitória (RF-25.7): <c>DPS × (duração × 0,8) ≥ HPtotal</c>.</summary>
     public bool IsWon(double dps, double waveDuration, double hpTotal) => dps * (waveDuration * _cfg.WinFactor) >= hpTotal;
 
-    /// <summary>DPS analítico (RF-25.7): só torres com slot; sem super hit, chilled, lentidão nem área; Scale Set usa o bônus de Raios.</summary>
+    /// <summary>DPS analítico (RF-25.7): só torres posicionadas; sem super hit, chilled, lentidão nem área; Scale Set usa o bônus de Raios.</summary>
     public double ComputeDps(IReadOnlyList<OfflineTower> towers, IReadOnlyList<int> levels)
     {
         var bolts = 0;
         for (var i = 0; i < towers.Count; i++)
-            if (towers[i].Slot is not null && towers[i].Type == TowerType.Bolt) bolts++;
+            if (towers[i].Placed && towers[i].Type == TowerType.Bolt) bolts++;
 
         var dps = 0.0;
         for (var i = 0; i < towers.Count; i++)
         {
             var t = towers[i];
-            if (t.Slot is null || !_defs.TryGetValue(t.Type, out var def)) continue;
+            if (!t.Placed || !_defs.TryGetValue(t.Type, out var def)) continue;
             var dmg = def.Damage;
             if (t.Type == TowerType.ScaleSet) dmg *= 1 + (def.DamageBonusPerBolt ?? 0.0) * bolts;
             for (var l = 1; l < levels[i]; l++) dmg *= _content.Economy.DamageGrowth;
@@ -94,7 +94,7 @@ public sealed class OfflineCalculator
         var farmWave = 0;
         var ups = new SortedDictionary<int, (TowerType Type, int From, int To)>();
         var autoOn = s.AutoScaleOn;
-        var eligible = towers.Any(t => t.Slot is not null);
+        var eligible = towers.Any(t => t.Placed);
 
         long Earned() => ToLong(Math.Floor(creditVal + s.Carry));
 
@@ -102,12 +102,12 @@ public sealed class OfflineCalculator
         {
             var working = s.Credits + Earned() - spent;
             var budget = AutoScaler.Budget(working, _cfg.AutoScaleBudgetFraction);
-            // Regra única (T6.2): o offline só monta candidatos (torres com slot) e agrega os passos por torre.
+            // Regra única (T6.2): o offline só monta candidatos (torres posicionadas) e agrega os passos por torre.
             var cands = new List<AutoScaleCandidate>(towers.Count);
             var index = new List<int>(towers.Count);
             for (var i = 0; i < towers.Count; i++)
             {
-                if (towers[i].Slot is null || !_defs.TryGetValue(towers[i].Type, out var def)) continue;
+                if (!towers[i].Placed || !_defs.TryGetValue(towers[i].Type, out var def)) continue;
                 cands.Add(new AutoScaleCandidate(towers[i].Id, towers[i].Type, levels[i], def.Cost));
                 index.Add(i);
             }

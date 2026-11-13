@@ -21,6 +21,8 @@ public sealed class MigrationRegistry
         return this;
     }
 
+    public bool Has(string schema, int fromVersion) => _steps.ContainsKey((schema, fromVersion));
+
     /// <summary>Menor versão da qual há cadeia contígua até <paramref name="currentVersion"/> (a própria atual se não há migrações).</summary>
     public int MinVersion(string schema, int currentVersion)
     {
