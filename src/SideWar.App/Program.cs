@@ -28,7 +28,7 @@ public static class Program
             return RunBench(args);
         using var instance = SingleInstance.TryAcquire(); // SDD-07 RF-07.8: second instance signals the first and exits 0.
         if (instance is null) return 0;
-        var app = new App();
+        var app = new App { Instance = instance };
         CrashHandler.Install(app);
 #if DEBUG
         if (Array.IndexOf(args, "--debug-crash") >= 0) CrashHandler.Fatal("--debug-crash", new InvalidOperationException("forced crash (--debug-crash)"));

@@ -126,6 +126,12 @@ public sealed class SceneWindow : IDisposable
     }
 
     internal Action<uint>? MessageObserver { get; set; }
+
+    /// <summary>
+    /// Broadcast <c>TaskbarCreated</c> (Explorer reiniciou) recebido pela cena, na T-Game (SDD-21 RF-21.3; T7.6 D9).
+    /// A raiz de composição reinstala o hook da barra e reconsulta o layout.
+    /// </summary>
+    public event Action? TaskbarCreated;
     /// <summary>Registration point for HotkeyService (T1.12): receives the WM_HOTKEY id.</summary>
     internal Action<int>? HotkeyHandler { get; set; }
     /// <summary>Registration point for SessionPowerWatcher (T2.5): WM_WTSSESSION_CHANGE / WM_POWERBROADCAST; true = handled.</summary>
@@ -216,6 +222,7 @@ public sealed class SceneWindow : IDisposable
             var pointer = WindowLong.Get(hwnd, WINDOW_LONG_PTR_INDEX.GWLP_USERDATA);
             if (pointer != 0) window = (SceneWindow?)GCHandle.FromIntPtr(pointer).Target;
             window?.MessageObserver?.Invoke(message);
+            if (window is not null && message == Taskbar.TaskbarTriggers.TaskbarCreatedMessage) window.TaskbarCreated?.Invoke();
             window?.owner.Dock?.OnSystemMessage(message, wParam.Value, lParam.Value); // SDD-05 RF-05.6
             window?.owner.Mode?.OnMessage(hwnd, message, wParam.Value, lParam.Value); // SDD-04 RF-04.3
             if (window?.SystemMessageHandler?.Invoke(message, wParam.Value, lParam.Value) == true) return new LRESULT(1); // SDD-07; TRUE for PBT_*
