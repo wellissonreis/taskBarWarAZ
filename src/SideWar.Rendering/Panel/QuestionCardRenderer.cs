@@ -15,6 +15,7 @@ namespace SideWar.Rendering.Panel;
 public sealed class QuestionCardRenderer(Typography typography, IconCatalog icons, int dpi) : IDisposable
 {
     private readonly PanelPainter p = new(typography, dpi);
+    private readonly PanelTextMetricsSkia tm = new(typography);
     private readonly SKPaint iconPaint = new() { IsAntialias = false };
     private readonly SKPaint strokePaint = new() { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeCap = SKStrokeCap.Butt };
     private readonly SKPath minimize = SKPath.ParseSvgPathData("M3 12h10")!;
@@ -25,10 +26,9 @@ public sealed class QuestionCardRenderer(Typography typography, IconCatalog icon
     public void Draw(SKCanvas c, QuestionCardModel m, QuestionCardLayout l, QuestionHit hover = default)
     {
         _ = hover; // o design não define hover no card de pergunta (RF-24.12, DP-24.14)
-        var tm = new PanelTextMetricsSkia(typography);
         c.Clear(SKColors.Transparent);
         var box = p.Rect(0, 0, QuestionCardLayout.Width, l.Height);
-        HardShadow.Draw(c, box, Palette.SombraCard, dpi);
+        p.Shadow(c, box, Palette.SombraCard);
         p.Fill(c, box, Palette.Perigo);
         var b = p.Px(QuestionCardLayout.Border);
         p.Fill(c, new SKRect(box.Left + b, box.Top + b, box.Right - b, box.Bottom - b), Palette.BgPainel);

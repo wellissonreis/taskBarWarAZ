@@ -16,6 +16,7 @@ internal sealed class PanelPainter(Typography typography, int dpi) : IDisposable
 {
     private readonly SKPaint fill = new() { IsAntialias = false, Style = SKPaintStyle.Fill };
     private readonly SKPaint text = new() { IsAntialias = true, Style = SKPaintStyle.Fill };
+    private readonly TextRunCache runs = new();
 
     public int Dpi => dpi;
     public float Scale => dpi / 96f;
@@ -49,6 +50,9 @@ internal sealed class PanelPainter(Typography typography, int dpi) : IDisposable
         Fill(c, new SKRect(o.Left + b, o.Top + b, o.Right - b, o.Bottom - b), inner);
     }
 
+    /// <summary>Sombra dura do corpo <paramref name="body"/> (px) com o paint deste painter (sem alocação).</summary>
+    public void Shadow(SKCanvas c, SKRect body, SKColor color) => Theme.HardShadow.Draw(c, body, color, dpi, fill);
+
     public SKFont Font(PanelFont face, float sizeDip) => typography.GetFont(PanelTextMetricsSkia.Role(face), sizeDip, dpi);
 
     /// <summary>Texto numa caixa de linha (topo = <c>box.Y</c>); baseline = topo + ascendente físico.</summary>
@@ -58,7 +62,7 @@ internal sealed class PanelPainter(Typography typography, int dpi) : IDisposable
         var font = Font(face, sizeDip);
         text.Color = color;
         var ls = letterSpacing * Scale;
-        var width = font.MeasureText(s) + ls * s.Length - (s.Length > 0 ? ls : 0f);
+        var width = runs.Measure(s, font) + ls * s.Length - (s.Length > 0 ? ls : 0f);
         var left = Px(box.X);
         var boxW = Px(box.X + box.W) - left;
         var x = align switch
@@ -70,14 +74,14 @@ internal sealed class PanelPainter(Typography typography, int dpi) : IDisposable
         var y = Px(box.Y - OffsetY) + (float)Math.Round(-font.Metrics.Ascent);
         if (ls == 0f)
         {
-            c.DrawText(s, x, y, SKTextAlign.Left, font, text);
+            c.DrawText(runs.Get(s, font).Blob, x, y, text);
             return;
         }
         foreach (var ch in s)
         {
-            var g = ch.ToString();
-            c.DrawText(g, x, y, SKTextAlign.Left, font, text);
-            x += font.MeasureText(g) + ls;
+            var g = runs.Get(runs.Char(ch), font);
+            c.DrawText(g.Blob, x, y, text);
+            x += g.Width + ls;
         }
     }
 
@@ -85,5 +89,6 @@ internal sealed class PanelPainter(Typography typography, int dpi) : IDisposable
     {
         fill.Dispose();
         text.Dispose();
+        runs.Dispose();
     }
 }

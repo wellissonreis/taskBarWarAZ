@@ -32,4 +32,18 @@ public static class HardShadow
         using var paint = new SKPaint { IsAntialias = false, Style = SKPaintStyle.Fill, Color = color };
         canvas.DrawRect(ShadowRect(body, dpi), paint);
     }
+
+    /// <summary>
+    /// Variante sem alocação (T7.2): usa o <paramref name="paint"/> do chamador (cada renderer tem o seu, SDD-08 RF-08.10), então não há estado compartilhado.
+    /// O paint é reconfigurado a cada chamada (sem AA, preenchimento, cor).
+    /// </summary>
+    public static void Draw(SKCanvas canvas, SKRect body, SKColor color, int dpi, SKPaint paint)
+    {
+        ArgumentNullException.ThrowIfNull(canvas);
+        ArgumentNullException.ThrowIfNull(paint);
+        paint.IsAntialias = false;
+        paint.Style = SKPaintStyle.Fill;
+        paint.Color = color;
+        canvas.DrawRect(ShadowRect(body, dpi), paint);
+    }
 }

@@ -193,7 +193,7 @@ T3.4 a T3.8 compartilham contratos de `SimState`: **não paralelizar entre si** 
 | Tarefa | Descrição (um commit) | Ficha/RF | Modelo | Amb. | Critérios |
 |---|---|---|---|---|---|
 | T7.1 | Rodada completa de medição P-00..P-22 e `specs/evidencias/perf/` | SDD-16 | Haiku | Windows | CA-16.3, CA-16.5 |
-| T7.2 | Correções de alocação até 0 B/frame e `RenderAllocationTests` | SDD-08 RNF-08.3 | Sonnet | WSL+Windows | CA-08.5 |
+| T7.2 🟡 | Correções de alocação até 0 B/frame e `RenderAllocationTests` | SDD-08 RNF-08.3 | Sonnet | WSL+Windows | CA-08.5 |
 | T7.3 | Atualização parcial (dirty rect) de RF-08.7, só com benchmark que a justifique | SDD-08 RF-08.7 | Sonnet | Windows | CA-16.3 |
 | T7.4 | Ajustes de GC e configuração de runtime | SDD-16 RF-16.6 | Sonnet | Windows | CA-16.3 |
 | T7.5 | Soak de 2 h (P-07) | SDD-16 | Haiku | Windows | CA-16.3 |

@@ -22,31 +22,32 @@ public static class ArsenalTabRenderer
         ArgumentNullException.ThrowIfNull(layout);
         ArgumentNullException.ThrowIfNull(ctx);
         float s = ctx.Scale;
-        int dpi = ctx.Dpi;
         canvas.Save();
         canvas.ClipRect(new SKRect(D.Px(2f, s), D.Px(PanelScroll.ViewportTopDip, s), D.Px(398f, s), D.Px(PanelScroll.ViewportTopDip + viewportDip, s)));
-        var silk = (Func<float, SKFont>)(sz => ctx.Fonts.GetFont(FontRole.SilkscreenRegular, sz, dpi));
-        var mono = (Func<float, SKFont>)(sz => ctx.Fonts.GetFont(FontRole.JetBrainsMonoRegular, sz, dpi));
+        DrawAutoCard(canvas, layout.AutoCard, offsetDip, s, ctx);
 
-        DrawAutoCard(canvas, layout.AutoCard, offsetDip, s, silk, mono);
+        DrawHelpCard(canvas, layout.HelpCard, offsetDip, s, ctx);
 
-        DrawHelpCard(canvas, layout.HelpCard, offsetDip, s, mono);
-
-        foreach (var row in layout.Rows)
+        var rows = layout.Rows;
+        for (int ri = 0; ri < rows.Count; ri++)
         {
+            var row = rows[ri];
             if (row.Rect.Y + row.Rect.H < offsetDip || row.Rect.Y > offsetDip + viewportDip) continue;
-            DrawRow(canvas, row, hover, building, offsetDip, s, ctx, silk, mono);
+            DrawRow(canvas, row, hover, building, offsetDip, s, ctx);
         }
         canvas.Restore();
     }
 
-    private static void DrawAutoCard(SKCanvas c, ArsenalAutoCardLayout a, float off, float s, Func<float, SKFont> silk, Func<float, SKFont> mono)
+    private static SKFont Silk(ArsenalCampaignPaintContext ctx, float sz) => ctx.Fonts.GetFont(FontRole.SilkscreenRegular, sz, ctx.Dpi);
+    private static SKFont Mono(ArsenalCampaignPaintContext ctx, float sz) => ctx.Fonts.GetFont(FontRole.JetBrainsMonoRegular, sz, ctx.Dpi);
+
+    private static void DrawAutoCard(SKCanvas c, ArsenalAutoCardLayout a, float off, float s, ArsenalCampaignPaintContext ctx)
     {
         D.Box(c, a.Rect, s, off, Palette.BgCard, Palette.BordaForte);
         float tx = a.Rect.X + 13f;
-        D.TextTop(c, ArsenalModel.AutoScaleTitle, silk(11f), tx, a.TitleTop, s, off, Palette.TxtPrincipal, 1f);
+        D.TextTop(c, ArsenalModel.AutoScaleTitle, Silk(ctx, 11f), tx, a.TitleTop, s, off, Palette.TxtPrincipal, 1f);
         for (int i = 0; i < a.DescriptionLines.Length; i++)
-            D.TextTop(c, a.DescriptionLines[i], mono(11f), tx, a.DescriptionTop + i * a.DescriptionLineHeight, s, off, Palette.TxtTerciario);
+            D.TextTop(c, a.DescriptionLines[i], Mono(ctx, 11f), tx, a.DescriptionTop + i * a.DescriptionLineHeight, s, off, Palette.TxtTerciario);
 
         bool on = a.ToggleText == "ON";
         var box = D.Rect(a.Box, s, off);
@@ -61,22 +62,21 @@ public static class ArsenalTabRenderer
             float b = MathF.Max(1f, MathF.Round(s));
             D.SolidPx(c, new SKRect(box.Left + b, box.Top + b, box.Right - b, box.Bottom - b), Palette.BgCard);
         }
-        var f = silk(10f);
+        var f = Silk(ctx, 10f);
         float lh = D.LinePx(f);
         var (_, ty) = D.Map(0, a.Toggle.Y + a.Toggle.H / 2f, off);
         D.TextBaseline(c, a.ToggleText, f, D.Px(2f + a.ToggleTextX, s), D.Px(ty, s) - lh / 2f - f.Metrics.Ascent, on ? Palette.Menta : Palette.TxtRotulo, 0f, s);
     }
 
-    private static void DrawHelpCard(SKCanvas c, ArsenalHelpCardLayout h, float off, float s, Func<float, SKFont> mono)
+    private static void DrawHelpCard(SKCanvas c, ArsenalHelpCardLayout h, float off, float s, ArsenalCampaignPaintContext ctx)
     {
         D.Box(c, h.Rect, s, off, Palette.MentaFundo, Palette.MentaBorda);
-        var f = mono(11f);
+        var f = Mono(ctx, 11f);
         for (int i = 0; i < h.Lines.Length; i++)
             D.TextTop(c, h.Lines[i], f, h.Rect.X + 13f, h.TextTop + i * h.LineHeight, s, off, Palette.MentaTexto);
     }
 
-    private static void DrawRow(SKCanvas c, ArsenalRowLayout r, ArsenalHit hover, BuildOrigin? building, float off, float s, ArsenalCampaignPaintContext ctx,
-        Func<float, SKFont> silk, Func<float, SKFont> mono)
+    private static void DrawRow(SKCanvas c, ArsenalRowLayout r, ArsenalHit hover, BuildOrigin? building, float off, float s, ArsenalCampaignPaintContext ctx)
     {
         var m = r.Model;
         D.BeginOpacity(c, m.Opacity);
@@ -88,29 +88,29 @@ public static class ArsenalTabRenderer
         else D.Solid(c, r.Slot, s, off, Palette.BgTrilhoFundo);
         D.DrawSprite(c, ctx.Sprites, D.SpriteFor(m.Type, m.Kind == ArsenalRowKind.Locked), D.Rect(r.Slot, s, off), ArsenalLayout.SpriteBox, s);
 
-        var nf = silk(12f);
+        var nf = Silk(ctx, 12f);
         var (_, ny) = D.Map(0, r.NameTop, off);
         float baseline = D.Px(ny, s) - nf.Metrics.Ascent;
         float x = D.Px(2f + r.TextX, s);
         float nameW = D.TextBaseline(c, m.Name, nf, x, baseline, Palette.TxtPrincipal, 0f, s);
-        D.TextBaseline(c, m.LevelText, mono(10f), x + nameW + D.Px(8f, s), baseline, m.LevelIsSeal ? Palette.TxtWidgetRotulo : Palette.Ambar, 0f, s);
-        D.TextTop(c, m.Azure, mono(10f), r.TextX, r.AzureTop, s, off, Palette.TxtRotulo);
-        D.TextTop(c, m.Stats, mono(10f), r.TextX, r.StatsTop, s, off, Palette.TxtSecundario);
+        D.TextBaseline(c, m.LevelText, Mono(ctx, 10f), x + nameW + D.Px(8f, s), baseline, m.LevelIsSeal ? Palette.TxtWidgetRotulo : Palette.Ambar, 0f, s);
+        D.TextTop(c, m.Azure, Mono(ctx, 10f), r.TextX, r.AzureTop, s, off, Palette.TxtRotulo);
+        D.TextTop(c, m.Stats, Mono(ctx, 10f), r.TextX, r.StatsTop, s, off, Palette.TxtSecundario);
 
         bool locked = m.ButtonStyle == ArsenalButtonStyle.Locked;
         bool hot = !locked && !r.ButtonHit.IsNone && hover == r.ButtonHit;
         var bp = D.Rect(r.Button, s, off);
         D.SolidPx(c, bp, locked ? Palette.BgTrilho : hot ? Palette.AmbarHover : Palette.Ambar);
         SKColor fg = locked ? Palette.TxtRotulo : Palette.BgTrilhoFundo;
-        var lf = silk(10f);
-        var cf = silk(9f);
+        var lf = Silk(ctx, 10f);
+        var cf = Silk(ctx, 9f);
         bool hasCost = m.CostText.Length > 0;
         float lh = D.LinePx(lf), ch = D.LinePx(cf), gap = D.Px(2f, s);
         float total = lh + (hasCost ? gap + ch : 0f);
         float top = bp.MidY - total / 2f;
-        D.TextBaseline(c, m.ButtonLabel, lf, bp.MidX - lf.MeasureText(m.ButtonLabel) / 2f, top - lf.Metrics.Ascent, fg, 0f, s);
+        D.TextBaseline(c, m.ButtonLabel, lf, bp.MidX - D.TextWidthPx(lf, m.ButtonLabel, 0f, s) / 2f, top - lf.Metrics.Ascent, fg, 0f, s);
         if (hasCost)
-            D.TextBaseline(c, m.CostText, cf, bp.MidX - cf.MeasureText(m.CostText) / 2f, top + lh + gap - cf.Metrics.Ascent, fg, 0f, s);
+            D.TextBaseline(c, m.CostText, cf, bp.MidX - D.TextWidthPx(cf, m.CostText, 0f, s) / 2f, top + lh + gap - cf.Metrics.Ascent, fg, 0f, s);
         c.Restore();
     }
 }

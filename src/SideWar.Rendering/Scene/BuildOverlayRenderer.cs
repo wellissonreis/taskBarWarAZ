@@ -82,7 +82,7 @@ public sealed class BuildOverlayRenderer : IDisposable
     private readonly SKPaint _text = new() { IsAntialias = false };
     private readonly SKPaint _sprite = new() { IsAntialias = false };
     private readonly SKPaint _stripes = new() { IsAntialias = false, Style = SKPaintStyle.Fill };
-    private readonly Dictionary<(string Text, int Px, int Spacing, string Family), (SKTextBlob Blob, float Width)> _runs = [];
+    private readonly Dictionary<(string Text, int Px, int Spacing, IntPtr Face), (SKTextBlob Blob, float Width)> _runs = [];
     private readonly List<(int A, int B)> _free = [];
     private readonly List<int> _centers = [];
     private SKShader? _stripeShader;
@@ -136,8 +136,12 @@ public sealed class BuildOverlayRenderer : IDisposable
         var layout = f.State.Layout;
         float bar = f.BarHeightDip;
 
-        foreach (var span in f.Blocked)
+        var blocked = f.Blocked; // índice: foreach sobre IReadOnlyList aloca o enumerador (RF-08.8)
+        for (int i = 0; i < blocked.Count; i++)
+        {
+            var span = blocked[i];
             DrawBlocked(canvas, span.X0, SceneGeometry.BarTop, span.X1 - span.X0, bar, strings.Label(span.Reason));
+        }
         DrawBlocked(canvas, 0, 0, layout.Width, AboveBarHeight, strings.AboveBar);
 
         float cellTop = CellTop(layout.Host, bar);
@@ -217,7 +221,8 @@ public sealed class BuildOverlayRenderer : IDisposable
 
     private void DrawFreeRuns(SKCanvas canvas, SimState state, float cellTop)
     {
-        var runs = FreeRuns(state);
+        FreeRuns(state);
+        var runs = _free; // List<T> concreta: enumerador struct (a interface devolvida por FreeRuns boxaria)
         float s = _scale, t = R(cellTop * s), b = R((cellTop + SceneGeometry.TowerCellSize) * s);
         float bw = Math.Max(1, R(BorderDip * s));
         foreach (var (a, c) in runs)
@@ -335,7 +340,7 @@ public sealed class BuildOverlayRenderer : IDisposable
     private (SKTextBlob Blob, float Width) GetRun(string text, SKFont font, int sizeDip, float spacingDip)
     {
         int spacingPx = (int)MathF.Round(spacingDip * _scale * 100);
-        var key = (text, Typography.PhysicalSize(sizeDip, _dpi), spacingPx, font.Typeface.FamilyName);
+        var key = (text, Typography.PhysicalSize(sizeDip, _dpi), spacingPx, font.Typeface.Handle);
         if (_runs.TryGetValue(key, out var run)) return run;
         if (spacingPx == 0)
             run = (SKTextBlob.Create(text, font) ?? throw new InvalidOperationException("SKTextBlob.Create failed."), font.MeasureText(text));

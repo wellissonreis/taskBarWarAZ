@@ -24,6 +24,8 @@ public sealed class IconCatalog : IDisposable
 
     private readonly SKPath[] _paths;
     private readonly Dictionary<(IconId, int), SKBitmap> _masks = new();
+    // DrawBitmap cria um SKImage por chamada (alocação por frame); a imagem da máscara é criada uma vez por (ícone, DPI).
+    private readonly Dictionary<(IconId, int), SKImage> _images = new();
     private bool _disposed;
 
     /// <summary>Faz o parse dos 7 paths; erro vira excecao de inicializacao (falha cedo).</summary>
@@ -84,14 +86,21 @@ public sealed class IconCatalog : IDisposable
     public void DrawTinted(SKCanvas canvas, IconId id, int dpi, float cx, float cy, SKPaint paint)
     {
         SKBitmap mask = GetMask(id, dpi);
+        if (!_images.TryGetValue((id, dpi), out SKImage? image))
+        {
+            image = SKImage.FromBitmap(mask) ?? throw new InvalidOperationException("SKImage.FromBitmap failed.");
+            _images[(id, dpi)] = image;
+        }
         float x = (float)Math.Round(cx - mask.Width / 2f);
         float y = (float)Math.Round(cy - mask.Height / 2f);
-        canvas.DrawBitmap(mask, x, y, new SKSamplingOptions(SKFilterMode.Nearest), paint);
+        canvas.DrawImage(image, x, y, new SKSamplingOptions(SKFilterMode.Nearest), paint);
     }
 
     /// <summary>Descarta as mascaras (WM_DPICHANGED); os paths permanecem.</summary>
     public void ClearMasks()
     {
+        foreach (SKImage i in _images.Values) i.Dispose();
+        _images.Clear();
         foreach (SKBitmap b in _masks.Values) b.Dispose();
         _masks.Clear();
     }

@@ -17,6 +17,7 @@ namespace SideWar.Rendering.Panel;
 public sealed class MissionsMigratePanelRenderer(Typography typography, IconCatalog icons, int dpi) : IDisposable
 {
     private readonly PanelPainter p = new(typography, dpi);
+    private readonly PanelTextMetricsSkia tm = new(typography);
     private readonly SKPaint iconPaint = new() { IsAntialias = false };
 
     /// <summary>Tamanho físico da janela: <c>round(400 × s) + round(6 × s)</c> × <c>round(548 × s) + round(6 × s)</c> (RF-24.2).</summary>
@@ -24,19 +25,24 @@ public sealed class MissionsMigratePanelRenderer(Typography typography, IconCata
 
     public void DrawMissions(SKCanvas canvas, MissionsTabModel model, MissionsLayout layout, PanelViewState view, TabBodyHit hover)
     {
-        Chrome(canvas, MissionsTabModel.TabTitle, view, () => MissionsBody(canvas, model, layout, hover));
+        BeginChrome(canvas, view);
+        MissionsBody(canvas, model, layout, hover);
+        EndChrome(canvas, MissionsTabModel.TabTitle, view);
     }
 
     public void DrawMigrate(SKCanvas canvas, MigrateTabModel model, MigrateLayout layout, PanelViewState view, TabBodyHit hover)
     {
-        Chrome(canvas, MigrateTabModel.TabTitle, view, () => MigrateBody(canvas, model, layout, hover));
+        BeginChrome(canvas, view);
+        MigrateBody(canvas, model, layout, hover);
+        EndChrome(canvas, MigrateTabModel.TabTitle, view);
     }
 
-    private void Chrome(SKCanvas c, string title, PanelViewState view, Action body)
+    // Sem delegate para o corpo (um closure por frame alocaria, RF-08.8): o chamador intercala Begin/Corpo/End.
+    private void BeginChrome(SKCanvas c, PanelViewState view)
     {
         c.Clear(SKColors.Transparent);
         var box = p.Rect(0, 0, PanelGeometry.PanelWidthDip, PanelGeometry.PanelHeightDip);
-        HardShadow.Draw(c, box, Palette.SombraPainel, dpi);
+        p.Shadow(c, box, Palette.SombraPainel);
         p.Fill(c, box, Palette.BordaPainel);
         var b = p.Px(2);
         p.Fill(c, new SKRect(box.Left + b, box.Top + b, box.Right - b, box.Bottom - b), Palette.BgPainel);
@@ -45,7 +51,10 @@ public sealed class MissionsMigratePanelRenderer(Typography typography, IconCata
         c.Save();
         c.ClipRect(p.Rect(2, PanelScroll.ViewportTopDip, 396, view.Viewport));
         p.OffsetY = view.Offset;
-        body();
+    }
+
+    private void EndChrome(SKCanvas c, string title, PanelViewState view)
+    {
         p.OffsetY = 0;
         c.Restore();
 
@@ -53,7 +62,7 @@ public sealed class MissionsMigratePanelRenderer(Typography typography, IconCata
 
         // Cabeçalho por último: filete de 1 DIP em y = 54 e título + fechar.
         p.Fill(c, new DipRect(2, 54, 396, 1), Palette.BordaPainel);
-        var lh = new PanelTextMetricsSkia(typography).LineHeight(PanelFont.Silkscreen, 14);
+        var lh = tm.LineHeight(PanelFont.Silkscreen, 14);
         p.Text(c, title, PanelFont.Silkscreen, 14, new DipRect(18, 2 + (52 - lh) / 2f, 330, lh), Palette.Ambar, letterSpacing: 1f);
         iconPaint.Color = Palette.TxtRotulo;
         icons.DrawTinted(c, IconId.Fechar, dpi, p.Px(PanelChromeHit.CloseX + 22), p.Px(PanelChromeHit.CloseY + 22), iconPaint);
@@ -74,7 +83,6 @@ public sealed class MissionsMigratePanelRenderer(Typography typography, IconCata
 
     private void MissionsBody(SKCanvas c, MissionsTabModel m, MissionsLayout l, TabBodyHit hover)
     {
-        var tm = new PanelTextMetricsSkia(typography);
         // 7.1 card de presença
         p.Box(c, l.PresenceCard, Palette.MentaBorda, Palette.MentaFundo);
         p.Text(c, m.Title, PanelFont.Silkscreen, 12, l.TitleBox, Palette.Menta);
@@ -118,7 +126,6 @@ public sealed class MissionsMigratePanelRenderer(Typography typography, IconCata
 
     private void MigrateBody(SKCanvas c, MigrateTabModel m, MigrateLayout l, TabBodyHit hover)
     {
-        var tm = new PanelTextMetricsSkia(typography);
         p.Box(c, l.Card, Palette.PrestigioBorda, Palette.PrestigioFundo);
         p.Text(c, MigrateTabModel.CardTitle, PanelFont.Silkscreen, 13, l.CardTitleBox, Palette.PrestigioClaro);
         var lh = tm.LineHeight(PanelFont.JetBrainsMono, 11);
@@ -127,15 +134,12 @@ public sealed class MissionsMigratePanelRenderer(Typography typography, IconCata
             var top = l.CardBodyBox.Y + i * MigrateLayout.CardBodyLineHeight + (MigrateLayout.CardBodyLineHeight - lh) / 2f;
             p.Text(c, l.CardBodyLines[i], PanelFont.JetBrainsMono, 11, new DipRect(l.CardBodyBox.X, top, l.CardBodyBox.W, lh), Palette.PrestigioTexto);
         }
-        string[] labels = [MigrateTabModel.TileCurrentLabel, MigrateTabModel.TileGainLabel];
-        string[] numbers = [m.CurrentReserves, m.GainNow];
-        string[] subs = [m.CurrentProduction, m.TotalProduction];
         for (var i = 0; i < 2; i++)
         {
             p.Box(c, l.Tiles[i], Palette.BordaPainel, Palette.BgItem);
-            p.Text(c, labels[i], PanelFont.JetBrainsMono, 10, l.TileLabelBoxes[i], Palette.TxtRotulo);
-            p.Text(c, numbers[i], PanelFont.Silkscreen, 18, l.TileNumberBoxes[i], i == 0 ? Palette.TxtPrincipal : Palette.PrestigioClaro);
-            p.Text(c, subs[i], PanelFont.JetBrainsMono, 10, l.TileSubBoxes[i], Palette.Menta);
+            p.Text(c, i == 0 ? MigrateTabModel.TileCurrentLabel : MigrateTabModel.TileGainLabel, PanelFont.JetBrainsMono, 10, l.TileLabelBoxes[i], Palette.TxtRotulo);
+            p.Text(c, i == 0 ? m.CurrentReserves : m.GainNow, PanelFont.Silkscreen, 18, l.TileNumberBoxes[i], i == 0 ? Palette.TxtPrincipal : Palette.PrestigioClaro);
+            p.Text(c, i == 0 ? m.CurrentProduction : m.TotalProduction, PanelFont.JetBrainsMono, 10, l.TileSubBoxes[i], Palette.Menta);
         }
         p.Text(c, MigrateTabModel.RegionsLabel, PanelFont.JetBrainsMono, 10, l.RegionsLabelBox, Palette.TxtRotulo, letterSpacing: 1f);
         for (var i = 0; i < l.Regions.Length; i++)

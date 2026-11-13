@@ -22,8 +22,11 @@ public sealed class WidgetRenderer : IDisposable
     private readonly SKPaint _fillAa = new() { IsAntialias = true, Style = SKPaintStyle.Fill };
     private readonly SKPaint _text = new() { IsAntialias = false };
     private readonly SKPaint _textAa = new() { IsAntialias = true };
+    private readonly SKPaint _tint = new() { Color = Palette.TxtPrincipal };
+    private readonly TextRunCache _runs = new();
     private readonly List<WidgetTextBox> _boxes = new(12);
     private SKBitmap? _background;
+    private SKImage? _backgroundImage; // DrawBitmap criaria um SKImage por frame
     private (int W, int H) _backgroundKey;
 
     public WidgetRenderer(Typography typography, IconCatalog icons)
@@ -35,11 +38,26 @@ public sealed class WidgetRenderer : IDisposable
     /// <summary>Caixas de texto desenhadas no último <see cref="Render"/> (px da janela), para golden de bbox (T-23.4).</summary>
     public IReadOnlyList<WidgetTextBox> LastTextBoxes => _boxes;
 
+    // WidgetModel.SealText concatena a cada acesso (alocação); aqui o texto do selo é memorizado por (presença, multiplicador).
+    private bool _sealPresent;
+    private string? _sealMultiplier, _sealText;
+
+    private string SealOf(in WidgetModel m)
+    {
+        if (_sealText is null || _sealPresent != m.IsPresent || !string.Equals(_sealMultiplier, m.MultiplierText, StringComparison.Ordinal))
+        {
+            _sealPresent = m.IsPresent;
+            _sealMultiplier = m.MultiplierText;
+            _sealText = m.SealText;
+        }
+        return _sealText;
+    }
+
     /// <summary>Layout vigente do modelo em DIP (selo e chip medidos nas fontes reais).</summary>
     public WidgetLayout GetLayout(in WidgetModel model, float heightDip, int dpi)
     {
         double scale = dpi / 96.0;
-        float sealW = MeasureBoxDip(FontRole.SilkscreenRegular, 10, dpi, model.SealText, scale);
+        float sealW = MeasureBoxDip(FontRole.SilkscreenRegular, 10, dpi, SealOf(model), scale);
         float boxH = (float)(LineHeightPx(_typography.GetFont(FontRole.SilkscreenRegular, 10, dpi)) / scale) + 8 + 2;
         float chipW = model.BonusChipText is { } chip ? MeasureBoxDip(FontRole.SilkscreenRegular, 10, dpi, chip, scale) : 0;
         return WidgetLayout.Compute(heightDip, sealW, boxH, chipW);
@@ -53,7 +71,7 @@ public sealed class WidgetRenderer : IDisposable
 
     private float MeasureBoxDip(FontRole role, float size, int dpi, string text, double scale)
     {
-        float px = _typography.GetFont(role, size, dpi).MeasureText(text);
+        float px = _runs.Measure(text, _typography.GetFont(role, size, dpi));
         return (float)(Math.Ceiling(px) / scale) + 12 + 2;
     }
 
@@ -69,7 +87,7 @@ public sealed class WidgetRenderer : IDisposable
 
         DrawCredits(canvas, model, layout, hPx, dpi, scale);
         DrawWave(canvas, model, layout, hPx, dpi, scale);
-        DrawSeal(canvas, layout.Seal, model.SealText, model.IsPresent ? Palette.SeloPresente : Palette.SeloAusente, dpi, scale);
+        DrawSeal(canvas, layout.Seal, SealOf(model), model.IsPresent ? Palette.SeloPresente : Palette.SeloAusente, dpi, scale);
         // Pico ativo: o chip ×3 vem depois do selo (ADR-034; a largura natural já o inclui).
         if (model.BonusChipText is { } chip && layout.HasChip)
             DrawSeal(canvas, layout.Chip, chip, Palette.Ambar, dpi, scale);
@@ -80,6 +98,7 @@ public sealed class WidgetRenderer : IDisposable
     {
         if (_background is null || _backgroundKey != (wPx, hPx))
         {
+            _backgroundImage?.Dispose();
             _background?.Dispose();
             _background = new SKBitmap(new SKImageInfo(wPx, hPx, SKColorType.Rgba8888, SKAlphaType.Premul));
             using var c = new SKCanvas(_background);
@@ -93,9 +112,10 @@ public sealed class WidgetRenderer : IDisposable
             c.DrawRect(0, hPx - b, wPx, b, _fill);
             c.DrawRect(0, b, b, hPx - 2 * b, _fill);
             c.DrawRect(wPx - b, b, b, hPx - 2 * b, _fill);
+            _backgroundImage = SKImage.FromBitmap(_background);
             _backgroundKey = (wPx, hPx);
         }
-        canvas.DrawBitmap(_background, 0, 0, new SKSamplingOptions(SKFilterMode.Nearest), null);
+        canvas.DrawImage(_backgroundImage!, 0, 0, new SKSamplingOptions(SKFilterMode.Nearest), null);
     }
 
     private void DrawCredits(SKCanvas canvas, in WidgetModel m, in WidgetLayout l, int hPx, int dpi, double scale)
@@ -116,13 +136,13 @@ public sealed class WidgetRenderer : IDisposable
         if (pending)
         {
             SKFont fp = _typography.GetFont(FontRole.SilkscreenRegular, 9, dpi);
-            float pillW = (float)Math.Ceiling(fp.MeasureText(m.PendingText!)) + Px(10, scale);
+            float pillW = (float)Math.Ceiling(_runs.Measure(m.PendingText!, fp)) + Px(10, scale);
             pillW = Math.Min(pillW, clip.Width);
             var pill = new SKRect(x, (float)Math.Round(top2), x + pillW, (float)Math.Round(top2) + lh2);
             _fillAa.Color = Palette.Ambar;
-            canvas.DrawRoundRect(new SKRoundRect(pill, lh2 / 2f), _fillAa);
+            DrawRound(canvas, pill, lh2 / 2f, _fillAa);
             DrawLine(canvas, m.PendingText!, fp, _text, Palette.BgTrilhoFundo,
-                pill.Left + (pill.Width - fp.MeasureText(m.PendingText!)) / 2f, Baseline(fp, pill.Top, pill.Height));
+                pill.Left + (pill.Width - _runs.Measure(m.PendingText!, fp)) / 2f, Baseline(fp, pill.Top, pill.Height));
         }
         else
         {
@@ -174,18 +194,17 @@ public sealed class WidgetRenderer : IDisposable
             if (active || m.HoverIndex == i)
             {
                 _fillAa.Color = active ? Palette.AtivoNav : Palette.HoverNav;
-                canvas.DrawRoundRect(new SKRoundRect(rect, rr), _fillAa);
+                DrawRound(canvas, rect, rr, _fillAa);
             }
 
-            using (var tint = new SKPaint { Color = Palette.TxtPrincipal })
-                _icons.DrawTinted(canvas, icons[i], dpi, (rect.Left + rect.Right) / 2f, (rect.Top + rect.Bottom) / 2f, tint);
+            _icons.DrawTinted(canvas, icons[i], dpi, (rect.Left + rect.Right) / 2f, (rect.Top + rect.Bottom) / 2f, _tint);
 
             if (active)
             {
                 float bw = (float)(16 * scale), bh = (float)(3 * scale);
                 float bx = rect.Left + (float)(14 * scale), by = rect.Bottom - (float)(2 * scale) - bh;
                 _fillAa.Color = Palette.Ambar;
-                canvas.DrawRoundRect(new SKRoundRect(new SKRect(bx, by, bx + bw, by + bh), (float)(2 * scale)), _fillAa);
+                DrawRound(canvas, new SKRect(bx, by, bx + bw, by + bh), (float)(2 * scale), _fillAa);
             }
 
             if (i == (int)WidgetTab.Missoes && m.BadgeText.Length > 0)
@@ -193,12 +212,17 @@ public sealed class WidgetRenderer : IDisposable
                 float diam = (float)(14 * scale);
                 float bx = rect.Right - (float)(3 * scale) - diam, by = rect.Top + (float)(3 * scale);
                 _fillAa.Color = Palette.Ambar;
-                canvas.DrawRoundRect(new SKRoundRect(new SKRect(bx, by, bx + diam, by + diam), diam / 2f), _fillAa);
+                DrawRound(canvas, new SKRect(bx, by, bx + diam, by + diam), diam / 2f, _fillAa);
                 string s = m.BadgeText;
-                float tw = badgeFont.MeasureText(s);
+                float tw = _runs.Measure(s, badgeFont);
                 DrawLine(canvas, s, badgeFont, _textAa, Palette.BgTrilhoFundo, bx + (diam - tw) / 2f, Baseline(badgeFont, by, diam));
             }
         }
+    }
+
+    private static void DrawRound(SKCanvas canvas, SKRect rect, float radius, SKPaint paint)
+    {
+        canvas.DrawRoundRect(rect.Left, rect.Top, rect.Width, rect.Height, radius, radius, paint); // sem SKRoundRect (objeto nativo por chamada)
     }
 
     private void DrawLine(SKCanvas canvas, string text, SKFont font, SKPaint paint, SKColor color, float x, float baseline)
@@ -206,8 +230,9 @@ public sealed class WidgetRenderer : IDisposable
         x = (float)Math.Round(x);
         baseline = (float)Math.Round(baseline);
         paint.Color = color;
-        canvas.DrawText(text, x, baseline, SKTextAlign.Left, font, paint);
-        float w = font.MeasureText(text);
+        var run = _runs.Get(text, font);
+        canvas.DrawText(run.Blob, x, baseline, paint);
+        float w = run.Width;
         SKFontMetrics fm = font.Metrics;
         _boxes.Add(new WidgetTextBox(text, new SKRect(x, baseline + fm.Ascent, x + w, baseline + fm.Descent)));
     }
@@ -235,6 +260,9 @@ public sealed class WidgetRenderer : IDisposable
         _fillAa.Dispose();
         _text.Dispose();
         _textAa.Dispose();
+        _tint.Dispose();
+        _backgroundImage?.Dispose();
+        _runs.Dispose();
     }
 }
 

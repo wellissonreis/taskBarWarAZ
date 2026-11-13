@@ -37,8 +37,10 @@ public static class CampaignTabRenderer
         for (int i = 0; i < k.BossLines.Length; i++)
             D.TextTop(canvas, k.BossLines[i], Mono(11f), k.BossX, k.FooterTop + i * k.FooterLineHeight, s, offsetDip, Palette.TxtSecundario);
 
-        foreach (var r in layout.Rows)
+        var rows = layout.Rows;
+        for (int ri = 0; ri < rows.Count; ri++)
         {
+            var r = rows[ri];
             if (r.Rect.Y + r.Rect.H < offsetDip || r.Rect.Y > offsetDip + viewportDip) continue;
             D.BeginOpacity(canvas, r.Model.Opacity);
             D.Box(canvas, r.Rect, s, offsetDip, Palette.BgItem, Palette.BordaPainel);
