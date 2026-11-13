@@ -181,7 +181,7 @@ T3.4 a T3.8 compartilham contratos de `SimState`: **não paralelizar entre si** 
 | T6.8 ✅ | `ProfileStore` e `SessionStore` (`OfflineSnapshot`) com schemas versionados e migrações | SDD-14 RF-14.5, RF-14.6, RF-14.10, RF-25.11 | Sonnet | WSL | CA-14.1, CA-14.4, CA-14.6, CA-25.9 |
 | T6.9 🟡 parte A (T6.9a) | Gatilhos de save, limite de gravações e integração de sessão/suspensão/logoff com o offline | SDD-14 RF-14.7, RF-14.8, SDD-07 | Sonnet | Windows | CA-14.5, CA-07.2, CA-07.5 |
 | T6.10 ✅ | Teste de kill do processo em loop | SDD-14 | Sonnet | Windows | CA-14.2 |
-| T6.11 | Ligar as abas Missões e Migrar, banners, caixas e card de pergunta aos serviços reais | SDD-24, SDD-26 | Sonnet | Windows | CA-26.9, CA-24.7, CA-24.8 |
+| T6.11 🟡 | Ligar as abas Missões e Migrar, banners, caixas e card de pergunta aos serviços reais | SDD-24, SDD-26 | Sonnet | Windows | CA-26.9, CA-24.7, CA-24.8 |
 | T6.12 | Fechamento de CA-07.2, CA-07.3 e CA-07.5, MTC-07, cobertura (Runtime e Persistence) e `specs/evidencias/E6.md` | SDD-07, 14, 17 | Haiku | Windows | CA-07.3, CA-17.3 |
 
 **Aprovação:** CA-25.1 a CA-25.9, CA-26.1 a CA-26.9, CA-27.8, CA-27.9, CA-14.1 a CA-14.6, CA-07.2, CA-07.3, CA-07.5, CA-24.11, CA-17.3. **Evidência obrigatória:** `specs/evidencias/E6.md` com TRX Linux e Windows, MTC-07.1..3 completos e a medição de P-19 (retorno de 12 h).
