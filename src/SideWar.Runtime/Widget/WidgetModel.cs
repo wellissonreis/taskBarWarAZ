@@ -22,13 +22,13 @@ public readonly record struct WidgetModel(
 {
     public const int NavButtonCount = 4;
 
-    /// <summary>Texto desenhado no selo (D-16): só o multiplicador.</summary>
-    public string SealText => MultiplierText;
+    /// <summary>Texto desenhado no selo: o rótulo completo do canvas, "PRESENTE ×2,0"/"AUSENTE ×0,25" (ADR-034; resolve D-16).</summary>
+    public string SealText => PresenceAccessibleName;
 
-    /// <summary>Rótulo completo do selo para o nome acessível (D-16, UIA futuro).</summary>
+    /// <summary>Rótulo completo do selo, também usado no nome acessível (UIA futuro).</summary>
     public string PresenceAccessibleName => (IsPresent ? "PRESENTE " : "AUSENTE ") + MultiplierText;
 
-    /// <summary>Nome acessível do selo/chip: presença e, com pico ativo, o bônus (o chip substitui o selo visualmente).</summary>
+    /// <summary>Nome acessível do selo/chip: presença e, com pico ativo, o bônus (o chip ×3 fica depois do selo).</summary>
     public string AccessibleName => BonusChipText is { } chip ? PresenceAccessibleName + ", bônus " + chip : PresenceAccessibleName;
 
     /// <summary>Texto do badge de Missões: vazio com contagem 0; "9+" acima de 9 (DP-23.5).</summary>

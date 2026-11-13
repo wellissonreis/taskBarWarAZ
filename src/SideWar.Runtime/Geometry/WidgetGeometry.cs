@@ -1,45 +1,39 @@
-using SideWar.Runtime.Taskbar;
-
 namespace SideWar.Runtime.Geometry;
 
-/// <summary>Where the widget goes and how it was chosen.</summary>
-public readonly record struct WidgetPlacement(PixelRect Bounds, bool IsFallback);
+/// <summary>Where the widget goes (window bounds in screen px).</summary>
+public readonly record struct WidgetPlacement(PixelRect Bounds);
 
-/// <summary>Pure widget geometry (SDD-23 RF-23.2).</summary>
+/// <summary>Pure widget geometry (SDD-23 RF-23.2, ADR-034): compact, right side, top of the scene, no fallback.</summary>
 public static class WidgetGeometry
 {
-    public const float WidthDip = 420f;
-    public const float MinHeightDip = 46f;
-    public const float FallbackHeightDip = 48f;
+    public const float HeightDip = 48f;
+    public const float CanvasRightOffsetDip = 548f;
+    public const float RightMarginDip = 8f;
+
+    /// <summary>Largura nominal (≈ sem chip ×3) para quem ainda não mediu o layout; o real vem de <c>WidgetLayout.WidthDip</c>.</summary>
+    public const float NominalWidthDip = 480f;
 
     /// <summary>
-    /// Normal case: bottom taskbar whose left free zone is at least 420 DIP wide; the widget sits on the bar with
-    /// its base on the bar base. Otherwise (other edge, narrower zone, or <paramref name="taskbar"/> null):
-    /// bottom-left corner of <paramref name="scene"/>.
+    /// <c>left = min(W − 548, W − 8 − largura)</c> relative to the scene, <c>top</c> = scene top, 48 DIP tall;
+    /// size <c>round(largura × dpi/96)</c> × <c>round(48 × dpi/96)</c>, rounded once.
     /// </summary>
-    /// <exception cref="ArgumentOutOfRangeException">DPI is zero or the DPI-scaled size does not fit.</exception>
-    public static WidgetPlacement Compute(MonitorInfo monitor, PixelRect scene, TaskbarLayout? taskbar)
+    /// <exception cref="ArgumentOutOfRangeException">DPI is zero/huge, width not positive, or the widget does not fit the scene.</exception>
+    public static WidgetPlacement Compute(MonitorInfo monitor, PixelRect scene, float widthDip)
     {
         if (monitor.Dpi == 0 || monitor.Dpi > int.MaxValue)
             throw new ArgumentOutOfRangeException(nameof(monitor), "DPI must be positive.");
+        if (!float.IsFinite(widthDip) || widthDip <= 0)
+            throw new ArgumentOutOfRangeException(nameof(widthDip), "Width must be positive.");
         var scale = monitor.Dpi / 96.0;
-        if (taskbar is { Edge: TaskbarEdge.Bottom } t && IsUsable(t) && t.LeftFreeZone.X1 - t.LeftFreeZone.X0 >= WidthDip)
-        {
-            var heightDip = Math.Max(t.HeightDip, MinHeightDip);
-            var width = Px(WidthDip, scale);
-            var height = Px(heightDip, scale);
-            var left = checked(monitor.Bounds.Left + Px(t.LeftFreeZone.X0, scale));
-            var bottom = checked(monitor.Bounds.Top + Px(t.TaskbarRect.Y + t.TaskbarRect.H, scale));
-            return new(new PixelRect(left, checked(bottom - height), checked(left + width), bottom), false);
-        }
-        var fw = Px(WidthDip, scale);
-        var fh = Px(FallbackHeightDip, scale);
-        return new(new PixelRect(scene.Left, checked(scene.Bottom - fh), checked(scene.Left + fw), scene.Bottom), true);
+        var w = Px(widthDip, scale);
+        var h = Px(HeightDip, scale);
+        var sceneW = scene.Width;
+        var rel = Math.Min(sceneW - Px(CanvasRightOffsetDip, scale), sceneW - Px(RightMarginDip, scale) - w);
+        if (rel < 0 || h > scene.Height)
+            throw new ArgumentOutOfRangeException(nameof(scene), "Widget does not fit the scene.");
+        var left = checked(scene.Left + rel);
+        return new(new PixelRect(left, scene.Top, checked(left + w), checked(scene.Top + h)));
     }
-
-    private static bool IsUsable(TaskbarLayout t) =>
-        float.IsFinite(t.HeightDip) && float.IsFinite(t.LeftFreeZone.X0) && float.IsFinite(t.LeftFreeZone.X1) &&
-        float.IsFinite(t.TaskbarRect.Y) && float.IsFinite(t.TaskbarRect.H) && t.HeightDip > 0;
 
     private static int Px(double dip, double scale) => checked((int)Math.Round(dip * scale, MidpointRounding.AwayFromZero));
 }

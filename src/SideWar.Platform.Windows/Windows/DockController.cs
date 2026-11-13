@@ -85,7 +85,7 @@ public sealed class DockController
         var monitors = Enumerate();
         var monitor = MonitorResolver.Resolve(monitors, hint)
             ?? throw new InvalidOperationException("No monitor available.");
-        // A taskbar that lives on another monitor says nothing about this one: no autohide margin, widget falls back.
+        // A taskbar that lives on another monitor says nothing about this one: no autohide margin, the bar is ignored.
         TaskbarLayout? bar = taskbar is { } t && (string.IsNullOrEmpty(t.MonitorDevice) || t.MonitorDevice == monitor.DeviceName)
             ? t : null;
         var sceneBounds = SceneLayout.Compute(monitor, bar ?? default, TowerHost.Band);
@@ -94,7 +94,7 @@ public sealed class DockController
         if (previous is null || previous.Scene != sceneBounds) scene.SetBounds(sceneBounds);
         if (SceneSurface is { } surface && surface.Size != new PixelSize(sceneBounds.Width, sceneBounds.Height))
             surface.Resize(new PixelSize(sceneBounds.Width, sceneBounds.Height));
-        WidgetPlacement placement = WidgetGeometry.Compute(monitor, sceneBounds, bar);
+        WidgetPlacement placement = WidgetGeometry.Compute(monitor, sceneBounds, WidgetGeometry.NominalWidthDip); // TODO(TA.10-Windows): largura medida (WidgetRenderer.MeasureWidthDip)
         scene.Widget?.Apply(placement);
         var result = new DockLayoutResult(monitor, sceneBounds, placement);
         Current = result;

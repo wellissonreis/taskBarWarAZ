@@ -58,7 +58,7 @@ public class PaletteTests
         ("selo-presente", "SeloPresente", 0xFF5CF0B0u),
         ("selo-ausente", "SeloAusente", 0xFFA9B6C8u),
         ("ausente-marca", "AusenteMarca", 0xFF8AA0C0u),
-        ("hover-nav", "HoverNav", 0x14FFFFFFu),
+        ("hover-nav", "HoverNav", 0x1AFFFFFFu),
         ("ativo-nav", "AtivoNav", 0x1FFFFFFFu),
         ("sombra-painel", "SombraPainel", 0x59000000u),
         ("sombra-card", "SombraCard", 0x73000000u),

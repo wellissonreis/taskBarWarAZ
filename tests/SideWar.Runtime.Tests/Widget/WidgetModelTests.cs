@@ -18,7 +18,7 @@ public class WidgetModelTests
         Assert.Equal("48,2K", m.CreditsText);
         Assert.Equal("+312/s", m.RateText);
         Assert.Equal("37/60", m.WaveText);
-        Assert.Equal("×2,0", m.SealText);
+        Assert.Equal("PRESENTE ×2,0", m.SealText);
         Assert.Equal("PRESENTE ×2,0", m.PresenceAccessibleName);
     }
 
@@ -33,7 +33,7 @@ public class WidgetModelTests
     public void Absent_ShowsOnlyMultiplier_FullLabelInAccessibleName()
     {
         WidgetModel m = new WidgetModelBuilder().Update(Inputs(p: PresenceState.Ausente, mult: 0.25, rate: 39), TimeSpan.Zero);
-        Assert.Equal("×0,25", m.SealText);
+        Assert.Equal("AUSENTE ×0,25", m.SealText);
         Assert.Equal("AUSENTE ×0,25", m.PresenceAccessibleName);
         Assert.Equal("+39/s", m.RateText);
         Assert.False(m.IsPresent);
@@ -92,18 +92,21 @@ public class WidgetModelTests
     }
 
     [Fact]
-    public void Layout_FixedWidthIs368_AndButtonsTileNav()
+    public void Layout_FixedWidthIs348_NaturalWidth_AndButtonsTileNav()
     {
-        Assert.Equal(368f, WidgetLayout.FixedWidth);
-        WidgetLayout l = WidgetLayout.Compute(420, 46, 40, 20, 0);
-        Assert.Equal(8f, l.Credits.X);
-        Assert.Equal(98f, l.Wave.X);
-        Assert.Equal(166f, l.Seal.X);
-        Assert.Equal(420f - 8 - 182, l.Nav0.X);
+        Assert.Equal(348f, WidgetLayout.FixedWidth);
+        WidgetLayout l = WidgetLayout.Compute(48, 100, 20, 0);
+        Assert.Equal(348f + 12 + 100, l.WidthDip); // sem espaço flexível
+        Assert.Equal(13f, l.Credits.X); // borda 1 + padding 12
+        Assert.Equal(70f, l.Credits.W);
+        Assert.Equal(95f, l.Wave.X); // 13 + 70 + 12
+        Assert.Equal(52f, l.Wave.W);
+        Assert.Equal(159f, l.Seal.X);
+        Assert.Equal(l.WidthDip - 1 - 6 - 182, l.Nav0.X);
         Assert.Equal(44f, l.Nav0.W);
         Assert.Equal(l.Nav0.X + 46, l.Nav1.X);
-        Assert.Equal(412f, l.Nav0.X + 3 * 46 + 44);
-        Assert.Equal(1f, l.Nav0.Y);
+        Assert.Equal(l.WidthDip - 7, l.Nav0.X + 3 * 46 + 44); // padding-right 6 + borda 1
+        Assert.Equal(2f, l.Nav0.Y);
         Assert.Equal(2, l.HitButton(l.Nav2.X + 1, 10));
         Assert.Equal(-1, l.HitButton(10, 10));
     }

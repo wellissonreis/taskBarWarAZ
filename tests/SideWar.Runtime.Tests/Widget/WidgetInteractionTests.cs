@@ -17,7 +17,7 @@ public class WidgetInteractionTests
 
     public WidgetInteractionTests()
     {
-        _i = new WidgetInteraction(_presence, _commands.Add) { Layout = WidgetLayout.Compute(420, 48, 41, 20, 0) };
+        _i = new WidgetInteraction(_presence, _commands.Add) { Layout = WidgetLayout.Compute(48, 100, 20, 0) };
     }
 
     private (float X, float Y) Center(int b)
@@ -36,11 +36,15 @@ public class WidgetInteractionTests
         }
         Assert.Equal(WidgetHitTarget.Background, _i.Hit(20, 24)); // créditos
         Assert.Equal(WidgetHitTarget.Background, _i.Hit(170, 24)); // selo
-        Assert.Equal(WidgetHitTarget.None, _i.Hit(0.5f, 0.5f)); // canto fora do arco
-        Assert.Equal(WidgetHitTarget.None, _i.Hit(419.5f, 47.5f));
-        Assert.Equal(WidgetHitTarget.Background, _i.Hit(4, 4)); // dentro do arco
+        // ADR-034 / CA-23.9: sem raio, os cantos também consomem o clique; só fora da caixa é None.
+        Assert.Equal(WidgetHitTarget.Background, _i.Hit(0.5f, 0.5f));
+        float w = _i.Layout.WidthDip;
+        Assert.Equal(WidgetHitTarget.Background, _i.Hit(w - 0.5f, 47.5f));
+        Assert.Equal(WidgetHitTarget.None, _i.Hit(w + 0.5f, 10));
+        Assert.Equal(WidgetHitTarget.None, _i.Hit(-0.5f, 10));
+        Assert.Equal(WidgetHitTarget.None, _i.Hit(10, 48.5f));
         Assert.Equal(WidgetHitTarget.None, _i.Hit(-1, 10));
-        Assert.Equal(WidgetHitTarget.None, _i.Hit(420, 10));
+        Assert.Equal(WidgetHitTarget.None, _i.Hit(w, 10));
     }
 
     [Fact]
@@ -93,8 +97,8 @@ public class WidgetInteractionTests
         Assert.True(_i.OnRightDown(x, y)); // sobre botão: conta e abre menu, não aciona o nav
         Assert.Equal(3, _presence.Count);
         Assert.Single(_commands);
-        Assert.False(_i.OnLeftDown(0.5f, 0.5f));
-        Assert.False(_i.OnRightDown(0.5f, 0.5f));
+        Assert.False(_i.OnLeftDown(-0.5f, 0.5f)); // fora da caixa (ADR-034: o canto não é mais "fora")
+        Assert.False(_i.OnRightDown(-0.5f, 0.5f));
         Assert.Equal(3, _presence.Count);
     }
 
@@ -124,12 +128,14 @@ public class WidgetInteractionTests
     }
 
     [Fact]
-    public void BonusChip_ReplacesSealSlot_InLayout() // Decisão T5.2 (ADR-032)
+    public void BonusChip_FollowsSeal_AndWidensTheWidget() // ADR-034
     {
-        WidgetLayout l = WidgetLayout.Compute(420, 46, 41, 20, 56);
-        Assert.Equal(l.Seal.X, l.Chip.X);
-        Assert.True(l.ChipFits);
-        Assert.False(WidgetLayout.Compute(420, 46, 41, 20, 70).ChipFits);
-        Assert.False(WidgetLayout.Compute(420, 46, 41, 20, 0).ChipFits);
+        WidgetLayout none = WidgetLayout.Compute(48, 100, 20, 0);
+        WidgetLayout l = WidgetLayout.Compute(48, 100, 20, 56);
+        Assert.True(l.HasChip);
+        Assert.False(none.HasChip);
+        Assert.Equal(l.Seal.X + l.Seal.W + 12, l.Chip.X);
+        Assert.Equal(none.WidthDip + 12 + 56, l.WidthDip);
+        Assert.True(l.Chip.X + l.Chip.W + 12 <= l.Nav0.X + 0.001f);
     }
 }

@@ -28,10 +28,10 @@ public sealed class WidgetRendererTests : IDisposable
         string? pending = null, string? chip = null) =>
         new(1, "48,2K", present ? "+312/s" : "+39/s", "37/60", present, present ? "×2,0" : "×0,25", chip, pending, badge, tab, hover);
 
-    private SKBitmap Draw(in WidgetModel m, int dpi = 96, float heightDip = 46)
+    private SKBitmap Draw(in WidgetModel m, int dpi = 96, float heightDip = 48)
     {
         double s = dpi / 96.0;
-        var bmp = new SKBitmap(new SKImageInfo((int)Math.Round(420 * s), (int)Math.Round(heightDip * s), SKColorType.Rgba8888, SKAlphaType.Premul));
+        var bmp = new SKBitmap(new SKImageInfo((int)Math.Round(_r.GetLayout(m, heightDip, dpi).WidthDip * s), (int)Math.Round(heightDip * s), SKColorType.Rgba8888, SKAlphaType.Premul));
         using var c = new SKCanvas(bmp);
         _r.Render(c, m, heightDip, dpi);
         return bmp;
@@ -40,16 +40,18 @@ public sealed class WidgetRendererTests : IDisposable
     private static SKColor At(SKBitmap b, double x, double y) => b.GetPixel((int)x, (int)y);
 
     [Theory]
-    [InlineData(96)]
-    [InlineData(120)]
-    [InlineData(144)]
-    [InlineData(168)]
-    [InlineData(192)]
-    public void LongestSeal_FitsIn420Dip_AtAllScales(int dpi)
+    [InlineData(96, 1280)]
+    [InlineData(96, 1366)]
+    [InlineData(96, 1920)]
+    [InlineData(144, 1920)]
+    [InlineData(192, 1920)]
+    public void LongestSealAndChip_FitLeftOfWMinus8(int dpi, int sceneDip)
     {
-        // CA-23.10 (D-16): fixo 368 + selo "×0,25" medido nos TTF reais deve caber, com o chip ou sem.
-        float seal = _r.MeasureSealDip("×0,25", dpi);
-        Assert.True(WidgetLayout.Slack(420, seal) >= 0, $"selo {seal} DIP estoura {WidgetLayout.Slack(420, seal)}");
+        // CA-23.10 (ADR-034): selo "AUSENTE ×0,25" + chip ×3 medidos nos TTF reais; largura natural ≤ W − 8.
+        var m = Model(present: false, chip: "×3 0:59");
+        float w = _r.MeasureWidthDip(m, dpi);
+        Assert.True(w <= sceneDip - 8, $"largura {w} DIP não cabe em {sceneDip}");
+        Assert.True(_r.MeasureSealDip("AUSENTE ×0,25", dpi) > 60, "o selo deve ser o rótulo completo");
     }
 
     [Theory]
@@ -58,33 +60,43 @@ public sealed class WidgetRendererTests : IDisposable
     [InlineData(144)]
     [InlineData(168)]
     [InlineData(192)]
-    public void BonusChip_ReplacesSeal_InTheSameSpace_AndFits(int dpi)
+    public void BonusChip_FollowsSeal_BothDrawn_WithinNavGap(int dpi)
     {
-        // Decisão do Tech Lead (T5.2, ADR-032): no pico o chip ×3 m:ss substitui o selo; ao fim o selo volta.
+        // ADR-034: o chip ×3 vem depois do selo; a largura natural já o inclui.
         var m = Model(chip: "×3 0:59");
-        var l = _r.GetLayout(m, 46, dpi);
-        Assert.True(l.ChipFits, $"chip {l.Chip.W} DIP não cabe (nav em {l.Nav0.X})");
-        Assert.Equal(l.Seal.X, l.Chip.X);
-        Assert.True(l.Chip.X + l.Chip.W + WidgetLayout.ChipGap <= l.Nav0.X);
+        var l = _r.GetLayout(m, 48, dpi);
+        Assert.True(l.HasChip);
+        Assert.Equal(l.Seal.X + l.Seal.W + 12, l.Chip.X, 0.01);
+        Assert.True(l.Chip.X + l.Chip.W + 12 <= l.Nav0.X + 0.01f);
         using SKBitmap b = Draw(m, dpi);
         Assert.Contains(_r.LastTextBoxes, t => t.Text == "×3 0:59");
-        Assert.DoesNotContain(_r.LastTextBoxes, t => t.Text == "×2,0");
+        Assert.Contains(_r.LastTextBoxes, t => t.Text == "PRESENTE ×2,0");
         Assert.Contains("PRESENTE ×2,0", m.AccessibleName);
         Assert.Contains("×3 0:59", m.AccessibleName);
 
         using SKBitmap back = Draw(Model(), dpi);
-        Assert.Contains(_r.LastTextBoxes, t => t.Text == "×2,0");
+        Assert.Contains(_r.LastTextBoxes, t => t.Text == "PRESENTE ×2,0");
         Assert.DoesNotContain(_r.LastTextBoxes, t => t.Text == "×3 0:59");
+        Assert.True(_r.GetLayout(Model(), 48, dpi).WidthDip < l.WidthDip);
     }
 
     [Fact]
-    public void Corners_AreTransparent_AndBackgroundIsPainelWithAlpha230()
+    public void Background_IsPainelAlpha235_NoRadius_Border1()
     {
         using SKBitmap b = Draw(Model());
-        Assert.Equal(0, At(b, 0, 0).Alpha);
+        // CA-23.9: sem raio, todos os pixels (cantos inclusos) têm alfa >= 1.
+        for (int y = 0; y < b.Height; y++)
+            for (int x = 0; x < b.Width; x++)
+                Assert.True(b.GetPixel(x, y).Alpha >= 1, $"alfa 0 em {x},{y}");
+        SKColor corner = At(b, 0, 0);
+        Assert.Equal(Palette.BordaPainel, corner);
+        Assert.Equal(Palette.BordaPainel, At(b, b.Width - 1, b.Height - 1));
+        Assert.Equal(Palette.BordaPainel, At(b, b.Width / 2, 0));
         SKColor inner = At(b, 150, 40);
-        Assert.Equal(230, inner.Alpha);
-        Assert.InRange(inner.Red, 0, 12);
+        Assert.Equal(235, inner.Alpha);
+        Assert.InRange(inner.Red, 0, 10);
+        Assert.InRange(inner.Green, 12, 22);
+        Assert.InRange(inner.Blue, 30, 38);
     }
 
     [Fact]
@@ -94,7 +106,7 @@ public sealed class WidgetRendererTests : IDisposable
         {
             var m = Model(present);
             using SKBitmap b = Draw(m);
-            var l = _r.GetLayout(m, 46, 96);
+            var l = _r.GetLayout(m, 48, 96);
             SKColor expected = present ? Palette.SeloPresente : Palette.SeloAusente;
             Assert.Equal(expected, At(b, l.Seal.X, l.Seal.Y + l.Seal.H / 2));
             Assert.Equal(expected, At(b, l.Seal.X + l.Seal.W / 2, Math.Round(l.Seal.Y, MidpointRounding.AwayFromZero)));
@@ -106,7 +118,7 @@ public sealed class WidgetRendererTests : IDisposable
     {
         var m = Model(tab: WidgetTab.Fases);
         using SKBitmap b = Draw(m);
-        var l = _r.GetLayout(m, 46, 96);
+        var l = _r.GetLayout(m, 48, 96);
         var r = l.Nav1;
         SKColor bg = At(b, r.X + 3, r.Y + 22);
         SKColor plain = At(Draw(Model()), r.X + 3, r.Y + 22);
@@ -120,7 +132,7 @@ public sealed class WidgetRendererTests : IDisposable
     [Fact]
     public void MissionBadge_DrawnOnlyOnMissoes_AndHiddenAtZero()
     {
-        var l = _r.GetLayout(Model(), 46, 96);
+        var l = _r.GetLayout(Model(), 48, 96);
         double bx = l.Nav2.X + 44 - 3 - 7, by = l.Nav2.Y + 3 + 1.5;
         using (SKBitmap b = Draw(Model(badge: 2))) Assert.Equal(Palette.Ambar, At(b, bx, by));
         using (SKBitmap b = Draw(Model(badge: 0))) Assert.NotEqual(Palette.Ambar, At(b, bx, by));
@@ -133,15 +145,15 @@ public sealed class WidgetRendererTests : IDisposable
     {
         var m = Model();
         using SKBitmap b = Draw(m);
-        var l = _r.GetLayout(m, 46, 96);
+        var l = _r.GetLayout(m, 48, 96);
         foreach (WidgetTextBox t in _r.LastTextBoxes)
         {
-            Assert.True(t.Bounds.Top >= 0 && t.Bounds.Bottom <= 46, $"{t.Text} fora da altura");
-            if (t.Text is "48,2K" or "+312/s") Assert.True(t.Bounds.Right <= l.Credits.X + 78 + 0.5f);
-            if (t.Text is "37/60" or "onda") Assert.True(t.Bounds.Right <= l.Wave.X + 56 + 0.5f);
+            Assert.True(t.Bounds.Top >= 0 && t.Bounds.Bottom <= 48, $"{t.Text} fora da altura");
+            if (t.Text is "48,2K" or "+312/s") Assert.True(t.Bounds.Right <= l.Credits.X + 70 + 0.5f);
+            if (t.Text is "37/60" or "onda") Assert.True(t.Bounds.Right <= l.Wave.X + 52 + 0.5f);
         }
         Assert.Contains(_r.LastTextBoxes, t => t.Text == "48,2K");
-        Assert.Contains(_r.LastTextBoxes, t => t.Text == "×2,0");
+        Assert.Contains(_r.LastTextBoxes, t => t.Text == "PRESENTE ×2,0");
     }
 
     [Fact]
@@ -157,7 +169,7 @@ public sealed class WidgetRendererTests : IDisposable
     public void Render_IsDeterministic_AndSupportsAllScalesAndHeights()
     {
         foreach (int dpi in new[] { 96, 120, 144, 168, 192 })
-            foreach (float h in new[] { 46f, 48f })
+            foreach (float h in new[] { 48f })
             {
                 using SKBitmap a = Draw(Model(tab: WidgetTab.Arsenal, chip: "×3 0:59"), dpi, h);
                 using SKBitmap c = Draw(Model(tab: WidgetTab.Arsenal, chip: "×3 0:59"), dpi, h);

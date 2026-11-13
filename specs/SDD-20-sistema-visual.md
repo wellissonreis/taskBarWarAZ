@@ -146,7 +146,7 @@ Todos os hex são sRGB opacos, salvo indicação de alfa. Skia: `SKColor` pré-c
 
 | Token | Valor | Uso |
 |---|---|---|
-| `hover-nav` | `rgba(255,255,255,.08)` | hover de botão do nav do widget |
+| `hover-nav` | `rgba(255,255,255,.10)` | hover de botão do nav do widget |
 | `ativo-nav` | `rgba(255,255,255,.12)` | aba ativa do nav |
 | `sombra-painel` | `rgba(0,0,0,.35)` | sombra dura do painel |
 | `sombra-card` | `rgba(0,0,0,.45)` | sombra dura dos cards de pergunta e de ausência |

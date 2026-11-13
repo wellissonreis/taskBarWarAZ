@@ -23,19 +23,11 @@ public readonly record struct PanelCommand(PanelCommandKind Kind, WidgetTab Tab,
 /// <summary>Alvo do hit-test do widget (RF-23.8).</summary>
 public enum WidgetHitTarget { None, Background, Button }
 
-/// <summary>Forma do widget: retângulo de raio 4 DIP; fora do arco o alfa é 0 e o clique passa (RF-23.3, CA-23.9).</summary>
+/// <summary>Forma do widget: retângulo sem raio (ADR-034): todo pixel tem alfa ≥ 1 e consome o clique (RF-23.3, CA-23.9).</summary>
 public static class WidgetShape
 {
-    public const float RadiusDip = 4f;
-
-    public static bool Contains(float x, float y, float width, float height)
-    {
-        if (x < 0 || y < 0 || x >= width || y >= height) return false;
-        float cx = x < RadiusDip ? RadiusDip : x > width - RadiusDip ? width - RadiusDip : x;
-        float cy = y < RadiusDip ? RadiusDip : y > height - RadiusDip ? height - RadiusDip : y;
-        float dx = x - cx, dy = y - cy;
-        return dx * dx + dy * dy <= RadiusDip * RadiusDip;
-    }
+    public static bool Contains(float x, float y, float width, float height) =>
+        x >= 0 && y >= 0 && x < width && y < height;
 }
 
 /// <summary>
@@ -56,7 +48,7 @@ public sealed class WidgetInteraction
     }
 
     /// <summary>Layout vigente em DIP (atualizado a cada render).</summary>
-    public WidgetLayout Layout { get; set; } = WidgetLayout.Compute(420, 46, 0, 0, 0);
+    public WidgetLayout Layout { get; set; } = WidgetLayout.Compute(48, 0, 0, 0);
 
     /// <summary>Botão sob o cursor, ou -1.</summary>
     public int HoverIndex { get; private set; } = -1;

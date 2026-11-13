@@ -8,14 +8,13 @@ using SkiaSharp;
 namespace SideWar.Rendering.Widget;
 
 /// <summary>
-/// Renderer puro do widget de 420 DIP (SDD-23 RF-23.3 a RF-23.7, RF-23.9): fundo em cache, créditos, onda,
+/// Renderer puro do widget compacto de largura natural (ADR-034) (SDD-23 RF-23.3 a RF-23.7, RF-23.9): fundo em cache, créditos, onda,
 /// selo de presença (D-16), chip do bônus, hover/ativo, ícones, barra de ativo e badges. Sem hit-test nem
 /// janela (T5.2/T1.9). Uso na T-Game; não é thread-safe.
 /// </summary>
 public sealed class WidgetRenderer : IDisposable
 {
-    public const float WidthDip = 420f;
-    private const float RadiusDip = 4f;
+    private const float RadiusDip = 4f; // só dos botões do nav; a janela não tem raio
 
     private readonly Typography _typography;
     private readonly IconCatalog _icons;
@@ -43,8 +42,11 @@ public sealed class WidgetRenderer : IDisposable
         float sealW = MeasureBoxDip(FontRole.SilkscreenRegular, 10, dpi, model.SealText, scale);
         float boxH = (float)(LineHeightPx(_typography.GetFont(FontRole.SilkscreenRegular, 10, dpi)) / scale) + 8 + 2;
         float chipW = model.BonusChipText is { } chip ? MeasureBoxDip(FontRole.SilkscreenRegular, 10, dpi, chip, scale) : 0;
-        return WidgetLayout.Compute(WidthDip, heightDip, sealW, boxH, chipW);
+        return WidgetLayout.Compute(heightDip, sealW, boxH, chipW);
     }
+
+    /// <summary>Largura natural da janela em DIP para o modelo (RF-23.2); alimenta <c>WidgetGeometry.Compute</c>.</summary>
+    public float MeasureWidthDip(in WidgetModel model, int dpi) => GetLayout(model, WidgetGeometry.HeightDip, dpi).WidthDip;
 
     /// <summary>Largura natural do selo em DIP para um texto (CA-23.10).</summary>
     public float MeasureSealDip(string sealText, int dpi) => MeasureBoxDip(FontRole.SilkscreenRegular, 10, dpi, sealText, dpi / 96.0);
@@ -59,19 +61,18 @@ public sealed class WidgetRenderer : IDisposable
     public void Render(SKCanvas canvas, in WidgetModel model, float heightDip, int dpi)
     {
         double scale = dpi / 96.0;
-        int wPx = Px(WidthDip, scale), hPx = Px(heightDip, scale);
+        WidgetLayout layout = GetLayout(model, heightDip, dpi);
+        int wPx = Px(layout.WidthDip, scale), hPx = Px(heightDip, scale);
         _boxes.Clear();
         canvas.Clear(SKColors.Transparent);
         DrawBackground(canvas, wPx, hPx, scale);
 
-        WidgetLayout layout = GetLayout(model, heightDip, dpi);
         DrawCredits(canvas, model, layout, hPx, dpi, scale);
         DrawWave(canvas, model, layout, hPx, dpi, scale);
-        // Pico ativo: o chip ×3 substitui o selo no mesmo espaço (ADR-032); ao fim do pico o selo volta.
-        if (model.BonusChipText is { } chip && layout.ChipFits)
+        DrawSeal(canvas, layout.Seal, model.SealText, model.IsPresent ? Palette.SeloPresente : Palette.SeloAusente, dpi, scale);
+        // Pico ativo: o chip ×3 vem depois do selo (ADR-034; a largura natural já o inclui).
+        if (model.BonusChipText is { } chip && layout.HasChip)
             DrawSeal(canvas, layout.Chip, chip, Palette.Ambar, dpi, scale);
-        else
-            DrawSeal(canvas, layout.Seal, model.SealText, model.IsPresent ? Palette.SeloPresente : Palette.SeloAusente, dpi, scale);
         DrawNav(canvas, model, layout, dpi, scale);
     }
 
@@ -83,11 +84,15 @@ public sealed class WidgetRenderer : IDisposable
             _background = new SKBitmap(new SKImageInfo(wPx, hPx, SKColorType.Rgba8888, SKAlphaType.Premul));
             using var c = new SKCanvas(_background);
             c.Clear(SKColors.Transparent);
-            float r = (float)(RadiusDip * scale), b = Math.Max(1, (float)Math.Round(scale));
-            _fillAa.Color = Palette.BgPainel.WithAlpha(230);
-            c.DrawRoundRect(new SKRoundRect(new SKRect(0, 0, wPx, hPx), r), _fillAa);
-            using var stroke = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = b, Color = Palette.BordaPainel };
-            c.DrawRoundRect(new SKRoundRect(new SKRect(b / 2, b / 2, wPx - b / 2, hPx - b / 2), r - b / 2), stroke);
+            // Fundo bg-trilho-fundo alfa 235, sem raio; borda 1 DIP borda-painel (RF-23.3). Todo pixel tem alfa >= 1.
+            float b = Math.Max(1, (float)Math.Round(scale));
+            _fill.Color = Palette.BgTrilhoFundo.WithAlpha(235);
+            c.DrawRect(0, 0, wPx, hPx, _fill);
+            _fill.Color = Palette.BordaPainel;
+            c.DrawRect(0, 0, wPx, b, _fill);
+            c.DrawRect(0, hPx - b, wPx, b, _fill);
+            c.DrawRect(0, b, b, hPx - 2 * b, _fill);
+            c.DrawRect(wPx - b, b, b, hPx - 2 * b, _fill);
             _backgroundKey = (wPx, hPx);
         }
         canvas.DrawBitmap(_background, 0, 0, new SKSamplingOptions(SKFilterMode.Nearest), null);
@@ -95,9 +100,9 @@ public sealed class WidgetRenderer : IDisposable
 
     private void DrawCredits(SKCanvas canvas, in WidgetModel m, in WidgetLayout l, int hPx, int dpi, double scale)
     {
-        SKFont f1 = _typography.GetFont(FontRole.SilkscreenRegular, 14, dpi);
+        SKFont f1 = _typography.GetFont(FontRole.SilkscreenRegular, 13, dpi);
         SKFont f2 = _typography.GetFont(FontRole.JetBrainsMonoRegular, 10, dpi);
-        float lh1 = (float)(14 * 1.1 * scale);
+        float lh1 = (float)(13 * 1.1 * scale);
         bool pending = m.PendingText is not null;
         float lh2 = pending ? (float)(14 * scale) : LineHeightPx(f2);
         float top = (hPx - (lh1 + lh2)) / 2f;

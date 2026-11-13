@@ -3,7 +3,7 @@ using SideWar.Runtime.Geometry;
 namespace SideWar.Runtime.Widget;
 
 /// <summary>
-/// Layout interno do widget em DIP, origem no canto da janela (SDD-23 RF-23.3). Puro. Os retângulos dos
+/// Layout interno do widget em DIP, origem no canto da janela (SDD-23 RF-23.2/RF-23.3, ADR-034). Largura natural. Puro. Os retângulos dos
 /// botões servem ao hit-test (T5.2).
 /// </summary>
 public readonly record struct WidgetLayout(
@@ -13,17 +13,18 @@ public readonly record struct WidgetLayout(
     DipRect Wave,
     DipRect Seal,
     DipRect Chip,
-    bool ChipFits,
+    bool HasChip,
     DipRect Nav0,
     DipRect Nav1,
     DipRect Nav2,
     DipRect Nav3)
 {
-    public const float InsetDip = 8, CreditsWidth = 78, WaveWidth = 56, ColumnGap = 12, ButtonSize = 44, ButtonGap = 2, ChipGap = 2;
+    public const float BorderDip = 1, PaddingLeft = 12, PaddingRight = 6, CreditsWidth = 70, WaveWidth = 52,
+        ColumnGap = 12, ButtonSize = 44, ButtonGap = 2, HeightDipFixed = 48;
     public const float NavWidth = 4 * ButtonSize + 3 * ButtonGap;
 
-    /// <summary>Soma das larguras fixas sem o selo: 8+78+12+56+12+12+182+8 = 368 (DP-23.1).</summary>
-    public const float FixedWidth = InsetDip + CreditsWidth + ColumnGap + WaveWidth + ColumnGap + ColumnGap + NavWidth + InsetDip;
+    /// <summary>Soma das larguras fixas sem selo nem chip ×3: 1+12+70+12+52+12+182+6+1 = 348 (RF-23.2).</summary>
+    public const float FixedWidth = BorderDip + PaddingLeft + CreditsWidth + ColumnGap + WaveWidth + ColumnGap + NavWidth + PaddingRight + BorderDip;
 
     public DipRect Button(int index) => index switch
     {
@@ -42,28 +43,28 @@ public readonly record struct WidgetLayout(
         return -1;
     }
 
-    /// <summary>Sobra (DIP) com o selo e sem chip; negativa = não cabe (CA-23.10).</summary>
-    public static float Slack(float widthDip, float sealWidthDip) => widthDip - FixedWidth - sealWidthDip;
+    /// <summary>Largura natural (DIP): fixa + selo + [gap 12 + chip ×3] (RF-23.2). Sem espaço flexível.</summary>
+    public static float NaturalWidth(float sealWidthDip, float chipWidthDip) =>
+        FixedWidth + ColumnGap + sealWidthDip + (chipWidthDip > 0 ? ColumnGap + chipWidthDip : 0);
 
     /// <param name="sealWidthDip">Largura natural do selo (texto + 6+6 + 1+1), medida.</param>
     /// <param name="sealHeightDip">Altura do selo (linha + 4+4 + 1+1).</param>
-    /// <param name="chipWidthDip">Largura natural do chip ×3, ou 0 sem chip. O chip ocupa o lugar do selo; quando <see cref="ChipFits"/> o selo não é desenhado.</param>
-    public static WidgetLayout Compute(float widthDip, float heightDip, float sealWidthDip, float sealHeightDip, float chipWidthDip)
+    /// <param name="chipWidthDip">Largura natural do chip ×3, ou 0 sem chip. O chip fica depois do selo (ADR-034).</param>
+    public static WidgetLayout Compute(float heightDip, float sealWidthDip, float sealHeightDip, float chipWidthDip)
     {
         float cy = heightDip / 2f;
-        float x = InsetDip;
+        float width = NaturalWidth(sealWidthDip, chipWidthDip);
+        float x = BorderDip + PaddingLeft;
         var credits = new DipRect(x, 0, CreditsWidth, heightDip);
         x += CreditsWidth + ColumnGap;
         var wave = new DipRect(x, 0, WaveWidth, heightDip);
         x += WaveWidth + ColumnGap;
         var seal = new DipRect(x, cy - sealHeightDip / 2f, sealWidthDip, sealHeightDip);
-        float navX = widthDip - InsetDip - NavWidth;
-        // Chip ×3 SUBSTITUI o selo no mesmo espaço (ADR-032, decisão do Tech Lead na T5.2): começa onde o selo começa.
-        float chipX = x;
-        bool fits = chipWidthDip > 0 && chipX + chipWidthDip + ChipGap <= navX;
-        var chip = new DipRect(chipX, cy - sealHeightDip / 2f, chipWidthDip, sealHeightDip);
+        x += sealWidthDip + ColumnGap;
+        var chip = new DipRect(x, cy - sealHeightDip / 2f, chipWidthDip, sealHeightDip);
+        float navX = width - BorderDip - PaddingRight - NavWidth;
         float by = cy - ButtonSize / 2f;
         DipRect Btn(int i) => new(navX + i * (ButtonSize + ButtonGap), by, ButtonSize, ButtonSize);
-        return new(widthDip, heightDip, credits, wave, seal, chip, fits, Btn(0), Btn(1), Btn(2), Btn(3));
+        return new(width, heightDip, credits, wave, seal, chip, chipWidthDip > 0, Btn(0), Btn(1), Btn(2), Btn(3));
     }
 }

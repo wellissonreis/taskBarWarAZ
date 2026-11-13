@@ -68,7 +68,7 @@ public sealed class WidgetControllerTests
         {
             game.Scene.SetBounds(new PixelRect(0, 0, 800, 96));
             Widget = game.Scene.GetOrCreateWidget();
-            Widget.Apply(new WidgetPlacement(new PixelRect(20, 20, 440, 68), false));
+            Widget.Apply(new WidgetPlacement(new PixelRect(20, 20, 440, 68)));
             Controller = new WidgetController(Widget, Painter, Presence, Panel.Add, menu,
                 () => new WidgetMenuState(false, false, ["1 (1920×1080)"], 0), Chosen.Add);
             Widget.Show();

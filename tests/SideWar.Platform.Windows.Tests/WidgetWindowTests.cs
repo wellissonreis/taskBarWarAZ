@@ -38,7 +38,7 @@ public sealed class WidgetWindowTests
 
     private static uint Ex(HWND h) => (uint)WindowLong.Get(h, WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE);
 
-    private static readonly WidgetPlacement Place = new(new PixelRect(20, 20, 440, 68), false);
+    private static readonly WidgetPlacement Place = new(new PixelRect(20, 20, 440, 68));
 
     [Fact]
     public async Task StylesOwnerAndVisibilityFollowTheScene() // CA-23.1, T-23.1

@@ -74,7 +74,6 @@ public sealed class WidgetWindow : IDisposable
     public bool WantsVisible { get; private set; }
     public bool IsVisible { get; private set; }
     public PixelRect Bounds { get; private set; }
-    public bool IsFallback { get; private set; }
 
     /// <summary>Lógica de mouse (hit-test, hover, cliques; RF-23.8). Sem ela a janela só consome os cliques.</summary>
     public WidgetInteraction? Interaction { get; set; }
@@ -108,7 +107,6 @@ public sealed class WidgetWindow : IDisposable
             throw Win32Error.LastError("SetWindowPos(widget bounds)");
         if (sizeChanged) Surface.Resize(new PixelSize(b.Width, b.Height));
         Bounds = b;
-        IsFallback = placement.IsFallback;
         if (sizeChanged) Resized?.Invoke();
     }
 

@@ -152,7 +152,7 @@ public static class Palette
     public static readonly SKColor AusenteMarca = new(0x8a, 0xa0, 0xc0);
 
     /// <summary>Token <c>hover-nav</c> (#ffffff, alfa 20).</summary>
-    public static readonly SKColor HoverNav = new(0xff, 0xff, 0xff, 20);
+    public static readonly SKColor HoverNav = new(0xff, 0xff, 0xff, 26);
 
     /// <summary>Token <c>ativo-nav</c> (#ffffff, alfa 31).</summary>
     public static readonly SKColor AtivoNav = new(0xff, 0xff, 0xff, 31);

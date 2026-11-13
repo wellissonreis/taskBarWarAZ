@@ -1,5 +1,5 @@
 using SideWar.Runtime.Geometry;
-using SideWar.Runtime.Taskbar;
+using SideWar.Runtime.Widget;
 using Xunit;
 
 namespace SideWar.Runtime.Tests.Geometry;
@@ -9,112 +9,82 @@ public sealed class WidgetGeometryTests
     private static MonitorInfo Monitor(uint dpi, int left = 0, int top = 0, int w = 1920, int h = 1080) =>
         new("M", new PixelRect(left, top, left + w, top + h), new PixelRect(left, top, left + w, top + h), dpi, true, 0);
 
-    private static TaskbarLayout Bar(TaskbarEdge edge, float x0, float x1, float height = 48, float barY = 1032, float barH = 48) =>
-        new("M", edge, false, new DipRect(0, barY, 1920, barH), height, [], null, (x0, x1), [], 1900, TaskbarAlignment.Left,
-            TaskbarSource.Uia, 96);
+    private static PixelRect Scene(MonitorInfo m, int hDip = 104) =>
+        new(m.Bounds.Left, m.Bounds.Bottom - (int)Math.Round(hDip * m.Dpi / 96.0), m.Bounds.Right, m.Bounds.Bottom);
 
-    private static PixelRect Scene(MonitorInfo m) => SceneLayout.Compute(m, Bar(TaskbarEdge.Bottom, 0, 0), TowerHost.Band);
-
-    // CA-23.3: 100/125/150/175/200 %, bottom bar 48 DIP, free zone >= 420 DIP.
-    [Theory]
-    [InlineData(96u, 420, 48)]
-    [InlineData(120u, 525, 60)]
-    [InlineData(144u, 630, 72)]
-    [InlineData(168u, 735, 84)]
-    [InlineData(192u, 840, 96)]
-    public void NormalCase_SizeAndBaseOnBarBase(uint dpi, int widthPx, int heightPx)
-    {
-        var m = Monitor(dpi);
-        var scale = dpi / 96.0;
-        var bar = Bar(TaskbarEdge.Bottom, 10, 600, barY: 1032, barH: 48);
-        var p = WidgetGeometry.Compute(m, Scene(m), bar);
-        Assert.False(p.IsFallback);
-        Assert.Equal(widthPx, p.Bounds.Width);
-        Assert.Equal(heightPx, p.Bounds.Height);
-        Assert.Equal((int)Math.Round(10 * scale, MidpointRounding.AwayFromZero), p.Bounds.Left);
-        Assert.Equal((int)Math.Round(1080 * scale, MidpointRounding.AwayFromZero), p.Bounds.Bottom);
-    }
-
-    [Theory]
-    [InlineData(300f, true)]
-    [InlineData(419.9f, true)]
-    [InlineData(420f, false)]
-    [InlineData(600f, false)]
-    public void FreeZoneThreshold(float zone, bool fallback)
-    {
-        var m = Monitor(96);
-        var p = WidgetGeometry.Compute(m, Scene(m), Bar(TaskbarEdge.Bottom, 0, zone));
-        Assert.Equal(fallback, p.IsFallback);
-    }
-
-    [Theory]
-    [InlineData(40f, 46)]
-    [InlineData(46f, 46)]
-    [InlineData(48f, 48)]
-    [InlineData(52f, 52)]
-    public void HeightIsMaxOfBarAnd46(float bar, int expected)
-    {
-        var m = Monitor(96);
-        var p = WidgetGeometry.Compute(m, Scene(m), Bar(TaskbarEdge.Bottom, 0, 600, bar, 1080 - bar, bar));
-        Assert.False(p.IsFallback);
-        Assert.Equal(expected, p.Bounds.Height);
-        Assert.Equal(1080, p.Bounds.Bottom);
-    }
-
-    [Theory]
-    [InlineData(TaskbarEdge.Top)]
-    [InlineData(TaskbarEdge.Left)]
-    [InlineData(TaskbarEdge.Right)]
-    [InlineData(TaskbarEdge.Unknown)]
-    public void NonBottomEdgeFallsBackToSceneBottomLeft(TaskbarEdge edge)
-    {
-        var m = Monitor(96);
-        var scene = Scene(m);
-        var p = WidgetGeometry.Compute(m, scene, Bar(edge, 0, 800));
-        Assert.True(p.IsFallback);
-        Assert.Equal(new PixelRect(scene.Left, scene.Bottom - 48, scene.Left + 420, scene.Bottom), p.Bounds);
-    }
-
+    // CA-23.3: left = W − 548 (1372 em 1920) com a largura do canvas (≤ 540), 48 DIP de altura, 100–200 %.
     [Theory]
     [InlineData(96u)]
     [InlineData(120u)]
     [InlineData(144u)]
     [InlineData(168u)]
     [InlineData(192u)]
-    public void FallbackScalesAndStaysInsideScene(uint dpi)
+    public void CanvasWidth_LeftIsWMinus548_TopIsSceneTop_Height48(uint dpi)
     {
         var m = Monitor(dpi);
         var scene = Scene(m);
-        var p = WidgetGeometry.Compute(m, scene, null);
-        Assert.True(p.IsFallback);
-        Assert.Equal((int)(420 * dpi / 96), p.Bounds.Width);
-        Assert.Equal((int)(48 * dpi / 96), p.Bounds.Height);
-        Assert.Equal(scene.Left, p.Bounds.Left);
-        Assert.Equal(scene.Bottom, p.Bounds.Bottom);
-        Assert.True(p.Bounds.Top >= scene.Top);
+        var scale = dpi / 96.0;
+        var p = WidgetGeometry.Compute(m, scene, 540f).Bounds;
+        Assert.Equal(scene.Top, p.Top);
+        Assert.Equal((int)Math.Round(48 * scale, MidpointRounding.AwayFromZero), p.Height);
+        Assert.Equal((int)Math.Round(540 * scale, MidpointRounding.AwayFromZero), p.Width);
+        Assert.Equal(scene.Width - (int)Math.Round(548 * scale, MidpointRounding.AwayFromZero), p.Left);
+        if (dpi == 96) Assert.Equal(1372, p.Left);
+        Assert.True(p.Right <= scene.Right - (int)Math.Round(8 * scale, MidpointRounding.AwayFromZero));
     }
 
-    [Fact]
-    public void SecondMonitorOffsetIsApplied()
+    [Theory]
+    [InlineData(96u, 560f)]
+    [InlineData(144u, 600f)]
+    [InlineData(192u, 700f)]
+    public void WideWidget_IsPushedLeftToKeep8DipMargin(uint dpi, float widthDip)
     {
-        var m = Monitor(96, left: 1920, top: -200);
-        var bar = Bar(TaskbarEdge.Bottom, 100, 700, barY: 1032, barH: 48);
-        var p = WidgetGeometry.Compute(m, Scene(m), bar);
-        Assert.Equal(new PixelRect(2020, 832, 2440, 880), p.Bounds);
+        var m = Monitor(dpi);
+        var scene = Scene(m);
+        var scale = dpi / 96.0;
+        var p = WidgetGeometry.Compute(m, scene, widthDip).Bounds;
+        Assert.Equal(scene.Right - (int)Math.Round(8 * scale, MidpointRounding.AwayFromZero), p.Right);
+        Assert.True(p.Left < scene.Width - (int)Math.Round(548 * scale, MidpointRounding.AwayFromZero));
     }
 
     [Fact]
-    public void NonFiniteGeometryFallsBack()
+    public void SecondMonitor_IsRelativeToScene()
+    {
+        var m = Monitor(96, left: 1920, top: 100);
+        var scene = Scene(m);
+        var p = WidgetGeometry.Compute(m, scene, 480f).Bounds;
+        Assert.Equal(1920 + 1372, p.Left);
+        Assert.Equal(scene.Top, p.Top);
+    }
+
+    [Fact]
+    public void SameBounds_NoMatterTheTaskbar_NoFallback()
     {
         var m = Monitor(96);
-        var p = WidgetGeometry.Compute(m, Scene(m), Bar(TaskbarEdge.Bottom, float.NaN, 800));
-        Assert.True(p.IsFallback);
+        Assert.Equal(WidgetGeometry.Compute(m, Scene(m), 480f), WidgetGeometry.Compute(m, Scene(m), 480f));
+    }
+
+    // CA-23.10: com o selo mais longo e o chip ×3 a largura cabe à esquerda de W − 8 em 1280, 1366 e 1920.
+    [Theory]
+    [InlineData(1280)]
+    [InlineData(1366)]
+    [InlineData(1920)]
+    public void LongWidgetWithChip_FitsLeftOfWMinus8(int w)
+    {
+        var m = Monitor(96, w: w);
+        float width = WidgetLayout.NaturalWidth(125f, 62f);
+        var p = WidgetGeometry.Compute(m, Scene(m), width).Bounds;
+        Assert.True(p.Left >= 0);
+        Assert.True(p.Right <= w - 8);
     }
 
     [Fact]
-    public void ZeroDpiThrows()
+    public void Throws_OnBadInput()
     {
-        var m = Monitor(96) with { Dpi = 0 };
-        Assert.Throws<ArgumentOutOfRangeException>(() => WidgetGeometry.Compute(m, default, null));
+        var m = Monitor(96);
+        Assert.Throws<ArgumentOutOfRangeException>(() => WidgetGeometry.Compute(m with { Dpi = 0 }, Scene(m), 480f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => WidgetGeometry.Compute(m, Scene(m), 0f));
+        Assert.Throws<ArgumentOutOfRangeException>(() => WidgetGeometry.Compute(m, Scene(m), float.NaN));
+        Assert.Throws<ArgumentOutOfRangeException>(() => WidgetGeometry.Compute(m, new PixelRect(0, 0, 300, 104), 480f));
     }
 }
