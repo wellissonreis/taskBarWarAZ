@@ -13,41 +13,91 @@ namespace SideWar.Platform.Windows.Taskbar;
 /// </summary>
 public sealed class TaskbarWatcher : IDisposable
 {
+    /// <summary>Win32 hook surface, replaceable by tests (no real hook, no window).</summary>
+    internal interface IHookApi
+    {
+        bool TryGetProcessId(nint window, out uint pid);
+        nint Install(uint pid, WINEVENTPROC callback);
+        void Remove(nint hook);
+    }
+
+    private sealed class Win32HookApi : IHookApi
+    {
+        public unsafe bool TryGetProcessId(nint window, out uint pid)
+        {
+            uint value = 0;
+            var ok = PInvoke.GetWindowThreadProcessId((HWND)window, &value) != 0 && value != 0;
+            pid = value;
+            return ok;
+        }
+
+        public unsafe nint Install(uint pid, WINEVENTPROC callback) =>
+            (nint)PInvoke.SetWinEventHook(PInvoke.EVENT_OBJECT_CREATE, PInvoke.EVENT_OBJECT_LOCATIONCHANGE,
+                HMODULE.Null, callback, pid, 0, PInvoke.WINEVENT_OUTOFCONTEXT).Value;
+
+        public unsafe void Remove(nint hook) => PInvoke.UnhookWinEvent(new HWINEVENTHOOK((void*)hook));
+    }
+
     private const uint ObjidWindow = 0, ObjidClient = 0xFFFFFFFC;
     private readonly Action _signal;
     private readonly WINEVENTPROC _callback; // rooted for the lifetime of the hook
-    private HWINEVENTHOOK _hook;
+    private readonly IHookApi _api;
+    private nint _hook;
     private HWND _bar;
+    private bool _wanted;
 
-    public TaskbarWatcher(Action signal)
+    public TaskbarWatcher(Action signal) : this(signal, new Win32HookApi()) { }
+
+    internal TaskbarWatcher(Action signal, IHookApi api)
     {
+        _api = api;
         _signal = signal ?? throw new ArgumentNullException(nameof(signal));
         _callback = OnEvent;
     }
 
-    public bool IsInstalled => !_hook.IsNull;
+    public bool IsInstalled => _hook != 0;
+    /// <summary>Times the hook was reinstalled for a new Explorer process ("TaskbarCreated").</summary>
+    public int ReinstallCount { get; private set; }
     public long EventsReceived { get; private set; }
     /// <summary>taskbar.events.dropped (RNF-21.6).</summary>
     public long EventsDropped { get; private set; }
     public long EventsAccepted => EventsReceived - EventsDropped;
 
     /// <summary>Replaces any previous hook. Returns false if the hook could not be installed.</summary>
-    public unsafe bool Install(nint taskbarHwnd)
+    public bool Install(nint taskbarHwnd)
     {
         Uninstall();
+        _wanted = true;
         _bar = (HWND)taskbarHwnd;
-        uint pid = 0;
-        if (PInvoke.GetWindowThreadProcessId(_bar, &pid) == 0 || pid == 0) return false;
-        _hook = PInvoke.SetWinEventHook(PInvoke.EVENT_OBJECT_CREATE, PInvoke.EVENT_OBJECT_LOCATIONCHANGE,
-            HMODULE.Null, _callback, pid, 0, PInvoke.WINEVENT_OUTOFCONTEXT);
-        return !_hook.IsNull;
+        if (!_api.TryGetProcessId(taskbarHwnd, out var pid)) return false;
+        _hook = _api.Install(pid, _callback);
+        return _hook != 0;
     }
 
+    /// <summary>Removes the hook (Hide) and forgets that one is wanted, so TaskbarCreated does not reinstall it.</summary>
     public void Uninstall()
     {
-        if (_hook.IsNull) return;
-        PInvoke.UnhookWinEvent(_hook);
-        _hook = default;
+        _wanted = false;
+        if (_hook == 0) return;
+        _api.Remove(_hook);
+        _hook = 0;
+    }
+
+    /// <summary>
+    /// "TaskbarCreated" arrived (Explorer restarted): when a hook is wanted (Show), reinstalls it for the new
+    /// Explorer PID using the freshly located taskbar window, then signals one reevaluation. Nothing happens while
+    /// hidden. Returns whether a hook is installed afterwards.
+    /// </summary>
+    public bool OnTaskbarCreated(Func<nint> locateTaskbar)
+    {
+        ArgumentNullException.ThrowIfNull(locateTaskbar);
+        if (!_wanted) return false;
+        var window = locateTaskbar();
+        var installed = window != 0 && Install(window);
+        if (!installed) _wanted = true; // keep wanting it: a later TaskbarCreated retries
+        ReinstallCount++;
+        _signal();
+        return installed;
     }
 
     private void OnEvent(HWINEVENTHOOK hook, uint evt, HWND hwnd, int idObject, int idChild, uint thread, uint time)

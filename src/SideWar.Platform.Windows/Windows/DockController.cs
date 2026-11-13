@@ -3,6 +3,7 @@ using SideWar.Platform.Windows.Rendering;
 using SideWar.Platform.Windows.Threading;
 using SideWar.Runtime.Geometry;
 using SideWar.Runtime.Taskbar;
+using SideWar.Runtime.Timing;
 using Windows.Win32;
 
 namespace SideWar.Platform.Windows.Windows;
@@ -19,7 +20,7 @@ public sealed class DockController
 
     private const uint SpiSetWorkArea = 0x2F;
     private readonly GameThread owner;
-    private long? deadline;
+    private RearmableDeadline debounce;
     private bool dirty;
     private TaskbarLayout? taskbar;
     private DockMonitorHint? hint;
@@ -38,7 +39,7 @@ public sealed class DockController
     public DockLayoutResult? Current { get; private set; }
     public DockMonitorHint? MonitorHint => hint;
     public int RelayoutCount { get; private set; }
-    internal long? NextDeadline => deadline;
+    internal long? NextDeadline => debounce.Deadline;
 
     /// <summary>Latest taskbar layout (from the taskbar service, by the App). Null = unknown. Schedules a relayout.</summary>
     public void SetTaskbar(TaskbarLayout? layout)
@@ -72,16 +73,15 @@ public sealed class DockController
         if (Current is null) return;
         dirty = true;
         if (!owner.Scene.IsVisible) return;
-        var due = Stopwatch.GetTimestamp() + (long)(Stopwatch.Frequency * DebounceSeconds);
-        // Coalesce a burst without postponing its first deadline (bounded latency, CA-05.3/05.5).
-        deadline = deadline is { } previous ? Math.Min(previous, due) : due;
+        // Re-armable debounce: the last trigger of a burst wins (SDD-16 RF-16.8, RF-05.6).
+        debounce.Trigger(Stopwatch.GetTimestamp(), (long)(Stopwatch.Frequency * DebounceSeconds));
     }
 
     /// <summary>Recomputes and applies now (scene bounds, scene surface, widget placement).</summary>
     public DockLayoutResult Relayout()
     {
         owner.VerifyAccess();
-        deadline = null;
+        debounce.Clear();
         var monitors = Enumerate();
         var monitor = MonitorResolver.Resolve(monitors, hint)
             ?? throw new InvalidOperationException("No monitor available.");
@@ -106,7 +106,7 @@ public sealed class DockController
 
     internal void OnWake(long now)
     {
-        if (deadline is { } due && now >= due) Relayout();
+        if (debounce.IsDue(now)) Relayout();
     }
 
     /// <summary>Show after changes while hidden recomputes before the window appears (active controller only).</summary>

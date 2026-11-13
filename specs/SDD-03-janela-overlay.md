@@ -104,7 +104,7 @@ O WndProc de **todas as janelas do jogo** (RF-03.9) implementa:
 
 ### RF-03.6: Reafirmação de topmost
 
-> **Refinado por SDD-23 RF-23.10.** O widget e as demais janelas do jogo precisam ficar **acima da barra de tarefas** (`Shell_TrayWnd`); a reafirmação também é disparada quando a barra (ou o Menu Iniciar/Pesquisa) vira foreground, com debounce de 100 ms e ordem fixa (RF-03.9). O debounce de 1 s abaixo vale para os demais gatilhos.
+> **Refinado por SDD-23 RF-23.10.** O widget e as demais janelas do jogo precisam ficar **acima da barra de tarefas** (`Shell_TrayWnd`); a reafirmação também é disparada quando a barra (ou o Menu Iniciar/Pesquisa) vira foreground, com debounce de 100 ms e ordem fixa (RF-03.9). O debounce de 1 s abaixo vale para os demais gatilhos. O debounce é **reagendável**: cada novo gatilho substitui o deadline pendente (o último vence); não há prazo máximo (SDD-16 RF-16.8).
 
 - Na mudança de foreground (evento vindo de SDD-06) e após `WM_DISPLAYCHANGE`, chamar `SetWindowPos(overlay, HWND_TOPMOST, …, SWP_NOACTIVATE|SWP_NOMOVE|SWP_NOSIZE|SWP_NOOWNERZORDER)`, limitado a **1 vez por segundo** (debounce).
 - Não reafirmar quando oculto.

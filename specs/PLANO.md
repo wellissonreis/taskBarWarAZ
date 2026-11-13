@@ -197,7 +197,7 @@ T3.4 a T3.8 compartilham contratos de `SimState`: **não paralelizar entre si** 
 | T7.3 | Atualização parcial (dirty rect) de RF-08.7, só com benchmark que a justifique | SDD-08 RF-08.7 | Sonnet | Windows | CA-16.3 |
 | T7.4 | Ajustes de GC e configuração de runtime | SDD-16 RF-16.6 | Sonnet | Windows | CA-16.3 |
 | T7.5 | Soak de 2 h (P-07) | SDD-16 | Haiku | Windows | CA-16.3 |
-| T7.6 | Conferência do inventário de segundo plano (UIA, `SideWar.Shell`, timers) com o código | SDD-16 RF-16.8 | Sonnet | WSL | CA-16.4 |
+| T7.6 ✅ | Conferência do inventário de segundo plano (UIA, `SideWar.Shell`, timers) com o código | SDD-16 RF-16.8 | Sonnet | WSL | CA-16.4 |
 
 **Aprovação:** CA-16.3, CA-16.4, CA-16.5, CA-08.5, CA-07.7. **Evidência obrigatória:** todas as metas com rótulo medido aprovado ou reprovado; cada reprovada com correção ou ADR de revisão aprovada pelo usuário. Depende de D-05.
 

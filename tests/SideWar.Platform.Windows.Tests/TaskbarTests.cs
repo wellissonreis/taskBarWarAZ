@@ -163,3 +163,67 @@ public sealed class TaskbarProbeTests
         }
     }
 }
+
+/// <summary>Headless (fake hook API): no window, no real hook (SDD-21 RF-21.6 TaskbarCreated).</summary>
+public sealed class TaskbarWatcherReinstallTests
+{
+    private sealed class FakeApi : TaskbarWatcher.IHookApi
+    {
+        public Dictionary<nint, uint> Pids { get; } = new();
+        public List<(uint Pid, nint Hook)> Installed { get; } = new();
+        public List<nint> Removed { get; } = new();
+        private nint next = 100;
+        public bool TryGetProcessId(nint window, out uint pid) => Pids.TryGetValue(window, out pid);
+        public nint Install(uint pid, global::Windows.Win32.UI.Accessibility.WINEVENTPROC callback)
+        {
+            Installed.Add((pid, next));
+            return next++;
+        }
+        public void Remove(nint hook) => Removed.Add(hook);
+    }
+
+    [Fact]
+    public void TaskbarCreatedReinstallsHookWithNewPidAndSignalsOnce()
+    {
+        var api = new FakeApi();
+        api.Pids[1] = 10;
+        api.Pids[2] = 20; // new Explorer, new taskbar window
+        var signals = 0;
+        using var w = new TaskbarWatcher(() => signals++, api);
+        Assert.True(w.Install(1));
+        Assert.True(w.OnTaskbarCreated(() => 2));
+        Assert.Equal([(10u, (nint)100), (20u, (nint)101)], api.Installed);
+        Assert.Equal([(nint)100], api.Removed);
+        Assert.Equal(1, w.ReinstallCount);
+        Assert.Equal(1, signals);
+        Assert.True(w.IsInstalled);
+    }
+
+    [Fact]
+    public void TaskbarCreatedWhileHiddenDoesNothing()
+    {
+        var api = new FakeApi();
+        api.Pids[1] = 10;
+        var located = 0;
+        using var w = new TaskbarWatcher(() => { }, api);
+        Assert.False(w.OnTaskbarCreated(() => { located++; return 1; })); // never shown
+        w.Install(1);
+        w.Uninstall(); // Hide
+        Assert.False(w.OnTaskbarCreated(() => { located++; return 1; }));
+        Assert.Equal(0, located);
+        Assert.Single(api.Installed);
+    }
+
+    [Fact]
+    public void TaskbarNotYetAvailableKeepsWantingAndRetriesOnNextMessage()
+    {
+        var api = new FakeApi();
+        api.Pids[1] = 10;
+        api.Pids[3] = 30;
+        using var w = new TaskbarWatcher(() => { }, api);
+        w.Install(1);
+        Assert.False(w.OnTaskbarCreated(() => 0)); // bar not found yet: old hook is still the stale one
+        Assert.True(w.OnTaskbarCreated(() => 3));
+        Assert.Equal(30u, api.Installed[^1].Pid);
+    }
+}

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using SideWar.Platform.Windows.Interop;
 using SideWar.Platform.Windows.Threading;
+using SideWar.Runtime.Timing;
 using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.UI.WindowsAndMessaging;
@@ -11,31 +12,30 @@ namespace SideWar.Platform.Windows.Windows;
 public sealed class ZOrderCoordinator
 {
     private readonly GameThread owner;
-    private long? deadline;
+    private RearmableDeadline debounce;
     internal ZOrderCoordinator(GameThread owner) => this.owner = owner;
-    internal long? NextDeadline => deadline;
+    internal long? NextDeadline => debounce.Deadline;
     public long ReassertionCount { get; private set; }
 
     public void Request(bool shellForeground = false)
     {
         owner.VerifyAccess();
         if (!owner.Scene.IsVisible) return;
-        var due = Stopwatch.GetTimestamp() + (long)(Stopwatch.Frequency * (shellForeground ? 0.1 : 1));
-        // Coalesce a burst without postponing its first deadline; shell events can accelerate it.
-        deadline = deadline is { } previous ? Math.Min(previous, due) : due;
+        // Re-armable debounce: the last trigger wins (SDD-16 RF-16.8); 100 ms after a shell foreground, 1 s otherwise.
+        debounce.Trigger(Stopwatch.GetTimestamp(), (long)(Stopwatch.Frequency * (shellForeground ? 0.1 : 1)));
     }
 
     internal void OnWake(long now)
     {
-        if (deadline is { } due && now >= due) ReassertNow();
+        if (debounce.IsDue(now)) ReassertNow();
     }
 
-    internal void Cancel() => deadline = null;
+    internal void Cancel() => debounce.Clear();
 
     internal void ReassertNow()
     {
         owner.VerifyAccess();
-        deadline = null;
+        debounce.Clear();
         if (!owner.Scene.IsVisible) return;
         // Future owned windows are appended in RF-03.9 order here, never in their own classes.
         if (!PInvoke.SetWindowPos(new HWND(owner.Scene.Handle), HWND.HWND_TOPMOST, 0, 0, 0, 0,

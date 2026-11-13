@@ -57,6 +57,18 @@ public class AtomicFileWriterTests
     }
 
     [Fact]
+    public void RetryWaitIsBoundedBelowTheGameThreadBudget() // RNF-14.4 (<= 250 ms), RF-16.7 item 1
+    {
+        var fs = new FakeFileSystem();
+        var sleeps = new List<TimeSpan>();
+        fs.Fault = (op, _) => { if (op == "write") throw new IOException("busy"); };
+        Assert.False(new AtomicFileWriter(fs, sleep: sleeps.Add).Write(P, B("a")));
+        Assert.Equal(AtomicFileWriter.MaxRetries, sleeps.Count);
+        Assert.True(TimeSpan.FromTicks(sleeps.Sum(x => x.Ticks)) <= TimeSpan.FromMilliseconds(250));
+        Assert.Equal(AtomicFileWriter.MaxTotalDelay, TimeSpan.FromTicks(sleeps.Sum(x => x.Ticks)));
+    }
+
+    [Fact]
     public void PersistentFailure_LogsErrorAndReturnsFalse_AfterThreeAttempts()
     {
         var fs = new FakeFileSystem();

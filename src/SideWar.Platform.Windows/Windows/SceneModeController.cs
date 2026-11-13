@@ -3,6 +3,7 @@ using SideWar.Platform.Windows.Interop;
 using SideWar.Platform.Windows.Threading;
 using SideWar.Runtime.Geometry;
 using SideWar.Runtime.Input;
+using SideWar.Runtime.Power;
 using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.UI.Input.KeyboardAndMouse;
@@ -27,6 +28,7 @@ public sealed class SceneModeController
     private float barHeightDip = SceneHitTester.DefaultBarHeight;
     private bool tracking;
     private bool peekEnabled;
+    private PowerProfile powerProfile = PowerProfile.Normal;
 
     internal SceneModeController(GameThread owner) => this.owner = owner;
 
@@ -92,6 +94,14 @@ public sealed class SceneModeController
         ConfigurePeek();
     }
 
+    /// <summary>Power profile (SDD-07 RF-07.5): the peek poll runs only on Normal (SDD-16 RF-16.8).</summary>
+    public void SetPowerProfile(PowerProfile profile)
+    {
+        owner.VerifyAccess();
+        powerProfile = profile;
+        ConfigurePeek();
+    }
+
     /// <summary>Applies the current effects, e.g. after the surface was created (initial Passive).</summary>
     public void Reapply() => Apply(mode.Effects, modeChanged: false);
 
@@ -151,7 +161,7 @@ public sealed class SceneModeController
 
     private void ConfigurePeek()
     {
-        var changed = peek.Configure(peekEnabled, mode.Mode == OverlayMode.Passive, owner.Scene.IsVisible, Now);
+        var changed = peek.Configure(peekEnabled, mode.Mode == OverlayMode.Passive, owner.Scene.IsVisible, powerProfile, Now);
         if (changed) ApplyOpacity();
     }
 

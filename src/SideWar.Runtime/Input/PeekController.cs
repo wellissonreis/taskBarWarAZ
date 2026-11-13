@@ -1,8 +1,10 @@
+using SideWar.Runtime.Power;
+
 namespace SideWar.Runtime.Input;
 
 /// <summary>
 /// Fade under the cursor in Passive (SDD-04 RF-04.5, DP-22.3: off by default for the strip). Polled at 8 Hz
-/// only while enabled, Passive and visible; fades after 250 ms of continuous presence and restores after 150 ms
+/// only while enabled, Passive, visible and on the Normal power profile; fades after 250 ms of continuous presence and restores after 150 ms
 /// of absence. Only the opacity changes; nothing is redrawn (RNF-04.2).
 /// </summary>
 public sealed class PeekController
@@ -34,11 +36,11 @@ public sealed class PeekController
     /// <summary>Next cursor poll; null when polling is off.</summary>
     public long? NextPoll => nextPoll;
 
-    /// <summary>Enabled by settings AND Passive AND visible (also the absent power profile may turn it off).</summary>
-    public bool Configure(bool enabled, bool passive, bool visible, long now)
+    /// <summary>Enabled by settings AND Passive AND visible AND power profile Normal (SDD-16 RF-16.8).</summary>
+    public bool Configure(bool enabled, bool passive, bool visible, PowerProfile profile, long now)
     {
         Enabled = enabled;
-        var run = enabled && passive && visible;
+        var run = enabled && passive && visible && profile == PowerProfile.Normal;
         if (run == active) return false;
         active = run;
         insideSince = outsideSince = null;

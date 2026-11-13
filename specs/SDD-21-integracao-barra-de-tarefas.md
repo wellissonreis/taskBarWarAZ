@@ -103,8 +103,8 @@ public readonly record struct TaskbarLayout(
 - **Interop:** `IUIAutomation` (CLSID `CUIAutomation8`) via CsWin32 (ADR-005); se algum tipo não existir nos metadados, P/Invoke manual documentado em `NativeMethods.txt`.
 - **Consulta** (uma por pedido):
   1. `ElementFromHandle(hwndDaBarra)`;
-  2. `CacheRequest` com `ClassName`, `AutomationId`, `ControlType`, `BoundingRectangle` e o **pai** (`TreeScope_Element | TreeScope_Parent`), para uma única viagem entre processos;
-  3. `FindAllBuildCache(TreeScope_Descendants, condição ControlType == Button, cacheRequest)`;
+  2. `CacheRequest` com `ClassName`, `AutomationId`, `ControlType` e `BoundingRectangle`, e escopo `TreeScope_Element | TreeScope_Children` (o nome do pai vem do elemento que o contém), para uma única viagem entre processos;
+  3. `FindAllBuildCache(…, TrueCondition, cacheRequest)` e **filtro em memória** `ControlType == Button` (implementação atual, `TaskbarProbe`). Esse filtro traz mais elementos pelo RPC do que uma condição no provedor; o custo será medido em P-22 (SDD-16) e, se pesar, a condição volta ao provedor;
   4. devolver `UiaNode[]` (`ClassName`, `ParentClassName`, `AutomationId`, `Rect` físico). **O `Name` do elemento não é lido** (ele contém nomes de aplicativos do usuário).
 - **Timeout:** a T-Game espera a resposta por no máximo **300 ms** (deadline do host, sem bloquear). Se estourar: resultado descartado e a consulta conta como **falha** (RF-21.3, "Falhas"; o fallback só vale após 3 falhas seguidas, ADR-023). Enquanto a consulta anterior não voltar, nenhuma nova é emitida (a thread nunca acumula pedidos); a chegada tardia de uma resposta é ignorada.
 - **Liberação:** o `IUIAutomation` e os elementos COM são criados por consulta e liberados (`Marshal.ReleaseComObject`) ao final. Se a medição da E1 (RNF-21.3) mostrar que recriar custa mais do que manter, a decisão de manter a instância viva é tomada com a medição anexada (sem ADR, pois é detalhe de implementação, mas registrada em `specs/evidencias/E1.md`).

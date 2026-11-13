@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using SideWar.Platform.Windows.Interop;
 using SideWar.Platform.Windows.Menus;
+using SideWar.Runtime.Timing;
 using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.UI.Shell;
@@ -31,17 +32,15 @@ public sealed class TrayIcon : IDisposable
     private GCHandle self;
     private ushort atom;
     private HWND handle;
-    private string tooltip;
-    private string? pendingTooltip;
-    private long lastTooltipTicks;
+    private readonly TooltipThrottle throttle;
+    private long? announcedDeadline;
     private bool added;
     private bool disposed;
 
     public unsafe TrayIcon(string tooltip = "SideWar", Func<long>? timestamp = null)
     {
-        this.tooltip = Clamp(tooltip);
         this.timestamp = timestamp ?? Stopwatch.GetTimestamp;
-        lastTooltipTicks = this.timestamp();
+        throttle = new TooltipThrottle(Clamp(tooltip), (long)(TooltipInterval.TotalSeconds * Stopwatch.Frequency), this.timestamp());
         module = new HINSTANCE(PInvoke.GetModuleHandle((PCWSTR)null).Value);
         try
         {
@@ -85,33 +84,50 @@ public sealed class TrayIcon : IDisposable
     public bool UsesEmbeddedIcon { get; private set; }
 
     public bool IsAdded => added;
-    public string Tooltip => tooltip;
+    public string Tooltip => throttle.Current;
+
+    /// <summary>
+    /// Host-clock deadline (same clock as the injected timestamp) at which a held-back tooltip may be applied; null when
+    /// none. The T-UI host arms one one-shot wait for it and calls <see cref="FlushTooltip"/>; there is no timer here.
+    /// </summary>
+    public long? NextTooltipDeadline => throttle.NextDeadline;
+
+    /// <summary>Raised when <see cref="NextTooltipDeadline"/> changes, so the host re-arms (or drops) its one-shot wait.</summary>
+    public event Action<long?>? TooltipDeadlineChanged;
     public int TooltipUpdates { get; private set; }
     public int RecreateCount { get; private set; }
     public unsafe nint WindowHandle => (nint)handle.Value;
 
-    /// <summary>Updates the tooltip at most once per second and only if the text changed; the latest rejected text is retried on the next call.</summary>
+    /// <summary>Updates the tooltip at most once per second and only if the text changed; a rejected text is held until <see cref="NextTooltipDeadline"/>.</summary>
     public bool SetTooltip(string text)
     {
         CheckAccess();
-        text = Clamp(text);
-        if (text == tooltip) { pendingTooltip = null; return false; }
-        long now = timestamp();
-        if (now - lastTooltipTicks < TooltipInterval.TotalSeconds * Stopwatch.Frequency)
-        {
-            pendingTooltip = text;
-            return false;
-        }
-        tooltip = text;
-        pendingTooltip = null;
-        lastTooltipTicks = now;
-        if (added) Notify(NOTIFY_ICON_MESSAGE.NIM_MODIFY);
-        TooltipUpdates++;
-        return true;
+        var applied = throttle.Offer(Clamp(text), timestamp());
+        return Commit(applied);
     }
 
-    /// <summary>Applies a tooltip held back by the 1 Hz limit once its interval elapsed.</summary>
-    public bool FlushTooltip() => pendingTooltip is { } text && SetTooltip(text);
+    /// <summary>Applies a tooltip held back by the 1 Hz limit once <see cref="NextTooltipDeadline"/> arrived; called by the host at that deadline.</summary>
+    public bool FlushTooltip()
+    {
+        CheckAccess();
+        return Commit(throttle.Flush(timestamp()));
+    }
+
+    private bool Commit(bool applied)
+    {
+        if (applied)
+        {
+            if (added) Notify(NOTIFY_ICON_MESSAGE.NIM_MODIFY);
+            TooltipUpdates++;
+        }
+        var next = throttle.NextDeadline;
+        if (next != announcedDeadline)
+        {
+            announcedDeadline = next;
+            TooltipDeadlineChanged?.Invoke(next);
+        }
+        return applied;
+    }
 
     /// <summary>Shows the native menu at screen point (x, y) and raises <see cref="CommandSelected"/>. Ignored while a menu is open.</summary>
     public unsafe MenuResult? ShowMenu(MenuState state, int x, int y)
@@ -170,7 +186,7 @@ public sealed class TrayIcon : IDisposable
             uCallbackMessage = CallbackMessage,
             hIcon = LoadIconHandle(),
         };
-        tooltip.AsSpan().CopyTo(data.szTip.AsSpan());
+        throttle.Current.AsSpan().CopyTo(data.szTip.AsSpan());
         if (!PInvoke.Shell_NotifyIcon(message, in data))
             throw Win32Error.LastError($"Shell_NotifyIcon({message})");
     }

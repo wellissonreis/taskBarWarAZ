@@ -5,6 +5,8 @@ public sealed class AtomicFileWriter
 {
     public const int MaxRetries = 2;
     public static readonly TimeSpan RetryDelay = TimeSpan.FromMilliseconds(50);
+    /// <summary>Worst-case blocked time spent in retry sleeps (100 ms; RNF-14.4 allows 250 ms on the caller). Sleeps only after an IOException, never in a loop without a limit.</summary>
+    public static readonly TimeSpan MaxTotalDelay = RetryDelay * MaxRetries;
 
     private readonly IFileSystem _fs;
     private readonly Action<string>? _logError;

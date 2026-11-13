@@ -31,7 +31,7 @@ SDD-26: Eventos que só ocorrem com o jogador presente: pico de demanda, chefe c
 
 ### RF-26.1: Regras gerais
 
-- Apenas em **Presente**. Ao passar a Ausente ou Offline: banners e caixas ativos são **removidos**, o bônus de pico (RF-26.3) é **encerrado**, e os contadores de sorteio **congelam** (voltam a avançar em Presente). Extras de pico ainda na `PeakQueue` **terminam de nascer**, sem bônus (fazem parte da onda; ADR-032).
+- Apenas em **Presente**. Ao passar a Ausente ou Offline: banners e caixas ativos são **removidos**, o bônus de pico (RF-26.3) é **encerrado**, e os contadores de sorteio **congelam** (voltam a avançar em Presente). Esses contadores são **tempo de simulação avançado por tick** (`EventScheduler.Advance`), não deadlines do host nem timers (determinismo: `Rng` e `StateHash`; SDD-16 RF-16.8). Extras de pico ainda na `PeakQueue` **terminam de nascer**, sem bônus (fazem parte da onda; ADR-032).
 - Eventos **não** pausam o jogo. Fechar ou minimizar o card de pergunta **não** pausa o tempo.
 - **Prioridade e não sobreposição** (RF-26.12): no máximo 1 banner por vez e no máximo 1 caixa.
 - Cliques em banners e caixas contam como **interação** (SDD-25 RF-25.1).

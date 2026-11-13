@@ -143,16 +143,20 @@ E `runtimeconfig.template.json`: `{ "configProperties": { "System.GC.ConserveMem
 |---|---|---|---|
 | Timer do jogo | T-Game | 30 Hz de simulação; render 30 fps (Presente) / 8 fps (Ausente) / evento | visível |
 | Polling de fullscreen | T-Game | 0,5 Hz visível / 1 Hz com tela cheia rastreada | visível ou oculto por fullscreen |
-| Polling do cursor (peek) | T-Game | 8 Hz | visível e Passive, peek ligado, perfil Normal |
+| Polling do cursor (peek) | T-Game | 8 Hz | visível e Passive, peek ligado, perfil de energia Normal (`PeekController.Configure`; no Saver não há poll) |
 | ~~Inatividade (`GetLastInputInfo`)~~ | — | **Removida:** substituída pelos timers de presença (abaixo; SDD-25 RF-25.1) | — |
-| Timers de presença (`PresenceTracker.NextDeadline`: Presente → Ausente em 5 min; recolher do card em 60 s) e de eventos (SDD-26: sorteios de pico, caixa, banner e chefe) | T-Game | deadline único do host, **sem polling**; congelados em Ausente (eventos) e ausentes oculto | visível |
+| Timers de presença (`PresenceTracker.NextDeadline`: Presente → Ausente em 5 min; o recolher do card em 60 s ainda não tem código, SDD-25 RF-25.4) | T-Game | deadline único do host, **sem polling**; ausentes oculto | visível |
+| Contadores de eventos (SDD-26: sorteios de pico, caixa, banner e chefe) | T-Game | **não são deadlines do host**: são contadores de tempo de simulação avançados por tick (`EventScheduler.Advance`), por determinismo (`Rng` e `StateHash`); sem timer próprio; congelam em Ausente e não avançam sem tick | visível, em Presente |
 | Thread `SideWar.Shell` (UIA somente leitura, MTA) | `SideWar.Shell` | **sob demanda**, por evento, sem polling; encerrada com o app (SDD-21 RF-21.3, ADR-023) | visível (0 consultas oculto) |
 | Poll de segurança da barra de tarefas (**condicionado**: só se a E1 mostrar que os botões XAML não emitem WinEvent; senão removido, ADR-032) | T-Game (agenda) → `SideWar.Shell` | a cada **60 s**, só com o overlay **visível** (deadline do host; SDD-21 RF-21.6) | visível |
-| Debounce da reavaliação da barra (500 ms) e do widget (200 ms; z-order 100 ms) | T-Game | deadlines únicos reagendáveis, sem timer periódico | visível, após evento |
+| Debounce da reavaliação da barra (500 ms), do dock/widget (200 ms) e do z-order (100 ms após foreground do shell; 1 s nos demais gatilhos) | T-Game | deadline único **reagendável**: cada novo gatilho substitui o pendente (o último vence; `RearmableDeadline`), sem timer periódico | visível, após evento |
 | Coalescência de créditos/taxa do widget | T-Game | ≤ 2 Hz, só se o texto mudou (SDD-23 RF-23.9) | visível |
-| Flush de log | T-IO | 0,5 Hz, só se houver buffer | quando há log pendente |
-| Tooltip da bandeja | T-UI | ≤ 1 Hz, só se mudou | sempre |
-| Hooks WinEvent (foreground/fullscreen; processo do Explorer para a barra, SDD-21 RF-21.6; foreground na barra para z-order do widget, SDD-23 RF-23.10) | T-Game | por evento, descarte no callback | sempre (a consulta só visível) |
+| ~~Flush de log~~ | — | **Não existe** (não há logger em arquivo; os logs vão a `Trace`/`Debug`). Entra nesta tabela quando o logger de SDD-14 RF-14.11 for implementado | — |
+| Tooltip da bandeja | T-UI | ≤ 1 Hz, só se mudou; o texto retido pelo limite expõe `NextTooltipDeadline` e o host da T-UI arma **uma** espera one-shot nele e chama `FlushTooltip` (sem timer periódico; `TooltipThrottle`) | sempre |
+| Hooks WinEvent (foreground, `MINIMIZESTART/END` e `LOCATIONCHANGE` do foreground para o fullscreen, SDD-06; processo do Explorer para a barra, SDD-21 RF-21.6, reinstalado com o PID novo em `TaskbarCreated`; foreground na barra para z-order do widget, SDD-23 RF-23.10, **pendente**) | T-Game | por evento, descarte no callback | sempre (a consulta só visível) |
+| Janela de notificações de sessão e energia (`SessionPowerWatcher`: `WTSRegisterSessionNotification`, `RegisterPowerSettingNotification`; SDD-07 RF-07.7) | T-Game (janela de cena) | por mensagem, sem timer | sempre |
+| `AppBarProbeWindow` (`ABN_FULLSCREENAPP` via `SHAppBarMessage`; SDD-06) | T-Game | por mensagem, sem timer | sempre |
+| Watchdog de encerramento (`ShutdownCoordinator`: `System.Threading.Timer` one-shot + `Task.Run` do save e do stop, com `Wait`) | ThreadPool | uma vez, só no encerramento | durante o shutdown |
 | Hotkeys globais (`RegisterHotKey`) | T-Game | por evento | sempre |
 | Espera do evento de ativação (instância única) | ThreadPool (registered wait) | por evento | sempre |
 

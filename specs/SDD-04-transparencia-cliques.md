@@ -83,7 +83,7 @@ Ao sair do Interactive com arraste em andamento, o arraste é cancelado (`Releas
 
 > **Refinado por SDD-22 RF-22.3 (DP-22.3).** O peek continua existindo **só na faixa**; widget, painel, cards, banners e caixas **não** participam do peek (alfa fixo 255). Valores e retângulo do peek: ver DP-22.3 (padrão aceito por ADR-030).
 
-- Configuração `settings.peekOnHover` (padrão **ligado**).
+- Configuração `settings.peekOnHover` (padrão **ligado**). O polling do cursor (8 Hz) só roda com o peek ligado, em Passive, visível e com o perfil de energia **Normal** (SDD-07 RF-07.5; SDD-16 RF-16.8).
 - Enquanto visível em Passive, a T-Game consulta `GetCursorPos` a **8 Hz** (deadline do host; só nesse estado).
 - Se o cursor estiver dentro do retângulo da faixa (exceto sobre as janelas sempre clicáveis) por ≥ 250 ms, a opacidade passa para `settings.opacity.peek` (padrão 60 ≈ 24%). Ao sair, a opacidade volta à passiva depois de 150 ms.
 - A transição é instantânea (sem animação), para não gerar frames extras. Só chama `SetOpacity`, sem redesenhar.

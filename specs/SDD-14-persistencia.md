@@ -157,7 +157,7 @@ Nunca perder progresso relevante e nunca corromper dados. O save de meio de onda
 ### RF-14.11: Logs
 
 - `logs\sidewar-<yyyyMMdd>.log`, em UTF-8, com 1 linha por evento: `ISO8601 [LEVEL] [thread] mensagem`.
-- Buffer em memória com flush a cada 2 s pela T-IO, ou imediato em `Error`. Rotação: 5 arquivos de até 1 MB cada.
+- **Ainda não implementado** (não há logger em arquivo; SDD-16 RF-16.8 registra o flush como inexistente). Quando existir: buffer em memória com flush a cada 2 s pela T-IO, ou imediato em `Error`. Rotação: 5 arquivos de até 1 MB cada.
 - Nenhum dado pessoal: sem nome de usuário em caminhos (usar `%LOCALAPPDATA%` literal no log) e sem títulos de janelas de outros apps. O diagnóstico de fullscreen registra apenas a **classe** da janela e o nome do processo.
 
 ## 6. Requisitos não funcionais

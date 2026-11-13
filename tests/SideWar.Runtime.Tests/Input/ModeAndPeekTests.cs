@@ -1,4 +1,5 @@
 using SideWar.Runtime.Input;
+using SideWar.Runtime.Power;
 using Xunit;
 
 namespace SideWar.Runtime.Tests.Input;
@@ -178,21 +179,38 @@ public sealed class PeekControllerTests
     public void DisabledOrNotPassiveOrHiddenDoesNotPoll()
     {
         var p = New();
-        Assert.False(p.Configure(false, true, true, 0));
+        Assert.False(p.Configure(false, true, true, PowerProfile.Normal, 0));
         Assert.Null(p.NextPoll);
-        p.Configure(true, false, true, 0);
+        p.Configure(true, false, true, PowerProfile.Normal, 0);
         Assert.Null(p.NextPoll);
-        p.Configure(true, true, false, 0);
+        p.Configure(true, true, false, PowerProfile.Normal, 0);
         Assert.Null(p.NextPoll);
-        p.Configure(true, true, true, 0);
+        p.Configure(true, true, true, PowerProfile.Normal, 0);
         Assert.Equal(0, p.NextPoll);
+    }
+
+    [Fact]
+    public void SaverProfileDoesNotPollAndNormalResumes()
+    {
+        var p = New();
+        p.Configure(true, true, true, PowerProfile.Normal, 0);
+        p.OnSample(0, true);
+        p.OnSample(Ms(250), true);
+        Assert.True(p.Peeking);
+        Assert.True(p.Configure(true, true, true, PowerProfile.Saver, Ms(300))); // un-peeks
+        Assert.False(p.Peeking);
+        Assert.Null(p.NextPoll);
+        Assert.False(p.PollDue(Ms(10_000)));
+        Assert.False(p.Configure(true, true, true, PowerProfile.Saver, Ms(400)));
+        p.Configure(true, true, true, PowerProfile.Normal, Ms(500));
+        Assert.Equal(Ms(500), p.NextPoll);
     }
 
     [Fact]
     public void PollsAtEightHz()
     {
         var p = New();
-        p.Configure(true, true, true, 0);
+        p.Configure(true, true, true, PowerProfile.Normal, 0);
         Assert.True(p.PollDue(0));
         p.OnSample(0, false);
         Assert.Equal(Ms(125), p.NextPoll);
@@ -204,7 +222,7 @@ public sealed class PeekControllerTests
     public void FadesWithin300msOfEntering() // CA-04.5
     {
         var p = New();
-        p.Configure(true, true, true, 0);
+        p.Configure(true, true, true, PowerProfile.Normal, 0);
         Assert.False(p.OnSample(0, true));
         Assert.False(p.OnSample(Ms(125), true));
         Assert.True(p.OnSample(Ms(250), true));
@@ -216,7 +234,7 @@ public sealed class PeekControllerTests
     public void ShortVisitDoesNotFadeAndResetsOnLeave()
     {
         var p = New();
-        p.Configure(true, true, true, 0);
+        p.Configure(true, true, true, PowerProfile.Normal, 0);
         p.OnSample(0, true);
         p.OnSample(Ms(125), false);
         p.OnSample(Ms(250), true); // restarts presence timer
@@ -229,7 +247,7 @@ public sealed class PeekControllerTests
     public void RestoresAfter150msOutside()
     {
         var p = New();
-        p.Configure(true, true, true, 0);
+        p.Configure(true, true, true, PowerProfile.Normal, 0);
         p.OnSample(0, true);
         p.OnSample(Ms(250), true);
         Assert.False(p.OnSample(Ms(375), false));
@@ -242,10 +260,10 @@ public sealed class PeekControllerTests
     public void LeavingPassiveRestoresImmediately()
     {
         var p = New();
-        p.Configure(true, true, true, 0);
+        p.Configure(true, true, true, PowerProfile.Normal, 0);
         p.OnSample(0, true);
         p.OnSample(Ms(250), true);
-        Assert.True(p.Configure(true, false, true, Ms(260)));
+        Assert.True(p.Configure(true, false, true, PowerProfile.Normal, Ms(260)));
         Assert.False(p.Peeking);
         Assert.Null(p.NextPoll);
         Assert.False(p.OnSample(Ms(300), true)); // inactive: ignored
@@ -255,10 +273,10 @@ public sealed class PeekControllerTests
     public void ReconfiguringSameStateKeepsPeeking()
     {
         var p = New();
-        p.Configure(true, true, true, 0);
+        p.Configure(true, true, true, PowerProfile.Normal, 0);
         p.OnSample(0, true);
         p.OnSample(Ms(250), true);
-        Assert.False(p.Configure(true, true, true, Ms(260)));
+        Assert.False(p.Configure(true, true, true, PowerProfile.Normal, Ms(260)));
         Assert.True(p.Peeking);
     }
 }
