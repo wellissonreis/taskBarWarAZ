@@ -12,7 +12,7 @@ Posicionar a faixa de forma nítida e correta em qualquer monitor, resolução e
 
 ## 3. Contexto técnico
 
-- ADR-020 (substitui ADR-003): faixa de 96 DIP acima da barra de tarefas, na largura do monitor (SDD-21, SDD-22); sem HUD lateral e sem tamanhos S/M/L. O histórico de ADR-003 (1920×200 com HUD à esquerda) fica nos RFs substituídos abaixo.
+- ADR-034 (substitui ADR-020): cena de 104 DIP acima da barra **mais** a faixa sobre a barra, onde ficam as torres (SDD-22 RF-22.1). Histórico: ADR-020 (substitui ADR-003): faixa de 96 DIP acima da barra de tarefas, na largura do monitor (SDD-21, SDD-22); sem HUD lateral e sem tamanhos S/M/L. O histórico de ADR-003 (1920×200 com HUD à esquerda) fica nos RFs substituídos abaixo.
 - O processo é **Per-Monitor V2** via manifesto. Com isso, as coordenadas das APIs Win32 são físicas, e o WPF também usa PMv2.
 - A área de trabalho de cada monitor vem de `GetMonitorInfoW` (`rcWork`). `SPI_GETWORKAREA` vale só para o primário e **não** deve ser usado.
 
@@ -67,7 +67,7 @@ public readonly record struct MonitorInfo(
 
 ### RF-05.4: Layout da faixa (`DockLayout.Compute`, função pura em Runtime)
 
-> **Substituído por SDD-22 RF-22.1 (ADR-020).** A faixa tem 96 DIP de altura e a largura da área de trabalho do monitor (`SceneLayout.Compute`), colada acima da barra; não há `StripSize` S/M/L, `HudWidth`, `HandleSize`, mundo 1920×200 nem `anchor`. O algoritmo abaixo é histórico e **não** é implementado.
+> **Substituído por SDD-22 RF-22.1 (ADR-020; ADR-034: cena de 104 DIP acima da barra + faixa sobre a barra).** A faixa tem 96 DIP de altura e a largura da área de trabalho do monitor (`SceneLayout.Compute`), colada acima da barra; não há `StripSize` S/M/L, `HudWidth`, `HandleSize`, mundo 1920×200 nem `anchor`. O algoritmo abaixo é histórico e **não** é implementado.
 
 Entradas: `MonitorInfo`, `DockEdge {Bottom, Top}`, `StripSize {S, M, L}`, `margin` (DIP, padrão 0) e `anchor {Left, Center, Right}` (padrão Right).
 
@@ -125,7 +125,7 @@ hudScale (px por DIP) = scaleDip
 
 ### RF-05.8: Modo AppBar (pós-MVP, `settings.dock.reserveSpace`, padrão `false`)
 
-> **Refinado por SDD-22 RF-22.1 (ADR-020).** O AppBar passa a reservar os **96 DIP da faixa** (não mais a altura do HUD/campo antigo). Continua **pós-MVP**.
+> **Refinado por SDD-22 RF-22.1 (ADR-020; ADR-034: reservaria os 104 DIP da cena acima da barra).** O AppBar passa a reservar os **96 DIP da faixa** (não mais a altura do HUD/campo antigo). Continua **pós-MVP**.
 
 Quando ligado, registrar a OverlayWindow como AppBar:
 
@@ -147,7 +147,7 @@ Esse modo resolve a sobreposição da faixa com a barra de status ou o terminal 
 
 - **RNF-05.1:** Nitidez: com 125%, 150%, 175% e 200%, os sprites são desenhados a partir do cache pré-escalado na escala exata, sem reamostragem por frame (SDD-09), e o texto é renderizado em pixels físicos.
 - **RNF-05.2:** A recomputação após `WM_DPICHANGED` termina em ≤ 100 ms, incluindo o rebake do cache (meta, medida na E1).
-- **RNF-05.3:** Nenhum pixel da faixa fora da `WorkArea`, salvo o modo AppBar.
+- **RNF-05.3:** Nenhum pixel da faixa fora da `WorkArea`, salvo o modo AppBar. **ADR-034:** exceção também para a janela de cena no hospedeiro `Taskbar`, que cobre de propósito a barra de tarefas (torres dentro da barra; SDD-22 RF-22.1).
 
 ## 7. Estratégia de implementação
 

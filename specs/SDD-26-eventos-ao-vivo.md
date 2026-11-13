@@ -18,7 +18,7 @@ SDD-26: Eventos que só ocorrem com o jogador presente: pico de demanda, chefe c
 - **ADR-015 / ADR-021:** nenhum evento abre janela ativável. Banners e o card de pergunta são Skia, sem ativação (SDD-22 e SDD-24).
 - **Design aprovado** (artefato "Azure Defense — Idle de barra", estados de Presence): banner âmbar de pico, banner rosa de chefe com 0:45 e o card de pergunta com alternativas A–D. Textos e números do design são ilustrativos onde divergirem desta ficha.
 - **Presença:** os eventos só existem em **Presente** (SDD-25 RF-25.1). O relógio dos eventos é o `eventClockSeconds`: tempo em Presente **acumulado, sem zerar ao ficar Ausente** (distinto do `PresentSeconds` contínuo de SDD-25 RF-25.3, que zera), que não avança em Ausente nem Offline. Persistido entre os "contadores de eventos" (SDD-25 RF-25.11, SDD-14).
-- **Economia:** SDD-27 (ondas, chefe a cada 20, "min de renda", baús, XP, missões). **Mundo 1D** (ADR-020): posições x em DIP entre o último slot e o portal.
+- **Economia:** SDD-27 (ondas, chefe a cada 20, "min de renda", baús, XP, missões). **Mundo 1D** (ADR-020; ADR-034): posições x em DIP entre o núcleo e o portal (antes: entre o último slot e o portal; RF-26.11).
 - **Rng:** `Rng` PCG32 persistido (SDD-11 RF-11.13). Todos os sorteios desta ficha consomem esse `Rng`, em ordem fixa, e entram no `StateHash`.
 
 ## 4. Escopo e exclusões
@@ -108,7 +108,7 @@ Cancelam o encontro **sem consumir o ledger**: passar a Ausente ou Offline (RF-2
 ### RF-26.11: Caixas de suprimentos (`SupplyCrateSystem`)
 
 - **Agendamento:** a cada **3 a 6 min** sorteados de tempo presente (uniforme em segundos inteiros), contado desde o desaparecimento da caixa anterior (coletada ou expirada).
-- **Posição:** `x` sorteado (inteiro em DIP) **entre o último slot e o portal**, com margem de 24 DIP em cada extremo; se o intervalo for menor que 48 DIP, usa o ponto médio. Os valores de slots e portal vêm de SDD-21/22. **Após `LayoutChanged` que encurta a faixa**, o `x` de uma caixa ativa é limitado ao novo intervalo (ADR-032).
+- **Posição:** `x` sorteado (inteiro em DIP) **entre o último slot e o portal**, com margem de 24 DIP em cada extremo; se o intervalo for menor que 48 DIP, usa o ponto médio. Os valores de slots e portal vêm de SDD-21/22. **ADR-034 (Aceita (Tech Lead, 2026-11-13)):** sem slots acima da barra, o intervalo passa a ser **entre o núcleo e o portal** (`[LeakX + 24, PortalX − 24]`), pois as torres ficam dentro da barra e a rota inteira acima dela fica livre (canvas: caixa em `x = 1000`). **Após `LayoutChanged` que encurta a faixa**, o `x` de uma caixa ativa é limitado ao novo intervalo (ADR-032).
 - **Aparência:** piscando (SDD-22). **Duração:** 45 s de SimTime. Expira sem aviso.
 - **Clique:** dá **1 min de renda**, **mínimo de 50 créditos** (`max(50, taxaRenda × 60)`, SDD-27 RF-27.13), com **número flutuante** (SDD-22). A caixa some. Conta para a missão "Colete 10 caixas de suprimentos" (SDD-27 RF-27.11).
 - No máximo **1 caixa** por vez.

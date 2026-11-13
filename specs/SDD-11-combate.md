@@ -2,6 +2,8 @@
 
 **Status:** Rascunho para revisão · **Etapa:** E3 · **Depende de:** SDD-01, SDD-10, SDD-12 (valores), SDD-22, SDD-27 · **Bloqueia:** SDD-13, 14, 15, 25, 26
 
+> **Revisada (rev3, ADR-034, 2026-11-13).** As torres deixam de ficar presas a slots: cada torre tem **posição livre em X** (âncora `Start`/`End` + `OffsetDip` inteiro) dentro das **zonas livres** do layout, validada por um `PlacementValidator` 1D (RF-11.9), e só muda por comando entre ticks (`BuildTower(type, x)`, `PlaceTower(id, x)`, `AutoPlaceUnpositioned()`), gravada no save e no `StateHash` (ADR-026). `SEM SLOT` vira `SEM POSIÇÃO`, com as mesmas regras (ADR-032 item 3). Distância, alcance (`alcance × 48` DIP), mira, dano e ordem do tick **não mudam**. Questões abertas: DP-33.1 a DP-33.3 e DP-33.7 (SDD-21 seção 11).
+>
 > **Revisada (rev2, ADR-019, ADR-020, ADR-026, ADR-027).** O combate passa a ser um **mundo 1D** (distância `|dx|`, alcance em slots, torres presas a slots da barra), com **acerto instantâneo** (sem `ProjectileStore` nem projéteis) e com o **layout da faixa como estado da simulação**, alterado só pelo comando `LayoutChanged` aplicado entre ticks e incluído no save e no `StateHash`. Números e regras de torre, inimigo e onda vêm de SDD-27. Permanecem: handles, stores, determinismo, eventos, `StateHash` e `Rng`.
 
 ## 1. Identificador e título
@@ -50,7 +52,7 @@ public readonly record struct Handle(int Value) { // bits 0..7 = índice (até 2
 ```
 
 - Cada store é um array de structs com capacidade fixa, **slots estáveis**, *free list* e `generation[]` incrementada a cada remoção. As gerações **começam em 1** (o valor 0 é reservado para `Handle.None`). Na saturação de 2²⁴, voltam para 1. Uma consulta por handle é O(1) e valida a geração.
-- Capacidades: `EnemyStore` 64 e `TowerStore` 16 (os slots são no máximo 12, SDD-21 RF-21.7). `ProjectileStore` foi **removido** (ADR-027).
+- Capacidades: `EnemyStore` 64 e `TowerStore` **32** (ADR-034: limite proposto de 24 torres, DP-33.3; antes 16, com no máximo 12 slots). `ProjectileStore` foi **removido** (ADR-027).
 - O limite de inimigos em campo é **44** (`MaxEnemiesOnField`, SDD-12). A capacidade 64 é margem.
 - Iteração: `for i in 0..capacity-1 if alive[i]` (capacidade pequena, sem lista auxiliar).
 - (Histórico: o descarte de disparo com `ProjectileStore` cheio e o contador `ProjectileDrops` deixam de existir com o acerto instantâneo.)
@@ -58,14 +60,16 @@ public readonly record struct Handle(int Value) { // bits 0..7 = índice (até 2
 ```csharp
 public struct Enemy   { public int Id; public EnemyKind Kind; public float X, Speed, SpawnSpeed;   // X = centro do sprite em DIP; marcha para a esquerda
                         public double Hp, MaxHp; public short Armor; public EnemyFlags Flags /* Chilled, Boss */; public TowerType LastHit; }
-public struct Tower   { public int Id; public TowerType Type; public int SlotIndex; public float Cooldown; public int Level;
-                        public Targeting Mode; public byte Hits; }   // X e alcance vêm do StripLayout (SlotIndex) e do tipo
+public struct Tower   { public int Id; public TowerType Type; public TowerAnchor Anchor; public int OffsetDip; public bool Placed;
+                        public float Cooldown; public int Level; public Targeting Mode; public byte Hits; }
+// ADR-034: X = Anchor == Start ? OffsetDip : StripLayout.Width − OffsetDip; Placed == false ⇔ SEM POSIÇÃO.
+// Histórico (ADR-020): public int SlotIndex; X vinha de StripLayout.SlotX[SlotIndex].
 // Projectile removido (ADR-027): o acerto é instantâneo.
 ```
 
 - `Id` é um número monotônico global (`Simulation.NextId`), exposto para a UI e o save.
 - `Handle` é interno e **não** é persistido. No restore, os handles são reconstruídos a partir dos `Id`.
-- A torre guarda `SlotIndex` (0-based), **não** coordenadas (SDD-21 RF-21.7); uma torre com `SlotIndex ≥ contagem de slots` do layout atual fica `SEM SLOT` (sem disparar) até o slot reaparecer.
+- **ADR-034:** a torre guarda **âncora + deslocamento inteiro em DIP** (SDD-21 RF-21.8, DP-33.2) e `Placed`. Torre com `Placed == false` está `SEM POSIÇÃO`: não dispara, não entra no Scale Set nem no DPS offline, conta no `n` do custo (ADR-032 item 3). *(Histórico: `SlotIndex` 0-based; `SEM SLOT` com `SlotIndex ≥ contagem de slots`.)*
 
 ### RF-11.3: `PathTable` (construída no carregamento do mapa)
 
@@ -73,10 +77,10 @@ public struct Tower   { public int Id; public TowerType Type; public int SlotInd
 
 **`StripLayout` (vigente, Core):**
 
-- Campos (em DIP, `float`): `SpawnX` (centro X do inimigo ao nascer = `portal.Left + portal.Width/2`, `portal.Left = TrayLeftX + 16`), `LeakX` (borda direita do núcleo, `94`; DP-22.9), `CoreX`, `PortalX` e `SlotX[]` (`CenterXDip` de cada slot do `SlotMap`, SDD-21 RF-21.7; no máximo 12). `PathLength = SpawnX − LeakX`.
+- **Campos vigentes (ADR-034):** `Width` (`W`, DIP inteiro), `SpawnX` (`portal.Left + 34`, `portal.Left = W − 80`, SDD-22 RF-22.2), `LeakX` (borda direita do núcleo, `88`), `CoreX`, `PortalX`, `Host` (`Taskbar`/`Band`) e `FreeZones[]` (intervalos `[X0, X1)` em DIP inteiros do `BuildZoneMap`, SDD-21 RF-21.7; no máximo 8). `PathLength = SpawnX − LeakX`. *(Histórico: `portal.Left = TrayLeftX + 16`, `LeakX = 94` e `SlotX[]` com no máximo 12 slots.)*
 - **Comando `LayoutChanged(layout)`**: substitui o layout inteiro. Aplicado pelo `GameHost` **entre ticks** (SDD-10 RF-10.6), nunca durante um tick; os valores entram quantizados (`Det.Quantize`) e o layout é gravado no save e incluído no `StateHash` (RF-11.12). O Runtime o envia quando `TaskbarLayoutChanged` (SDD-21), DPI ou monitor mudam (SDD-22 RF-22.1).
 > **Ajustado por ADR-031.** (DP-11.1)
-- **Efeitos de um `LayoutChanged`:** o alcance de cada torre passa a ser medido a partir do novo `SlotX[SlotIndex]`; torres com `SlotIndex` fora do novo `SlotMap` ficam `SEM SLOT`; a velocidade dos inimigos é em DIP/s (SDD-27 RF-27.6) e **não** muda. O tratamento de inimigos já em campo cujo `X` fica fora do novo intervalo `[LeakX, SpawnX]` é resolvido por ADR-031: inimigos com `X` além do novo `SpawnX` são **limitados a ele** (sem recalcular os demais; nenhuma morte nem vazamento imediato).
+- **Efeitos de um `LayoutChanged` (ADR-034):** o X de cada torre é recalculado pela âncora com o novo `Width`; as torres são **reavaliadas em ordem crescente de `Id`** pelo `PlacementValidator` (RF-11.9) contra as novas `FreeZones` e as torres de `Id` menor já reavaliadas: inválida → `Placed = false` (`SEM POSIÇÃO`); `SEM POSIÇÃO` cuja posição gravada voltou a ser válida → `Placed = true` (retorno automático, DP-33.1). *(Histórico: alcance a partir de `SlotX[SlotIndex]`; `SEM SLOT` fora do `SlotMap`.)* a velocidade dos inimigos é em DIP/s (SDD-27 RF-27.6) e **não** muda. O tratamento de inimigos já em campo cujo `X` fica fora do novo intervalo `[LeakX, SpawnX]` é resolvido por ADR-031: inimigos com `X` além do novo `SpawnX` são **limitados a ele** (sem recalcular os demais; nenhuma morte nem vazamento imediato).
 - Não há `PathDist`, faixa (`lane`), normal, grade de distância à estrada nem `DistanceToRoad`.
 
 **Histórico (`PathTable`):**
@@ -97,7 +101,7 @@ public struct Tower   { public int Id; public TowerType Type; public int SlotInd
 
 1. `WaveSystem.Spawn`: `waveClock += dt`. Enquanto `schedule[next].t ≤ waveClock` e `aliveEnemies < 44`, spawnar em `X = SpawnX` (RF-11.8). A fila de extras do pico (`PeakQueue`, SDD-26 RF-26.2) também é consumida aqui.
 2. Fatores de evento (SDD-26, núcleo): o **fator de pico** ×3 (SDD-26 RF-26.3) é lido no passo 3.3; o `EventScheduler` e o `BossEncounter` avançam com `PresentSeconds` (só em Presente). Não há `ISimModule`.
-3. `TowerSystem`: para cada torre com slot válido, em ordem crescente de `Id`:
+3. `TowerSystem`: para cada torre **posicionada** (`Placed`; antes "com slot válido"), em ordem crescente de `Id`:
    1. `Cooldown = max(0, Cooldown − dt)`;
    2. `Target = Targeting.Pick(tower)` (RF-11.5, distância 1D);
    3. se `Target ≠ None && Cooldown == 0`: executa o **acerto instantâneo** (RF-11.6) no mesmo passo, emite `Hit` (com X do alvo e o dano, para o número flutuante) e define `Cooldown = cadência` do tipo (RF-11.7).
@@ -126,7 +130,7 @@ public struct Tower   { public int Id; public TowerType Type; public int SlotInd
 
 > **Substituído por SDD-27 RF-27.4 e SDD-22 RF-22.2 (ADR-020).** Distância 1D `|xInimigo − xTorre|` e alcance em slots (`slots × 48` DIP); o inimigo "mais avançado" é o de **menor `X`** (mais perto do núcleo). Na UI só `First` (DP-27.6); os outros modos continuam no Core. O texto abaixo foi adaptado.
 
-- Candidatos: inimigos vivos (`Hp > 0`) com `X > LeakX` e `|X − xTorre| ≤ alcanceDIP`, em que `xTorre = SlotX[SlotIndex]` e `alcanceDIP = alcanceSlots × 48` (JSON, SDD-12 RF-12.4). Sem `Sqrt` nem achatamento de perspectiva.
+- Candidatos: inimigos vivos (`Hp > 0`) com `X > LeakX` e `|X − xTorre| ≤ alcanceDIP`, em que `xTorre` = X da torre pela âncora (ADR-034; antes `SlotX[SlotIndex]`) e `alcanceDIP = alcanceSlots × 48` (JSON, SDD-12 RF-12.4; o nome do campo fica, a unidade é "células de 48 DIP"). Sem `Sqrt` nem achatamento de perspectiva.
 - Modos (`Targeting`):
   - `First` (padrão): menor `X` (o mais próximo do núcleo dentro do alcance);
   - `Last`: maior `X`;
@@ -184,7 +188,17 @@ Cannon (área): para cada outro inimigo vivo com |X − alvo.X| ≤ SplashRadius
 
 ### RF-11.9: Posicionamento (`PlacementValidator.Validate(x, y, towers, ignoreId?) → PlacementReason`)
 
-> **Substituído por SDD-21 RF-21.7, SDD-22 e SDD-27 RF-27.5 (ADR-020).** Não há posição livre `(x, y)`: a torre ocupa um **slot** (botão da barra ou slot virtual); `BuildTower(type, slot)` só exige slot livre, torre desbloqueada e créditos. Saem os motivos `OutOfField`, `Road`, `Core`, `Entry`, `Reserved` e `Overlap` e a função `CoversRoad`. O texto abaixo é histórico.
+> **Vigente (ADR-034): `PlacementValidator` 1D** — `Validate(int x, StripLayout layout, TowerStore towers, int? ignoreId) → PlacementReason`, puro, sem alocação, usado pela simulação (comandos) e pelo overlay do modo construção (SDD-22 RF-22.11):
+>
+> | Ordem | Motivo | Regra (DIP inteiros) |
+> |---|---|---|
+> | 1 | `OutOfZone` | a caixa `[x − 22, x + 22)` não cabe inteira em nenhuma `FreeZones[i]` |
+> | 2 | `Overlap` | a caixa intersecta a caixa de outra torre **posicionada** (exceto `ignoreId`); encostar não conta |
+> | — | `None` | válido |
+>
+> Largura da caixa (44), margens e limite de 24 torres: **DP-33.3, aceita**. A âncora é decidida no comando (`Start` se `x < Width/2`, senão `End`; DP-33.2). Não há `y`: a altura é do render.
+>
+> **Histórico (ADR-020):** **Substituído por SDD-21 RF-21.7, SDD-22 e SDD-27 RF-27.5 (ADR-020).** Não há posição livre `(x, y)`: a torre ocupa um **slot** (botão da barra ou slot virtual); `BuildTower(type, slot)` só exige slot livre, torre desbloqueada e créditos. Saem os motivos `OutOfField`, `Road`, `Core`, `Entry`, `Reserved` e `Overlap` e a função `CoversRoad`. O texto abaixo é histórico.
 
 | Ordem | Motivo | Regra (unidades de mundo) |
 |---|---|---|
@@ -206,12 +220,14 @@ Pré-condição comum: `RunState == InStage` e `phase == Wave`, salvo indicaçã
 
 | Comando | Validações (em ordem) | Efeito | Eventos |
 |---|---|---|---|
-| `BuildTower(type, slot)` | slot existe e está livre; torre desbloqueada; `credits ≥ ceil(base × 1,5^n)` (`n` = torres existentes) | debita; cria a torre `Level=1`, `SlotIndex=slot`, `Mode=First` | `TowerBuilt` |
+| `BuildTower(type, x)` (ADR-034; antes `BuildTower(type, slot)`) | `PlacementValidator` = `None` (`OutOfZone`/`Overlap`); torres < 24 (`TowerLimit`, DP-33.3); torre desbloqueada; `credits ≥ ceil(base × 1,5^n)` (`n` = torres existentes, inclusive `SEM POSIÇÃO`) | debita; cria a torre `Level=1`, `Anchor`/`OffsetDip` pela regra de RF-11.9, `Placed=true`, `Mode=First` | `TowerBuilt` |
+| `PlaceTower(id, x)` (ADR-034, **DP-33.1, aceita**) | existe; `Placed == false` (`NotUnpositioned`); `PlacementValidator(x, ignoreId=id)` = `None` | sem custo; nova âncora/deslocamento; `Placed=true` | `TowerPlaced` |
+| `AutoPlaceUnpositioned()` (ADR-034, **DP-33.7, aceita**, só migração) | `migratedSlots` pendente no estado | para cada torre `SEM POSIÇÃO` em ordem de `Id`, a primeira posição válida varrendo as `FreeZones` da esquerda para a direita em passos de 44 DIP a partir de `X0 + 22`; limpa a pendência | `TowerPlaced` por torre |
 | `UpgradeTower(id)` | existe; `Level < 999`; `credits ≥ ceil((base × 1,2) × 1,18^(L−1))` | SDD-27 RF-27.5 | `TowerUpgraded` |
 | ~~`SellTower(id)`~~ | **removido** (DP-27.3) | — | — |
 | `SetTargeting(id, mode)` | existe (vale também com o jogo pausado) | muda o modo | — |
 | ~~`StartWave()`~~ | **removido** (ondas automáticas, SDD-27 RF-27.7) | — | — |
-| `LayoutChanged(layout)` | layout válido (`SpawnX > LeakX`, slots ≤ 12) | substitui o `StripLayout` entre ticks (RF-11.3) | `LayoutChanged` |
+| `LayoutChanged(layout)` | layout válido (`SpawnX > LeakX`, `FreeZones` ≤ 8, ordenadas e disjuntas; antes "slots ≤ 12") | substitui o `StripLayout` entre ticks e reavalia as torres (RF-11.3) | `LayoutChanged` |
 | comandos de SDD-26 RF-26.15 | estado Presente e evento ativo | pico, chefe, caixa | eventos de SDD-26 |
 
 Resultado: `CommandResult(Status, Reason, Missing)`, em que `Missing` são os créditos que faltam.
@@ -224,7 +240,7 @@ Resultado: `CommandResult(Status, Reason, Missing)`, em que `Missing` são os cr
 
 ### RF-11.12: `StateHash`
 
-- FNV-1a 64 sobre: `tick`, `phase`, `wave`, `credits`, `carry`, `reservas`, `xp`, `level`, `baseHp`, `maxBaseHp`, **o layout da faixa (`StripLayout`: `SpawnX`, `LeakX`, `CoreX`, `PortalX`, contagem e `SlotX[]`; ADR-026)** e, em ordem de `Id`, os campos de cada torre (inclui `SlotIndex`) e inimigo (floats pelos **bits**, `BitConverter.SingleToInt32Bits`; `double` por `DoubleToInt64Bits`). Inclui também o estado do `WaveSystem` (agenda restante, `PeakQueue`, `waveClock`, `rest`), o estado de SDD-26 (eventos, ledger) e o `Rng`. (Não há projéteis.)
+- FNV-1a 64 sobre: `tick`, `phase`, `wave`, `credits`, `carry`, `reservas`, `xp`, `level`, `baseHp`, `maxBaseHp`, **o layout da faixa (`StripLayout`: `Width`, `SpawnX`, `LeakX`, `CoreX`, `PortalX`, `Host`, contagem e `FreeZones[]`; ADR-026/ADR-034; antes contagem e `SlotX[]`)**, a pendência `migratedSlots` (DP-33.7) e, em ordem de `Id`, os campos de cada torre (inclui `SlotIndex`) e inimigo (floats pelos **bits**, `BitConverter.SingleToInt32Bits`; `double` por `DoubleToInt64Bits`). Inclui também o estado do `WaveSystem` (agenda restante, `PeakQueue`, `waveClock`, `rest`), o estado de SDD-26 (eventos, ledger) e o `Rng`. (Não há projéteis.)
 - Usado em testes, replay, verificação de save e restore (SDD-14) e RNF-07.4.
 
 ### RF-11.13: `Rng`
@@ -242,7 +258,7 @@ Resultado: `CommandResult(Status, Reason, Missing)`, em que `Missing` são os cr
 ## 7. Estratégia de implementação
 
 1. `Handle`, stores e testes de free list e geração.
-2. `StripLayout` e o comando `LayoutChanged` com testes (conversão de slots, `PathLength`, efeito em torres e inimigos).
+2. `StripLayout` e o comando `LayoutChanged` com testes (zonas livres e reavaliação das torres por `Id`, ADR-034; `PathLength`, efeito em torres e inimigos).
 3. Sistemas na ordem do tick (RF-11.4 vigente), um por arquivo, cada um com testes unitários de cenário mínimo.
 4. Comandos e resultados (RF-11.10 vigente).
 5. `StateHash`, replay determinístico e benchmarks.
@@ -250,7 +266,7 @@ Resultado: `CommandResult(Status, Reason, Missing)`, em que `Missing` são os cr
 
 ## 8. Dependências
 
-SDD-10 (passo e fases) e SDD-12 (formato do conteúdo). SDD-27 fornece a economia (créditos, XP, níveis, fases) como interface `IEconomy` e os números de torres, inimigos e ondas; nesta etapa, um *stub* com as fórmulas de SDD-27 já basta. SDD-21 e SDD-22 fornecem o `SlotMap` e a geometria 1D; SDD-25 e SDD-26 consomem o estado.
+SDD-10 (passo e fases) e SDD-12 (formato do conteúdo). SDD-27 fornece a economia (créditos, XP, níveis, fases) como interface `IEconomy` e os números de torres, inimigos e ondas; nesta etapa, um *stub* com as fórmulas de SDD-27 já basta. SDD-21 e SDD-22 fornecem o `BuildZoneMap` (ADR-034; antes `SlotMap`) e a geometria 1D; SDD-25 e SDD-26 consomem o estado.
 
 ## 9. Critérios de aceitação
 
@@ -266,13 +282,14 @@ SDD-10 (passo e fases) e SDD-12 (formato do conteúdo). SDD-27 fornece a economi
 | T-11.1 | Bolt com 3 acertos: o 3º dá dano ×2 (contador por torre; só acertos reais) |
 | T-11.2 | Frost: lentidão (fator 0,65) cumulativa até o piso de 45% da `SpawnSpeed`; chilled dá +25% em Bolt e Cannon e 0% no Frost |
 | T-11.3 | Cannon: área de raio 36 DIP com fator 0,6; metade do dano em runner; armadura aplicada a cada alvo; dano mínimo 1 |
-| T-11.4 | Mira 1D: os 4 modos e desempates (menor `X` = primeiro), alcance em slots |
+| T-11.4 | Mira 1D: os 4 modos e desempates (menor `X` = primeiro), alcance em células de 48 DIP a partir do X da torre (âncora) |
 | T-11.5 | Acerto instantâneo: o dano é aplicado no tick do disparo; alvo morto no mesmo tick não é candidato; pico ×3 multiplica o dano |
 | T-11.6 | Limite de 44 inimigos: spawn adiado e retomado |
 | T-11.7 | Vazamento em `X ≤ LeakX`: dano ao núcleo; queda exatamente quando o HP chega a 0, com recuo de 5 ondas e núcleo restaurado |
 | T-11.8 | Fim de onda: a próxima começa sozinha após 1,4 s (42 ticks) de campo vazio |
 | T-11.9 | Comandos: cada validação da tabela RF-11.10 vigente e o `Missing` correto; `SellTower` e `StartWave` inexistentes |
-| T-11.10 | `LayoutChanged`: aplicado só entre ticks; entra no hash; torre `SEM SLOT`; `PathLength`; slots ≤ 12 |
+| T-11.10 | `LayoutChanged` (ADR-034): aplicado só entre ticks; entra no hash; reavaliação por `Id`; `SEM POSIÇÃO` e retorno; `PathLength`; zonas ≤ 8 |
+| T-11.13 | `PlacementValidator` 1D, `BuildTower(type, x)` (âncora, `OutOfZone`, `Overlap`, `TowerLimit`), `PlaceTower`, `AutoPlaceUnpositioned`; cada campo novo muda o `StateHash` (ADR-034) |
 | T-11.11 | Handles: geração inválida após remoção e reutilização de slot |
 | T-11.12 | Stress: 10 000 ticks com spawn máximo e sem alocação |
 | T-11.13 | Replay e hash (CA-11.2) |

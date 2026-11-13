@@ -1,6 +1,8 @@
 # SDD-24: Painel de 4 abas e cards (pergunta do chefe e "Bem-vindo de volta")
 
-**Status:** Rascunho para revisão · **Etapa:** E5 · **Depende de:** SDD-20, SDD-23 · **Bloqueia:** SDD-25, SDD-26 (visuais)
+**Status:** Rascunho para revisão (rev. ADR-034) · **Etapa:** E5 · **Depende de:** SDD-20, SDD-23 · **Bloqueia:** SDD-25, SDD-26 (visuais)
+
+> **Revisada por ADR-034 (2026-11-13).** O Arsenal passa a ser a **origem do modo construção** (arrastar a torre para um espaço livre da barra; clique posiciona; ESC cancela; SDD-22 RF-22.11, SDD-15 RF-15.3), ganha o **cartão de ajuda** do canvas e mantém o toggle de auto-escala; o mapeamento torre → serviço Azure é o do `Main.dc.html`. Sai a linha "construir em slot vazio" e `SEM SLOT` vira `SEM POSIÇÃO` (com `REPOSICIONAR`, DP-33.1). O painel passa a ficar **à direita** (`Main.dc.html`: `right 132`, `bottom 160` em 1920×1080). `OpenArsenal(slotIndex)` vira `OpenArsenal(towerId)`.
 
 ## 1. Identificador e título
 
@@ -16,7 +18,7 @@ Dar ao jogador as telas de gestão do idle (melhorar torres, acompanhar a campan
 - **ADR-018 / SDD-20:** o design é oficial e **todo valor visual vem de SDD-20 por nome de token** (`bg-painel`, `ambar`, `esp-12` etc.). Os valores em DIP que **não** são token (tamanhos de linha, larguras de botão, alturas de barra) foram **transcritos** de `Main.dc.html`, `Presence.dc.html` e `Offline.dc.html` e são citados aqui como número. Hex só aparece nesta ficha quando o design usa um valor que **não existe** como token (nenhum caso hoje).
 - **ADR-019/022:** idle; o card de retorno vem de SDD-25; o comportamento de jogo (custos, ondas, missões, perguntas) é de SDD-25/26/27. **Aqui só visual, layout, estados, hit-test, render e hover.**
 - **SDD-23 RF-23.8/23.10:** o widget emite `PanelCommand.ToggleTab(tab)` e informa badge e aba ativa; o z-order é reafirmado na ordem faixa, widget, painel e cards.
-- **SDD-22 RF-22.3:** clicar em torre ou slot vazio emite `OpenArsenal(slotIndex)`; o painel abre o Arsenal focado nesse slot.
+- **SDD-22 RF-22.3 (ADR-034):** clicar numa torre emite `OpenArsenal(towerId)`; o painel abre o Arsenal focado nessa torre. *(Histórico: `OpenArsenal(slotIndex)`, também em slot vazio.)* O modo construção (SDD-22 RF-22.11) começa no Arsenal.
 - **SDD-04 RF-04.4/04.6:** alfa ≥ 1 recebe clique, alfa 0 atravessa. Painel e cards são **sempre clicáveis** (`WS_EX_TRANSPARENT` nunca aplicado), independente do modo Passivo da faixa.
 - **SDD-08:** `LayeredSurface`, zero alocação por frame, sem blur, sem `SKImageFilter`, retângulos sem antialias. **SDD-10 `RenderPolicy`:** render só em mudança.
 - **Unidades:** 1 CSS px do design = 1 DIP; px físico = `round(DIP × dpi/96)` (SDD-05, SDD-20). Todas as coordenadas abaixo são DIP a 100 %.
@@ -33,7 +35,7 @@ Dar ao jogador as telas de gestão do idle (melhorar torres, acompanhar a campan
 - regras de custo, dano, ondas, missões, prestígio, regiões e formatação numérica (SDD-27);
 - presença, multiplicadores, auto-escala, cálculo offline, pendências e regras do card de retorno (SDD-25);
 - agendamento, sorteio, ledger, tempo e efeito da pergunta do chefe (SDD-26);
-- geometria da barra e slots (SDD-21), faixa, banners e caixas (SDD-22), widget e nav (SDD-23);
+- geometria da barra e zonas de construção (SDD-21), cena, overlay do modo construção, banners e caixas (SDD-22), widget e nav (SDD-23);
 - tokens, tipografia, ícones e animações (SDD-20), sprites (SDD-09);
 - as janelas WPF Configurações e Sobre.
 
@@ -68,11 +70,11 @@ Três classes de janela, todas na T-Game, top-level, **sem owner**, criadas no p
 
 **Sombra dura** (SDD-20 RF-20.4): retângulo preenchido, do tamanho da caixa visível, deslocado **(+6, +6) DIP**, desenhado **antes** do corpo, sem blur. Cor `sombra-painel` (painel) e `sombra-card` (os dois cards). A janela tem **6 DIP de margem à direita e embaixo** (tabela de RF-24.1); a caixa visível não muda. Tamanho físico da sombra = `round(6 × dpi/96)`; tamanho físico da janela = `round(largura × s) + round(6 × s)` por eixo, com `s = dpi/96`, arredondado **uma vez por layout**.
 
-**Referência vertical:** `stripTop` = topo da faixa de 96 DIP (`SceneLayout.Compute`, SDD-22 RF-22.1, já com a margem de 2 px da ocultação automática). No design, o painel e os cards ficam com a base da caixa visível **8 DIP acima do topo da faixa** (painel: `bottom 152` = 144 da faixa+barra + 8; card de pergunta: contêiner de 250 para caixa de 242).
+**Referência vertical:** `stripTop` = topo da janela de cena (`SceneLayout.Compute`, SDD-22 RF-22.1, já com a margem de 2 px da ocultação automática). **ADR-034:** com a cena de 104 DIP sobre a barra, `stripTop` fica 104 DIP acima do topo da barra; no `Main.dc.html` (1080 de altura, composição de 152) o painel tem `bottom 160` = 152 + 8, o que confirma a regra `stripTop − 8`. No design, o painel e os cards ficam com a base da caixa visível **8 DIP acima do topo da faixa** (painel: `bottom 152` = 144 da faixa+barra + 8; card de pergunta: contêiner de 250 para caixa de 242).
 
 | Janela | Posição (caixa visível) |
 |---|---|
-| Painel | `left = WorkArea.Left + 16 DIP`; `bottom = stripTop − 8 DIP` |
+| Painel | **ADR-034:** `left = faixa.Left + W − 132 − 400` (borda direita a 132 DIP da borda direita da faixa, como `right 132` do `Main.dc.html`); `bottom = stripTop − 8 DIP`. *(Histórico: `left = WorkArea.Left + 16 DIP`.)* |
 | Card de pergunta | centralizado horizontalmente na faixa: `left = faixa.Left + (W − 520)/2` DIP; `bottom = stripTop − 8 DIP` |
 | Card de retorno | centralizado horizontalmente: `left = faixa.Left + (W − 472)/2`; `bottom = stripTop − 8 DIP` |
 
@@ -100,7 +102,7 @@ Caixa 400 × 548, `box-sizing: border-box`.
 - O conteúdo rola dentro do viewport (RF-24.4); tudo fora de `y ∈ [55, 546)` é **recortado** (clip) e **não é clicável** (RF-24.11).
 - A aba é uma coluna: `flex-direction: column`. As alturas das linhas dependem da métrica de linha "normal" das fontes (`TextCache`); a altura total do conteúdo é calculada por `PanelLayout` (função pura, Runtime) a cada mudança de dados e de escala, **não por frame**. Alturas fixas conhecidas: linha de torre **74** (10 + 52 + 10 + borda 2), linha de fase mínima **44**, botões conforme RF-24.5 a RF-24.8.
 - Trocar de aba: rola para o topo (offset 0); o painel mantém o offset enquanto a mesma aba estiver aberta.
-- Comandos de entrada do painel: `PanelCommand.ToggleTab(tab)` (SDD-23), `OpenArsenal(slotIndex)` (SDD-22), `Close`. O painel informa ao widget a aba ativa (e ao fechar, "nenhuma"). Fechar no botão ou por `ToggleTab` da aba ativa; **clicar fora do painel não fecha** (o clique atravessa; sem foco não há "perder foco").
+- Comandos de entrada do painel: `PanelCommand.ToggleTab(tab)` (SDD-23), `OpenArsenal(towerId)` (SDD-22; ADR-034, antes `OpenArsenal(slotIndex)`), `Close`. O painel informa ao widget a aba ativa (e ao fechar, "nenhuma"). Fechar no botão ou por `ToggleTab` da aba ativa; **clicar fora do painel não fecha** (o clique atravessa; sem foco não há "perder foco").
 
 ### RF-24.4: Rolagem do corpo
 
@@ -112,6 +114,8 @@ Caixa 400 × 548, `box-sizing: border-box`.
 - Sem inércia, sem animação de rolagem: salto direto ao offset.
 
 ### RF-24.5: Aba Arsenal
+
+> **ADR-034:** ordem vertical vigente, gap `esp-10`: 5.1 card de auto-escala (com o toggle, inalterado) → **5.1b cartão de ajuda** (novo) → 5.2 linhas de torre (com o **ícone arrastável**, 5.2b) → 5.3 linhas `SEM POSIÇÃO`. A seção 5.4 ("construir em slot vazio") fica **obsoleta**. Mapeamento torre → serviço Azure (do `Main.dc.html`, inalterado): Raio = `Máquina Virtual (Azure VM)`, Gelo = `WAF no Application Gateway`, Canhão = `Azure DDoS Protection`, Scale Set = `VM Scale Sets`.
 
 Ordem vertical, gap `esp-10`:
 
@@ -127,6 +131,8 @@ Ordem vertical, gap `esp-10`:
 
 - O toggle ligado/desligado vem de `autoScaleOn` (SDD-25 RF-25.5, padrão ligado). Clique no toggle emite `SetAutoScale(bool)`. **O estado desligado não está no design** (DP-24.6): proposta de caixa 20×20 com borda 1 `txt-rotulo`, sem preenchimento, texto `OFF` em `txt-rotulo`.
 - Área de clique ≥ 44 × 44 (largura natural ≈ 42 estendida a 44; SDD-20 RF-20.4).
+
+**5.1b Cartão de ajuda (ADR-034, transcrito do `Main.dc.html`)** (largura 364): `padding 10 12`, fundo `#0f2a2a` (= `bg` do card de presença de Missões), borda **1 DIP** `#2f7a62`, JetBrains Mono **11**, cor `#b8d8cc`, line-height **1,45**, texto (em `Strings`): `Arraste uma torre para um espaço livre dentro da barra de tarefas, ao lado dos ícones. Ícones, pesquisa, widget e relógio ficam bloqueados; acima da barra é a rota dos inimigos.` Sem alvo de clique (é `Background`).
 
 **5.2 Linha de torre** (uma por torre desbloqueada na ordem do catálogo: Raio, Gelo, Canhão, Scale Set; largura 364): padding `10 12`, gap `esp-12`, itens centralizados; fundo `bg-item`, borda **1 DIP** `borda-painel`; opacidade da linha inteira = `1` (normal) ou **0,45** (bloqueada).
 
@@ -152,11 +158,22 @@ Texto por torre (transcrito do design; números são exemplos, valores vêm de S
 
 - O **custo** é o da próxima melhoria (SDD-27 RF-27.5), formatado por `CreditFormatter` (SDD-27 RF-27.2); o nível e as estatísticas também (SDD-27). A estatística do Scale Set não está no design (DP-24.5).
 - Clique em MELHORAR (mouse down e up no mesmo botão) emite `UpgradeTower(id)` (SDD-27 RF-27.5). **Sem créditos suficientes**, o design não define estado (todos os botões do design são `ambar`): proposta em DP-24.3.
-- Linha de torre não é clicável fora do botão.
+- Linha de torre não é clicável fora do botão **e do ícone** (5.2b).
 
-**5.3 Linha "SEM SLOT"** (SDD-21 RF-21.8): torre com `slotIndex ≥ contagemDeSlots`; **não existe no design** (DP-24.4). Mesmo layout da linha de torre, com o selo `SEM SLOT` no lugar do nível (JetBrains Mono 10, `txt-widget-rotulo`), linha com opacidade **0,45** e botão no estilo do botão bloqueado com rótulo `SEM SLOT` (sem custo, sem hover, sem clique): a torre não é vendida nem perdida e volta ao slot sozinha quando o slot reaparecer. Ordem: após as torres com slot.
+**5.2b Ícone arrastável e modo construção (ADR-034).** O quadro do ícone (52 × 52) de cada linha de torre **desbloqueada** é a origem do modo construção (SDD-15 RF-15.3, SDD-22 RF-22.11):
 
-**5.4 Linha "construir em slot vazio"** (SDD-22 RF-22.3, SDD-27 RF-27.5): **não existe no design** (DP-24.5). Quando o Arsenal é aberto por `OpenArsenal(slotIndex)` com um slot **vazio**, o corpo começa com o rótulo `CONSTRUIR NO SLOT {n}` (JetBrains Mono **10**, `txt-rotulo`, letter-spacing **1**, como o rótulo `MISSÕES DE HOJE`) seguido de **uma linha por torre desbloqueada**, com o mesmo layout da linha de torre, nome/tema/estatísticas do nível 1, e botão **84 × 44** `ambar` com rótulo `CONSTRUIR` e o custo (`ceil(base × 1,5^n)`, SDD-27 RF-27.5). Clique emite `BuildTower(type, slotIndex)`. Sem foco em slot vazio, nenhuma linha de construir é mostrada (DP-24.5). Com `OpenArsenal` em torre existente, a linha da torre fica visível (rolagem automática até ela, uma vez, ao abrir).
+- `WM_LBUTTONDOWN` no ícone → `SetCapture`; deslocamento > 6 px físicos → **arrastar** (o fantasma segue o cursor sobre a barra; soltar em posição válida emite `BuildTower(type, x)`; soltar em posição inválida ou fora da barra continua no modo, com o fantasma, até clique, ESC ou clique direito);
+- soltar sem passar do limiar → **armar** (o fantasma segue o cursor; o próximo clique esquerdo na barra posiciona);
+- cursor de mão sobre o ícone; o ícone do tipo em construção ganha a borda 2 DIP `#5cf0b0` enquanto o modo dura;
+- custo exibido na dica do fantasma = custo de construção (`ceil(base × 1,5^n)`, SDD-27 RF-27.5); sem créditos, o modo **não** inicia e vale DP-24.3;
+- ícone de torre bloqueada (Scale Set antes da fase 09) e de qualquer linha com o limite de 24 torres atingido (DP-33.3): sem arraste, cursor seta;
+- o painel **continua aberto** durante o modo (o canvas mostra o painel aberto); os cliques no painel durante o modo cancelam o modo (Aceita (Tech Lead, 2026-11-13); sem estado no design).
+
+**5.3 Linha "SEM POSIÇÃO"** (ADR-034, SDD-21 RF-21.8; antes "SEM SLOT"): torre cuja caixa não cabe mais numa zona livre; **não existe no design** (DP-24.4). Mesmo layout da linha de torre, com o selo `SEM POSIÇÃO` no lugar do nível (JetBrains Mono 10, `txt-widget-rotulo`), linha com opacidade **0,45** e botão **`REPOSICIONAR`** 84 × 44 no estilo `ambar` (sem custo): o clique inicia o modo construção para **esta** torre e o posicionamento emite `PlaceTower(id, x)` (**DP-33.1, aceita**; o botão fica no estilo bloqueado com o rótulo `SEM POSIÇÃO`, sem clique). A torre não é vendida nem perdida e volta sozinha quando o espaço reaparecer. Ordem: após as torres posicionadas.
+
+*(Histórico, ADR-020: linha "SEM SLOT" para `slotIndex ≥ contagemDeSlots`, botão bloqueado `SEM SLOT`.)*
+
+**5.4 ~~Linha "construir em slot vazio"~~ (obsoleta por ADR-034: construir é pelo modo construção, 5.2b).** Histórico: (SDD-22 RF-22.3, SDD-27 RF-27.5): **não existe no design** (DP-24.5). Quando o Arsenal é aberto por `OpenArsenal(slotIndex)` com um slot **vazio**, o corpo começa com o rótulo `CONSTRUIR NO SLOT {n}` (JetBrains Mono **10**, `txt-rotulo`, letter-spacing **1**, como o rótulo `MISSÕES DE HOJE`) seguido de **uma linha por torre desbloqueada**, com o mesmo layout da linha de torre, nome/tema/estatísticas do nível 1, e botão **84 × 44** `ambar` com rótulo `CONSTRUIR` e o custo (`ceil(base × 1,5^n)`, SDD-27 RF-27.5). Clique emite `BuildTower(type, slotIndex)`. Sem foco em slot vazio, nenhuma linha de construir é mostrada (DP-24.5). Com `OpenArsenal` em torre existente, a linha da torre fica visível (rolagem automática até ela, uma vez, ao abrir).
 
 ### RF-24.6: Aba Campanha
 
@@ -325,7 +342,7 @@ Caixa **472 × 612** (o quadro do design tem 520 × 660 com padding 24 e fundo `
 ### RF-24.11: Hit-test, cursores e interação
 
 - **Alvo de clique:** a tabela de retângulos de cada janela é calculada pelo `PanelLayout`/`CardLayout` (funções puras, sem alocação por clique); `WM_LBUTTONDOWN` registra o alvo e `WM_LBUTTONUP` no **mesmo** alvo dispara o comando (padrão de SDD-23 RF-23.8). Alvos do corpo do painel são **recortados** pelo viewport (RF-24.3): um botão parcialmente rolado para fora só responde na parte visível.
-- **Alvos (enum `PanelHit`/`CardHit`):** `Close`, `ScrollThumb`, `ScrollTrack`, `AutoScaleToggle`, `UpgradeTower(id)`, `BuildTower(type)`, `MissionCollect(id)`, `RegionRow(i)`, `Migrate`, `QuestionOption(i)`, `QuestionMinimize`, `QuestionClose`, `OfflineCollectX2`, `OfflineCollect`, `Background`.
+- **Alvos (enum `PanelHit`/`CardHit`):** `Close`, `ScrollThumb`, `ScrollTrack`, `AutoScaleToggle`, `UpgradeTower(id)`, **`TowerIcon(type)`** (origem do modo construção, ADR-034), **`Reposition(id)`** (DP-33.1), ~~`BuildTower(type)`~~ (obsoleto: a construção é emitida pelo overlay da cena), `MissionCollect(id)`, `RegionRow(i)`, `Migrate`, `QuestionOption(i)`, `QuestionMinimize`, `QuestionClose`, `OfflineCollectX2`, `OfflineCollect`, `Background`.
 - **Fundo e sombra:** qualquer ponto da janela com alfa ≥ 1 (inclui a **sombra**, alfa de `sombra-painel` ≈ 89) **consome** o clique e não o repassa ao app de baixo; fora de alvo é `Background` (sem ação). `HTTRANSPARENT` não resolve entre processos (DP-24.13). A margem de 6 DIP da sombra, portanto, é uma faixa morta.
 - **Alvo mínimo 44 × 44** (SDD-20 RF-20.4): fechar 44×44, toggle 44, MELHORAR 84×44, COLETAR 72×44, linha de fase e opção de resposta `min-height 44`, MIGRAR 48, COLETAR ×2 52, COLETAR +X 44, minimizar 44×44.
 - **Cursores** (`WM_SETCURSOR`, retorna TRUE): mão (`IDC_HAND`) sobre botões, toggle, opções habilitadas, região selecionável e polegar/trilho; seta nos demais; seta sobre botões bloqueados e opções desabilitadas.
@@ -342,7 +359,7 @@ O design só define hover nos botões com a classe `ad-act`: `filter: brightness
 |---|---|---|
 | MELHORAR, CONSTRUIR, COLETAR (missão) | `ambar` | `ambar-hover` |
 | MIGRAR | `prestigio` | `prestigio-hover` |
-| Botão bloqueado (`FASE 09`, `SEM SLOT`) | `bg-trilho` | **sem hover** (no design a classe `ad-act` também o afeta; esta ficha o desliga, DP-24.14) |
+| Botão bloqueado (`FASE 09`, `SEM POSIÇÃO`, DP-33.1 aceita; antes `SEM SLOT`) | `bg-trilho` | **sem hover** (no design a classe `ad-act` também o afeta; esta ficha o desliga, DP-24.14) |
 
 - **Sem hover no design:** fechar, toggle, opções de resposta, COLETAR ×2 e COLETAR +X do card de retorno, minimizar. **Não inventar:** ficam sem hover (DP-24.14 propõe `ambar-hover` em COLETAR ×2).
 - **Pressionado, desabilitado, foco:** inexistentes no design (SDD-20 seção final). Pressionado usa o estado de hover (padrão de DP-23.7).
@@ -393,15 +410,15 @@ Todas as metas são **não comprovadas** até haver medição em `specs/evidenci
 
 ## 8. Dependências
 
-SDD-20 (tokens, tipografia, ícones), SDD-23 (widget: `PanelCommand`, aba ativa, badge), SDD-08 (superfície), SDD-09 (sprites), SDD-03/04 (janela, não ativação, alfa), SDD-10 (`RenderPolicy`, deadlines), SDD-22 (faixa: `stripTop`, `OpenArsenal`, banners), SDD-21 (slots e `SEM SLOT`), SDD-27 (números e textos), SDD-25 e SDD-26 (comportamento dos cards). Consumidores: SDD-25 (card e badge) e SDD-26 (card de pergunta).
+SDD-20 (tokens, tipografia, ícones), SDD-23 (widget: `PanelCommand`, aba ativa, badge), SDD-08 (superfície), SDD-09 (sprites), SDD-03/04 (janela, não ativação, alfa), SDD-10 (`RenderPolicy`, deadlines), SDD-22 (faixa: `stripTop`, `OpenArsenal`, banners), SDD-21 (zonas de construção e `SEM POSIÇÃO`, ADR-034; antes slots e `SEM SLOT`), SDD-27 (números e textos), SDD-25 e SDD-26 (comportamento dos cards). Consumidores: SDD-25 (card e badge) e SDD-26 (card de pergunta).
 
 ## 9. Critérios de aceitação
 
 - **CA-24.1:** As três janelas têm `LAYERED|TOOLWINDOW|NOACTIVATE|TOPMOST`, **não** têm `TRANSPARENT` nem owner, e `WM_MOUSEACTIVATE` retorna `MA_NOACTIVATE` (T-24.1).
 - **CA-24.2:** Com o Bloco de Notas em foco digitando, 100 cliques no painel (cabeçalho, linhas, botões, sombra) e nos cards não mudam `GetForegroundWindow()` e o texto continua no Bloco de Notas (T-24.2; MTC-24.2).
-- **CA-24.3:** Geometria: painel 400×548 (janela 406×554), `left = WorkArea.Left + 16`, base = `stripTop − 8`; card de pergunta 520×242 e de retorno 472×612, centralizados e com base em `stripTop − 8`; sombra (+6,+6) DIP; em 100/125/150/175/200 % (T-24.3 por tabela; MTC-24.1).
+- **CA-24.3:** Geometria: painel 400×548 (janela 406×554), **ADR-034:** `left = faixa.Left + W − 532` (antes `WorkArea.Left + 16`), base = `stripTop − 8`; card de pergunta 520×242 e de retorno 472×612, centralizados e com base em `stripTop − 8`; sombra (+6,+6) DIP; em 100/125/150/175/200 % (T-24.3 por tabela; MTC-24.1).
 - **CA-24.4:** Cabeçalho do painel: título Silkscreen 14, letter-spacing 1, `ambar`; fechar 44×44; filete 1 DIP `borda-painel`; viewport 396×491 (T-24.4).
-- **CA-24.5:** Arsenal: card de auto-escala; linhas de torre (52×52 de slot, MELHORAR 84×44, opacidade 0,45 na bloqueada); linha `SEM SLOT`; linha de construir em slot vazio; valores de RF-24.5 (T-24.4, golden sem texto + bounding boxes).
+- **CA-24.5 (ADR-034):** Arsenal: card de auto-escala com toggle; cartão de ajuda (5.1b); linhas de torre (52×52 de ícone, MELHORAR 84×44, opacidade 0,45 na bloqueada); linha `SEM POSIÇÃO` com `REPOSICIONAR`; valores de RF-24.5 (T-24.4, golden sem texto + bounding boxes). Arrastar e clicar no ícone iniciam o modo construção com o tipo certo; sem créditos ou no limite de torres, não iniciam (T-24.15).
 - **CA-24.6:** Campanha: card da fase (barra de 8 DIP, `Chefe na onda X · tema Y`) e lista com estrelas e `BLOQ.` a 0,55 (T-24.4).
 - **CA-24.7:** Missões: card de presença com 3 faixas e a atual destacada em `menta`; linhas com barra de 5 DIP; COLETAR 72×44 só em missão concluída não coletada (T-24.4, T-24.5).
 - **CA-24.8:** Migrar: card roxo, 2 tiles, regiões, botão MIGRAR de 48 DIP; primeiro clique arma por 5 s e **não** emite `Migrate`; segundo clique em ≤ 5 s emite `Migrate`; 5 s sem clique, troca de aba, fechar ou clique fora do botão desarma (T-24.6 com `FakeClock`).
@@ -432,6 +449,7 @@ SDD-20 (tokens, tipografia, ícones), SDD-23 (widget: `PanelCommand`, aba ativa,
 | T-24.12 | Hover: tabela de botões e cores | Linux |
 | T-24.13 | Clique na sombra consumido (`WindowFromPoint`, `SendInput`) | WindowsInteractive |
 | T-24.14 | Z-order: faixa, widget, painel, cards após clique em `Shell_TrayWnd` | WindowsInteractive |
+| T-24.15 | Ícone arrastável (ADR-034): limiar de 6 px, armar × arrastar, captura, bloqueios por crédito/limite/fase, `REPOSICIONAR` | Linux |
 | MTC-24.1 | Comparar painel e cards lado a lado com o artefato (100/150/200 %); medir alturas de linha com os TTF reais | Manual |
 | MTC-24.2 | Digitar no VS Code e clicar no painel e nos cards | Manual |
 | MTC-24.3 | Roda do mouse sobre o painel com a opção "rolar janelas inativas" ligada e **desligada**; barra arrastável nos dois casos | Manual |
@@ -460,8 +478,8 @@ SDD-20 (tokens, tipografia, ícones), SDD-23 (widget: `PanelCommand`, aba ativa,
 | DP-24.1 | Rolagem por roda depende da opção "rolar janelas inativas" do Windows; passo de rolagem não está no design; roda não conta como interação | Passo de 40 DIP por detente; detectar a opção (`SPI_GETMOUSEWHEELROUTING`, a confirmar); barra sempre visível se desligada. Alternativa não recomendada: Raw Input com `RIDEV_INPUTSINK` ou hook de baixo nível apenas com o cursor sobre o painel | RF-24.4 |
 | DP-24.2 | A barra de rolagem não existe no design (barra nativa do navegador) | Trilho 8 DIP `bg-trilho`, polegar `txt-rotulo`, hover `txt-secundario`, polegar ≥ 44 DIP, área de clique 16 DIP | RF-24.4 |
 | DP-24.3 | MELHORAR/CONSTRUIR **sem créditos suficientes**: o design só tem o botão `ambar` | Sem estado novo: botão `ambar` normal e o clique devolve `NotAvailable` sem efeito; alternativa: estilo do botão bloqueado (`bg-trilho`/`txt-rotulo`, sem opacidade) enquanto faltar crédito, com a versão do modelo sobrescrita a ≤ 2 Hz | RF-24.5 |
-| DP-24.4 | Linha **SEM SLOT** não existe no design (SDD-21 RF-21.8 só manda o selo) | Layout da torre, opacidade 0,45, botão no estilo bloqueado com `SEM SLOT`; melhorar uma torre sem slot **não** é permitido | RF-24.5 |
-| DP-24.5 | Linha de **construir** em slot vazio não existe no design; Scale Set sem estatística no design | Ao abrir por slot vazio, uma linha por torre desbloqueada com `CONSTRUIR` + custo; sem foco, nenhuma linha de construir; estatística do Scale Set por analogia (`Dano · Alc · Cad`) | RF-24.5, SDD-22 |
+| DP-24.4 | Linha **SEM POSIÇÃO** (antes SEM SLOT) não existe no design | Layout da torre, opacidade 0,45; **ADR-034:** botão `REPOSICIONAR` (DP-33.1); melhorar uma torre sem posição **não** é permitido | RF-24.5 |
+| DP-24.5 | ~~Linha de construir em slot vazio~~ **Obsoleta por ADR-034** (modo construção). Continua: Scale Set sem estatística no design | Estatística do Scale Set por analogia (`Dano · Alc · Cad`) | RF-24.5 |
 | DP-24.6 | Estado **desligado** do toggle e a marca de seleção da caixa (nativa no design) | OFF: caixa com borda `txt-rotulo` e texto `OFF`; marca em `bg-trilho-fundo` | RF-24.5 |
 | DP-24.7 | Recompensa em renda: SDD-27 diz `10 min de renda`, o design mostra `+12K créditos`; missão coletada não está no design | Exibir `+10 min de renda`; missão coletada: barra cheia, sem botão e linha de progresso `COLETADA` em `menta` | RF-24.7, SDD-27 |
 | DP-24.8 | Faixa de bônus destacada em Ausente/Offline (×0,25) | Nenhuma faixa destacada; título com o multiplicador atual em `txt-widget-rotulo` | RF-24.7 |
@@ -476,4 +494,4 @@ SDD-20 (tokens, tipografia, ícones), SDD-23 (widget: `PanelCommand`, aba ativa,
 | DP-24.17 | O painel mantém a aba aberta ao ocultar/reexibir? | Sim, última aba com offset 0 | RF-24.14 |
 | DP-24.18 | **Resolvida (ADR-031: 52 + filete de 1 DIP).** Cabeçalho do design: `height 52` com `border-bottom 1px` em caixa de conteúdo = 53 DIP; o enunciado cita 52 | Usar 52 + filete 1 = 53; viewport do corpo 491 | RF-24.3 |
 
-Itens do design **ausentes** (não inventados nesta ficha, apenas propostos acima como DP): estado desabilitado detalhado e pressionado dos botões, hover dos cards, foco por teclado (o jogo não usa teclado), animação de abertura, barra de rolagem, seletor de região, botão minimizar, bloco de explicação, estado errado/tempo esgotado da pergunta, linha SEM SLOT, linha de construir.
+Itens do design **ausentes** (não inventados nesta ficha, apenas propostos acima como DP): estado desabilitado detalhado e pressionado dos botões, hover dos cards, foco por teclado (o jogo não usa teclado), animação de abertura, barra de rolagem, seletor de região, botão minimizar, bloco de explicação, estado errado/tempo esgotado da pergunta, linha SEM POSIÇÃO (antes SEM SLOT), destaque do ícone durante o modo construção.

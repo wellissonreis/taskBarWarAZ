@@ -132,8 +132,8 @@ Todas as janelas abaixo são criadas e possuídas pela **T-Game**, são `WS_POPU
 
 | Janela | Ficha | `dwExStyle` | Cliques | Opacidade global | Ownership |
 |---|---|---|---|---|---|
-| **Faixa** (`OverlayWindow`/`SceneWindow`) | SDD-22 | `LAYERED\|TOOLWINDOW\|NOACTIVATE\|TOPMOST` (+`TRANSPARENT` em Passivo) | só nos pixels de torre/slot vazio, em Interativo (SDD-04) | 255 presente, 128 ausente | **dona** de todas as outras; sem owner |
-| **Widget HUD** (420×48 DIP) | SDD-23 | `LAYERED\|TOOLWINDOW\|NOACTIVATE\|TOPMOST` | sempre clicável | 255 | owned pela faixa |
+| **Faixa** (`OverlayWindow`/`SceneWindow`; ADR-034: cena acima da barra **e** faixa sobre a barra) | SDD-22 | `LAYERED\|TOOLWINDOW\|NOACTIVATE\|TOPMOST` (+`TRANSPARENT` em Passivo) | só nos pixels de torre em Interativo, e a janela inteira no modo construção (SDD-04, SDD-22 RF-22.11; antes torre/slot vazio) | 255 presente, 128 ausente | **dona** de todas as outras; sem owner |
+| **Widget HUD** (48 DIP de altura, largura natural, à direita acima da barra; ADR-034, antes 420×48) | SDD-23 | `LAYERED\|TOOLWINDOW\|NOACTIVATE\|TOPMOST` | sempre clicável | 255 | owned pela faixa |
 | **Painel** (4 abas) e **cards** | SDD-24 | idem | sempre clicáveis | 255 | owned pela faixa |
 | **Banners e caixas** (hotspots) | SDD-22 RF-22.8, SDD-26 | idem | sempre clicáveis (alfa por pixel) | 255 | owned pela faixa |
 | **Selo de ausente** (`SceneSealWindow`) | SDD-22 RF-22.7 | `LAYERED\|TOOLWINDOW\|NOACTIVATE\|TOPMOST\|TRANSPARENT` | **nunca** (click-through) | 255 | owned pela faixa |

@@ -14,7 +14,7 @@ SDD-27: Regras puras do jogo idle "Azure Defense": créditos, formatação numé
 
 ## 3. Contexto técnico
 
-- **Decisões do Tech Lead:** ADR-019 (gênero idle), ADR-020 (faixa de 96 DIP acima da barra de tarefas, mundo 1D em DIP, slots = botões da barra; SDD-21/22), ADR-021 (painel e cards Skia sem ativação; visual em SDD-24), ADR-022 (offline analítico; SDD-25) e ADR-024 (perguntas Azure e picos são núcleo; SDD-26).
+- **Decisões do Tech Lead:** ADR-019 (gênero idle), ADR-020 (faixa de 96 DIP acima da barra de tarefas, mundo 1D em DIP, slots = botões da barra; SDD-21/22; **substituída por ADR-034**: torres dentro da barra em posição livre em X, economia inalterada), ADR-021 (painel e cards Skia sem ativação; visual em SDD-24), ADR-022 (offline analítico; SDD-25) e ADR-024 (perguntas Azure e picos são núcleo; SDD-26).
 - **Design aprovado** (artefato "Azure Defense — Idle de barra", somente leitura): painel com abas Arsenal, Campanha, Missões e Migrar; faixa; estados de presença; relatório de retorno. Os números de exemplo do design (48,2K, LV14, 1,2K, "Onda 37", "+8 Reservas") são ilustrativos. Valem as fórmulas desta ficha. Conferência: `floor(37²/170) = 8`, o que bate com o exemplo "+8 Reservas".
 - **Mundo 1D:** os inimigos entram pelo portal (ao lado da bandeja) e andam em uma dimensão, em DIP, até o núcleo. Cada slot é um botão da barra de tarefas e tem uma posição x. Nada de caminho curvo, faixas (`lane`) ou perspectiva.
 - **Determinismo (SDD-11 RF-11.1):** transcendentais são proibidos no tick. Todas as potências desta ficha (1,5ⁿ, 1,18ᵏ, 1,12ᵏ, 1,09ᵏ, 1,07ᵏ, 1,04ᵏ) vêm de tabelas `PowTable` construídas **por multiplicação iterativa** (`t[k] = t[k−1] × fator`, IEEE 754), sem `Math.Pow`. Isso é determinístico entre SOs.
@@ -65,8 +65,8 @@ SDD-27: Regras puras do jogo idle "Azure Defense": créditos, formatação numé
 | `cannon` | Canhão | Azure DDoS Protection | 90 | 60 | 2,1 | 2 | área de raio 36 DIP, fator 0,6; metade do dano contra `runner` |
 | `scaleset` | Scale Set | VM Scale Sets | 400 | 14 × (1 + 0,15 × nº de torres Raio) | 0,7 | 3 | desbloqueia na fase 09 (RF-27.9) |
 
-- **Alcance em DIP** = `slots × 48`, medido em 1D a partir do centro da torre: um inimigo está no alcance se `|xInimigo − xTorre| ≤ alcanceDIP`. Raio e Scale Set: 144 DIP; Gelo e Canhão: 96 DIP.
-- **Scale Set:** o bônus de `0,15 × nº de torres Raio` usa a contagem **atual** de torres Raio e é reavaliado a cada disparo. Torres `SEM SLOT` (SDD-21 RF-21.8) **não atiram**, **não entram** nesta contagem nem no DPS offline (ADR-032).
+- **Alcance em DIP** = `slots × 48` (ADR-034: "slots" vira só a unidade de 48 DIP; o centro da torre é a sua posição X livre), medido em 1D a partir do centro da torre: um inimigo está no alcance se `|xInimigo − xTorre| ≤ alcanceDIP`. Raio e Scale Set: 144 DIP; Gelo e Canhão: 96 DIP.
+- **Scale Set:** o bônus de `0,15 × nº de torres Raio` usa a contagem **atual** de torres Raio e é reavaliado a cada disparo. Torres `SEM POSIÇÃO` (ADR-034; antes `SEM SLOT`, SDD-21 RF-21.8) **não atiram**, **não entram** nesta contagem nem no DPS offline (ADR-032).
 - **Armadura** e **chilled +25%** mantidos de SDD-11 RF-11.6. Ordem do dano (ADR-031) (tudo em `double`): dano(nível) → super hit ×2 → Canhão contra runner ×0,5 → chilled ×1,25 → pico ×3 → menos armadura → `max(1, floor(resultado))`.
 - **Super hit** conta apenas acertos reais, como em SDD-11 RF-11.6.
 - **Lentidão (Gelo):** `speed = min(speed, max(speed × 0,65, spawnSpeed × 0,45))`.
@@ -75,12 +75,12 @@ SDD-27: Regras puras do jogo idle "Azure Defense": créditos, formatação numé
 
 ### RF-27.5: Construção e melhoria (substitui SDD-11 RF-11.7, RF-11.9 e RF-11.10 na parte de torres)
 
-- **Construir** em um slot livre (slots = botões da barra, SDD-21/22): `custo = ceil(base × 1,5^n)`, em que `n` é o número de torres **já existentes, de qualquer tipo**, **inclusive as `SEM SLOT`** (ADR-032). Exemplo com Raio: n=0 → 45; n=1 → 68; n=2 → 102.
+- **Construir** numa posição livre da barra (ADR-034: posição livre em X nas zonas livres, SDD-21 RF-21.7/21.8; antes "slot livre, slots = botões da barra"): `custo = ceil(base × 1,5^n)`, em que `n` é o número de torres **já existentes, de qualquer tipo**, **inclusive as `SEM POSIÇÃO`** (antes `SEM SLOT`; ADR-032). A fórmula **não muda**. Exemplo com Raio: n=0 → 45; n=1 → 68; n=2 → 102.
 - **Melhorar** L → L+1: `custo = ceil((base × 1,2) × 1,18^(L−1))`. Exemplo com Raio: L1→2 = 54; L2→3 = 64. Níveis de **1 a 999** (substitui o máximo de 5 de SDD-11 RF-11.7 e de SDD-12 `upgrade.maxLevel`).
 - **Dano:** `dano(L) = dano₁ × 1,12^(L−1)`. O dano é **recalculado a partir da base** pela tabela (substitui o arredondamento cumulativo de SDD-11 RF-11.7). Cadência e alcance **não** mudam com o nível.
-- Limite de torres: o número de slots disponíveis (SDD-21/22). Os limites por tipo de SDD-11 RF-11.10 (Gelo 3, Canhão 4) **não** existem mais (DP-27.3).
+- Limite de torres: o espaço livre da barra e o teto proposto de **24** torres (ADR-034, DP-33.3; antes o número de slots). Os limites por tipo de SDD-11 RF-11.10 (Gelo 3, Canhão 4) **não** existem mais (DP-27.3).
 - **Venda e mudança de posição** não fazem parte desta ficha (DP-27.3).
-- Comandos: `BuildTower(type, slot)`, `UpgradeTower(id)`, `SetTargeting(id, mode)`. Validações em ordem: slot livre (só no Build), torre desbloqueada, `credits ≥ custo`. Resultado `CommandResult(Status, Reason, Missing)`.
+- Comandos: `BuildTower(type, x)` (ADR-034; antes `BuildTower(type, slot)`), `UpgradeTower(id)`, `SetTargeting(id, mode)`; `PlaceTower(id, x)` sem custo (**DP-33.1, aceita**). Validações em ordem: posição válida (`PlacementValidator`, SDD-11 RF-11.9; antes "slot livre") (só no Build), torre desbloqueada, `credits ≥ custo`. Resultado `CommandResult(Status, Reason, Missing)`.
 - Melhorias exigem créditos `long`; a `PowTable` cobre até 999, e o custo acima de `long.MaxValue/2` é "inalcançável" (RF-27.1). Na prática, o nível alcançável fica na casa das centenas, e o teto de 999 é só o limite formal.
 - Contador de "melhorias manuais" alimenta a missão (RF-27.11). Melhorias da auto-escala (SDD-25) **não** contam (DP-27.7).
 
@@ -216,7 +216,7 @@ Novos arquivos em `Content/`, embutidos e cobertos pelo `ContentHash`: `towers.j
 | Ficha e RF | Situação |
 |---|---|
 | SDD-11 RF-11.1 | HP e dano passam a `double`; tabelas por multiplicação iterativa |
-| SDD-11 RF-11.3, RF-11.5, RF-11.9 | `PathTable` e posicionamento 2D substituídos pelo mundo 1D e slots (ADR-020) |
+| SDD-11 RF-11.3, RF-11.5, RF-11.9 | `PathTable` e posicionamento 2D substituídos pelo mundo 1D e slots (ADR-020); slots substituídos por posição livre em X (ADR-034) |
 | SDD-11 RF-11.4 (passos 1, 9) e RF-11.10 (`StartWave`) | ondas automáticas |
 | SDD-11 RF-11.6, RF-11.7, RF-11.8 | números novos (RF-27.4 a RF-27.6) |
 | SDD-11 RF-11.13 | o `Rng` passa a ser usado pelas regras (SDD-26) |

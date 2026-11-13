@@ -1,6 +1,6 @@
 # SDD-14: Persistência (configurações, perfil e sessão)
 
-**Status:** Rascunho para revisão · **Etapa:** E6 (o SettingsStore entra na E2) · **Depende de:** SDD-07, 11, 13 (apenas o `stageTopic` e o `Profile` ajustado), 21 (`slotIndex`, `SEM SLOT`), 22 (layout da faixa), 25 (presença, offline, pendências), 26 (ledger e eventos), 27 (economia, Reservas, regiões, missões) · **Bloqueia:** SDD-18
+**Status:** Rascunho para revisão · **Etapa:** E6 (o SettingsStore entra na E2) · **Depende de:** SDD-07, 11, 13 (apenas o `stageTopic` e o `Profile` ajustado), 21 (posição das torres e `SEM POSIÇÃO`, ADR-034; antes `slotIndex`, `SEM SLOT`), 22 (layout da faixa), 25 (presença, offline, pendências), 26 (ledger e eventos), 27 (economia, Reservas, regiões, missões) · **Bloqueia:** SDD-18
 
 > **Atualizada pelas fichas do jogo idle (ADR-019, ADR-022, ADR-026).** O conteúdo de `session.json` e `profile.json` e os gatilhos de gravação de RF-14.5 a RF-14.8 foram ajustados abaixo; o mecanismo de arquivo (RF-14.1 a RF-14.3, RF-14.9 a RF-14.11) não muda.
 
@@ -90,7 +90,8 @@ Nunca perder progresso relevante e nunca corromper dados. O save de meio de onda
 > - `autoScaleOn` (padrão `true`);
 > - `pending`: `{ credits, xp, melhorias[], quedas, ondaDe, ondaPara, tempoS, perdas }` e `cardState` (`Aberto | Recolhido`) do card "Bem-vindo de volta" (SDD-25 RF-25.9): as pendências **nunca se perdem** ao fechar o app;
 > - `layout` (**ADR-026**): comprimento da faixa, posições dos slots, do núcleo e do portal, que fazem parte do estado e entram no `StateHash`; só mudam pelo comando `LayoutChanged`, aplicado entre ticks (SDD-22 RF-22.2, SDD-01 RF-01.6). Ao restaurar, o `layout` gravado é usado **como está**; se a barra atual difere, o `LayoutChanged` é emitido depois do restore, entre ticks;
-> - `towers[].slotIndex` (0-based, no lugar de `x/y`) e o estado **`SEM SLOT`** (`slotIndex ≥ contagem de slots`): a torre **não atira, não é desenhada, não é vendida nem perdida**, e volta ao slot sem custo quando o índice reaparece (SDD-21 RF-21.8);
+> - **ADR-034 (vigente):** `towers[].anchor` (`"Start"|"End"`), `towers[].offsetDip` (inteiro ≥ 0) e `towers[].placed` (`false` = **`SEM POSIÇÃO`**: não atira, não é desenhada, não é vendida nem perdida, volta sozinha quando a posição volta a ser válida; SDD-21 RF-21.8, SDD-11 RF-11.3); o `layout` passa a ter `width`, `host` e `freeZones[]` no lugar de `slotX[]`; campo `migratedSlots` (DP-33.7, aceita). **Migração (DP-33.7, aceita):** `sidewar.session` sobe uma versão; a migração (RF-14.10) troca cada `slotIndex` por `anchor = "Start"`, `offsetDip = 0`, `placed = false`, troca `slotX[]` por `freeZones = []` e grava `migratedSlots = true`; após o restore, o primeiro `LayoutChanged` é seguido de `AutoPlaceUnpositioned()` (SDD-11 RF-11.10), entre ticks. Créditos, níveis, `Id` e o `n` do custo ficam intactos.
+> - *(Histórico, ADR-020:)* `towers[].slotIndex` (0-based, no lugar de `x/y`) e o estado **`SEM SLOT`** (`slotIndex ≥ contagem de slots`): a torre **não atira, não é desenhada, não é vendida nem perdida**, e volta ao slot sem custo quando o índice reaparece (SDD-21 RF-21.8);
 > - `sim`: fase/`StageRun` `(stageId, attempt, falls, ondaMax, chefesVencidos)`, onda atual e `ondaMax`, créditos, `carry`, XP, nível, HP do núcleo, `Reservas` e região vigentes, seed e estado do `Rng` (`rng`), `nextId`, estado da onda automática (fila, cursor, descanso de 1,4 s);
 > - estado dos eventos (SDD-26): encontro de chefe em andamento (pergunta sorteada, tempo restante), banner de pico e `PeakQueue`, bônus ×3 ativo, caixa e agendamentos dos próximos sorteios.
 >
@@ -175,7 +176,7 @@ Nunca perder progresso relevante e nunca corromper dados. O save de meio de onda
 
 ## 8. Dependências
 
-SDD-07 (gatilhos de ciclo de vida), SDD-11 (estado e hash), SDD-13 (`stageTopic`; o perfil e o checkpoint foram substituídos por SDD-27), SDD-21 (`slotIndex`, `SEM SLOT`), SDD-22/ADR-026 (`layout`, `LayoutChanged`), SDD-25 (lista de RF-25.11), SDD-26 (ledger, perguntas sorteadas, eventos) e SDD-27 (economia, Reservas, regiões, missões, seed).
+SDD-07 (gatilhos de ciclo de vida), SDD-11 (estado e hash), SDD-13 (`stageTopic`; o perfil e o checkpoint foram substituídos por SDD-27), SDD-21 (posição das torres e `SEM POSIÇÃO`, ADR-034; antes `slotIndex`, `SEM SLOT`), SDD-22/ADR-026 (`layout`, `LayoutChanged`), SDD-25 (lista de RF-25.11), SDD-26 (ledger, perguntas sorteadas, eventos) e SDD-27 (economia, Reservas, regiões, missões, seed).
 
 ## 9. Critérios de aceitação
 
@@ -184,7 +185,7 @@ SDD-07 (gatilhos de ciclo de vida), SDD-11 (estado e hash), SDD-13 (`stageTopic`
 - **CA-14.3:** Arquivos corrompidos (truncado, JSON inválido, versão futura, hash divergente) vão para `corrupt\` e o app inicia normalmente (T-14.4).
 - **CA-14.4:** Sessão de outro `contentHash` é descartada com aviso, e o perfil é mantido (T-14.5).
 - **CA-14.5:** Durante 10 min de onda, ocorrem ≤ 12 gravações de sessão (contagem no log), excluindo os fins de onda.
-- **CA-14.6 (idle):** o ciclo save → restore preserva `savedUtc`, `presence`, `pending` + `cardState`, `layout`, `slotIndex` (inclusive torres `SEM SLOT`), `Rng`, `carry`, Reservas, região, missões do dia, ledger e contadores, com `StateHash` igual (SDD-25 CA-25.9); um `Hide` grava o snapshot de forma síncrona e a retomada com o relógio adiantado aciona o `OfflineCalculator` (T-14.8, T-14.9).
+- **CA-14.6 (idle):** o ciclo save → restore preserva `savedUtc`, `presence`, `pending` + `cardState`, `layout` (com `freeZones`, ADR-034), a posição das torres (`anchor`, `offsetDip`, `placed`, inclusive `SEM POSIÇÃO`; antes `slotIndex`/`SEM SLOT`); um save antigo com `slotIndex` migra conforme DP-33.7, `Rng`, `carry`, Reservas, região, missões do dia, ledger e contadores, com `StateHash` igual (SDD-25 CA-25.9); um `Hide` grava o snapshot de forma síncrona e a retomada com o relógio adiantado aciona o `OfflineCalculator` (T-14.8, T-14.9).
 
 ## 10. Cenários de teste
 
@@ -197,7 +198,7 @@ SDD-07 (gatilhos de ciclo de vida), SDD-11 (estado e hash), SDD-13 (`stageTopic`
 | T-14.5 | `contentHash` divergente | Linux |
 | T-14.6 | Migração fictícia v0→v1 | Linux |
 | T-14.7 | `SavePolicy`: tabela de gatilhos e debounce | Linux |
-| T-14.8 | Ida e volta dos campos novos (idle): `savedUtc`, presença, pendências e `cardState`, `layout`, `slotIndex` e `SEM SLOT`, `Rng`, Reservas, região, missões, ledger, contadores | Linux |
+| T-14.8 | Ida e volta dos campos novos (idle): `savedUtc`, presença, pendências e `cardState`, `layout`, `anchor`/`offsetDip`/`placed` (ADR-034; antes `slotIndex` e `SEM SLOT`) e migração de save com `slotIndex` (DP-33.7), `Rng`, Reservas, região, missões, ledger, contadores | Linux |
 | T-14.9 | `SavePolicy` idle: sem gatilho de fase Build; `Hide` síncrono grava o snapshot; nada é gravado oculto | Linux |
 
 ## 11. Riscos técnicos

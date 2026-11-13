@@ -292,3 +292,65 @@ Observação: D-05 não bloqueia o início de nenhuma etapa, mas **sem ela, nenh
    - **SDD-21** (T1.7 e T1.8): classificador e slots puros no WSL, depois UIA e `--dump-taskbar` no Windows (risco de barra). Escopos disjuntos (`Platform.Windows/Windows/*` × `Platform.Windows/Taskbar/*` e `Runtime/Taskbar/*`); T1.8 só começa depois de T1.4.
 
 Em paralelo, pode começar a **E3** (SDD-12, SDD-11 e SDD-27 no Core), pois não depende de Windows.
+
+## 8. Revisão ADR-033: fichas propostas (decisão registrada como ADR-034)
+
+> **Origem:** ficha SPEC-ADR033 (2026-11-13). A decisão do usuário foi registrada como **ADR-034** em DECISOES.md (o número ADR-033 já pertence a `IOverlaySurface`, T1.6). Nada nesta seção altera as linhas anteriores do plano: ela **propõe** fichas novas e aponta o retrabalho das já feitas. As propostas DP-33.x (SDD-21 seção 11) foram **Aceitas (Tech Lead, 2026-11-13)**, assim como a caixa entre núcleo e portal (TA.12 liberada), o fantasma inválido em laranja, o clique no painel cancelando o modo construção e o banner de pico/chefe oculto durante o modo. Regra de ambiente inalterada: workers sempre com `claude2` ou `codex`.
+
+### 8.1 Fichas novas (série TA)
+
+| ID sugerido | Escopo (um commit) | Ficha/RF | Depende de | Amb. | Critérios |
+|---|---|---|---|---|---|
+| TA.1 | **Spike de z-order e clique sobre a barra** (descartável, antes de qualquer render): janela layered topmost cobrindo a barra com 3 torres de teste nas zonas livres; medir o reaparecimento após clicar em ícone, Iniciar, pesquisa, bandeja e miniaturas; clique passante em Passivo e Interativo; recomendação registrada para DP-33.4 (`towersInBar` padrão) | SDD-22 RF-22.1, RNF-22.11; SDD-21 DP-33.4 | T1.5, T1.11 | Windows | MTC-21.13, MTC-22.11, T-22.14; `specs/evidencias/TA.1.md` |
+| TA.2 | `TaskbarClassifier` com `Blocked` (margens 4/16) e `BuildZoneMap` (`Taskbar`/`Band`, descarte < 44, máx. 8 zonas); fixture sintética do canvas; `--dump-taskbar` grava `Blocked` e `BuildZones`; captura manual de `taskbar-centro-apps-abertos` | SDD-21 RF-21.1, RF-21.5, RF-21.7, RF-21.9 | DP-33.3, DP-33.5, DP-33.6 | WSL (+ captura Windows) | CA-21.1, CA-21.5, T-21.1 a T-21.3, CA-21.9 |
+| TA.3 | Core: `Tower` com `Anchor`/`OffsetDip`/`Placed`; `StripLayout` com `Width`/`Host`/`FreeZones`; `PlacementValidator` 1D; `LayoutChanged` com reavaliação por `Id`; `BuildTower(type, x)`, `PlaceTower(id, x)`, `AutoPlaceUnpositioned()`; `TowerStore` 32 e limite 24; `StateHash`; regeneração dos replays do `SanityBot` | SDD-11 RF-11.2, 11.3, 11.9, 11.10, 11.12; SDD-27 RF-27.5; SDD-21 RF-21.8 | DP-33.1, DP-33.2, DP-33.3, DP-33.7 | WSL | CA-11.1, CA-11.2, T-11.10, T-11.13, T-21.4 |
+| TA.4 | Persistência e offline: `sidewar.session` +1 com migração de `slotIndex` (DP-33.7), `anchor`/`offsetDip`/`placed`/`freeZones`/`migratedSlots`; `OfflineTower` e auto-escala só com torres posicionadas | SDD-14 RF-14.10, CA-14.6; SDD-25 (DPS) | TA.3 | WSL | CA-14.6, T-14.8, CA-25.5 |
+| TA.5 | `SceneLayout.Compute` novo (cena 104 DIP + barra; hospedeiro `Band`); `SceneWindow` redimensionada sobre a barra; `ZOrderCoordinator` passa a reafirmar a cena com os gatilhos da barra; host emite `LayoutChanged` a partir do `BuildZoneMap` | SDD-22 RF-22.1, RF-22.2; SDD-05 RNF-05.3; SDD-03 RF-03.9 | TA.1, TA.2 | WSL (puro) + Windows | CA-22.1, RNF-22.11, MTC-22.1 |
+| TA.6 | `SceneGeometry` e camadas do canvas novo: núcleo (4, 46) e barra roxa, portal em `W − 80`, chão em 102, barras de vida dos inimigos, drone elevado, chefe com barra de 68, torres de 36 DIP na barra com brilho pré-cozido e rótulo no canto, portal na camada estática, imagem estática da faixa da barra; linha de estado em `[102, 104)`; selo em `top 2`; caixa em `top 58` | SDD-22 RF-22.4 a RF-22.8 | TA.3 | WSL | CA-22.2, T-22.2, T-22.8 |
+| TA.7 | `BuildModeController` (puro), `BuildOverlayRenderer`, `SceneHitTester` novo (`SceneTower(towerId)` / `BuildOverlay`), `OverlayModeController` com Interativo forçado | SDD-22 RF-22.3, RF-22.11; SDD-15 RF-15.3; SDD-04 RF-04.2, RF-04.6 | TA.3, TA.6 | WSL | CA-22.11, T-22.4, T-22.13 |
+| TA.8 | Plataforma do modo construção: captura do arraste do painel até a cena, ESC por `RegisterHotKey` temporário (DP-33.8), cursores, cancelamentos (clique direito, ocultar, 30 s), banner de pico oculto durante o modo | SDD-15 RF-15.3, RF-15.6; SDD-22 RF-22.8, RF-22.11 | TA.7, T5.3 | Windows | CA-22.11, MTC-22.12, CA-15.8 |
+| TA.9 | Goldens novas em 1920×152 a 100% e 150%: `strip-present`, `strip-away`, `strip-peak`, `strip-boss`, `strip-build`, `strip-band`, `strip-unpositioned` | SDD-22 CA-22.7; SDD-17 RF-17.3 | TA.6, TA.7 | WSL | CA-22.7, T-22.9 |
+| TA.10 | Widget compacto à direita: `WidgetGeometry` (`left = min(W − 548, W − 8 − largura)`, `top` = topo da cena, 48 DIP), `WidgetLayout` de largura natural (70/52, gap 12, padding 0 6 0 12), fundo alfa 235 sem raio, hover `.10` | SDD-23 RF-23.2 a RF-23.7 | TA.5 | WSL + Windows | CA-23.3, CA-23.4, CA-23.9, CA-23.10 |
+| TA.11 | Arsenal: cartão de ajuda, ícone arrastável como origem do modo construção, linha `SEM POSIÇÃO` com `REPOSICIONAR`, `OpenArsenal(towerId)`, painel à direita (`left = W − 532`) | SDD-24 RF-24.2, RF-24.5, RF-24.11 | TA.3, TA.7 | WSL | CA-24.3, CA-24.5, T-24.15 |
+| TA.12 | Caixa de suprimentos sorteada entre o núcleo e o portal (proposta em SDD-26 RF-26.11) | SDD-26 RF-26.11 | proposta aceita | WSL | CA-26.5 (ajustado) |
+| TA.13 | Fechamento: MTC-21 (1 a 13), MTC-22.11 a 22.13, `strip-present` com 24 torres (RNF-22.1, RNF-22.5), atualização de `specs/evidencias/E1.md` e `E4.md` | SDD-21, SDD-22, SDD-16 | TA.1 a TA.11 | Windows | CA-21.2, CA-22.3, RNF-22.1 |
+
+**Ambiente (decisão do Tech Lead, 2026-11-13): o usuário usa o PC o tempo todo; testes interativos no Windows movem o mouse e ficam adiados até haver desktop isolado.** Requerem **desktop isolado (VM, Sandbox ou RDP)**; testes interativos adiados: **TA.1, a parte Windows de TA.5, TA.8 e TA.13** (e a parte Windows de TA.10). **Podem prosseguir agora (WSL, sem interação):** TA.2, TA.3, TA.4, TA.6, TA.7, TA.9, TA.11, TA.12, a parte WSL de TA.5 (`SceneLayout`, lógica do `ZOrderCoordinator` com fakes) e a parte WSL de TA.10 (`WidgetGeometry`/`WidgetLayout`). Sem o spike TA.1, `towersInBar` fica padrão `false` (hospedeiro `Band`) até ele rodar; a decisão final continua dependendo dele (DP-33.4).
+
+**Ordem executável agora:** onda 1, em paralelo (escopos disjuntos): **TA.2** (`Runtime/Taskbar/*`) e **TA.3** (`Core/*`); onda 2: **TA.4** e **TA.6** (ambas dependem de TA.3) e **TA.5-WSL** (depende de TA.2; a dependência de TA.1 só vale para o lado Windows); onda 3: **TA.7** (depende de TA.3 e TA.6), **TA.10-WSL** (depende de TA.5-WSL) e **TA.12** (depende só de TA.3); onda 4: **TA.11** (depende de TA.3, TA.7 e da integração de T5.5/T5.9) e **TA.9** (depende de TA.6 e TA.7). Adiadas, na ordem: TA.1 → TA.5-Windows → TA.8 (depende de TA.7 e T5.3) → TA.10-Windows → TA.13.
+
+**Dependências originais:** TA.1 (Windows) roda em paralelo com TA.2 e TA.3 (WSL, escopos disjuntos: `Runtime/Taskbar/*` × `Core/*`). TA.4 e TA.6 dependem de TA.3; TA.5 de TA.1 e TA.2. TA.7 depois de TA.6; TA.8 e TA.11 depois de TA.7; TA.9 por último no render. Se TA.1 reprovar o z-order, o padrão `towersInBar = false` (hospedeiro `Band`) é decidido pelo Tech Lead antes de TA.5, e TA.5/TA.6 seguem com os dois hospedeiros.
+
+### 8.2 Retrabalho em fichas já feitas (✅) ou parcialmente feitas
+
+| Ficha | O que muda com ADR-034 | Absorvido por |
+|---|---|---|
+| T1.2 ✅ | `SceneLayout.Compute`: janela = cena de 104 DIP + altura da barra (hospedeiro `Taskbar`) ou só a cena (`Band`); tabelas de teste novas | TA.5 |
+| T1.5 ✅ | `SceneWindow` passa a cobrir a barra e a ser reafirmada acima de `Shell_TrayWnd` pelo `ZOrderCoordinator` | TA.5 |
+| T1.6 ✅ | `TestSceneRenderer` desenha "8 slots" (quadro de teste); trocar por torres em posições livres na faixa da barra | TA.5 (quadro de teste) |
+| T1.7 ✅ | `SlotMap` e fallback de 8 slots viram `BuildZoneMap` e hospedeiro `Band`; o classificador ganha `Blocked` | TA.2 |
+| T1.8 ✅ | `--dump-taskbar` grava `Blocked`/`BuildZones`; o resto (probe, thread, gatilhos) não muda | TA.2 |
+| T1.9 ✅ | Janela do widget: sai a geometria "zona livre à esquerda / fallback na faixa"; entra a posição à direita, no topo da cena, com largura natural | TA.10 |
+| T1.11 ✅ | `HitTarget` `SceneTower(slotIndex)`/`SceneEmptySlot` vira `SceneTower(towerId)`/`BuildOverlay`; Interativo forçado no modo construção | TA.7 |
+| T1.12 ✅ / T5.7 ✅ | `HotkeyService` precisa registrar e desregistrar o ESC dinamicamente (só no modo construção) | TA.8 |
+| T1.13 ✅ / T1.14 🟡 | Cenário `e1-synthetic` e medições usam a faixa de 96 DIP; refazer com a janela nova (cena + barra) | TA.13 |
+| T2.x ✅ | **Sem retrabalho.** T2.2 (`FullscreenWatcher`) já oculta faixa, widget e hotspots; o cancelamento do modo construção ao ocultar entra em TA.8 | — |
+| T3.4 ✅ | `StripLayout` (`SlotX[]` → `Width`/`Host`/`FreeZones`), `LayoutChanged`, `TowerHasSlot`/`TowerX` | TA.3 |
+| T3.5 ✅ | Mira usa `SlotX[SlotIndex]`; passa a usar o X da torre pela âncora | TA.3 |
+| T3.6 ✅ | Contagem de Raios "com slot" do Scale Set passa a ser "posicionados" | TA.3 |
+| T3.7 ✅ | `BuildTower(type, slot)` → `BuildTower(type, x)`; `PlaceTower`; `AutoPlaceUnpositioned`; hash com os campos novos | TA.3 |
+| T3.10 ✅ / T3.11 ✅ / TU.1 | Replays e `SanityBot` constroem por slot; goldens de `StateHash` mudam; host converte `TaskbarLayout` em `LayoutChanged` | TA.3, TA.5 |
+| T4.6 ✅ | `SceneGeometry` e camadas (torres por slot de 44 DIP acima da barra) refeitas para o canvas novo | TA.6 |
+| T4.8 ✅ | Goldens de 1440 DIP (`strip-fallback`, `strip-empty-slots`) substituídas pelas de 1920×152 | TA.9 |
+| T4.9 ✅ | Linha de estado vai para `[102, 104)`; selo para `top 2`; caixa para `top 58` (chão 102) | TA.6 |
+| T6.3 ✅ | `OfflineTower` "Slot nulo = SEM SLOT" vira `placed`; auto-escala "só torres com slot" vira "só posicionadas" | TA.4 |
+| T6.5 ✅ | Caixa "entre o último slot e o portal" (só se a proposta de SDD-26 RF-26.11 for aceita) | TA.12 |
+| T6.8 ✅ / T6.9a 🟡 | Schema da sessão com `slotIndex`: nova versão e migração; goldens do `ReplayTests` regenerados | TA.4 |
+| T5.1 ✅ (integrada na main) | **Retrabalho em ficha já feita:** `WidgetLayout` passa a largura natural à direita (70/52, gap 12, padding 0 6 0 12), fundo `#071323` alfa 235 com borda 1 `#1f3350`, sem raio, hover a .10, `left = min(W−548, W−8−largura)`, sem fallback de posição (SDD-23 vigente) | TA.10 |
+| T5.2 ✅ (integrada na main) | **Retrabalho em ficha já feita:** hit-test, cursores, `NotifyInteraction`, render por evento e menu seguem; muda só a geometria do widget (à direita, topo da cena, 48 DIP, sem os cantos de raio 4) | TA.10 |
+| T5.3 ✅ (integrada na main) | **Retrabalho em ficha já feita:** painel e cards passam à direita (`left = W−532`, base em `stripTop−8`); geometria, rolagem e hover seguem, com os novos alvos `TowerIcon`/`Reposition` | TA.11 |
+| T5.4 ✅ (integrada na main) | **Retrabalho em ficha já feita:** Arsenal sem "construir em slot"; ganha o cartão de ajuda 5.1b, ícone 52×52 arrastável/armável como origem do modo construção, linha `SEM POSIÇÃO` com `REPOSICIONAR` e `OpenArsenal(towerId)`; Campanha sem mudança | TA.11 |
+| T5.8 ✅ (integrada na main) | **Retrabalho em ficha já feita:** menus e bandeja seguem; o menu do widget acompanha a nova posição e entra a ação de cancelar o modo construção (ESC dinâmico fica em TA.8) | TA.8, TA.10 |
+| T5.5, T5.9 (em integração) | Entram na main antes de TA.11; a aba Arsenal/Campanha já está coberta acima. T5.5 (Missões/Migrar/pergunta) e T5.9 (Settings/About) sem mudança por ADR-034, só o painel à direita (TA.11) e o interruptor `towersInBar` em Settings (SDD-15 RF-15.9) | TA.11 |
+| T5.6 (pendente) | Re-escopar antes de começar: goldens do widget compacto e do painel à direita | TA.10, TA.11 |
+| T1.15, T4.10, T4.11, T5.11, T6.11 (pendentes; re-escopar antes de começar) | Checklists e cenários de bench passam a incluir a faixa sobre a barra e o modo construção (MTC-21.13, MTC-22.11 a 22.13) | TA.13 |

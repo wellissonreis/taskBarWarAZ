@@ -32,7 +32,7 @@ Para alterar uma decisão aceita, é preciso registrar uma nova ADR com justific
 
 ### ADR-003: Formato do overlay como faixa acoplada a uma borda (padrão: inferior, acima da barra de tarefas)
 
-> **Status: Substituída por ADR-020 (geometria) e ADR-018 (design oficial).** Histórico preservado abaixo: o mundo de 1920×200 com HUD lateral, a escolha de bordas inferior/superior e o D-02 deixam de valer. O que continua: a faixa não reserva espaço por padrão (AppBar opcional, pós-MVP, agora reservando os 96 DIP da faixa, SDD-05 RF-05.8).
+> **Status: Substituída por ADR-020 (geometria) e ADR-018 (design oficial); ADR-020, por sua vez, foi substituída por ADR-034.** Histórico preservado abaixo: o mundo de 1920×200 com HUD lateral, a escolha de bordas inferior/superior e o D-02 deixam de valer. O que continua: a faixa não reserva espaço por padrão (AppBar opcional, pós-MVP, agora reservando os 96 DIP da faixa, SDD-05 RF-05.8).
 
 - O mundo do jogo é uma faixa de 1920×200 unidades (proporção 9,6:1) com HUD lateral à esquerda.
 - No MVP, acopla nas bordas **inferior** e **superior**. Bordas laterais com faixa vertical ficam para depois do MVP (D-02).
@@ -134,6 +134,8 @@ Para alterar uma decisão aceita, é preciso registrar uma nova ADR com justific
 
 ### ADR-020: Geometria: faixa de 96 DIP, widget HUD 420×48, slots = botões de apps da barra
 
+> **Status: Substituída por ADR-034 (decisão do usuário, 2026-11-13).** As torres deixam de ocupar os botões de aplicativos (slots ordinais) e passam a ficar **dentro da barra**, em posição livre em X nas zonas livres; a janela de cena passa a cobrir também a barra; o widget HUD passa a ser compacto, à direita, acima da barra. Histórico preservado abaixo. O que continua: leitura da barra só por UI Automation somente leitura (ADR-023), mundo 1D em DIP, layout como estado da simulação (ADR-026), substituição de ADR-003 e ADR-017.
+
 - **Contexto:** a cena fica visualmente sobre a barra de tarefas, e as torres ocupam o lugar dos ícones de aplicativos.
 - **Decisão:**
   - a faixa de batalha tem **96 DIP** de altura, colada **acima** da barra de tarefas, na **largura do monitor** (área de trabalho);
@@ -173,6 +175,8 @@ Para alterar uma decisão aceita, é preciso registrar uma nova ADR com justific
 - **Substitui:** as fontes citadas em SDD-09 e SDD-20 anteriores à revisão.
 
 ### ADR-026: O layout da faixa é parte do estado da simulação (determinismo)
+
+> **Status: Refinada por ADR-034.** O layout passa a conter as **zonas livres de construção** (no lugar das posições dos slots) e cada torre guarda a **própria posição X** (âncora + deslocamento em DIP inteiros), que também é estado da simulação, muda só por comando entre ticks e entra no save e no `StateHash`.
 
 - **Contexto:** comprimento da faixa, posições dos slots, do núcleo e do portal dependem do monitor e da barra, o que ameaçaria o `StateHash` (ADR-004).
 - **Decisão:** o layout da faixa (comprimento, posições dos slots, núcleo, portal) **faz parte do estado da simulação**. Muda **somente** pelo comando `LayoutChanged`, aplicado **entre ticks**, e é gravado no save e no `StateHash`.
@@ -217,6 +221,8 @@ Para alterar uma decisão aceita, é preciso registrar uma nova ADR com justific
 
 ### ADR-032: Decisões da releitura
 
+> **Status: Refinada por ADR-034** nos itens 1 (D-16 e D-17 ficam resolvidos pelo canvas: widget de largura natural e com fundo próprio), 3 (`SEM SLOT` passa a ser `SEM POSIÇÃO`, com as mesmas regras de custo, disparo, Scale Set e DPS offline) e 8 (**obsoleto**: o widget não fica mais à esquerda, e o núcleo não se desloca para `x = 428`). Os demais itens continuam.
+
 - **Decisão (Tech Lead):** itens aplicados após a releitura crítica das fichas SDD-20 a SDD-27.
   1. **Selo de presença e fundo do widget:** escalados ao usuário como D-16 (selo que não cabe em 420 DIP) e D-17 (fundo próprio do widget, inexistente no design); nenhuma das duas é decidida aqui.
   2. **COLETAR ×2:** novo SDD-26 RF-26.16. Pergunta do mesmo sorteio do tema da fase, 45 s, ledger próprio por relatório de retorno (id do relatório); não conta para estrelas nem missões; acerto dobra créditos e XP; erro, tempo esgotado ou card recolhido valem ×1. SDD-25 referencia RF-26.16.
@@ -241,6 +247,21 @@ Para alterar uma decisão aceita, é preciso registrar uma nova ADR com justific
 - **Decisão:** `IOverlaySurface` fica em `SideWar.Runtime` sem Skia: `PixelSize Size`, `float Scale`, `OverlayFrame BeginFrame()`, `void EndFrame(PixelRect? dirty)`, `void SetOpacity(byte constantAlpha)`. `OverlayFrame` é `readonly struct` com `nint Pixels`, `int Width`, `int Height`, `int RowBytes`, formato fixo BGRA8888 com alfa pré-multiplicado, válido só entre `BeginFrame` e `EndFrame`. `LayeredSurface` (Platform.Windows, RF-08.1) devolve os bits do DIB. O Skia fica em `SideWar.Rendering`: um adaptador (`SkiaFrameCanvas`) cria e cacheia `SKSurface.Create(SKImageInfo(w, h, Bgra8888, Premul), Pixels, RowBytes)` por buffer, sem alocar em regime.
 - **Alternativas descartadas:** `IOverlaySurface` só em Platform.Windows (Runtime perde a porta); SkiaSharp em Runtime (altera ArchitectureTests e a regra de camadas).
 
+### ADR-034: Torres dentro da barra de tarefas, com posição livre em X (substitui ADR-020)
+
+- **Status:** decisão do usuário (2026-11-13), registrada pelo Tech Lead a partir da ficha SPEC-ADR033. **Numeração:** a ficha pedia "ADR-033", mas esse número já pertence a `IOverlaySurface` (ficha T1.6); esta decisão recebe o próximo número livre, **ADR-034**. As decisões pendentes que ela abre mantêm o rótulo pedido pela ficha, **DP-33.x**.
+- **Contexto:** o canvas de design atualizado (artboards Main, Strip, Presence e Offline; composição de 1920×152 DIP: cena em `y` 0–102 acima da barra, barra de tarefas em `y` 104–152) coloca as torres **dentro** da barra de tarefas, nos espaços livres ao lado dos ícones, e não mais sobre os botões de aplicativos. Construir passa a ser arrastar uma torre do Arsenal para um espaço livre.
+- **Decisão (já tomada pelo usuário; não reabrir):**
+  1. **Torres dentro da barra.** Sprite de **36 DIP** de altura, centralizado verticalmente na barra (`top` = topo da barra + 6 com barra de 48 DIP). **Zonas bloqueadas:** widget do Windows (canto esquerdo), Iniciar + pesquisa + ícones de apps, bandeja + relógio, e **toda a área acima da barra**, onde ficam só a rota dos inimigos, a base (núcleo) à esquerda e o portal sobre o relógio (à direita). A janela de cena passa a desenhar **também sobre a barra** (SDD-22 RF-22.1).
+  2. **Posição livre em X.** Não há grade nem slot ordinal: a torre pode ficar em qualquer X inteiro (DIP) cuja caixa de colisão caiba inteira numa zona livre, sem sobrepor outra torre (SDD-21 RF-21.7, SDD-11 RF-11.9).
+  3. **Widget HUD segue o canvas:** compacto, **à direita, acima da barra** (créditos + taxa, onda, chip de presença, nav de 4 botões de 44×44), com fundo próprio; deixa de ser 420×48 sobre a zona livre à esquerda (SDD-23 RF-23.2/23.3).
+  4. **Modo construção do canvas:** arrastar a torre do Arsenal; realce **verde = livre**, **laranja = bloqueado**; clique posiciona; **ESC** cancela. O Arsenal ganha o texto de ajuda e mantém o toggle de auto-escala; o mapeamento torre → serviço Azure é o do `Main.dc.html` (Raio = Máquina Virtual, Gelo = WAF no Application Gateway, Canhão = Azure DDoS Protection, Scale Set = VM Scale Sets) (SDD-24 RF-24.5, SDD-15 RF-15.3).
+  5. **Não mudam:** economia (SDD-27), presença e offline (SDD-25), eventos ao vivo (SDD-26), acerto instantâneo (ADR-027; os feixes e clarões do canvas **não** são implementados), alcance 1D em DIP (`alcance × 48`, medido do centro X da torre).
+- **Determinismo (ADR-026, obrigatório):** a posição X de cada torre (âncora `Start`/`End` + deslocamento inteiro em DIP) e as zonas livres do layout são **estado da simulação**. Mudam **somente** por comando aplicado **entre ticks** (`BuildTower(type, x)`, `PlaceTower(id, x)`, `LayoutChanged`), são gravadas no save e entram no `StateHash`. A simulação nunca lê a barra, o monitor nem o cursor.
+- **Decididas (Aceita (Tech Lead, 2026-11-13); aceitas como propostas no texto de SDD-21 seção 11):** DP-33.1 (zona livre que encolhe), DP-33.2 (referência de ancoragem do X), DP-33.3 (largura de colisão, espaçamento e limite de torres), DP-33.4 (z-order e clique da janela sobre a barra), DP-33.5 (ocultação automática, barra vertical e vários monitores), DP-33.6 (fallback sem UIA), DP-33.7 (migração de saves com `slotIndex`), DP-33.8 (ESC sem foco), DP-33.9 (diferenças visuais do canvas além das decisões 1–4). Também aceitas: caixa de suprimentos entre o núcleo e o portal (SDD-26 RF-26.11), fantasma inválido em laranja, clique no painel cancela o modo construção e banner de pico/chefe oculto durante o modo. Todas estão em SDD-21 seção 11, com proposta e justificativa; as fichas de implementação estão em PLANO.md, seção "Revisão ADR-033: fichas propostas" (seção 8).
+- **Substitui:** ADR-020 inteira; ADR-032 item 8; e, nas fichas, SDD-21 RF-21.5/21.7/21.8 (slots), SDD-22 RF-22.1 a RF-22.5 (geometria da cena), SDD-23 RF-23.2/23.3 (widget), SDD-24 RF-24.2/24.5 (posição do painel e Arsenal), SDD-15 RF-15.3 (construção), SDD-04 RF-04.6 (alvos), SDD-11 RF-11.2/11.3/11.9/11.10 (torre por slot), SDD-14 (`towers[].slotIndex`) e SDD-05 RNF-05.3 (a cena passa a cobrir a barra).
+- **Refina:** ADR-026 (layout com zonas livres e posição das torres), ADR-032 itens 1 e 3, ADR-023 (o UIA alimenta as zonas, não slots), D-12, D-15, D-16 e D-17.
+
 ---
 
 ## Decisões pendentes (dependem do usuário)
@@ -258,10 +279,10 @@ Para alterar uma decisão aceita, é preciso registrar uma nova ADR com justific
 | D-09 | Nome do produto, executável e pasta de dados | "SideWar Desktop", `SideWar.exe`, `%LOCALAPPDATA%\SideWar` | SDD-18 |
 | D-10 | Calibração da economia idle (custos, ganhos, multiplicadores) | Valores iniciais de SDD-27, ajustados por JSON após playtest | Balanceamento final (SDD-27, SDD-12) |
 | D-11 | O card "Bem-vindo de volta" aparecer sozinho (janela não ativável) ao retornar | Aparecer sozinho, sem ativar a janela (ADR-015 refinada) | SDD-25 RF-25.9 e SDD-24 |
-| D-12 | Comportamento com a barra não inferior ou com ocultação automática | Fallback virtual já especificado (SDD-21 RF-21.7, SDD-22 RF-22.1) | SDD-21 e SDD-22 (aceite em barra não inferior) |
+| D-12 | Comportamento com a barra não inferior ou com ocultação automática | Fallback virtual já especificado (SDD-21 RF-21.7, SDD-22 RF-22.1). **Atualizado por ADR-034:** proposta de "faixa de torres" no topo da cena (DP-33.5, DP-33.6), aceito pelo Tech Lead em 2026-11-13 | SDD-21 e SDD-22 (aceite em barra não inferior) |
 | D-13 | Sprite próprio do Scale Set (hoje placeholder) | Criar o sprite no design; enquanto isso, placeholder registrado no MANIFEST | SDD-22 RF-22.9 (assets) |
 | D-14 | Títulos das fases 08 a 10 (provisórios) | Aceitar os provisórios de SDD-27 (DP-27.10) até o usuário definir | SDD-27 (conteúdo) |
-| D-15 | Barra com Widgets/Copilot ocupando a zona esquerda | O widget HUD vai para a faixa (fallback de SDD-23 RF-23.2) | SDD-23 (posição do widget) |
-| D-16 | Selo de presença do widget não cabe em 420 DIP | Selo só com "×2,0"/"×0,25", cor e borda indicando o estado, rótulo completo no nome acessível | SDD-23 (layout final do selo) | E5 (bloqueia SDD-23 layout final) |
-| D-17 | Fundo próprio do widget (`bg-painel` alfa 230, borda, raio 4), inexistente no design | Aprovar | SDD-23, SDD-20 | E5 |
+| D-15 | ~~Barra com Widgets/Copilot ocupando a zona esquerda~~ **Obsoleto (ADR-034):** o widget HUD fica à direita, acima da barra; o widget do Windows passa a ser zona bloqueada (SDD-21 RF-21.5) | n/a | n/a |
+| D-16 | ~~Selo de presença do widget não cabe em 420 DIP~~ **Resolvido por ADR-034 (decisão 3 do usuário):** o widget tem largura natural (SDD-23 RF-23.3) e o chip mostra o texto completo do canvas | n/a | n/a |
+| D-17 | ~~Fundo próprio do widget~~ **Resolvido por ADR-034:** o canvas novo define o fundo (`#071323` alfa 235, borda 1 `#1f3350`, sem raio; SDD-23 RF-23.3) | n/a | n/a |
 | D-18 | Recompensa das missões em renda relativa vs valor fixo do design (+12K) | Renda relativa | SDD-27 (DP-24.7), SDD-24 | E6 (missões) |

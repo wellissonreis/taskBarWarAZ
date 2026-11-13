@@ -8,7 +8,7 @@ SDD-04: Alfa por pixel, opacidade global, modos Passivo/Interativo e regiões cl
 
 ## 2. Objetivo
 
-Garantir que o overlay **não atrapalhe o uso do computador**. No modo Passivo, todo clique atravessa a **faixa** e chega ao aplicativo de baixo. No modo Interativo, a faixa recebe cliques apenas onde há conteúdo desenhado (torres e slots vazios, SDD-22 RF-22.3). Os modos valem **somente para a faixa** (ADR-021): widget HUD, painel, cards, banners, caixas e hotspots são **sempre clicáveis** e nunca recebem `WS_EX_TRANSPARENT`; o selo de ausente é sempre click-through (SDD-03 RF-03.9). A troca entre os modos é instantânea, barata e previsível.
+Garantir que o overlay **não atrapalhe o uso do computador**. No modo Passivo, todo clique atravessa a **faixa** e chega ao aplicativo de baixo. No modo Interativo, a faixa recebe cliques apenas onde há conteúdo desenhado (torres, SDD-22 RF-22.3; com ADR-034 as torres ficam dentro da barra e o resto da barra continua clicável para o Windows; antes também slots vazios). Os modos valem **somente para a faixa** (ADR-021): widget HUD, painel, cards, banners, caixas e hotspots são **sempre clicáveis** e nunca recebem `WS_EX_TRANSPARENT`; o selo de ausente é sempre click-through (SDD-03 RF-03.9). A troca entre os modos é instantânea, barata e previsível.
 
 ## 3. Contexto técnico
 
@@ -50,7 +50,9 @@ enum OverlayMode { Passive, Interactive }
 | Passive | menu "Interagir" (bandeja ou widget) | Interactive |
 | Interactive | clique no controle de modo do widget (SDD-23) | Passive |
 | Interactive | hotkey `ToggleInteractive` | Passive |
-| Interactive | `autoPassiveSeconds` (padrão 8 s) sem o cursor sobre o overlay **e** sem arraste ativo | Passive |
+| Interactive | `autoPassiveSeconds` (padrão 8 s) sem o cursor sobre o overlay **e** sem arraste ativo **e** fora do modo construção (ADR-034) | Passive |
+| qualquer | entrada no **modo construção** (ADR-034, SDD-15 RF-15.3) | Interactive forçado (lembra o modo anterior) |
+| Interactive forçado | saída do modo construção (posicionou ou cancelou) | o modo anterior |
 | qualquer | overlay oculto (SDD-07) | Passive (ao reaparecer, sempre Passive) |
 
 A aplicação de estilo:
@@ -89,7 +91,9 @@ Ao sair do Interactive com arraste em andamento, o arraste é cancelado (`Releas
 
 ### RF-04.6: Regiões clicáveis no modo Interactive
 
-> **Substituído por SDD-22 RF-22.3 (ADR-021).** O `HitTarget` da faixa é `SceneTower(slotIndex) | SceneEmptySlot(slotIndex) | None`; os alvos do widget são de SDD-23 RF-23.8 e os dos hotspots de SDD-22 RF-22.8. Os alvos `HudButton`, `PaletteTower`, `FieldTower`, `FieldGround` e `TowerPanelButton` abaixo não são mais usados.
+> **ADR-034 (vigente):** a janela de cena passa a cobrir também a barra de tarefas (SDD-22 RF-22.1). A regra de clique **não muda**: em Passivo, `WS_EX_TRANSPARENT` faz todo clique (inclusive sobre torres e ícones da barra) chegar ao Windows; em Interativo, só pixels com alfa ≥ 1 recebem clique, e como fora das torres o alfa é 0, o clique sobre ícones, pesquisa, bandeja e espaço livre da barra **atravessa** para `Shell_TrayWnd`. O `HitTarget` da faixa passa a ser `SceneTower(towerId) | BuildOverlay | None` (sem `SceneEmptySlot`); `BuildOverlay` só existe no modo construção, quando o overlay (alfa ≥ 1 na janela inteira) recebe todos os cliques sobre a cena e a barra (SDD-22 RF-22.11). Clique em torre emite `OpenArsenal(towerId)`.
+>
+> **Histórico:** **Substituído por SDD-22 RF-22.3 (ADR-021).** O `HitTarget` da faixa é `SceneTower(slotIndex) | SceneEmptySlot(slotIndex) | None`; os alvos do widget são de SDD-23 RF-23.8 e os dos hotspots de SDD-22 RF-22.8. Os alvos `HudButton`, `PaletteTower`, `FieldTower`, `FieldGround` e `TowerPanelButton` abaixo não são mais usados.
 
 - São determinadas **apenas** pelo alfa desenhado (sem regiões de janela `SetWindowRgn`).
 - O `HitTester` em Runtime converte as coordenadas de cliente em físicas, depois em DIP e depois em coordenadas da HUD ou do mundo (SDD-05), e devolve um `HitTarget`: `HudButton(id) | PaletteTower(type) | FieldTower(id) | FieldGround(worldPoint) | TowerPanelButton(id) | None`.

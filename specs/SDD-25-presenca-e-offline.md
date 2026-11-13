@@ -99,7 +99,7 @@ Aplica-se a **créditos e XP** ganhos (SDD-27 RF-27.12). O tempo presente **cont
 Para cada onda `w` tentada, na fase e na região do snapshot:
 
 ```
-DPS            = Σ (dano(L) / cadência) das torres com slot      # sem super hit, chilled, lentidão, área
+DPS            = Σ (dano(L) / cadência) das torres posicionadas   # ADR-034: antes "com slot"; SEM POSIÇÃO fora; sem super hit, chilled, lentidão, área
                  (Scale Set usa o dano com o bônus de Raios; SDD-27 RF-27.4)
 HPtotal(w)     = Σ HP(w) por inimigo da onda                      # SDD-27 RF-27.6, com região e fase
 duraçãoOnda(w) = quantidade(w) × intervalo(w) + 10 s              # SDD-27 RF-27.7

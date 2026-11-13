@@ -85,7 +85,7 @@ Concentrar todos os números do jogo em arquivos de conteúdo versionados, como 
 
 Cada torre no JSON (histórico) tinha `{ id, name, cost, range, damage, interval, projectileSpeed, limit|null, strong:[kinds], weak:[kinds], description }`.
 
-**Formato vigente:** `{ id, name, azureTheme, cost /* base */, rangeSlots, damage /* dano₁ */, interval /* cadência, s */, unlockStage|null, strong:[kinds], weak:[kinds], description }`, com os valores de SDD-27 RF-27.4. O Scale Set acrescenta `damageBonusPerBolt: 0.15`. Os textos de `description` vêm de `TOWER_ROLE_INFO` da referência, revisados. (SDD-27 RF-27.4 ainda lista a velocidade de projétil; ver DP-11.4 de SDD-11.)
+**Formato vigente:** (ADR-034: `rangeSlots` mantém o nome e os valores, mas passa a significar "células de 48 DIP" medidas do X livre da torre; não há mais slots) `{ id, name, azureTheme, cost /* base */, rangeSlots, damage /* dano₁ */, interval /* cadência, s */, unlockStage|null, strong:[kinds], weak:[kinds], description }`, com os valores de SDD-27 RF-27.4. O Scale Set acrescenta `damageBonusPerBolt: 0.15`. Os textos de `description` vêm de `TOWER_ROLE_INFO` da referência, revisados. (SDD-27 RF-27.4 ainda lista a velocidade de projétil; ver DP-11.4 de SDD-11.)
 
 ### RF-12.5: Inimigos `enemies.json`
 
@@ -236,7 +236,7 @@ SDD-01. SDD-09 e SDD-22 (IDs de sprite, validação cruzada). SDD-27 fornece os 
 
 | Risco | Prob. | Impacto | Mitigação |
 |---|---|---|---|
-| ~~Faixa com poucas áreas de construção~~ | — | — | **Obsoleto:** as torres ocupam slots da barra (ADR-020) |
+| ~~Faixa com poucas áreas de construção~~ | — | — | **Obsoleto:** as torres ocupam slots da barra (ADR-020); com ADR-034, posição livre nas zonas livres da barra |
 | ~~Escala k mudar a dificuldade~~ | — | — | **Obsoleto:** sem mapa 2D; ver o risco de densidade em SDD-27 §11 |
 | ~~`hpGrowth` de 26 excessivo~~ | — | — | **Obsoleto:** D-08 substituído pelas fases idle de SDD-27 (`1,09^(w−1)`); calibração é D-10 |
 | Valores de SDD-27 mal calibrados (D-10) | Alta | Médio | Todos em JSON; ajuste após o playtest; validador de faixas |

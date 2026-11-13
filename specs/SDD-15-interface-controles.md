@@ -28,7 +28,7 @@ Permitir jogar inteiramente pelo overlay com o mouse, e controlar o overlay sem 
 
 ### RF-15.1: Layout da HUD (caixa de projeto de 216×176 DIP; coordenadas x, y, w, h)
 
-> **Substituído por SDD-23 RF-23.1 a RF-23.8 (ADR-018, ADR-020, ADR-028).** O HUD é o widget de 420×48 DIP (créditos e taxa, onda, selo de presença, nav de 4 botões: Arsenal, Fases, Missões, Migrar), sem alça (SDD-03 RF-03.3 substituído), sem barra de HP do núcleo na HUD (o núcleo está na faixa, SDD-22), sem botão Onda/Pausa/Velocidade e sem estados `NoRun`/`Result`. Os selos "PAUSADO" e "CHEFE NA PRÓXIMA ONDA" deixam de existir (retomada automática, SDD-25 RF-25.2; chefe com banner e card, SDD-26). Tabela abaixo é histórica.
+> **Substituído por SDD-23 RF-23.1 a RF-23.8 (ADR-018, ADR-020, ADR-028; ADR-034: widget compacto à direita, acima da barra, largura natural).** O HUD é o widget de 420×48 DIP (créditos e taxa, onda, selo de presença, nav de 4 botões: Arsenal, Fases, Missões, Migrar), sem alça (SDD-03 RF-03.3 substituído), sem barra de HP do núcleo na HUD (o núcleo está na faixa, SDD-22), sem botão Onda/Pausa/Velocidade e sem estados `NoRun`/`Result`. Os selos "PAUSADO" e "CHEFE NA PRÓXIMA ONDA" deixam de existir (retomada automática, SDD-25 RF-25.2; chefe com banner e card, SDD-26). Tabela abaixo é histórica.
 
 > Os selos de pico e de pergunta são definidos em SDD-19.
 
@@ -59,7 +59,25 @@ Permitir jogar inteiramente pelo overlay com o mouse, e controlar o overlay sem 
 
 ### RF-15.3: Construção (arrastar e soltar)
 
-> **Substituído por SDD-22 RF-22.3 e SDD-24 RF-24.5 (aba Arsenal) com SDD-27 RF-27.5 (ADR-020).** Não há paleta nem arraste: as torres ocupam os **slots = botões de apps da barra** (SDD-21). No modo interativo da faixa, clicar numa torre ou num slot vazio abre o **Arsenal focado** naquele `slotIndex` (`OpenArsenal(slotIndex)`), onde se constrói e melhora (`BuildTower(type, slot)`, `UpgradeTower(id)`). `DragController`, `PlacementValidator` e o modo "tocar e colocar" saem do escopo.
+> **Vigente (ADR-034, 2026-11-13): modo construção.** O arraste volta, agora **a partir do Arsenal** (SDD-24 RF-24.5, item 5.2b) **para um espaço livre dentro da barra de tarefas** (SDD-21 RF-21.7/21.8), com o overlay de SDD-22 RF-22.11. Máquina `BuildModeController` (Runtime, pura, testada no Linux; a captura e o cursor ficam em Platform):
+>
+> | De | Evento | Para / efeito |
+> |---|---|---|
+> | `Idle` | `WM_LBUTTONDOWN` no ícone de uma torre desbloqueada no Arsenal (com créditos para construir e abaixo do limite de 24 torres) | `Pressed(type)`; `SetCapture` no painel |
+> | `Pressed` | deslocamento > **6 px físicos** | `Dragging(type)`: a janela de cena fica Interativa e mostra o overlay; o fantasma segue o cursor (posição X convertida para DIP da faixa e arredondada) |
+> | `Pressed` | `WM_LBUTTONUP` sem passar do limiar | `Armed(type)`: overlay ativo, o fantasma segue o cursor; `ReleaseCapture` |
+> | `Dragging` | `WM_LBUTTONUP` em posição válida (`PlacementValidator`, SDD-11 RF-11.9) | posta `BuildTower(type, x)`; sai para `Idle` |
+> | `Dragging` | `WM_LBUTTONUP` em posição inválida ou fora da barra | `Armed(type)` (não constrói; o jogador ainda pode clicar numa posição válida) |
+> | `Armed` | clique esquerdo na cena em posição válida | posta `BuildTower(type, x)` (ou `PlaceTower(id, x)` quando iniciado por `REPOSICIONAR`, DP-33.1); sai para `Idle` |
+> | `Armed` | clique esquerdo em posição inválida | sem efeito |
+> | qualquer ≠ `Idle` | **ESC** (DP-33.8), clique direito, `WM_CAPTURECHANGED` durante o arraste, clique no painel fora do ícone, ocultação (SDD-07), presença virando Ausente, ou **30 s** sem movimento do mouse | cancela; sai para `Idle` |
+>
+> - O comando é validado de novo **na simulação, entre ticks** (ADR-026): se o layout mudou entre o clique e o tick, ele pode voltar `Overlap`/`OutOfZone`, e o feedback usa `FeedbackToast`/painel como os demais resultados.
+> - Durante o modo: `autoPassiveSeconds` suspenso; o banner de pico/chefe fica oculto (SDD-22 RF-22.8); ao sair, o modo da faixa volta ao anterior.
+> - Cada clique do jogador no modo conta como interação de presença (SDD-25 RF-25.1).
+> - Fps: o do estado Presente (SDD-22 RF-22.10); não há `DragFps` próprio.
+>
+> **Histórico (ADR-020):** ~~Substituído por SDD-22 RF-22.3 e SDD-24 RF-24.5 (aba Arsenal) com SDD-27 RF-27.5 (ADR-020).~~ Não há paleta nem arraste: as torres ocupam os **slots = botões de apps da barra** (SDD-21). No modo interativo da faixa, clicar numa torre ou num slot vazio abre o **Arsenal focado** naquele `slotIndex` (`OpenArsenal(slotIndex)`), onde se constrói e melhora (`BuildTower(type, slot)`, `UpgradeTower(id)`). `DragController`, `PlacementValidator` e o modo "tocar e colocar" saem do escopo.
 
 1. `WM_LBUTTONDOWN` sobre um tile habilitado: `DragController.Arm(type, ponto)` e `SetCapture`.
 2. `WM_MOUSEMOVE`: se o deslocamento passar de **6 px físicos**, a máquina entra em `Dragging`. Cada movimento converte para mundo e valida (`PlacementValidator` e ouro) e gera o `DragView { type, x, y, range, valid, reason }`. Isso marca a tela como suja, e o fps de arraste vale (SDD-10).
@@ -70,7 +88,7 @@ Permitir jogar inteiramente pelo overlay com o mouse, e controlar o overlay sem 
 
 ### RF-15.4: Seleção e painel da torre
 
-> **Substituído por SDD-24 (aba Arsenal) e SDD-22 RF-22.3.** Não há `TowerPanel` flutuante, venda (SDD-27 DP-27.3), nível máximo 5 nem anel de alcance em hover; o Arsenal mostra nível, custo de melhoria, alvo e o selo "SEM SLOT" (SDD-21 RF-21.8). O hit-test das torres é o `SceneHitTester` de SDD-22 (`SceneTower`/`SceneEmptySlot`).
+> **Substituído por SDD-24 (aba Arsenal) e SDD-22 RF-22.3.** Não há `TowerPanel` flutuante, venda (SDD-27 DP-27.3), nível máximo 5 nem anel de alcance em hover; o Arsenal mostra nível, custo de melhoria, alvo e o selo "SEM POSIÇÃO" (ADR-034; antes "SEM SLOT", SDD-21 RF-21.8). O hit-test das torres é o `SceneHitTester` de SDD-22 (`SceneTower(towerId)`; `SceneEmptySlot` deixou de existir com ADR-034).
 
 - Clicar numa torre (hit-test pelo retângulo do sprite em mundo, de trás para frente na ordem de desenho) seleciona. Clicar em chão vazio ou com o botão direito desseleciona.
 - Ao passar o mouse sobre uma torre, o anel de alcance aparece (somente no Interactive).
@@ -115,9 +133,10 @@ Permitir jogar inteiramente pelo overlay com o mouse, e controlar o overlay sem 
 | `ToggleVisibility` | Ctrl+Alt+H | adiciona ou remove `HiddenReason.User` (SDD-07) |
 | `TogglePause` | Ctrl+Alt+P | adiciona ou remove `PauseReason.User`. Se o motivo for `Idle` ou `Hidden`, convertê-lo e retomar |
 | ~~`StartWave`~~ | ~~Ctrl+Alt+N~~ | **Removido** (ADR-019; texto original: `StartWave`; se pausado, apenas retoma) |
+| `CancelBuild` (ADR-034) | **Esc**, sem modificador | **Só enquanto o modo construção está ativo** (RF-15.3): registrado ao entrar e desregistrado ao sair (`RegisterHotKey(janelaDaFaixa, id, MOD_NOREPEAT, VK_ESCAPE)`). Cancela o modo. Não configurável. Se o registro falhar, o modo continua cancelável por clique direito e por tempo (**DP-33.8, aceita**) |
 
 - `RegisterHotKey(janelaDaFaixa, id, MOD_CONTROL|MOD_ALT|MOD_NOREPEAT, vk)` (antes: `handleWindow`). Se falhar (`ERROR_HOTKEY_ALREADY_REGISTERED`), registrar no log, marcar o atalho como "indisponível" nas Configurações e mostrar um toast **uma vez** por sessão: "Atalho Ctrl+Alt+G em uso por outro app".
-- Com o overlay oculto, apenas `ToggleVisibility` age. Os demais são ignorados.
+- Com o overlay oculto, apenas `ToggleVisibility` age. Os demais são ignorados (o modo construção já foi cancelado ao ocultar).
 - O formato textual dos atalhos é `Ctrl+Alt+Shift+Win+<Tecla>`, interpretado por `HotkeyParser` (Runtime, puro, testado).
 
 ### RF-15.7: Ícone de bandeja (`TrayIcon`, T-UI)
