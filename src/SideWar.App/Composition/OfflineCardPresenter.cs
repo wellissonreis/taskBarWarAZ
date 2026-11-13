@@ -84,6 +84,7 @@ internal sealed class OfflineCardPresenter : IOfflineCardPresenter, IDisposable
         RebuildQuestion();
         if (!TryPlace(OverlayKind.QuestionCard, questionLayout!.Height, out var placement)) return;
         var window = EnsureQuestionWindow();
+        Claim(window); // a janela é compartilhada com o card do chefe (T6.11b): quem mostra assume os handlers
         window.Apply(placement);
         window.Show();
         window.Redraw();
@@ -135,36 +136,27 @@ internal sealed class OfflineCardPresenter : IOfflineCardPresenter, IDisposable
         return cardWindow = window;
     }
 
-    private QuestionCardWindow EnsureQuestionWindow()
+    private void Claim(QuestionCardWindow window)
     {
-        if (questionWindow is { } existing) return existing;
-        var window = game.Scene.GetOrCreateQuestionCard();
         window.Renderer = (frame, _) => DrawQuestion(frame);
         window.Interaction = () => coordinator?.NotifyInteraction();
         window.LeftDown = OnQuestionDown;
         window.LeftUp = OnQuestionUp;
-        return questionWindow = window;
+    }
+
+    private QuestionCardWindow EnsureQuestionWindow()
+    {
+        if (questionWindow is { } existing) return existing;
+        var window = game.Scene.GetOrCreateQuestionCard();
+        questionWindow = window;
+        return window;
     }
 
     /// <summary>RF-24.2: centralizado sobre a faixa, 8 DIP acima do topo; a pergunta mantém a base e cresce para cima.</summary>
     private bool TryPlace(OverlayKind kind, float heightDip, out OverlayPlacement placement)
     {
-        placement = default;
-        if (game.Dock.Current is not { } current) return false;
-        placement = PanelGeometry.Compute(kind, current.Monitor, current.Scene);
-        if (kind == OverlayKind.QuestionCard && heightDip > 0)
-        {
-            double s = placement.Scale;
-            int boxH = (int)Math.Round(heightDip * s, MidpointRounding.AwayFromZero);
-            int bottom = placement.Bounds.Top + placement.Box.Height;
-            int top = Math.Max(current.Monitor.WorkArea.Top, bottom - boxH);
-            placement = placement with
-            {
-                Bounds = new PixelRect(placement.Bounds.Left, top, placement.Bounds.Right, bottom + placement.ShadowPx),
-                Box = new PixelSize(placement.Box.Width, bottom - top),
-            };
-        }
-        EnsureRenderers((int)current.Monitor.Dpi);
+        if (!OverlayPlacements.TryPlace(game, kind, heightDip, out placement)) return false;
+        EnsureRenderers((int)game.Dock.Current!.Monitor.Dpi);
         return true;
     }
 

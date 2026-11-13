@@ -11,6 +11,7 @@ public static partial class Strings
     public const string BannerPeak = "PICO DE DEMANDA · ESCALAR ×3";
     public const string BannerBoss = "CHEFE · RESPONDER PERGUNTA AZURE";
     public const string BannerScaled = "DEFESA ESCALADA ×3";
+    public const string SealManaged = "MODO GERENCIADO · AUTO-ESCALA ATIVA";
 
     public static string PresenceText(int minutes) =>
         $"Você está presente há {minutes} min. Interaja ao menos uma vez a cada 5 min para manter o bônus.";

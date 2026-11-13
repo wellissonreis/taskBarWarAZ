@@ -40,6 +40,28 @@ public sealed class MissionsMigratePanelRenderer(Typography typography, IconCata
         EndChrome(canvas, MigrateTabModel.TabTitle, view);
     }
 
+    /// <summary>
+    /// Arsenal com o mesmo cromo (sombra, borda, filete, título "ARSENAL", fechar e barra de rolagem; T6.11b): o corpo é do
+    /// <see cref="ArsenalTabRenderer"/>, que aplica a rolagem por conta própria (offset/viewport da <paramref name="view"/>).
+    /// </summary>
+    public void DrawArsenal(SKCanvas canvas, ArsenalLayout layout, ArsenalHit hover, PanelViewState view, ArsenalCampaignPaintContext ctx,
+        SideWar.Runtime.Input.BuildOrigin? building = null)
+    {
+        BeginChrome(canvas, view);
+        p.OffsetY = 0f; // o corpo do Arsenal desloca por si (offsetDip)
+        ArsenalTabRenderer.Draw(canvas, layout, hover, view.Offset, view.Viewport, ctx, building);
+        EndChrome(canvas, SideWar.Runtime.Localization.Strings.PanelTitleArsenal, view);
+    }
+
+    /// <summary>Campanha ("FASES") com o mesmo cromo do Arsenal (T6.11b).</summary>
+    public void DrawCampaign(SKCanvas canvas, CampaignLayout layout, PanelViewState view, ArsenalCampaignPaintContext ctx)
+    {
+        BeginChrome(canvas, view);
+        p.OffsetY = 0f;
+        CampaignTabRenderer.Draw(canvas, layout, view.Offset, view.Viewport, ctx);
+        EndChrome(canvas, SideWar.Runtime.Localization.Strings.PanelTitleCampaign, view);
+    }
+
     // Sem delegate para o corpo (um closure por frame alocaria, RF-08.8): o chamador intercala Begin/Corpo/End.
     private void BeginChrome(SKCanvas c, PanelViewState view)
     {

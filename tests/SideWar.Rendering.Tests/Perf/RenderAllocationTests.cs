@@ -115,7 +115,7 @@ public sealed class RenderAllocationTests : IDisposable
         long bytes = BytesPerFrame(i =>
         {
             double now = i / 60.0;
-            hot.DrawBanner(canvas, i % 2 == 0 ? BannerVariant.Peak : BannerVariant.Boss, "0:24", now, Normal);
+            hot.DrawBanner(canvas, (BannerVariant)(i % 3), "0:24", now, Normal);
             hot.DrawSupplyBox(canvas, now, Normal);
             hot.DrawSeal(canvas, "ausente há 1h 48min");
         });

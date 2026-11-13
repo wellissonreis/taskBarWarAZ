@@ -3,6 +3,10 @@ namespace SideWar.Runtime.Localization;
 /// <summary>Textos visíveis em pt-BR (SDD-15 RF-15.11). Parcial: cada ficha acrescenta o seu bloco. Aqui, aba Arsenal (SDD-24 RF-24.5, ADR-034).</summary>
 public static partial class Strings
 {
+    /// <summary>Títulos do cromo do painel das abas Arsenal e Campanha (SDD-24 RF-24.3; Missões e Migrar têm os seus em <c>TabTitle</c>).</summary>
+    public const string PanelTitleArsenal = "ARSENAL";
+    public const string PanelTitleCampaign = "CAMPANHA";
+
     public const string ArsenalAutoScaleTitle = "AUTO-ESCALA (AUSENTE)";
     public const string ArsenalAutoScaleDescription = "Enquanto você trabalha em outra janela, usa 50% dos créditos para melhorar a torre mais barata a cada 15 min.";
     public const string ArsenalToggleOn = "ON";

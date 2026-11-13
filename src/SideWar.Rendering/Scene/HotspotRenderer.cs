@@ -4,6 +4,7 @@ using SideWar.Rendering.Sprites;
 using SideWar.Rendering.Text;
 using SideWar.Rendering.Theme;
 using SideWar.Runtime.Geometry;
+using SideWar.Runtime.Localization;
 using SkiaSharp;
 
 namespace SideWar.Rendering.Scene;
@@ -13,6 +14,9 @@ public enum BannerVariant
 {
     Peak,
     Boss,
+
+    /// <summary>"DEFESA ESCALADA ×3" (SDD-26 RF-26.3): mesma geometria do pico, não clicável, em menta.</summary>
+    PeakScaled,
 }
 
 /// <summary>
@@ -23,10 +27,6 @@ public enum BannerVariant
 /// </summary>
 public sealed class HotspotRenderer : IDisposable
 {
-    public const string PeakText = "PICO DE DEMANDA · ESCALAR ×3";
-    public const string BossText = "CHEFE · RESPONDER PERGUNTA AZURE";
-    public const string SealText = "MODO GERENCIADO · AUTO-ESCALA ATIVA";
-
     private const int BannerFontDip = 12;
     private const int SealFontDip = 11;
     private static readonly SKSamplingOptions Nearest = new(SKFilterMode.Nearest, SKMipmapMode.None);
@@ -95,9 +95,9 @@ public sealed class HotspotRenderer : IDisposable
     {
         RequireDpi();
         var font = _typography.GetFont(FontRole.SilkscreenRegular, BannerFontDip, _dpi);
-        int gap = P(variant == BannerVariant.Peak ? 12 : 10);
+        int gap = P(variant != BannerVariant.Boss ? 12 : 10);
         int w = 2 * P(16);
-        if (variant == BannerVariant.Peak) w += P(16) + gap;
+        if (variant != BannerVariant.Boss) w += P(16) + gap;
         w += MeasureSpaced(Text(variant), font, BannerFontDip) + gap;
         w += 2 * P(6) + MeasureChip(chip, font);
         return w;
@@ -131,11 +131,12 @@ public sealed class HotspotRenderer : IDisposable
             canvas.Restore();
         }
 
-        bool peak = variant == BannerVariant.Peak;
-        SKColor bg = peak ? Palette.Ambar : Palette.Perigo;
+        bool peak = variant != BannerVariant.Boss;
+        bool scaled = variant == BannerVariant.PeakScaled;
+        SKColor bg = scaled ? Palette.Menta : peak ? Palette.Ambar : Palette.Perigo;
         SKColor fg = peak ? Palette.BgTrilhoFundo : Palette.PerigoTinta;
         SKColor chipBg = peak ? Palette.BgTrilhoFundo : Palette.PerigoTinta;
-        SKColor chipFg = peak ? Palette.Ambar : Palette.PerigoClaro;
+        SKColor chipFg = scaled ? Palette.Menta : peak ? Palette.Ambar : Palette.PerigoClaro;
         _fill.Color = bg;
         canvas.DrawRect(control.Left, control.Top, control.Width, control.Height, _fill);
 
@@ -188,7 +189,7 @@ public sealed class HotspotRenderer : IDisposable
         RequireDpi();
         var font = _typography.GetFont(FontRole.SilkscreenRegular, SealFontDip, _dpi);
         int border = P(1);
-        int w = 2 * border + 2 * P(12) + P(8) + P(10) + MeasureSpaced(SealText, font, SealFontDip) + P(10) + MeasureSpaced(awayText, font, SealFontDip);
+        int w = 2 * border + 2 * P(12) + P(8) + P(10) + MeasureSpaced(Strings.SealManaged, font, SealFontDip) + P(10) + MeasureSpaced(awayText, font, SealFontDip);
         int h = 2 * border + 2 * P(7) + LineHeight(font);
         return new PixelSize(w, h);
     }
@@ -215,13 +216,18 @@ public sealed class HotspotRenderer : IDisposable
         canvas.DrawRect(x, MathF.Round(cy - sq / 2f), sq, sq, _fill);
         x += sq + P(10);
         float baseline = Baseline(font, cy);
-        x += DrawSpaced(canvas, SealText, font, SealFontDip, x, baseline, Palette.TxtSecundario) + P(10);
+        x += DrawSpaced(canvas, Strings.SealManaged, font, SealFontDip, x, baseline, Palette.TxtSecundario) + P(10);
         DrawSpaced(canvas, awayText, font, SealFontDip, x, baseline, Palette.TxtRotulo);
     }
 
     // ---------- texto com letter-spacing: 1 px ----------
 
-    private static string Text(BannerVariant v) => v == BannerVariant.Peak ? PeakText : BossText;
+    private static string Text(BannerVariant v) => v switch
+    {
+        BannerVariant.Peak => Strings.BannerPeak,
+        BannerVariant.PeakScaled => Strings.BannerScaled,
+        _ => Strings.BannerBoss,
+    };
 
     private int P(float dip) => Math.Max(1, (int)MathF.Round(dip * _scale, MidpointRounding.AwayFromZero));
 

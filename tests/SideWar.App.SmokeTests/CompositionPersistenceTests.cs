@@ -1,6 +1,7 @@
 using System.IO;
 using SideWar.App.Composition;
 using SideWar.Core;
+using SideWar.Core.Missions;
 using SideWar.Core.Simulation;
 using SideWar.Runtime;
 using SideWar.Runtime.Composition;
@@ -50,6 +51,31 @@ public sealed class CompositionPersistenceTests : IDisposable
         Assert.NotNull(second.Restored);
         Assert.Equal(first.State.ComputeStateHash(), second.State.ComputeStateHash());
         Assert.Empty(log);
+    }
+
+    [Fact]
+    public void Missions_of_the_day_survive_a_restart()
+    {
+        Directory.CreateDirectory(dir);
+        var runtime = new GameRuntime(new GameRuntimeOptions { Clock = new ManualClock() });
+        var missions = new MissionService(runtime.Content, 777);
+        var store = new SessionPersistence(dir, "0.0.0-test", _ => { });
+        store.BindMissions(missions);
+        missions.Sync(new DateOnly(2026, 11, 13), []);
+        var first = missions.Missions[0];
+        var def = runtime.Content.Missions.Missions.First(m => m.Id == first.Id);
+        missions.Restore(new MissionServiceState("2026-11-13",
+            [new MissionEntry(first.Id, def.Target, MissionStatus.Completed), .. missions.Missions.Skip(1)], 0));
+        var (session, profile) = store.Encode(runtime);
+        Assert.True(store.Write(session, profile));
+
+        var reopened = new SessionPersistence(dir, "0.0.0-test", _ => { });
+        var restored = new MissionService(runtime.Content, 777);
+        reopened.BindMissions(restored);
+        Assert.Equal("2026-11-13", restored.Date);
+        Assert.Equal(4, restored.Missions.Count);
+        Assert.Equal(MissionStatus.Completed, restored.Missions[0].Status);
+        Assert.Equal(1, restored.Badge);
     }
 
     [Fact]

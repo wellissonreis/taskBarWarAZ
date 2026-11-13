@@ -20,6 +20,7 @@ public enum StripScene
     Away,
     Peak,
     Boss,
+    PeakScaled,
     Build,
     Band,
     Unpositioned,
@@ -47,6 +48,7 @@ public static class StripScenes
         StripScene.Away => "strip-away",
         StripScene.Peak => "strip-peak",
         StripScene.Boss => "strip-boss",
+        StripScene.PeakScaled => "strip-peakscaled",
         StripScene.Build => "strip-build",
         StripScene.Band => "strip-band",
         _ => "strip-unpositioned",
@@ -55,7 +57,7 @@ public static class StripScenes
     public static string GoldenName(StripScene scene, int dpi, bool text = true) => $"{Name(scene)}-{dpi * 100 / 96}{(text ? "" : "-notext")}";
 
     /// <summary>Cenas com texto (banner, selo, overlay do modo construção): têm variante "sem texto" para a comparação entre SOs.</summary>
-    public static bool HasHotspotText(StripScene scene) => scene is StripScene.Peak or StripScene.Boss or StripScene.Away or StripScene.Build;
+    public static bool HasHotspotText(StripScene scene) => scene is StripScene.Peak or StripScene.Boss or StripScene.PeakScaled or StripScene.Away or StripScene.Build;
 
     /// <summary>Trechos bloqueados do canvas/fixture TA.2 (DIP).</summary>
     public static readonly BlockedSpan[] Blocked =
@@ -155,6 +157,9 @@ public static class StripScenes
                 break;
             case StripScene.Boss:
                 DrawBanner(canvas, hot, sceneRect, dpi, BannerVariant.Boss, "0:45", now);
+                break;
+            case StripScene.PeakScaled:
+                DrawBanner(canvas, hot, sceneRect, dpi, BannerVariant.PeakScaled, "0:59", now);
                 break;
             case StripScene.Away:
                 DrawSeal(canvas, hot, sceneRect, dpi, "ausente há 1h 48min");

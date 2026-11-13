@@ -72,7 +72,7 @@ public sealed class StripGoldenTests
     public void Scenes_AreDistinctFromEachOther()
     {
         using var present = StripScenes.Render(StripScene.Present, 96);
-        foreach (var scene in new[] { StripScene.Away, StripScene.Peak, StripScene.Boss, StripScene.Build, StripScene.Band, StripScene.Unpositioned })
+        foreach (var scene in new[] { StripScene.Away, StripScene.Peak, StripScene.Boss, StripScene.PeakScaled, StripScene.Build, StripScene.Band, StripScene.Unpositioned })
         {
             using var other = StripScenes.Render(scene, 96);
             Assert.False(present.Bytes.AsSpan().SequenceEqual(other.Bytes), scene.ToString());

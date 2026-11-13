@@ -130,7 +130,7 @@ public sealed class StripEdgeAndHotspotTests : IDisposable
     public void SilkscreenHasGlyphsForTheBannerAndSealTexts()
     {
         var face = _typo.GetTypeface(FontRole.SilkscreenRegular);
-        foreach (var t in new[] { HotspotRenderer.PeakText, HotspotRenderer.BossText, HotspotRenderer.SealText, "ausente há 1h 48min", "0:24" })
+        foreach (var t in new[] { SideWar.Runtime.Localization.Strings.BannerPeak, SideWar.Runtime.Localization.Strings.BannerBoss, SideWar.Runtime.Localization.Strings.BannerScaled, SideWar.Runtime.Localization.Strings.SealManaged, "ausente há 1h 48min", "0:24" })
             Assert.Empty(GlyphCoverage.Missing(face, t));
     }
 

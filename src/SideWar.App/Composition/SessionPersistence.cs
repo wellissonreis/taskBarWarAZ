@@ -1,3 +1,4 @@
+using SideWar.Core.Missions;
 using SideWar.Core.Simulation;
 using SideWar.Persistence.IO;
 using SideWar.Persistence.Mapping;
@@ -21,6 +22,7 @@ internal sealed class SessionPersistence
     private readonly object writeGate = new();
     private ProfileData baseProfile;
     private byte[]? lastSession;
+    private MissionService? missions;
 
     public SessionPersistence(string dataDirectory, string appVersion, Action<string> log, IFileSystem? fileSystem = null)
     {
@@ -62,6 +64,46 @@ internal sealed class SessionPersistence
         if (RestoredSession is { } snapshot) PendingMapper.Restore(card, snapshot, state);
     }
 
+    /// <summary>
+    /// Liga o <see cref="MissionService"/> (SDD-14 RF-14.5: <c>profile.missions</c>): restaura o dia salvo e passa a gravá-lo em cada
+    /// <see cref="Encode"/>. Os segundos presentes do dia não são persistidos; a missão "Fique presente" os recompõe do progresso
+    /// (minutos × 60), então o progresso nunca regride ao reabrir.
+    /// </summary>
+    public void BindMissions(MissionService service)
+    {
+        missions = service;
+        if (baseProfile.Missions is not { DateLocal: { Length: > 0 } date } saved) return;
+        var items = saved.Items.Select(i => new MissionEntry(i.Id, i.Progress, i.State switch
+        {
+            MissionStateData.Collected => MissionStatus.Collected,
+            MissionStateData.Completed => MissionStatus.Completed,
+            _ => MissionStatus.InProgress,
+        })).ToArray();
+        double presentSeconds = items.Where(i => i.Id == "stay-present").Select(i => i.Progress * 60.0).FirstOrDefault();
+        service.Restore(new MissionServiceState(date, items, presentSeconds));
+    }
+
+    private MissionsData? MissionsToData()
+    {
+        if (missions is null) return null;
+        var s = missions.Snapshot();
+        return new MissionsData
+        {
+            DateLocal = s.Date.Length == 0 ? null : s.Date,
+            Items = s.Missions.Select(m => new MissionProgressData
+            {
+                Id = m.Id,
+                Progress = m.Progress,
+                State = m.Status switch
+                {
+                    MissionStatus.Collected => MissionStateData.Collected,
+                    MissionStatus.Completed => MissionStateData.Completed,
+                    _ => MissionStateData.InProgress,
+                },
+            }).ToArray(),
+        };
+    }
+
     /// <summary>Serializa na T-Game (estado vivo). Devolve os bytes de sessão e perfil prontos para escrever.</summary>
     public (byte[] Session, byte[] Profile) Encode(GameRuntime runtime, OfflineCardController? card = null)
     {
@@ -78,6 +120,7 @@ internal sealed class SessionPersistence
             AutoScaleAccumSeconds = runtime.Host.AutoScaleAccumSeconds,
         };
         var profile = SimSnapshotMapper.ToProfile(runtime.State, runtime.Context, baseProfile);
+        if (MissionsToData() is { } missionData) profile = profile with { Missions = missionData };
         // SDD-14 RF-14.5 / SDD-25 RF-25.11: pending + cardState vão junto da sessão (nunca se perdem ao fechar o app).
         var (pending, cardState) = card is null ? (new PendingData(), CardStateData.Aberto) : PendingMapper.ToSession(card);
         var snapshot = SimSnapshotMapper.ToSession(runtime.State, runtime.Context, DateTime.UtcNow, presence, profile,

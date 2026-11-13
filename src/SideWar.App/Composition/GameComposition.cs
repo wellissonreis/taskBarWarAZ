@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using SideWar.Core;
+using SideWar.Core.Missions;
 using SideWar.Persistence.Settings;
 using SideWar.Platform.Windows.Fullscreen;
 using SideWar.Platform.Windows.Input;
@@ -10,6 +11,7 @@ using SideWar.Platform.Windows.Threading;
 using SideWar.Platform.Windows.Windows;
 using SideWar.Rendering.Animation;
 using SideWar.Rendering.Icons;
+using SideWar.Rendering.Panel;
 using SideWar.Rendering.Scene;
 using SideWar.Rendering.Sprites;
 using SideWar.Rendering.Text;
@@ -37,6 +39,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
 {
     private const double WidgetIntervalSeconds = 0.5; // SDD-23: no máximo 2 atualizações de texto por segundo
     private const double ReenumerateDelaySeconds = 1; // SDD-07 RF-07.7
+    private const ulong MissionSeed = 0x5EED_5A1D_E7A2UL; // sorteio diário = f(seed, data), independente do Rng da partida (SDD-27 RF-27.11)
 
     private readonly GameRuntime runtime;
     private readonly CompositeLoopHost loop;
@@ -60,6 +63,11 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     private OfflineCardController? card;
     private OfflineCardPresenter? cardPresenter;
     private OfflineReturnCoordinator? offline;
+    private MissionService? missions;
+    private LiveEventsCoordinator? live;
+    private LiveEventsPresenter? livePresenter;
+    private PanelCoordinator? panel;
+    private PanelPresenter? panelPresenter;
     private TaskbarService? taskbar;
     private TaskbarProbe? probe;
     private TaskbarWatcher? watcher;
@@ -155,6 +163,24 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             offline.SetBaseline(restored.SavedUtc, restored.AutoScaleOn, restored.Presence.AutoScaleAccumSeconds);
         loop.AddBefore(offline); // prazo de 60 s do card, tick e 45 s da pergunta (oculto = sem deadline)
         res.Started("offline-card", cardPresenter.Dispose);
+
+        // 2c. Missões, eventos ao vivo (banner, caixa, card do chefe) e painel das 4 abas (T6.11b).
+        missions = new MissionService(runtime.Content, MissionSeed);
+        persistence.BindMissions(missions); // profile.missions → dia salvo
+        livePresenter = new LiveEventsPresenter(game, runtime, typography, icons, sceneRenderer, () => Animation,
+            () => offline.Question is not null, () => ScheduleWidget(now: true));
+        live = new LiveEventsCoordinator(runtime, missions, livePresenter, clock, log: log, missionsChanged: () => ScheduleWidget(now: true));
+        livePresenter.Attach(live);
+        runtime.Host.AddHook(live); // Consume/AddPresentSeconds por tick
+        loop.AddAfter(live); // depois do GameHost: vira o dia, aplica coletas entre ticks, remonta a visão a ~1 Hz
+        loop.AddAfter(livePresenter); // anel/piscar a ≤ 15 Hz só visível e com a simulação andando
+        res.Started("live-events", livePresenter.Dispose);
+        panelPresenter = new PanelPresenter(game, runtime, typography, icons, () => sceneRenderer.SpriteCache);
+        panel = new PanelCoordinator(runtime, missions, panelPresenter, new PanelTextMetricsSkia(typography), clock, () => ScheduleWidget(now: true));
+        panelPresenter.Attach(panel);
+        loop.AddAfter(panel); // 1 Hz de dados, 5 s do MIGRAR, 30 s do modo construção
+        res.Started("panel", panelPresenter.Dispose);
+        live.Start(); // Sync(hoje): sorteia/restaura o dia e coleta a virada pendente
 
         // 3. Dock (SDD-05): monitor salvo, geometria da cena e do widget.
         var dock = game.Dock;
@@ -371,10 +397,14 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         return new WidgetMenuState(m.Interactive, m.Paused, m.Monitors, m.SelectedMonitor);
     }
 
-    // Painel e cards (SDD-24) ficam fora desta ficha: o widget registra a interação e o pedido é só anotado.
-    private void OnPanelCommand(PanelCommand command) => log($"panel command {command.Kind}/{command.Tab} (panel not wired: T4.10 REPORT)");
+    // Painel das 4 abas (SDD-24, T6.11b): o widget alterna a aba; a torre da cena abre o Arsenal na linha dela (ADR-034).
+    private void OnPanelCommand(PanelCommand command) => panel?.Execute(command);
 
-    private void OnTargetClicked(HitTarget target) => runtime.NotifyInteraction();
+    private void OnTargetClicked(HitTarget target)
+    {
+        runtime.NotifyInteraction();
+        if (target.Kind == HitKind.SceneTower) panel?.OpenArsenal(target.TowerId);
+    }
 
     private void OnModeChanged(OverlayMode mode) => PublishMenu();
 
@@ -411,6 +441,8 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         sceneRenderer?.SetDpi(dpi);
         widget?.SetDpi(dpi);
         cardPresenter?.Relayout();
+        livePresenter?.Relayout();
+        panelPresenter?.Relayout();
         sink.Invalidate();
         taskbar?.SetMonitor(result.Monitor);
         fullscreen?.Reconfigure(ToFullscreenMode(settings.Behavior.HideOnFullscreen), result.Monitor.DeviceName);
@@ -487,7 +519,8 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         int stage = Math.Clamp(state.Stage, 1, runtime.Content.Stages.Length);
         var inputs = new WidgetInputs(state.Credits, runtime.Host.Rate.DisplayedRate, state.Wave,
             runtime.Content.Stages[stage - 1].Waves, runtime.Presence.State, state.PresenceMultiplier,
-            BonusSecondsLeft: 0, Pending: card?.BadgeCredits ?? 0, MissionBadge: 0, ActiveTab: null, HoverIndex: -1);
+            BonusSecondsLeft: live?.WidgetChipSeconds ?? 0, Pending: card?.BadgeCredits ?? 0, MissionBadge: missions?.Badge ?? 0,
+            ActiveTab: panel?.ActiveTab, HoverIndex: -1);
         var model = widgetModel.Update(inputs, TimeSpan.FromSeconds(now.NowTicks / now.TicksPerSecond));
         widget.Interaction.BadgeVisible = model.PendingText != null; // SDD-23: badge "+X" clicável só quando desenhado
         widget.SetModel(model);
