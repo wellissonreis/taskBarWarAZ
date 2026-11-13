@@ -21,14 +21,14 @@ public enum StripScene
 }
 
 /// <summary>
-/// Monta, de forma determinística, as cenas de SDD-22 CA-22.7 (1440 × 96 DIP) pela API pública: SimState/StripLayout,
+/// Monta, de forma determinística, as cenas de SDD-22 CA-22.7 (1440 × 152 DIP, geometria ADR-034; as goldens oficiais 1920 × 152 são TA.9) pela API pública: SimState/StripLayout,
 /// <see cref="SceneRenderer.Draw"/> (com a borda de estado) e <see cref="HotspotRenderer"/> (banner, caixa, selo), compostos
 /// sobre o fundo da barra de tarefas (#1b2230) como o shell faria com as janelas layered. Tempo de animação fixo.
 /// </summary>
 public static class StripScenes
 {
     public const int WidthDip = 1440;
-    public const int HeightDip = 96;
+    public const int HeightDip = 152;
     public static readonly SKColor Backdrop = new(0x1b, 0x22, 0x30);
     private static readonly AnimationPolicy Normal = new(false, PowerProfile.Normal);
 
@@ -51,7 +51,7 @@ public static class StripScenes
     {
         var slots = new float[8];
         for (int i = 0; i < 8; i++) slots[i] = 640 + 48 * i + 22;
-        var s = new SimState(TestLayouts.FromCenters(1290, 94, 10, 1256, slots)) { BaseHp = 78, MaxBaseHp = 100 };
+        var s = new SimState(TestLayouts.FromCenters(1394, 88, 4, 1360, slots)) { BaseHp = 78, MaxBaseHp = 100 };
         if (towers)
         {
             TowerType[] types = [TowerType.Bolt, TowerType.Frost, TowerType.Cannon, TowerType.Bolt, TowerType.Frost];

@@ -68,16 +68,17 @@ public sealed class FloatingNumbers
         (float)Math.Clamp((now - start) / SceneGeometry.FloatSeconds, 0.0, 1.0);
 }
 
-/// <summary>Cache de textos pequenos ("LV14", "-96"): aloca só na primeira vez de cada valor.</summary>
+/// <summary>Cache de textos pequenos ("14", "-96"): aloca só na primeira vez de cada valor.</summary>
 public sealed class TextCache
 {
     private readonly string?[] _levels = new string?[256];
     private readonly string?[] _damage = new string?[1024];
 
-    public string Level(int n)
+    /// <summary>Rótulo de nível: só o número ("14"), sem "LV" (ADR-034, DP-33.9).</summary>
+    public string Number(int n)
     {
-        if ((uint)n >= (uint)_levels.Length) return "LV" + n;
-        return _levels[n] ??= "LV" + n;
+        if ((uint)n >= (uint)_levels.Length) return n.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        return _levels[n] ??= n.ToString(System.Globalization.CultureInfo.InvariantCulture);
     }
 
     /// <summary>Dano inteiro com sinal: "-96".</summary>

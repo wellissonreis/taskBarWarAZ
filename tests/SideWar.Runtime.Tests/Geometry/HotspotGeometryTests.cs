@@ -27,17 +27,17 @@ public sealed class HotspotGeometryTests
     }
 
     [Fact]
-    public void SupplyBox_BaseOnStripBase_AndClampedInsideTheStrip()
+    public void SupplyBox_Top58_BaseOnGround_AndClampedInsideTheStrip()
     {
         var p = HotspotGeometry.SupplyBox(Scene(96), 96, 1060);
-        Assert.Equal(new PixelRect(1060, 1052, 1112, 1096), p.Window); // 52 × 44, top 52, base y = 96
+        Assert.Equal(new PixelRect(1060, 1058, 1112, 1102), p.Window); // 52 × 44, top 58, base no chão (y = 102; ADR-034)
         Assert.Equal(new PixelRect(0, 0, 52, 44), p.Control);
 
         Assert.Equal(1440 - 52, HotspotGeometry.SupplyBox(Scene(96), 96, 5000).Window.Left);
         Assert.Equal(0, HotspotGeometry.SupplyBox(Scene(96), 96, -30).Window.Left);
 
         var hi = HotspotGeometry.SupplyBox(Scene(192), 192, 100);
-        Assert.Equal(new PixelRect(200, 1000 + 192 - 88, 304, 1192), hi.Window); // 104 × 88 at 200%
+        Assert.Equal(new PixelRect(200, 1000 + 116, 304, 1000 + 116 + 88), hi.Window); // 104 × 88 at 200%, top 58 DIP
     }
 
     [Fact]
@@ -48,11 +48,11 @@ public sealed class HotspotGeometryTests
     }
 
     [Fact]
-    public void Seal_CenteredAndFourDipBelowTheTop()
+    public void Seal_CenteredAndTwoDipBelowTheTop()
     {
         var r = HotspotGeometry.Seal(Scene(96), 96, 500, 30);
-        Assert.Equal(new PixelRect(470, 1004, 970, 1034), r);
-        Assert.Equal(1000 + 6, HotspotGeometry.Seal(Scene(144), 144, 500, 30).Top);
+        Assert.Equal(new PixelRect(470, 1002, 970, 1032), r);
+        Assert.Equal(1000 + 3, HotspotGeometry.Seal(Scene(144), 144, 500, 30).Top);
     }
 
     [Fact]

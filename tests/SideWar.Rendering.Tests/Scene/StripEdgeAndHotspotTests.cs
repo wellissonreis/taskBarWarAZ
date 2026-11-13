@@ -31,7 +31,7 @@ public sealed class StripEdgeAndHotspotTests : IDisposable
     {
         var slots = new float[8];
         for (int i = 0; i < 8; i++) slots[i] = 640 + 48 * i + 22;
-        var s = new SimState(TestLayouts.FromCenters(1290, 94, 10, 1256, slots)) { BaseHp = 50, MaxBaseHp = 100 };
+        var s = new SimState(TestLayouts.FromCenters(1394, 88, 4, 1360, slots)) { BaseHp = 50, MaxBaseHp = 100 };
         s.Towers.Add(new Tower { Id = s.TakeId(), Type = TowerType.Bolt, Anchor = TowerAnchor.Start, OffsetDip = TestLayouts.SceneX(0), Placed = true, Level = 14 });
         return s;
     }
@@ -58,11 +58,11 @@ public sealed class StripEdgeAndHotspotTests : IDisposable
     }
 
     [Theory]
-    [InlineData(96, 94, 96)]
-    [InlineData(120, 118, 120)]
-    [InlineData(144, 141, 144)]
-    [InlineData(192, 188, 192)]
-    public void EdgeRows_AreTheLastTwoDipOfTheStrip(int dpi, int top, int bottom) =>
+    [InlineData(96, 102, 104)]
+    [InlineData(120, 128, 130)]
+    [InlineData(144, 153, 156)]
+    [InlineData(192, 204, 208)]
+    public void EdgeRows_AreTheGapBetweenGroundAndBar(int dpi, int top, int bottom) =>
         Assert.Equal((top, bottom), StripEdge.Rows(dpi / 96f));
 
     [Theory]
@@ -73,13 +73,14 @@ public sealed class StripEdgeAndHotspotTests : IDisposable
         var (r, hot) = Renderers(dpi);
         using var _ = r; using var __ = hot;
         var state = NewState();
-        int w = 1440 * dpi / 96, h = dpi;
+        int w = 1440 * dpi / 96, h = 152 * dpi / 96;
         using var plain = Bitmap(w, h);
         using var edged = Bitmap(w, h);
         using (var c = new SKCanvas(plain)) r.Draw(c, state, 0, Normal);
         using (var c = new SKCanvas(edged)) r.Draw(c, state, 0, Normal, StripEdgeMode.Present);
         var (top, bottom) = StripEdge.Rows(dpi / 96f);
         Assert.Equal(0, plain.GetPixel(5, h - 1).Alpha);
+        Assert.Equal(0, plain.GetPixel(5, h / 2).Alpha);
         int sprite = 0, partial = 0, edge = 0;
         for (int y = top; y < bottom; y++)
             for (int x = 0; x < w; x++)
@@ -90,8 +91,8 @@ public sealed class StripEdgeAndHotspotTests : IDisposable
                 else if (p.Alpha != 0) { partial++; Assert.NotEqual(Palette.BordaPresente, e); } // translúcido: mistura sobre a linha
                 else if (p.Alpha == 0) { Assert.Equal(Palette.BordaPresente, e); edge++; } // sem sprite: a linha
             }
-        Assert.True(sprite + partial > 0, $"há sprite sobre a linha (torre/slot/núcleo); opacos={sprite} parciais={partial}");
-        Assert.True(edge > w, "a linha aparece onde não há sprite");
+        Assert.Equal(0, sprite + partial); // ADR-034: o vão [102, 104) não é coberto por pés de sprite nem pela barra
+        Assert.Equal(w * (bottom - top), edge); // a linha cobre a largura toda
         Assert.Equal(0, edged.GetPixel(5, top - 1).Alpha); // só 2 DIP
     }
 
@@ -100,12 +101,12 @@ public sealed class StripEdgeAndHotspotTests : IDisposable
     {
         var (r, hot) = Renderers(96);
         using var _ = r; using var __ = hot;
-        using var bmp = Bitmap(1440, 96);
+        using var bmp = Bitmap(1440, 152);
         using var c = new SKCanvas(bmp);
         r.Draw(c, NewState(), 0, Normal, StripEdgeMode.Away);
-        Assert.Equal(Palette.BordaAusente, bmp.GetPixel(5, 95));
+        Assert.Equal(Palette.BordaAusente, bmp.GetPixel(5, 103));
         r.Draw(c, NewState(), 0, Normal, StripEdgeMode.Boss);
-        Assert.Equal(Palette.BordaChefe, bmp.GetPixel(5, 94));
+        Assert.Equal(Palette.BordaChefe, bmp.GetPixel(5, 102));
     }
 
     // ---------- textos ----------
@@ -144,7 +145,7 @@ public sealed class StripEdgeAndHotspotTests : IDisposable
         using var _ = r; using var __ = hot;
         int cw = hot.MeasureBannerWidth(BannerVariant.Peak, "0:24");
         Assert.True(cw > 200);
-        var place = HotspotGeometry.Banner(new PixelRect(0, 0, 1440 * dpi / 96, dpi), (uint)dpi, cw);
+        var place = HotspotGeometry.Banner(new PixelRect(0, 0, 1440 * dpi / 96, 152 * dpi / 96), (uint)dpi, cw);
         using var bmp = Bitmap(place.Window.Width, place.Window.Height);
         using var canvas = new SKCanvas(bmp);
         int m = place.Control.Left, midY = place.Window.Height / 2;

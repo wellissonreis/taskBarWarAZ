@@ -11,7 +11,7 @@ public enum StripEdgeMode
     Boss,
 }
 
-/// <summary>Linha de borda de estado: 2 DIP na base da faixa (y ∈ [94, 96)), sob os sprites (RF-22.4 item 1).</summary>
+/// <summary>Linha de borda de estado: 2 DIP no vão y ∈ [102, 104) (ADR-034), sob os sprites (RF-22.4 item 1).</summary>
 public static class StripEdge
 {
     public const float HeightDip = 2f;
@@ -23,10 +23,10 @@ public static class StripEdge
         _ => Palette.BordaPresente,
     };
 
-    /// <summary>Linhas de pixel ocupadas: <c>[round(94 × scale), round(96 × scale))</c>.</summary>
+    /// <summary>Linhas de pixel ocupadas: <c>[round(102 × scale), round(104 × scale))</c>.</summary>
     public static (int Top, int Bottom) Rows(float scale) =>
-        ((int)MathF.Round((SceneGeometry.StripHeight - HeightDip) * scale, MidpointRounding.AwayFromZero),
-         (int)MathF.Round(SceneGeometry.StripHeight * scale, MidpointRounding.AwayFromZero));
+        ((int)MathF.Round(SceneGeometry.StatusLineTop * scale, MidpointRounding.AwayFromZero),
+         (int)MathF.Round((SceneGeometry.StatusLineTop + SceneGeometry.StatusLineHeight) * scale, MidpointRounding.AwayFromZero));
 
     /// <summary>Desenha a linha de borda na largura <paramref name="widthPx"/>; não altera o estado do canvas.</summary>
     public static void Draw(SKCanvas canvas, SKPaint fill, float scale, int widthPx, StripEdgeMode mode)

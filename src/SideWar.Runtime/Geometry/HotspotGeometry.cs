@@ -6,7 +6,7 @@ public enum HotspotKind
     /// <summary>Banner de pico ou de chefe (36 DIP de controle + 6 DIP de margem para o anel).</summary>
     Banner,
 
-    /// <summary>Caixa de suprimentos (52 × 44 DIP, base em y = 96).</summary>
+    /// <summary>Caixa de suprimentos (52 × 44 DIP, top 58, base no chão em y = 102).</summary>
     SupplyBox,
 }
 
@@ -28,7 +28,9 @@ public static class HotspotGeometry
     public const float SupplyBoxHeightDip = 44f;
     public const float SupplySpriteWidthDip = 45f;
     public const float SupplySpriteHeightDip = 24f;
-    public const float SealTopDip = 4f;
+    public const float SealTopDip = 2f;
+    /// <summary>Topo da caixa de suprimentos (ADR-034: chão em 102, caixa de 44 DIP).</summary>
+    public const float SupplyBoxTopDip = 58f;
 
     public static int Px(double dip, uint dpi) => checked((int)Math.Round(dip * dpi / 96.0, MidpointRounding.AwayFromZero));
 
@@ -50,7 +52,7 @@ public static class HotspotGeometry
     }
 
     /// <summary>
-    /// Caixa de suprimentos: 52 × 44 DIP com a base na base da faixa. <paramref name="leftDip"/> é o X do controle
+    /// Caixa de suprimentos: 52 × 44 DIP em <c>top = 58</c> (base no chão, y = 102). <paramref name="leftDip"/> é o X do controle
     /// relativo à esquerda da faixa (SDD-26); é mantido dentro da faixa.
     /// </summary>
     public static HotspotPlacement SupplyBox(PixelRect scene, uint dpi, float leftDip)
@@ -61,7 +63,7 @@ public static class HotspotGeometry
         int h = Px(SupplyBoxHeightDip, dpi);
         int max = Math.Max(scene.Left, scene.Right - w);
         int left = Math.Clamp(scene.Left + Px(leftDip, dpi), scene.Left, max);
-        int top = scene.Bottom - h;
+        int top = scene.Top + Px(SupplyBoxTopDip, dpi);
         return new(new PixelRect(left, top, left + w, top + h), new PixelRect(0, 0, w, h));
     }
 
@@ -73,7 +75,7 @@ public static class HotspotGeometry
         return new(left, top, left + spriteWidthPx, top + spriteHeightPx);
     }
 
-    /// <summary>Selo de modo ausente: centrado na faixa, 4 DIP abaixo do topo. Tamanho já medido em pixels.</summary>
+    /// <summary>Selo de modo ausente: centrado na faixa, 2 DIP abaixo do topo (ADR-034). Tamanho já medido em pixels.</summary>
     public static PixelRect Seal(PixelRect scene, uint dpi, int widthPx, int heightPx)
     {
         CheckDpi(dpi);

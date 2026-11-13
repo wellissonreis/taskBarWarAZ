@@ -9,7 +9,8 @@ namespace SideWar.Rendering.Scene;
 
 /// <summary>
 /// Camadas da cena (SDD-22 RF-22.4) desenhadas num <see cref="SKCanvas"/> a partir do <see cref="SimState"/>:
-/// núcleo + barra, slots/torres + rótulos, inimigos (bob global), números de dano, portal, chefe + barra.
+/// linha de estado, núcleo + barra, portal, inimigos (bob global) + barras de vida, números de dano, torres (na barra ou na faixa,
+/// brilho pré-cozido, rótulo só número), chefe + barra (ADR-034, canvas 1920 × 152; feixes e clarões não, ADR-027).
 /// A linha de borda de estado entra pelo parâmetro <c>edge</c> de Draw; selo e hotspots são do <see cref="HotspotRenderer"/> (T4.9). Pensado para a T-Game (não thread-safe);
 /// paints/fonts pré-criados, sem alocação por frame em regime.
 /// </summary>
@@ -18,6 +19,8 @@ public sealed class SceneRenderer : IDisposable
     private static readonly SKSamplingOptions Nearest = new(SKFilterMode.Nearest, SKMipmapMode.None);
 
     private readonly ScaledSpriteCache _cache;
+    private readonly SpriteAtlas _atlas;
+    private readonly TowerSprites _towerSprites = new();
     private readonly Typography _typography;
     private readonly SKPaint _fill = new() { IsAntialias = false, Style = SKPaintStyle.Fill };
     private readonly SKPaint _sprite = new() { IsAntialias = false };
@@ -26,6 +29,7 @@ public sealed class SceneRenderer : IDisposable
     private readonly TextCache _texts = new();
     private readonly Dictionary<(string Text, int Px), (SKTextBlob Blob, float Width)> _runs = [];
     private readonly int[] _order = new int[EnemyStore.CapacityConst];
+    private readonly int[] _towerOrder = new int[64];
     private readonly int[] _slowShown = new int[64];
     private int _slowHead;
     private long _cursor;
@@ -37,6 +41,7 @@ public sealed class SceneRenderer : IDisposable
     {
         ArgumentNullException.ThrowIfNull(atlas);
         ArgumentNullException.ThrowIfNull(typography);
+        _atlas = atlas;
         _cache = new ScaledSpriteCache(atlas);
         _typography = typography;
     }
@@ -54,6 +59,7 @@ public sealed class SceneRenderer : IDisposable
         ClearRuns();
         _scale = dpi / 96f;
         _cache.Bake(_scale);
+        _towerSprites.Reset(_scale);
     }
 
     /// <summary>
@@ -112,9 +118,11 @@ public sealed class SceneRenderer : IDisposable
 
     /// <summary>
     /// Desenha a cena (limpa o canvas para transparente antes). Com <paramref name="edge"/> a linha de borda de estado
-    /// (RF-22.6) é desenhada logo após o Clear, portanto SOB os sprites (RF-22.4 item 1); nulo = sem linha.
+    /// (RF-22.6, <c>y ∈ [102, 104)</c>) é desenhada logo após o Clear, portanto SOB os sprites (RF-22.4 item 1); nulo = sem linha.
+    /// <paramref name="barHeightDip"/> é a altura da barra (48 no padrão) e define o topo das torres.
     /// </summary>
-    public void Draw(SKCanvas canvas, SimState state, double now, AnimationPolicy policy, StripEdgeMode? edge = null)
+    public void Draw(SKCanvas canvas, SimState state, double now, AnimationPolicy policy, StripEdgeMode? edge = null,
+        float barHeightDip = SceneGeometry.DefaultBarHeight)
     {
         ArgumentNullException.ThrowIfNull(canvas);
         ArgumentNullException.ThrowIfNull(state);
@@ -129,23 +137,14 @@ public sealed class SceneRenderer : IDisposable
         int bobPx = (int)MathF.Round(bob * s, MidpointRounding.AwayFromZero);
 
         // 2. núcleo: barra e sprite
-        var bar = SceneGeometry.CoreBarContent(layout.CoreX);
-        DrawBar(canvas, bar, SceneGeometry.CoreBarOuter(layout.CoreX), SceneGeometry.BarFillWidth(state.BaseHp, state.MaxBaseHp),
-            Palette.BgTrilho, Palette.Menta, 0);
+        DrawBar(canvas, SceneGeometry.CoreBarOuter(layout.CoreX), SceneGeometry.BarFillWidth(state.BaseHp, state.MaxBaseHp, SceneGeometry.CoreBarWidth),
+            SceneColors.CoreBarTrack, SceneColors.CoreBarFill, SceneColors.BarBorder, 0);
         DrawSprite(canvas, SpriteId.Core, SceneGeometry.Core(layout.CoreX), 0, null);
 
-        // 3. torres posicionadas (ADR-034; compilação mínima da TA.3: o desenho na barra e o modo construção são TA.6/TA.7)
-        for (int i = 0; i < state.Towers.Capacity; i++)
-        {
-            if (!state.Towers.IsAlive(i)) continue;
-            ref var t = ref state.Towers.At(i);
-            if (!t.Placed) continue;
-            float cell = SceneGeometry.CellLeft(state.TowerCenterX(in t));
-            DrawSprite(canvas, SceneGeometry.TowerSprite(t.Type), SceneGeometry.Tower(t.Type, cell), 0, null);
-            DrawCentered(canvas, _texts.Level(t.Level), cell, SceneGeometry.TowerLabelBox(cell).Y, SceneGeometry.CellWidth, SceneGeometry.LabelFontDip, Palette.TxtBranco);
-        }
+        // 3. portal (camada estática no canvas: nasce por trás dele, antes dos inimigos)
+        DrawSprite(canvas, SpriteId.Portal, SceneGeometry.Portal(layout.PortalX), 0, null);
 
-        // 4. inimigos comuns, por nascimento (o mais novo por cima)
+        // 4. inimigos comuns, por nascimento (o mais novo por cima), cada um seguido da sua barra de vida
         var enemies = state.Enemies;
         int n = enemies.CopyIndicesByIdAscending(_order);
         int boss = -1;
@@ -155,26 +154,59 @@ public sealed class SceneRenderer : IDisposable
             if (e.Hp <= 0) continue; // morto, ainda no store até o DeathSystem
             if (e.Kind == EnemyKind.Boss || (e.Flags & EnemyFlags.Boss) != 0) { boss = _order[k]; continue; }
             DrawSprite(canvas, SceneGeometry.EnemySprite(e.Kind), SceneGeometry.Enemy(e.Kind, e.X), bobPx, null);
+            DrawEnemyBar(canvas, SceneGeometry.EnemyBar(e.Kind, e.X), SceneGeometry.BarFillWidth(e.Hp, e.MaxHp, SceneGeometry.EnemyBar(e.Kind, e.X).W));
         }
 
         // 5. números de dano
         DrawNumbers(canvas, now, policy);
 
-        // 6. portal
-        DrawSprite(canvas, SpriteId.Portal, SceneGeometry.Portal(layout.PortalX), 0, null);
+        // 6. torres posicionadas, na ordem de Id (as SEM POSIÇÃO não são desenhadas); sem slot vazio nem "+" (ADR-034)
+        DrawTowers(canvas, state, barHeightDip);
 
-        // 7. chefe e sua barra
+        // 7. chefe e sua barra (68 × 5)
         if (boss >= 0)
         {
             ref var b = ref enemies.At(boss);
             var rect = SceneGeometry.Enemy(EnemyKind.Boss, b.X);
             DrawSprite(canvas, SpriteId.EnemyBoss, rect, bobPx, null);
-            DrawBar(canvas, SceneGeometry.BossBarContent(rect), SceneGeometry.BossBarOuter(rect),
-                SceneGeometry.BarFillWidth(b.Hp, b.MaxHp), Palette.PerigoTrilho, Palette.Perigo, bobPx);
+            DrawBar(canvas, SceneGeometry.BossBarOuter(rect), SceneGeometry.BarFillWidth(b.Hp, b.MaxHp, SceneGeometry.BossBarWidth),
+                Palette.PerigoTrilho, Palette.Perigo, SceneColors.BarBorder, bobPx);
         }
     }
 
-    // base alinhada a round(96 × scale); posição X por round(dip × scale); tamanho do cache (já round(dip × scale)).
+    private void DrawTowers(SKCanvas canvas, SimState state, float barHeightDip)
+    {
+        var host = state.Layout.Host;
+        int count = 0;
+        for (int i = 0; i < state.Towers.Capacity; i++)
+        {
+            if (!state.Towers.IsAlive(i) || !state.Towers.At(i).Placed) continue;
+            if (count < _towerOrder.Length) _towerOrder[count++] = i;
+        }
+        // ordem de Id crescente (inserção por seleção: ≤ 24 torres, sem alocação)
+        for (int a = 1; a < count; a++)
+        {
+            int v = _towerOrder[a], k = a - 1;
+            while (k >= 0 && state.Towers.At(_towerOrder[k]).Id > state.Towers.At(v).Id) { _towerOrder[k + 1] = _towerOrder[k]; k--; }
+            _towerOrder[k + 1] = v;
+        }
+        for (int k = 0; k < count; k++)
+        {
+            ref var t = ref state.Towers.At(_towerOrder[k]);
+            var rect = SceneGeometry.Tower(t.Type, host, state.TowerCenterX(in t), barHeightDip);
+            if (_towerSprites.Get(_atlas, t.Type, host) is { } image)
+            {
+                float left = R(rect.X * _scale) - _towerSprites.PadPx;
+                float top = R(rect.Y * _scale) - _towerSprites.PadPx;
+                _sprite.Color = Palette.TxtBranco;
+                canvas.DrawImage(image, left, top, Nearest, _sprite);
+            }
+            var (lx, ly) = SceneGeometry.TowerLabelOrigin(rect);
+            DrawLabel(canvas, _texts.Number(t.Level), lx, ly);
+        }
+    }
+
+    // base alinhada a round(base × scale); posição X por round(dip × scale); tamanho do cache (já round(dip × scale)).
     private void DrawSprite(SKCanvas canvas, SpriteId id, DipRect r, int yOffsetPx, SKColor? tint)
     {
         if (!_cache.TryGet(id, out var src, out _) || _cache.Image is not { } image) return;
@@ -185,12 +217,13 @@ public sealed class SceneRenderer : IDisposable
         canvas.DrawImage(image, SKRect.Create(src.Left, src.Top, src.Width, src.Height), dst, Nearest, _sprite);
     }
 
-    private void DrawBar(SKCanvas canvas, DipRect content, DipRect outer, float fillDip, SKColor track, SKColor fill, int yOffsetPx)
+    // barra com borda de 1 px (núcleo e chefe): borda, trilho, preenchimento.
+    private void DrawBar(SKCanvas canvas, DipRect outer, float fillDip, SKColor track, SKColor fill, SKColor border, int yOffsetPx)
     {
         float s = _scale;
         float ox = R(outer.X * s), oy = R(outer.Y * s) + yOffsetPx, ow = R(outer.Right * s) - R(outer.X * s), oh = R(outer.Bottom * s) - R(outer.Y * s);
         float b = Math.Max(1, R(SceneGeometry.BarBorder * s));
-        _fill.Color = Palette.BgTrilhoFundo;
+        _fill.Color = border;
         canvas.DrawRect(ox, oy, ow, oh, _fill);
         _fill.Color = track;
         canvas.DrawRect(ox + b, oy + b, ow - 2 * b, oh - 2 * b, _fill);
@@ -199,6 +232,21 @@ public sealed class SceneRenderer : IDisposable
         {
             _fill.Color = fill;
             canvas.DrawRect(ox + b, oy + b, fw, oh - 2 * b, _fill);
+        }
+    }
+
+    // barra de vida do inimigo comum: 3 DIP, sem borda, trilho + preenchimento (HP%).
+    private void DrawEnemyBar(SKCanvas canvas, DipRect bar, float fillDip)
+    {
+        float s = _scale;
+        float x = R(bar.X * s), y = R(bar.Y * s), w = R(bar.Right * s) - x, h = Math.Max(1, R(bar.Bottom * s) - y);
+        _fill.Color = Palette.PerigoTrilho;
+        canvas.DrawRect(x, y, w, h, _fill);
+        float fw = Math.Min(w, R(fillDip * s));
+        if (fw > 0)
+        {
+            _fill.Color = Palette.Perigo;
+            canvas.DrawRect(x, y, fw, h, _fill);
         }
     }
 
@@ -219,8 +267,8 @@ public sealed class SceneRenderer : IDisposable
                 FloatKind.Slow => Palette.Gelo,
                 _ => Palette.AzulClaro,
             };
-            DrawCentered(canvas, it.Text, it.X - SceneGeometry.CellWidth / 2, SceneGeometry.FloatTop - rise,
-                SceneGeometry.CellWidth, SceneGeometry.FloatFontDip, color, alpha);
+            DrawCentered(canvas, it.Text, it.X - SceneGeometry.TowerCellSize / 2, SceneGeometry.FloatTop - rise,
+                SceneGeometry.TowerCellSize, SceneGeometry.FloatFontDip, color, alpha);
         }
     }
 
@@ -238,6 +286,21 @@ public sealed class SceneRenderer : IDisposable
         _text.Color = Palette.SombraTexto.WithAlpha(alpha);
         canvas.DrawText(blob, x + sh, y + sh, _text);
         _text.Color = color.WithAlpha(alpha);
+        canvas.DrawText(blob, x, y, _text);
+    }
+
+    // Rótulo de nível: Silkscreen 9, branco, alinhado à esquerda em (xDip, topDip), sombras 1px 1px 0 e −1px −1px 0 pretas.
+    private void DrawLabel(SKCanvas canvas, string text, float xDip, float topDip)
+    {
+        var font = _typography.GetFont(FontRole.SilkscreenRegular, SceneGeometry.LabelFontDip, _dpi);
+        var (blob, _) = GetRun(text, font, SceneGeometry.LabelFontDip);
+        float x = R(xDip * _scale);
+        float y = R(topDip * _scale) + R(-font.Metrics.Ascent);
+        float sh = Math.Max(1, R(_scale));
+        _text.Color = Palette.SombraTexto;
+        canvas.DrawText(blob, x + sh, y + sh, _text);
+        canvas.DrawText(blob, x - sh, y - sh, _text);
+        _text.Color = Palette.TxtBranco;
         canvas.DrawText(blob, x, y, _text);
     }
 
@@ -261,6 +324,7 @@ public sealed class SceneRenderer : IDisposable
     {
         ClearRuns();
         _cache.Dispose();
+        _towerSprites.Dispose();
         _fill.Dispose();
         _sprite.Dispose();
         _text.Dispose();

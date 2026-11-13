@@ -26,7 +26,7 @@ public sealed class SceneRendererTests : IDisposable
     {
         var slots = new float[8];
         for (int i = 0; i < 8; i++) slots[i] = 640 + 48 * i + 22;
-        var layout = TestLayouts.FromCenters(1290, 94, 10, 1256, slots);
+        var layout = TestLayouts.FromCenters(1394, 88, 4, 1360, slots);
         var s = new SimState(layout) { BaseHp = 50, MaxBaseHp = 100 };
         s.Towers.Add(new Tower { Id = s.TakeId(), Type = TowerType.Bolt, Anchor = TowerAnchor.Start, OffsetDip = TestLayouts.SceneX(0), Placed = true, Level = 14 });
         s.Towers.Add(new Tower { Id = s.TakeId(), Type = TowerType.Frost, Anchor = TowerAnchor.Start, OffsetDip = TestLayouts.SceneX(1), Placed = true, Level = 3 });
@@ -48,7 +48,7 @@ public sealed class SceneRendererTests : IDisposable
     }
 
     private static SKBitmap NewBitmap(int dpi = 96) =>
-        new(new SKImageInfo(1440 * dpi / 96, 96 * dpi / 96, SKColorType.Bgra8888, SKAlphaType.Premul));
+        new(new SKImageInfo(1440 * dpi / 96, 152 * dpi / 96, SKColorType.Bgra8888, SKAlphaType.Premul));
 
     [Fact]
     public void Draw_CoreBarFill_AndBossBarAndTransparentBackground()
@@ -60,11 +60,12 @@ public sealed class SceneRendererTests : IDisposable
         using var canvas = new SKCanvas(bmp);
         r.Draw(canvas, s, 0, Normal);
 
-        Assert.Equal(Palette.Menta, bmp.GetPixel(30, 34));      // preenchido (50% de 60 = 30 → x 22..51)
-        Assert.Equal(Palette.BgTrilho, bmp.GetPixel(70, 34));   // trilho (x > 52)
-        Assert.Equal(Palette.BgTrilhoFundo, bmp.GetPixel(21, 33)); // borda
-        // chefe: sprite centrado em 800, bob 0 em t=0, barra em top 36 (Left = 766 + 4); 100% cheio
-        Assert.Equal(Palette.Perigo, bmp.GetPixel(770 + 5, 38));
+        // barra do núcleo 64 × 5 em (14, 38): 50% = 32 DIP → x 14..45 preenchido, trilho depois
+        Assert.Equal(SceneColors.CoreBarFill, bmp.GetPixel(30, 40));
+        Assert.Equal(SceneColors.CoreBarTrack, bmp.GetPixel(70, 40));
+        Assert.Equal(SceneColors.BarBorder, bmp.GetPixel(13, 39)); // borda
+        // chefe: sprite centrado em 800, bob 0 em t=0, barra 68 × 5 em (766, 42); 100% cheio
+        Assert.Equal(Palette.Perigo, bmp.GetPixel(766 + 5, 44));
         Assert.Equal(0u, (uint)bmp.GetPixel(5, 5).Alpha);       // cena sem fundo
     }
 
@@ -76,12 +77,54 @@ public sealed class SceneRendererTests : IDisposable
         using var bmp = NewBitmap();
         using var canvas = new SKCanvas(bmp);
         r.Draw(canvas, s, 0, Normal);
-        // ADR-034 (TA.3, mínimo): só torres posicionadas são desenhadas; marcadores de slot vazio saíram (a barra e o modo construção são TA.6/TA.7).
-        Assert.True(HasOpaque(bmp, 640, 38, 44, 12), "rótulo LV14 da torre 0");
-        Assert.True(HasOpaque(bmp, 640 + 48, 38, 44, 12), "rótulo da torre 1");
+        // torres de 36 DIP na barra: Raio em x 644..680, Gelo (32) em 694..726, top 110
+        Assert.True(HasOpaque(bmp, 644, 110, 36, 36), "torre Raio");
+        Assert.True(HasOpaque(bmp, 694, 110, 32, 36), "torre Gelo");
+        Assert.True(HasOpaque(bmp, 670, 136, 10, 10), "rótulo só-número no canto da torre 0");
+        Assert.False(HasOpaque(bmp, 644, 0, 36, 100), "nada acima da torre (sem rótulo no topo)");
+        // sem slot vazio, sem "+" em posição livre
+        Assert.False(HasOpaque(bmp, 640 + 48 * 4, 104, 44, 48), "posição livre fica vazia");
         Assert.False(HasOpaque(bmp, 640 + 48 * 2, 54, 44, 14), "sem '+' de slot vazio");
-        Assert.False(HasOpaque(bmp, 640 + 48 * 2 + 1, 70, 42, 26), "sem sprite de slot vazio");
-        Assert.False(HasOpaque(bmp, 640 + 48 * 4 + 1, 0, 40, 30), "sem nada acima de uma posição livre");
+    }
+
+    [Fact]
+    public void Draw_UnpositionedTowerIsNotDrawn_AndBandHostDrawsAt44()
+    {
+        var s = NewState();
+        s.Towers.Add(new Tower { Id = s.TakeId(), Type = TowerType.Bolt, Anchor = TowerAnchor.Start, OffsetDip = TestLayouts.SceneX(4), Placed = false, Level = 5 });
+        using var r = NewRenderer();
+        using var bmp = NewBitmap();
+        using (var canvas = new SKCanvas(bmp)) r.Draw(canvas, s, 0, Normal);
+        Assert.False(HasOpaque(bmp, 640 + 48 * 4, 104, 44, 48), "SEM POSIÇÃO não é desenhada");
+
+        var band = new SimState(StripLayout.Create(1440, 1394, 88, 4, 1360, TowerHost.Band, [new FreeZone(640, 1032)])) { BaseHp = 50, MaxBaseHp = 100 };
+        band.Towers.Add(new Tower { Id = band.TakeId(), Type = TowerType.Bolt, Anchor = TowerAnchor.Start, OffsetDip = 700, Placed = true, Level = 9 });
+        using var bmp2 = NewBitmap();
+        using (var canvas = new SKCanvas(bmp2)) r.Draw(canvas, band, 0, Normal);
+        Assert.True(HasOpaque(bmp2, 678, 2, 44, 44), "hospedeiro Band: sprite de 44 em top 2");
+        Assert.False(HasOpaque(bmp2, 678, 104, 44, 48), "nada na barra no hospedeiro Band");
+    }
+
+    [Fact]
+    public void Draw_EnemyHealthBar_ElevatedDrone_AndPortalPosition()
+    {
+        var s = NewState();
+        int id = AddEnemy(s, EnemyKind.Grunt, 400, 50);
+        _ = id;
+        AddEnemy(s, EnemyKind.Runner, 500, 100);
+        using var r = NewRenderer();
+        using var bmp = NewBitmap();
+        using (var canvas = new SKCanvas(bmp)) r.Draw(canvas, s, 0, Normal);
+        // grunt 23 × 26 em x 388.5: barra 3 DIP em top 70, 50% preenchida
+        Assert.Equal(Palette.Perigo, bmp.GetPixel(392, 71));
+        Assert.Equal(Palette.PerigoTrilho, bmp.GetPixel(408, 71));
+        // drone: sprite em top 60..82 (pé elevado), barra em 54
+        Assert.True(HasOpaque(bmp, 481, 60, 38, 22));
+        Assert.Equal(Palette.Perigo, bmp.GetPixel(490, 55));
+        Assert.False(HasOpaque(bmp, 481, 83, 38, 19), "o drone não encosta no chão");
+        // portal em x 1360, top 50, 68 × 52
+        Assert.True(HasOpaque(bmp, 1360, 50, 68, 52));
+        Assert.False(HasOpaque(bmp, 1360, 0, 68, 49));
     }
 
     private static bool HasOpaque(SKBitmap b, int x, int y, int w, int h)
@@ -104,10 +147,10 @@ public sealed class SceneRendererTests : IDisposable
         using (var cv = new SKCanvas(a)) r.Draw(cv, s, 0.0, Normal);          // offset 0
         using (var cv = new SKCanvas(b)) r.Draw(cv, s, 0.26, Normal);         // estado 2: −2 DIP
         using (var cv = new SKCanvas(c)) r.Draw(cv, s, 0.26, new AnimationPolicy(true, PowerProfile.Normal));
-        // grunt 23×26: top 70 sem bob; com −2 o topo sobe para 68.
-        Assert.False(HasOpaque(a, 389, 68, 23, 2));
-        Assert.True(HasOpaque(b, 389, 68, 23, 2));
-        Assert.False(HasOpaque(c, 389, 68, 23, 2));
+        // grunt 23×26: top 76 sem bob; com −2 o topo sobe para 74.
+        Assert.False(HasOpaque(a, 389, 74, 23, 2));
+        Assert.True(HasOpaque(b, 389, 74, 23, 2));
+        Assert.False(HasOpaque(c, 389, 74, 23, 2));
     }
 
     [Fact]
@@ -181,7 +224,7 @@ public sealed class SceneRendererTests : IDisposable
         using var b = NewBitmap();
         using (var cv = new SKCanvas(a)) r.Draw(cv, s, 0.01, Normal);
         using (var cv = new SKCanvas(b)) r.Draw(cv, s, 0.5, Normal);
-        // topo do texto: com 0,01 s fica em ~32; com 0,5 s já subiu > 8 DIP
+        // topo do texto: com 0,01 s fica em ~38; com 0,5 s já subiu > 8 DIP
         Assert.True(FirstOpaqueRow(a, 280, 40, 20, 0) > FirstOpaqueRow(b, 280, 40, 20, 0));
         using var c = NewBitmap();
         using (var cv = new SKCanvas(c)) r.Draw(cv, s, 1.5, Normal);
@@ -207,9 +250,9 @@ public sealed class SceneRendererTests : IDisposable
         using var bmp = NewBitmap(144);
         using var canvas = new SKCanvas(bmp);
         r.Draw(canvas, s, 0, Normal);
-        // barra do núcleo: conteúdo em x=22·1,5=33 .. , y=32·1,5=48; metade preenchida
-        Assert.Equal(Palette.Menta, bmp.GetPixel(40, 50));
-        Assert.Equal(Palette.BgTrilho, bmp.GetPixel(100, 50));
+        // barra do núcleo: conteúdo em x=14·1,5=21, y=38·1,5=57, 96 px de largura; metade preenchida
+        Assert.Equal(SceneColors.CoreBarFill, bmp.GetPixel(30, 59));
+        Assert.Equal(SceneColors.CoreBarTrack, bmp.GetPixel(100, 59));
     }
 
     [Fact]
