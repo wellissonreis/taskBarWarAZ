@@ -1,0 +1,13 @@
+SideWar Desktop - Licença
+
+PENDENTE: licença do projeto não decidida (ver specs/DECISOES.md: nenhuma decisão de licença do próprio SideWar está registrada; a definir antes do primeiro release público).
+
+Este arquivo NÃO define a licença do código do SideWar. Não há, até agora, decisão registrada nas specs sobre os termos de uso, redistribuição ou modificação do código-fonte do projeto. Quando a decisão for tomada, o texto final desta licença substitui este marcador.
+
+Enquanto isso valem somente as seguintes informações:
+
+1. Componentes de terceiros (SkiaSharp, .NET, fontes Silkscreen e JetBrains Mono) mantêm as licenças listadas em THIRD-PARTY-NOTICES.txt, com os respectivos textos completos.
+
+2. Os assets de arte do design (sprites PNG exportados do artefato de design) e as fontes Silkscreen e JetBrains Mono fornecidas pelo usuário: o autor do projeto detém os direitos (decisão D-03, resolvida em 2026-11-10; ver specs/DECISOES.md e assets/source/ATTRIBUTION.md).
+
+3. O Pixelify Sans e o IBM Plex não fazem parte deste pacote (ADR-031, item 12).
