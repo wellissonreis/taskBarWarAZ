@@ -208,7 +208,7 @@ T3.4 a T3.8 compartilham contratos de `SimState`: **não paralelizar entre si** 
 | Tarefa | Descrição (um commit) | Ficha/RF | Modelo | Critérios |
 |---|---|---|---|---|
 | T8.1 ✅ | Perfil de publicação `win-x64` single-file e versionamento (`--version`) | RF-18.1, RF-18.2 | Sonnet | CA-18.1, CA-18.5 |
-| T8.2 | `scripts/windows/publish.ps1` (build, testes, publish, ZIP, `SHA256SUMS.txt`) | RF-18.3 | Sonnet | CA-18.1 |
+| T8.2 ✅ | `scripts/windows/publish.ps1` (build, testes, publish, ZIP, `SHA256SUMS.txt`) | RF-18.3 | Sonnet | CA-18.1 |
 | T8.3 🟡 | `LICENSE.txt`, `THIRD-PARTY-NOTICES.txt` (SkiaSharp, .NET, Silkscreen e JetBrains Mono OFL, assets conforme D-03) e `README.txt` | RF-18.3, RF-18.7 | Haiku | CA-18.1 (LICENSE do projeto pendente de decisão) |
 | T8.4 | Verificação do pacote (extrair, `--bench idle-static`, `--version`, `--diag`) e zero rede (ADR-014) | RF-18.3, RF-16.2 | Sonnet | CA-18.1, CA-18.4 |
 | T8.5 | Instalação por ZIP e remoção limpa; Windows Sandbox/VM sem .NET | RF-18.5, RF-18.7 | Haiku | CA-18.2, CA-18.3 |
