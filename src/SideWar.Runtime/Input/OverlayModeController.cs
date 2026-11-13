@@ -22,6 +22,8 @@ public sealed class OverlayModeController
     private bool dragActive;
     private bool absent;
     private long? deadline;
+    private bool buildActive;
+    private OverlayMode modeBeforeBuild;
 
     public OverlayModeController(double ticksPerSecond, double autoPassiveSeconds = DefaultAutoPassiveSeconds)
     {
@@ -34,6 +36,8 @@ public sealed class OverlayModeController
     public bool CursorOver => cursorOver;
     public bool DragActive => dragActive;
     public bool Absent => absent;
+    /// <summary>Build mode (SDD-22 RF-22.11) forces Interactive and suspends the auto-return.</summary>
+    public bool BuildActive => buildActive;
 
     /// <summary>Tick at which Interactive returns to Passive; null when no countdown runs.</summary>
     public long? NextDeadline => deadline;
@@ -45,6 +49,33 @@ public sealed class OverlayModeController
     public ModeEffects? Toggle(long now) => SetMode(Mode == OverlayMode.Passive ? OverlayMode.Interactive : OverlayMode.Passive, now);
 
     public ModeEffects? SetMode(OverlayMode mode, long now)
+    {
+        if (buildActive) return null; // forced Interactive while the build overlay is on (RF-22.11)
+        return Apply(mode, now);
+    }
+
+    /// <summary>
+    /// Build mode on/off (SDD-22 RF-22.11, SDD-15 RF-15.3): on forces Interactive without countdown (remembers the previous mode);
+    /// off returns to the previous mode (Interactive restarts the countdown). Returns effects if the window style changed.
+    /// </summary>
+    public ModeEffects? SetBuildMode(bool active, long now)
+    {
+        if (active == buildActive) return null;
+        if (active)
+        {
+            modeBeforeBuild = Mode;
+            buildActive = true;
+            var fx = Apply(OverlayMode.Interactive, now);
+            deadline = null;
+            return fx;
+        }
+        buildActive = false;
+        if (modeBeforeBuild == OverlayMode.Passive) return Apply(OverlayMode.Passive, now);
+        Restart(now);
+        return null;
+    }
+
+    private ModeEffects? Apply(OverlayMode mode, long now)
     {
         if (mode == Mode) return null;
         var cancel = mode == OverlayMode.Passive && dragActive;
@@ -65,7 +96,11 @@ public sealed class OverlayModeController
     }
 
     /// <summary>Overlay hidden (SDD-07): always back to Passive, so the next appearance is Passive.</summary>
-    public ModeEffects? OnHidden(long now) => SetMode(OverlayMode.Passive, now);
+    public ModeEffects? OnHidden(long now)
+    {
+        buildActive = false; // hiding cancels the build mode (SDD-15 RF-15.3)
+        return Apply(OverlayMode.Passive, now);
+    }
 
     /// <summary>WM_MOUSEMOVE over the strip: cancels the countdown.</summary>
     public void OnMouseMove()
@@ -107,5 +142,5 @@ public sealed class OverlayModeController
     }
 
     private void Restart(long now) =>
-        deadline = cursorOver || dragActive ? null : now + autoPassiveTicks;
+        deadline = buildActive || cursorOver || dragActive ? null : now + autoPassiveTicks;
 }

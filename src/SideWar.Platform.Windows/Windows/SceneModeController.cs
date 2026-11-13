@@ -23,7 +23,8 @@ public sealed class SceneModeController
     private readonly GameThread owner;
     private readonly OverlayModeController mode = new(Stopwatch.Frequency);
     private readonly PeekController peek = new(Stopwatch.Frequency);
-    private IReadOnlyList<HitRegion> regions = [];
+    private SideWar.Core.Simulation.SimState? hitState;
+    private float barHeightDip = SceneHitTester.DefaultBarHeight;
     private bool tracking;
     private bool peekEnabled;
 
@@ -42,24 +43,30 @@ public sealed class SceneModeController
     /// <summary>Raised after the mode changed (also on automatic return and on hide): the App updates the widget indicator and the mode border (RF-04.7).</summary>
     public event Action<OverlayMode>? ModeChanged;
 
-    /// <summary>A click on a tower or empty slot while Interactive (SDD-22 RF-22.3).</summary>
+    /// <summary>A click on a tower or on the build overlay while Interactive (SDD-22 RF-22.3, RF-22.11). TA.8 maps the BuildOverlay click (position, right button) to <c>BuildModeController</c>.</summary>
     public event Action<HitTarget>? TargetClicked;
 
     /// <summary>The mode left Interactive with a drag in progress; the game must abort it (RF-04.2).</summary>
     public event Action? DragCancelled;
 
-    /// <summary>Tower and empty-slot rectangles in DIP relative to the strip (set by the scene renderer).</summary>
-    public void SetRegions(IReadOnlyList<HitRegion> value)
+    /// <summary>Simulation state (layout + towers) and bar height used by the hit test (T-Game only; SDD-22 RF-22.3).</summary>
+    public void SetScene(SideWar.Core.Simulation.SimState? state, float barHeight)
     {
         owner.VerifyAccess();
-        regions = value ?? throw new ArgumentNullException(nameof(value));
+        hitState = state;
+        barHeightDip = barHeight;
     }
+
+    /// <summary>Build mode on/off (SDD-22 RF-22.11): forces Interactive, suspends the auto-return, returns to the previous mode on exit.</summary>
+    public void SetBuildMode(bool active) => Apply(mode.SetBuildMode(active, Now));
+
+    public bool BuildMode => mode.BuildActive;
 
     public HitTarget HitTest(int clientX, int clientY)
     {
         owner.VerifyAccess();
         var (x, y) = SceneHitTester.ToDip(clientX, clientY, Scale);
-        return SceneHitTester.Test(regions, x, y);
+        return hitState is null ? HitTarget.None : SceneHitTester.Test(hitState, barHeightDip, mode.BuildActive, x, y);
     }
 
     /// <summary>Hotkey / widget control / menu trigger (RF-04.2).</summary>

@@ -208,22 +208,28 @@ public sealed class SceneModeTests(Xunit.ITestOutputHelper output)
             {
                 using var surface = ShowOpaqueStrip(game, new PixelRect(200, 200, 600, 296));
                 game.Mode.ScaleOverride = 1f;
-                game.Mode.SetRegions([
-                    new HitRegion(HitKind.SceneEmptySlot, 0, 10, 40, 44, 50),
-                    new HitRegion(HitKind.SceneTower, 1, 60, 20, 44, 70)]);
+                var content = SideWar.Core.Content.ContentLoader.LoadEmbedded();
+                var sim = SideWar.Core.Simulation.SimState.CreateInitial(content,
+                    SideWar.Core.Simulation.StripLayout.Create(600, 560, 88, 4, 520, SideWar.Core.Simulation.TowerHost.Taskbar,
+                        [new SideWar.Core.Simulation.FreeZone(0, 600)]), SideWar.Core.Simulation.Rng.Seed(1, 2));
+                sim.Credits = 1_000_000;
+                Assert.True(sim.Apply(new SideWar.Core.Simulation.SimContext(content), new SideWar.Core.Simulation.BuildTower(SideWar.Core.Simulation.TowerType.Bolt, 80)).IsOk);
+                game.Mode.SetScene(sim, 48f);
                 game.Mode.TargetClicked += hits.Add;
-                Assert.Equal(new HitTarget(HitKind.SceneTower, 1), game.Mode.HitTest(70, 30));
-                Assert.Equal(HitTarget.None, game.Mode.HitTest(300, 5));
+                int towerId = sim.Towers.At(0).Id;
+                Assert.Equal(HitTarget.Tower(towerId), game.Mode.HitTest(80, 120));
+                Assert.Equal(HitTarget.None, game.Mode.HitTest(300, 120));
                 var hwnd = new HWND(game.Scene.Handle);
                 LPARAM At(int x, int y) => new((y << 16) | (x & 0xFFFF));
-                PInvoke.SendMessage(hwnd, PInvoke.WM_LBUTTONDOWN, default, At(70, 30)); // Passive: ignored
+                PInvoke.SendMessage(hwnd, PInvoke.WM_LBUTTONDOWN, default, At(80, 120)); // Passive: ignored
                 game.Mode.SetMode(OverlayMode.Interactive);
-                PInvoke.SendMessage(hwnd, PInvoke.WM_LBUTTONDOWN, default, At(70, 30));
-                PInvoke.SendMessage(hwnd, PInvoke.WM_LBUTTONDOWN, default, At(20, 60));
-                PInvoke.SendMessage(hwnd, PInvoke.WM_LBUTTONDOWN, default, At(300, 5)); // empty: no event
+                PInvoke.SendMessage(hwnd, PInvoke.WM_LBUTTONDOWN, default, At(80, 120));
+                PInvoke.SendMessage(hwnd, PInvoke.WM_LBUTTONDOWN, default, At(300, 120)); // free space: no event
+                PInvoke.SendMessage(hwnd, PInvoke.WM_LBUTTONDOWN, default, At(300, 5)); // outside: no event
                 return 0;
             });
-            Assert.Equal([new HitTarget(HitKind.SceneTower, 1), new HitTarget(HitKind.SceneEmptySlot, 0)], hits);
+            Assert.Single(hits);
+            Assert.Equal(HitKind.SceneTower, hits[0].Kind);
         }
         finally { await game.StopAsync(); }
     }
