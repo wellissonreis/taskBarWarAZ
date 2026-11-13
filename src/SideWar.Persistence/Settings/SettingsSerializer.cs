@@ -55,6 +55,7 @@ public static class SettingsSerializer
         w.WriteEndObject();
         w.WriteStartObject("taskbar");
         w.WriteBoolean("useUia", s.Taskbar.UseUia);
+        w.WriteBoolean("towersInBar", s.Taskbar.TowersInBar);
         w.WriteEndObject();
         w.WriteEndObject();
     }
@@ -113,7 +114,7 @@ public static class SettingsSerializer
                 RecordCommands = Bool(diag, "recordCommands", d.Diagnostics.RecordCommands),
                 LogLevel = EnumVal(diag, "logLevel", d.Diagnostics.LogLevel),
             },
-            Taskbar = new TaskbarSettings { UseUia = Bool(taskbar, "useUia", d.Taskbar.UseUia) },
+            Taskbar = new TaskbarSettings { UseUia = Bool(taskbar, "useUia", d.Taskbar.UseUia), TowersInBar = Bool(taskbar, "towersInBar", d.Taskbar.TowersInBar) },
         };
     }
 

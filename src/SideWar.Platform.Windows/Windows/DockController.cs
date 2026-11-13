@@ -88,7 +88,7 @@ public sealed class DockController
         // A taskbar that lives on another monitor says nothing about this one: no autohide margin, widget falls back.
         TaskbarLayout? bar = taskbar is { } t && (string.IsNullOrEmpty(t.MonitorDevice) || t.MonitorDevice == monitor.DeviceName)
             ? t : null;
-        var sceneBounds = SceneLayout.Compute(monitor, bar ?? default);
+        var sceneBounds = SceneLayout.Compute(monitor, bar ?? default, TowerHost.Band);
         var scene = owner.Scene;
         var previous = Current;
         if (previous is null || previous.Scene != sceneBounds) scene.SetBounds(sceneBounds);

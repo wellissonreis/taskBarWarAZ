@@ -8,11 +8,11 @@ public readonly record struct FreeZone(int X0, int X1);
 
 public readonly record struct BuildZones(TowerHost Host, IReadOnlyList<FreeZone> Free, int HostTopDip, int HostHeightDip);
 
-/// <summary>settings.taskbar.useUia / towersInBar; both default to true (also for new()).</summary>
+/// <summary>settings.taskbar.useUia (default true) / towersInBar (default FALSE until the TA.1 spike, PLANO sec. 8; also for new()).</summary>
 public readonly record struct BuildZoneOptions
 {
     public bool UseUia { get; init; } = true;
-    public bool TowersInBar { get; init; } = true;
+    public bool TowersInBar { get; init; }
 
     public BuildZoneOptions() { }
 }

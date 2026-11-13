@@ -88,7 +88,7 @@ public sealed class DockControllerTests
                 var f = Setup(game, m);
                 f.Dock.SetTaskbar(Bar("A"));
                 var result = f.Dock.Relayout();
-                var expectedScene = SceneLayout.Compute(m, Bar("A"));
+                var expectedScene = SceneLayout.Compute(m, Bar("A"), TowerHost.Band);
                 var expectedWidget = WidgetGeometry.Compute(m, expectedScene, Bar("A"));
                 return (result, expectedScene, expectedWidget, SceneRect: WindowRect(f.Scene.Handle),
                     WidgetRect: WindowRect(f.Widget.Handle), f.Surface.Size, WSize: f.Widget.Surface.Size, m.WorkArea);

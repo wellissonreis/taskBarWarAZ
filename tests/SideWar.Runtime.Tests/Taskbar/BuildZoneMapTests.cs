@@ -37,7 +37,7 @@ public sealed class BuildZoneMapTests
             new(686, 1332, BlockReason.StartSearchApps),
             new(1696, 1920, BlockReason.TrayClock),
         }, layout.Blocked);
-        var zones = BuildZoneMap.From(layout, 1920, new());
+        var zones = BuildZoneMap.From(layout, 1920, new() { TowersInBar = true });
         Assert.Equal(TowerHost.Taskbar, zones.Host);
         Assert.Equal(new FreeZone[] { new(192, 686), new(1332, 1696) }, zones.Free);
         Assert.Equal(104, zones.HostTopDip);
@@ -92,9 +92,9 @@ public sealed class BuildZoneMapTests
     {
         // Start ends at 544 (+4 = 548): a gap of 40 DIP is dropped, a gap of 44 is kept.
         var tight = TaskbarClassifier.Classify([Node(500, "StartButton"), Node(592), Tray(1200)], Context(1440));
-        Assert.DoesNotContain(BuildZoneMap.From(tight, 1440, new()).Free, z => z.X0 == 548);
+        Assert.DoesNotContain(BuildZoneMap.From(tight, 1440, new() { TowersInBar = true }).Free, z => z.X0 == 548);
         var ok = TaskbarClassifier.Classify([Node(500, "StartButton"), Node(596), Tray(1200)], Context(1440));
-        Assert.Contains(new FreeZone(548, 592), BuildZoneMap.From(ok, 1440, new()).Free);
+        Assert.Contains(new FreeZone(548, 592), BuildZoneMap.From(ok, 1440, new() { TowersInBar = true }).Free);
     }
 
     [Fact]
@@ -102,7 +102,7 @@ public sealed class BuildZoneMapTests
     {
         var layout = TaskbarClassifier.Classify([Node(500, "StartButton"), Node(548), Tray(1200)], Context(1440));
         var fractional = layout with { Blocked = [new(0, 100.2f, BlockReason.Edge), new(300.7f, 1440, BlockReason.TrayClock)] };
-        Assert.Equal(new FreeZone[] { new(101, 300) }, BuildZoneMap.From(fractional, 1440, new()).Free);
+        Assert.Equal(new FreeZone[] { new(101, 300) }, BuildZoneMap.From(fractional, 1440, new() { TowersInBar = true }).Free);
     }
 
     [Fact]
@@ -110,7 +110,7 @@ public sealed class BuildZoneMapTests
     {
         var layout = TaskbarClassifier.Classify([Node(500, "StartButton"), Node(548), Tray(1200)], Context(1440));
         var spans = Enumerable.Range(0, 11).Select(i => new BlockedSpan(100 * i + 50, 100 * i + 55, BlockReason.StartSearchApps)).ToArray();
-        var zones = BuildZoneMap.From(layout with { Blocked = spans }, 1440, new());
+        var zones = BuildZoneMap.From(layout with { Blocked = spans }, 1440, new() { TowersInBar = true });
         Assert.Equal(8, zones.Free.Count);
         Assert.Equal(new FreeZone(0, 50), zones.Free[0]);
         Assert.Equal(new FreeZone(555, 650), zones.Free[6]);
@@ -120,7 +120,7 @@ public sealed class BuildZoneMapTests
     [InlineData(1280)] [InlineData(1440)] [InlineData(1920)] [InlineData(2560)]
     public void BandFallbackMatchesDp336(int width)
     {
-        var zones = BuildZoneMap.From(TaskbarClassifier.Classify([], Context(width)), width, new());
+        var zones = BuildZoneMap.From(TaskbarClassifier.Classify([], Context(width)), width, new() { TowersInBar = true });
         Assert.Equal(TowerHost.Band, zones.Host);
         Assert.Equal(2, zones.HostTopDip);
         Assert.Equal(44, zones.HostHeightDip);
@@ -135,20 +135,24 @@ public sealed class BuildZoneMapTests
     public static TheoryData<string> FallbackConditions => new()
     { "edge", "autohide", "fallback", "nostart", "useuia", "towers" };
 
+    [Fact]
+    public void TowersInBarDefaultsToFalseUntilSpike() =>
+        Assert.False(new BuildZoneOptions().TowersInBar);
+
     [Theory]
     [MemberData(nameof(FallbackConditions))]
     public void EveryFallbackConditionYieldsBand(string condition)
     {
         var nodes = CanvasNodes();
         var context = Context(1920);
-        var options = new BuildZoneOptions();
+        var options = new BuildZoneOptions { TowersInBar = true };
         switch (condition)
         {
             case "edge": context = context with { Edge = TaskbarEdge.Top }; break;
             case "autohide": context = context with { AutoHide = true }; break;
             case "fallback": nodes = []; break;
             case "nostart": nodes = nodes.Where(x => x.AutomationId != "StartButton").ToArray(); break;
-            case "useuia": options = new() { UseUia = false }; context = context with { UseUia = false }; break;
+            case "useuia": options = new() { UseUia = false, TowersInBar = true }; context = context with { UseUia = false }; break;
             case "towers": options = new() { TowersInBar = false }; break;
         }
         var layout = TaskbarClassifier.Classify(nodes, context);
@@ -161,9 +165,9 @@ public sealed class BuildZoneMapTests
     public void UiaLayoutWithOptionsOffStillBand_AndSingleHostPerCall()
     {
         var layout = TaskbarClassifier.Classify(CanvasNodes(), Context(1920));
-        Assert.Equal(TowerHost.Band, BuildZoneMap.From(layout, 1920, new() { UseUia = false }).Host);
-        Assert.Equal(TowerHost.Band, BuildZoneMap.From(layout with { AutoHide = true }, 1920, new()).Host);
-        Assert.Equal(TowerHost.Taskbar, BuildZoneMap.From(layout, 1920, new()).Host);
+        Assert.Equal(TowerHost.Band, BuildZoneMap.From(layout, 1920, new() { UseUia = false, TowersInBar = true }).Host);
+        Assert.Equal(TowerHost.Band, BuildZoneMap.From(layout with { AutoHide = true }, 1920, new() { TowersInBar = true }).Host);
+        Assert.Equal(TowerHost.Taskbar, BuildZoneMap.From(layout, 1920, new() { TowersInBar = true }).Host);
     }
 
     [Theory]
@@ -172,7 +176,7 @@ public sealed class BuildZoneMapTests
     {
         var layout = TaskbarClassifier.Classify([Node(width / 2 - 100, "StartButton"), Node(width / 2 - 52), Tray(width - 200)],
             Context(width));
-        var zones = BuildZoneMap.From(layout, width, new());
+        var zones = BuildZoneMap.From(layout, width, new() { TowersInBar = true });
         Assert.Equal(TowerHost.Taskbar, zones.Host);
         Assert.All(zones.Free, z => Assert.True(z.X1 - z.X0 >= 44 && z.X0 >= 0 && z.X1 <= width));
         for (var i = 1; i < zones.Free.Count; i++) Assert.True(zones.Free[i].X0 >= zones.Free[i - 1].X1);

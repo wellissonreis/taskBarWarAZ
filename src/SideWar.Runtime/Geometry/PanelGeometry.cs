@@ -27,7 +27,7 @@ public static class PanelGeometry
 
     /// <summary>
     /// Places the window (visible box + 6 DIP shadow margin right/bottom). <paramref name="strip"/> is the scene
-    /// strip (SceneLayout.Compute, already with the auto-hide margin): its top is <c>stripTop</c>.
+    /// strip (SceneLayout.Compute, Band host: already with the auto-hide margin): its top is <c>stripTop</c>.
     /// Not enough height: top = WorkArea.Top; the panel shrinks its viewport when taller than the work area.
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException">DPI is zero or the work area is empty.</exception>

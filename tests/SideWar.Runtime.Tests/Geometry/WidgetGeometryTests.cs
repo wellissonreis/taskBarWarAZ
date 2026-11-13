@@ -13,7 +13,7 @@ public sealed class WidgetGeometryTests
         new("M", edge, false, new DipRect(0, barY, 1920, barH), height, [], null, (x0, x1), [], 1900, TaskbarAlignment.Left,
             TaskbarSource.Uia, 96);
 
-    private static PixelRect Scene(MonitorInfo m) => SceneLayout.Compute(m, Bar(TaskbarEdge.Bottom, 0, 0));
+    private static PixelRect Scene(MonitorInfo m) => SceneLayout.Compute(m, Bar(TaskbarEdge.Bottom, 0, 0), TowerHost.Band);
 
     // CA-23.3: 100/125/150/175/200 %, bottom bar 48 DIP, free zone >= 420 DIP.
     [Theory]

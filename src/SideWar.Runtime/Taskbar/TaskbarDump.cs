@@ -57,7 +57,7 @@ public sealed record TaskbarDump(int Schema, int WindowsBuild, uint Dpi, DumpMon
         return new(CurrentSchema, windowsBuild, monitor.Dpi, new(monitor.DeviceName, monitor.Bounds,
             monitor.WorkArea, monitor.IsPrimary), edge, autoHide, taskbarRectPx, labeled, DumpLayout.From(layout),
             DumpBuildZones.From(BuildZoneMap.From(layout, (int)Math.Round(monitor.Bounds.Width * 96.0 / monitor.Dpi),
-                new BuildZoneOptions())));
+                new BuildZoneOptions { TowersInBar = true })));
     }
 
     public static UiaNode[] ToUiaNodes(IEnumerable<DumpNode> nodes) => nodes

@@ -74,4 +74,10 @@ public sealed record DiagnosticsSettings
     public LogLevelSetting LogLevel { get; init; } = LogLevelSetting.Info;
 }
 
-public sealed record TaskbarSettings { public bool UseUia { get; init; } = true; }
+public sealed record TaskbarSettings
+{
+    public bool UseUia { get; init; } = true;
+
+    /// <summary>Towers inside the bar (ADR-034); off by default until the TA.1 spike validates z-order over the taskbar.</summary>
+    public bool TowersInBar { get; init; }
+}
