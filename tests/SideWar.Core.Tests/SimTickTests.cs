@@ -10,12 +10,12 @@ public sealed class SimTickTests
     private static readonly SimContext Ctx = new(Content);
 
     private static StripLayout Layout(float spawn = 1000f, int slots = 4) =>
-        StripLayout.Create(spawn, 94f, 10f, spawn - 20f, Enumerable.Range(0, slots).Select(i => 200f + 60f * i).ToArray());
+        TestLayouts.FromCenters(spawn, 94f, 10f, spawn - 20f, Enumerable.Range(0, slots).Select(i => 200f + 60f * i).ToArray());
 
     private static SimState NewState(int slots = 4) => SimState.CreateInitial(Content, Layout(slots: slots), Rng.Seed(42, 54));
 
-    private static Handle AddTower(SimState s, TowerType type, int slot, int level = 1, Targeting mode = Targeting.First) =>
-        s.Towers.Add(new Tower { Id = s.TakeId(), Type = type, SlotIndex = slot, Level = level, Mode = mode });
+    private static Handle AddTower(SimState s, TowerType type, int slot, int level = 1, Targeting mode = Targeting.First, bool placed = true) =>
+        s.Towers.Add(new Tower { Id = s.TakeId(), Type = type, Anchor = TowerAnchor.Start, OffsetDip = TestLayouts.X(slot), Placed = placed, Level = level, Mode = mode });
 
     private static Handle AddEnemy(SimState s, float x, double hp = 1000, short armor = 0, EnemyKind kind = EnemyKind.Grunt, float speed = 0f) =>
         s.Enemies.Add(new Enemy { Id = s.TakeId(), Kind = kind, X = x, Hp = hp, MaxHp = hp, Armor = armor, Speed = speed, SpawnSpeed = 45 });
@@ -112,13 +112,13 @@ public sealed class SimTickTests
         Assert.Equal(0.7f, s.Towers.Get(t2).Cooldown);
     }
 
-    [Fact(DisplayName = "T-11.10 Torre SEM SLOT não atira nem esfria; volta ao slot reaparecer")]
+    [Fact(DisplayName = "T-11.10 Torre SEM POSIÇÃO não atira nem esfria; volta sozinha quando a zona reaparece")]
     public void No_Slot_Tower_Idle()
     {
         var s = NewState(slots: 4);
         s.StartWave(Ctx);
         s.WaveClock = -1000f;
-        var t = AddTower(s, TowerType.Bolt, 5);
+        var t = AddTower(s, TowerType.Bolt, 5, placed: false);
         s.Towers.Get(t).Cooldown = 0.5f;
         var e = AddEnemy(s, 520, hp: 100);
         s.Step(Ctx);

@@ -14,10 +14,10 @@ public sealed class AbsentAutoScalerTests
 
     private static SimState NewState(long credits, params TowerType[] towers)
     {
-        var layout = StripLayout.Create(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f });
+        var layout = TestLayouts.FromCenters(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f });
         var s = SimState.CreateInitial(Content, layout, Rng.Seed(42, 54));
         s.Credits = 1_000_000;
-        for (int i = 0; i < towers.Length; i++) Assert.True(s.Apply(Ctx, new BuildTower(towers[i], i)).IsOk);
+        for (int i = 0; i < towers.Length; i++) Assert.True(s.Apply(Ctx, new BuildTower(towers[i], TestLayouts.X(i))).IsOk);
         s.Credits = credits;
         return s;
     }
@@ -60,7 +60,7 @@ public sealed class AbsentAutoScalerTests
         Assert.NotEmpty(r.Upgrades);
         Assert.True(r.Spent <= start / 2);
         Assert.Equal(start - r.Spent, s.Credits);
-        Assert.Equal(1 + r.Upgrades.Count, s.Towers.Get(s.FindTowerAtSlot(0)).Level);
+        Assert.Equal(1 + r.Upgrades.Count, s.Towers.Get(TestLayouts.TowerAt(s, 0)).Level);
         // custo recalculado: cada melhoria custa mais que a anterior
         for (int i = 1; i < r.Upgrades.Count; i++) Assert.True(r.Upgrades[i].Cost > r.Upgrades[i - 1].Cost);
         // para quando a próxima não cabe
@@ -77,9 +77,9 @@ public sealed class AbsentAutoScalerTests
         s.Credits = 200; // orçamento 100: uma melhoria de 54, depois 54 na outra (Id menor primeiro) não cabe (108)
         var r = AutoScaler.Run(s, Ctx, true, PresenceState.Offline);
         Assert.Single(r.Upgrades);
-        int firstId = s.Towers.Get(s.FindTowerAtSlot(0)).Id;
+        int firstId = s.Towers.Get(TestLayouts.TowerAt(s, 0)).Id;
         Assert.Equal(firstId, r.Upgrades[0].TowerId);
-        Assert.Equal((2, 1), (s.Towers.Get(s.FindTowerAtSlot(0)).Level, s.Towers.Get(s.FindTowerAtSlot(1)).Level));
+        Assert.Equal((2, 1), (s.Towers.Get(TestLayouts.TowerAt(s, 0)).Level, s.Towers.Get(TestLayouts.TowerAt(s, 1)).Level));
 
         var s2 = NewState(0, TowerType.Bolt, TowerType.Frost);
         long upBolt = Cost(TowerType.Bolt), upFrost = Cost(TowerType.Frost);
@@ -131,7 +131,7 @@ public sealed class AbsentAutoScalerTests
     {
         var s = NewState(long.MaxValue / 4, TowerType.Bolt);
         AutoScaler.Run(s, Ctx, true, PresenceState.Ausente);
-        Assert.True(s.Towers.Get(s.FindTowerAtSlot(0)).Level <= Content.Economy.MaxTowerLevel);
+        Assert.True(s.Towers.Get(TestLayouts.TowerAt(s, 0)).Level <= Content.Economy.MaxTowerLevel);
     }
 
     [Fact(DisplayName = "RF-25.5 acumulador: 15 min por rodada, acumula em Ausente/Offline e zera em Presente")]

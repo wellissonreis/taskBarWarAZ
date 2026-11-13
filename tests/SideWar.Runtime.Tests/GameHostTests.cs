@@ -40,7 +40,7 @@ public sealed class GameHostTests
         {
             Presence = new PresenceTracker(Clock);
             State = SimState.CreateInitial(Content,
-                StripLayout.Create(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f }), Rng.Seed(42, 54));
+                TestLayouts.FromCenters(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f }), Rng.Seed(42, 54));
             if (quiet)
             {
                 State.StartWave(Ctx);
@@ -137,7 +137,7 @@ public sealed class GameHostTests
         r.Host.AddHook(hook);
         r.Host.OnWake(r.Clock);
         r.State.Credits = 100000;
-        r.Host.OnCommand(new BuildTower(TowerType.Bolt, 0));
+        r.Host.OnCommand(new BuildTower(TowerType.Bolt, TestLayouts.X(0)));
         Assert.Equal(0, r.State.Towers.Count);
         r.Clock.AdvanceTicks(1_000_000);   // 33 ms
         r.Host.OnWake(r.Clock);
@@ -151,7 +151,7 @@ public sealed class GameHostTests
     {
         var r = new Rig();
         r.Host.OnWake(r.Clock);
-        var l = StripLayout.Create(900f, 94f, 10f, 880f, new[] { 200f });
+        var l = TestLayouts.FromCenters(900f, 94f, 10f, 880f, new[] { 200f });
         r.Host.OnCommand(new LayoutChanged(l));
         r.Run(0.1);
         Assert.Same(l, r.State.Layout);
@@ -256,7 +256,7 @@ public sealed class GameHostTests
         var r = new Rig();
         r.Host.OnWake(r.Clock);
         r.Host.Shutdown();
-        r.Host.OnCommand(new BuildTower(TowerType.Bolt, 0));
+        r.Host.OnCommand(new BuildTower(TowerType.Bolt, TestLayouts.X(0)));
         r.Run(1);
         Assert.Equal(0, r.State.Tick);
         Assert.Null(r.Host.NextDeadline);

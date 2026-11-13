@@ -10,7 +10,7 @@ public sealed class SimProgressTests
     private static readonly SimContext Ctx = new(Content);
 
     private static StripLayout Layout() =>
-        StripLayout.Create(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f });
+        TestLayouts.FromCenters(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f });
 
     private static SimState NewState() => SimState.CreateInitial(Content, Layout(), Rng.Seed(42, 54));
 
@@ -175,7 +175,7 @@ public sealed class SimProgressTests
     public void Stage_Completion()
     {
         var s = Quiet(stage: 1, wave: 60);
-        s.Towers.Add(new Tower { Id = s.TakeId(), Type = TowerType.Bolt, SlotIndex = 0, Level = 1 });
+        s.Towers.Add(new Tower { Id = s.TakeId(), Type = TowerType.Bolt, Anchor = TowerAnchor.Start, OffsetDip = TestLayouts.X(0), Placed = true, Level = 1 });
         s.Credits = 5000;
         s.BossQuestionsCorrect = 3;           // fase 1: 60 ondas → 3 chefes
         s.RestoreNextSpawn(s.ActivePlan!.Spawns.Length);
@@ -262,8 +262,8 @@ public sealed class SimProgressTests
         {
             var s = NewState();
             s.Credits = 1_000_000;
-            s.Apply(Ctx, new BuildTower(TowerType.Bolt, 0));
-            s.Apply(Ctx, new BuildTower(TowerType.Cannon, 1));
+            s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(0)));
+            s.Apply(Ctx, new BuildTower(TowerType.Cannon, TestLayouts.X(1)));
             for (int i = 0; i < 3000; i++) s.Step(Ctx);
             Assert.True(s.Wave >= 1);
             return s.ComputeStateHash();

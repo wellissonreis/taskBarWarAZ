@@ -10,6 +10,8 @@ public enum SimEventType : byte
     CrateSpawned, CrateCollected, CrateExpired,
     /// <summary>SDD-27 RF-27.10 (T6.7): A = Reservas ganhas, B = índice da região nova.</summary>
     Migrated,
+    /// <summary>ADR-034: torre posicionada por <c>PlaceTower</c>/<c>AutoPlaceUnpositioned</c>. X = centro, A = Id da torre, B = <see cref="TowerType"/>.</summary>
+    TowerPlaced,
 }
 
 /// <summary>

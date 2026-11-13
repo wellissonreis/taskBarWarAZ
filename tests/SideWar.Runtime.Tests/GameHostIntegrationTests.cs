@@ -26,9 +26,9 @@ public sealed class GameHostIntegrationTests
         {
             Presence = new PresenceTracker(Clock);
             State = SimState.CreateInitial(Content,
-                StripLayout.Create(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f }), Rng.Seed(42, 54));
+                TestLayouts.FromCenters(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f }), Rng.Seed(42, 54));
             State.Credits = 1_000_000;
-            for (int i = 0; i < towers.Length; i++) Assert.True(State.Apply(Ctx, new BuildTower(towers[i], i)).IsOk);
+            for (int i = 0; i < towers.Length; i++) Assert.True(State.Apply(Ctx, new BuildTower(towers[i], TestLayouts.X(i))).IsOk);
             Host = new GameHost(Clock, App, Presence, State, Ctx);
             App.LeaveHidden(HiddenReason.Starting);
         }
@@ -67,7 +67,7 @@ public sealed class GameHostIntegrationTests
         r.Host.OnWake(r.Clock);
         r.Host.RunState = RunState.NoRun;
         long t = r.State.Tick;
-        r.Host.OnCommand(new BuildTower(TowerType.Bolt, 0));
+        r.Host.OnCommand(new BuildTower(TowerType.Bolt, TestLayouts.X(0)));
         r.Run(2);
         Assert.Equal(t, r.State.Tick);
         Assert.True(r.Host.TryDequeueResult(out _, out var res));
@@ -77,7 +77,7 @@ public sealed class GameHostIntegrationTests
         r.Host.OnWake(r.Clock);
         r.Run(1);
         Assert.True(r.State.Tick > t);
-        r.Host.OnCommand(new BuildTower(TowerType.Bolt, 0));
+        r.Host.OnCommand(new BuildTower(TowerType.Bolt, TestLayouts.X(0)));
         r.Run(0.4);
         Assert.True(r.Host.TryDequeueResult(out _, out res));
         Assert.True(res.IsOk);
@@ -115,7 +115,7 @@ public sealed class GameHostIntegrationTests
         Assert.True(r.Host.AutoScaleUpgradeCount > 0);
         Assert.True(r.Host.AutoScaleSpent > 0);
         Assert.Equal(0, r.State.ManualUpgrades);
-        Assert.True(r.State.Towers.Get(r.State.FindTowerAtSlot(0)).Level > 1);
+        Assert.True(r.State.Towers.Get(TestLayouts.TowerAt(r.State, 0)).Level > 1);
         Assert.True(r.State.Credits < before + 100_000);
         r.Host.InteractionObserved();
         r.Run(1);
@@ -149,17 +149,17 @@ public sealed class GameHostIntegrationTests
     [Fact(DisplayName = "TU.1 offline e Ausente usam a mesma auto-escala (AutoScaler.Plan): mesmo gasto e mesmos níveis")]
     public void Offline_And_Sim_Share_AutoScaler()
     {
-        var layout = StripLayout.Create(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f });
+        var layout = TestLayouts.FromCenters(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f });
         var s = SimState.CreateInitial(Content, layout, Rng.Seed(42, 54));
         s.Credits = 1_000_000;
         var types = new[] { TowerType.Bolt, TowerType.Bolt, TowerType.Cannon };
-        for (int i = 0; i < types.Length; i++) Assert.True(s.Apply(Ctx, new BuildTower(types[i], i)).IsOk);
+        for (int i = 0; i < types.Length; i++) Assert.True(s.Apply(Ctx, new BuildTower(types[i], TestLayouts.X(i))).IsOk);
         long credits = 5000;
         s.Credits = credits;
         var towers = new List<OfflineTower>();
         for (int i = 0; i < types.Length; i++)
         {
-            var t = s.Towers.Get(s.FindTowerAtSlot(i));
+            var t = s.Towers.Get(TestLayouts.TowerAt(s, i));
             towers.Add(new OfflineTower(t.Id, t.Type, i, t.Level));
         }
 
@@ -174,6 +174,6 @@ public sealed class GameHostIntegrationTests
         Assert.Equal(simResult.Upgrades.Count, off.Report.NMelhorias);
         Assert.Equal(credits - simResult.Spent, off.State.Credits);
         for (int i = 0; i < types.Length; i++)
-            Assert.Equal(s.Towers.Get(s.FindTowerAtSlot(i)).Level, off.State.Towers[i].Level);
+            Assert.Equal(s.Towers.Get(TestLayouts.TowerAt(s, i)).Level, off.State.Towers[i].Level);
     }
 }

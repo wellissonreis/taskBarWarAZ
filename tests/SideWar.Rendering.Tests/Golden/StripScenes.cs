@@ -48,13 +48,13 @@ public static class StripScenes
     {
         var slots = new float[8];
         for (int i = 0; i < 8; i++) slots[i] = 640 + 48 * i + 22;
-        var s = new SimState(StripLayout.Create(1290, 94, 10, 1256, slots)) { BaseHp = 78, MaxBaseHp = 100 };
+        var s = new SimState(TestLayouts.FromCenters(1290, 94, 10, 1256, slots)) { BaseHp = 78, MaxBaseHp = 100 };
         if (towers)
         {
             TowerType[] types = [TowerType.Bolt, TowerType.Frost, TowerType.Cannon, TowerType.Bolt, TowerType.Frost];
             int[] levels = [14, 3, 8, 5, 1];
             for (int i = 0; i < types.Length; i++)
-                s.Towers.Add(new Tower { Id = s.TakeId(), Type = types[i], SlotIndex = i, Level = levels[i] });
+                s.Towers.Add(new Tower { Id = s.TakeId(), Type = types[i], Anchor = TowerAnchor.Start, OffsetDip = TestLayouts.SceneX(i), Placed = true, Level = levels[i] });
         }
         return s;
     }

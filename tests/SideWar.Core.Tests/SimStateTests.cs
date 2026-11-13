@@ -7,10 +7,10 @@ namespace SideWar.Core.Tests;
 public sealed class SimStateTests
 {
     private static StripLayout Layout(float spawn = 1000f, int slots = 4) =>
-        StripLayout.Create(spawn, 94f, 10f, spawn - 20f, Enumerable.Range(0, slots).Select(i => 200f + 60f * i).ToArray());
+        TestLayouts.FromCenters(spawn, 94f, 10f, spawn - 20f, Enumerable.Range(0, slots).Select(i => 200f + 60f * i).ToArray());
 
     private static Enemy E(int id, float x) => new() { Id = id, Kind = EnemyKind.Grunt, X = x, Hp = 10, MaxHp = 10, Speed = 45, SpawnSpeed = 45 };
-    private static Tower T(int id, int slot) => new() { Id = id, Type = TowerType.Bolt, SlotIndex = slot, Level = 1 };
+    private static Tower T(int id, int slot) => new() { Id = id, Type = TowerType.Bolt, Anchor = TowerAnchor.Start, OffsetDip = TestLayouts.X(slot), Placed = true, Level = 1 };
 
     [Fact(DisplayName = "T-11.11 Handle layout: index, generation, None")]
     public void Handle_Encoding()
@@ -51,10 +51,11 @@ public sealed class SimStateTests
     public void Store_CapacityAndFreeList()
     {
         var s = new TowerStore();
-        Assert.Equal(16, s.Capacity);
+        Assert.Equal(32, s.Capacity);
+        Assert.Equal(24, TowerStore.MaxTowers);
         Assert.Equal(64, new EnemyStore().Capacity);
-        var hs = new Handle[16];
-        for (int i = 0; i < 16; i++) { hs[i] = s.Add(T(i + 1, i)); Assert.Equal(i, hs[i].Index); Assert.Equal(1, hs[i].Generation); }
+        var hs = new Handle[32];
+        for (int i = 0; i < 32; i++) { hs[i] = s.Add(T(i + 1, i)); Assert.Equal(i, hs[i].Index); Assert.Equal(1, hs[i].Generation); }
         Assert.True(s.Add(T(99, 0)).IsNone);
         s.Remove(hs[3]); s.Remove(hs[9]);
         Assert.Equal(9, s.Add(T(100, 0)).Index);  // LIFO
@@ -116,32 +117,44 @@ public sealed class SimStateTests
         Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
     }
 
-    [Fact(DisplayName = "T-11.10 StripLayout validates, quantizes and exposes PathLength")]
+    private static readonly FreeZone[] Z = [new(100, 300), new(500, 700)];
+
+    [Fact(DisplayName = "T-11.10 StripLayout validates, quantizes and exposes Width/Host/FreeZones/PathLength")]
     public void Layout_Validation()
     {
-        var l = StripLayout.Create(1000.0004f, 94f, 10f, 980f, new[] { 100.3f, 200f });
+        var l = StripLayout.Create(1000, 1000.0004f, 94f, 10f, 980f, TowerHost.Band, Z);
         Assert.Equal(Det.Quantize(1000.0004f), l.SpawnX);
-        Assert.Equal(Det.Quantize(100.3f), l.SlotXAt(0));
+        Assert.Equal(1000, l.Width);
+        Assert.Equal(TowerHost.Band, l.Host);
         Assert.Equal(l.SpawnX - 94f, l.PathLength);
-        Assert.Equal(2, l.SlotCount);
-        Assert.True(l.HasSlot(1)); Assert.False(l.HasSlot(2)); Assert.False(l.HasSlot(-1));
+        Assert.Equal(2, l.FreeZoneCount);
+        Assert.Equal(new FreeZone(500, 700), l.ZoneAt(1));
 
-        Assert.False(StripLayout.TryCreate(94f, 94f, 10f, 80f, [], out _, out var e1)); Assert.NotNull(e1);
-        Assert.False(StripLayout.TryCreate(1000f, 94f, 10f, 980f, new float[13], out _, out _));
-        Assert.False(StripLayout.TryCreate(float.NaN, 94f, 10f, 980f, [], out _, out _));
-        Assert.False(StripLayout.TryCreate(1000f, 94f, 10f, 980f, new[] { float.PositiveInfinity }, out _, out _));
-        Assert.True(StripLayout.TryCreate(1000f, 94f, 10f, 980f, new float[12], out var l12, out _));
-        Assert.Equal(12, l12!.SlotCount);
-        Assert.Throws<ArgumentException>(() => StripLayout.Create(50f, 94f, 10f, 40f, []));
+        Assert.False(StripLayout.TryCreate(1000, 94f, 94f, 10f, 80f, TowerHost.Taskbar, [], out _, out var e1)); Assert.NotNull(e1);
+        Assert.False(StripLayout.TryCreate(0, 1000f, 94f, 10f, 980f, TowerHost.Taskbar, [], out _, out _));
+        Assert.False(StripLayout.TryCreate(1000, float.NaN, 94f, 10f, 980f, TowerHost.Taskbar, [], out _, out _));
+        Assert.False(StripLayout.TryCreate(1000, 1000f, 94f, 10f, 980f, (TowerHost)9, [], out _, out _));
+        var nine = Enumerable.Range(0, 9).Select(i => new FreeZone(100 * i, 100 * i + 50)).ToArray();
+        Assert.False(StripLayout.TryCreate(1000, 1000f, 94f, 10f, 980f, TowerHost.Taskbar, nine, out _, out _));
+        Assert.True(StripLayout.TryCreate(1000, 1000f, 94f, 10f, 980f, TowerHost.Taskbar, nine.AsSpan(0, 8), out var l8, out _));
+        Assert.Equal(8, l8!.FreeZoneCount);
+        // zonas: vazia, fora de ordem, sobrepostas, fora de [0, Width]; podem se tocar
+        Assert.False(StripLayout.TryCreate(1000, 1000f, 94f, 10f, 980f, TowerHost.Taskbar, [new(50, 50)], out _, out _));
+        Assert.False(StripLayout.TryCreate(1000, 1000f, 94f, 10f, 980f, TowerHost.Taskbar, [new(500, 600), new(100, 200)], out _, out _));
+        Assert.False(StripLayout.TryCreate(1000, 1000f, 94f, 10f, 980f, TowerHost.Taskbar, [new(100, 300), new(250, 400)], out _, out _));
+        Assert.False(StripLayout.TryCreate(1000, 1000f, 94f, 10f, 980f, TowerHost.Taskbar, [new(-1, 100)], out _, out _));
+        Assert.False(StripLayout.TryCreate(1000, 1000f, 94f, 10f, 980f, TowerHost.Taskbar, [new(900, 1001)], out _, out _));
+        Assert.True(StripLayout.TryCreate(1000, 1000f, 94f, 10f, 980f, TowerHost.Taskbar, [new(100, 300), new(300, 400)], out _, out _));
+        Assert.Throws<ArgumentException>(() => StripLayout.Create(100, 50f, 94f, 10f, 40f, TowerHost.Taskbar, []));
     }
 
     [Fact(DisplayName = "T-11.10 Layout is immutable: source array changes do not leak")]
     public void Layout_CopiesInput()
     {
-        var src = new[] { 100f, 200f };
-        var l = StripLayout.Create(1000f, 94f, 10f, 980f, src);
-        src[0] = 999f;
-        Assert.Equal(100f, l.SlotXAt(0));
+        var src = new[] { new FreeZone(100, 300) };
+        var l = StripLayout.Create(1000, 1000f, 94f, 10f, 980f, TowerHost.Taskbar, src);
+        src[0] = new FreeZone(0, 1);
+        Assert.Equal(new FreeZone(100, 300), l.ZoneAt(0));
     }
 
     [Fact(DisplayName = "T-11.10 Det.Quantize rounds to 1/1024, half to even")]
@@ -160,7 +173,7 @@ public sealed class SimStateTests
         var far = s.Enemies.Add(E(1, 990f));
         var mid = s.Enemies.Add(E(2, 400f));
         var tw = s.Towers.Add(T(3, 3));
-        Assert.True(s.TowerHasSlot(s.Towers.Get(tw)));
+        Assert.True(s.Towers.Get(tw).Placed);
 
         var shorter = Layout(600f, 2);
         s.ApplyLayout(shorter);
@@ -168,13 +181,13 @@ public sealed class SimStateTests
         Assert.Equal(600f, s.Enemies.Get(far).X);
         Assert.Equal(400f, s.Enemies.Get(mid).X);
         Assert.Equal(2, s.Enemies.Count);              // nada removido
-        Assert.False(s.TowerHasSlot(s.Towers.Get(tw))); // SEM SLOT
-        Assert.True(float.IsNaN(s.TowerX(s.Towers.Get(tw))));
+        Assert.False(s.Towers.Get(tw).Placed);          // SEM POSIÇÃO
+        Assert.Equal(380, s.TowerCenterX(s.Towers.Get(tw))); // posição gravada preservada
         Assert.Equal(1, s.Towers.Count);                // torre preservada
 
         s.ApplyLayout(Layout(1000f, 4));                // slot reaparece
-        Assert.True(s.TowerHasSlot(s.Towers.Get(tw)));
-        Assert.Equal(380f, s.TowerX(s.Towers.Get(tw)));
+        Assert.True(s.Towers.Get(tw).Placed);
+        Assert.Equal(380, s.TowerCenterX(s.Towers.Get(tw)));
         Assert.Equal(600f, s.Enemies.Get(far).X);       // não "desclampa"
     }
 
@@ -229,13 +242,13 @@ public sealed class SimStateTests
         Assert.Equal(3, Sat.Add(5, -2));
     }
 
-    [Fact(DisplayName = "T-11.1 FindTowerAtSlot and content id mapping")]
+    [Fact(DisplayName = "T-11.1 TowerAt (helper) and content id mapping")]
     public void FindSlot_And_Ids()
     {
         var s = new SimState(Layout());
-        Assert.True(s.FindTowerAtSlot(1).IsNone);
+        Assert.True(TestLayouts.TowerAt(s, 1).IsNone);
         var h = s.Towers.Add(T(1, 1));
-        Assert.Equal(h, s.FindTowerAtSlot(1));
+        Assert.Equal(h, TestLayouts.TowerAt(s, 1));
         var c = ContentLoader.LoadEmbedded();
         foreach (var e in c.Enemies) Assert.True(SimIds.TryEnemyKind(e.Id, out _), e.Id);
         foreach (var t in c.Towers) Assert.True(SimIds.TryTowerType(t.Id, out var ty) && ty != TowerType.None, t.Id);

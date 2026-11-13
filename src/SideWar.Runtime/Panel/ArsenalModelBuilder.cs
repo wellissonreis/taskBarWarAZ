@@ -22,7 +22,8 @@ public static class ArsenalModelBuilder
         var rows = new List<ArsenalRowModel>();
 
         int? buildSlot = null;
-        if (focusSlot is { } fs && state.Layout.HasSlot(fs) && state.FindTowerAtSlot(fs).IsNone) buildSlot = fs;
+        // ADR-034 (compilação mínima; UI real é TA.11): "slot" focado passa a ser o X da posição livre.
+        if (focusSlot is { } fs && PlacementValidator.Validate(fs, state.Layout, state.Towers) == PlacementReason.None) buildSlot = fs;
 
         if (buildSlot is { } slot)
         {
@@ -36,12 +37,12 @@ public static class ArsenalModelBuilder
             }
         }
 
-        var owned = new List<(TowerType Type, int Slot, int Id, int Level)>();
+        var owned = new List<(TowerType Type, int Slot, int Id, int Level, bool Placed)>();
         for (int i = 0; i < state.Towers.Capacity; i++)
         {
             if (!state.Towers.IsAlive(i)) continue;
             ref readonly var t = ref state.Towers.At(i);
-            owned.Add((t.Type, t.SlotIndex, t.Id, t.Level));
+            owned.Add((t.Type, state.TowerCenterX(in t), t.Id, t.Level, t.Placed));
         }
         owned.Sort(static (a, b) =>
         {
@@ -53,9 +54,9 @@ public static class ArsenalModelBuilder
 
         foreach (bool withSlot in new[] { true, false })
         {
-            foreach (var (type, tslot, id, level) in owned)
+            foreach (var (type, tslot, id, level, placed) in owned)
             {
-                if (state.Layout.HasSlot(tslot) != withSlot) continue;
+                if (placed != withSlot) continue;
                 var def = DefOf(content, type);
                 if (def is null) continue;
                 rows.Add(withSlot ? TowerRow(ctx, def, type, id, tslot, level) : NoSlotRow(ctx, def, type, id, tslot, level));

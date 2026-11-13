@@ -22,7 +22,7 @@ public sealed class ArsenalCampaignTests
     {
         var xs = new float[slots];
         for (int i = 0; i < slots; i++) xs[i] = 200f + 60f * i;
-        var s = SimState.CreateInitial(Content, StripLayout.Create(1000f, 94f, 10f, 980f, xs), Rng.Seed(42, 54));
+        var s = SimState.CreateInitial(Content, TestLayouts.FromCenters(1000f, 94f, 10f, 980f, xs), Rng.Seed(42, 54));
         s.Credits = credits;
         return s;
     }
@@ -31,7 +31,7 @@ public sealed class ArsenalCampaignTests
     public void Arsenal_UpgradeRow_TextsAndCostsFromTowerCosts()
     {
         var s = NewState();
-        Assert.True(s.Apply(Ctx, new BuildTower(TowerType.Bolt, 0)).IsOk);
+        Assert.True(s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(0))).IsOk);
         var m = ArsenalModelBuilder.Build(s, Ctx, true);
         var r = m.Rows[0];
         Assert.Equal(ArsenalRowKind.Tower, r.Kind);
@@ -65,9 +65,9 @@ public sealed class ArsenalCampaignTests
     public void Arsenal_TowerWithoutSlot_IsNoSlotRow_AfterSlotted_NoHit()
     {
         var s = NewState();
-        s.Apply(Ctx, new BuildTower(TowerType.Cannon, 3));
-        s.Apply(Ctx, new BuildTower(TowerType.Bolt, 0));
-        s.ApplyLayout(StripLayout.Create(1000f, 94f, 10f, 980f, new[] { 200f, 260f }));
+        s.Apply(Ctx, new BuildTower(TowerType.Cannon, TestLayouts.X(3)));
+        s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(0)));
+        s.ApplyLayout(TestLayouts.FromCenters(1000f, 94f, 10f, 980f, new[] { 200f, 260f }));
         var m = ArsenalModelBuilder.Build(s, Ctx, true);
         Assert.Equal([ArsenalRowKind.Tower, ArsenalRowKind.NoSlot, ArsenalRowKind.Locked], m.Rows.Select(x => x.Kind).ToArray());
         var ns = m.Rows[1];
@@ -83,19 +83,19 @@ public sealed class ArsenalCampaignTests
     public void Arsenal_FocusEmptySlot_BuildsRowsWithBuildCost_AndIntentIsBuildTower()
     {
         var s = NewState();
-        s.Apply(Ctx, new BuildTower(TowerType.Bolt, 0)); // n = 1 → Raio 68
-        var m = ArsenalModelBuilder.Build(s, Ctx, true, focusSlot: 2);
-        Assert.Equal("CONSTRUIR NO SLOT 3", m.BuildLabel);
+        s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(0))); // n = 1 → Raio 68
+        var m = ArsenalModelBuilder.Build(s, Ctx, true, focusSlot: TestLayouts.X(2)); // ADR-034: o "slot" focado passa a ser o X da posição livre (UI real: TA.11)
+        Assert.Equal(TestLayouts.X(2), m.BuildSlot);
         var b = m.Rows.Where(r => r.Kind == ArsenalRowKind.Build).ToArray();
         Assert.Equal(3, b.Length); // Raio, Gelo, Canhão (Scale Set bloqueado)
         Assert.Equal("68", b[0].CostText);
         Assert.Equal("CONSTRUIR", b[0].ButtonLabel);
         var lay = ArsenalLayout.Compute(m, Tm);
-        Assert.Equal(ArsenalHit.Build(TowerType.Bolt, 2), lay.Rows[0].ButtonHit);
+        Assert.Equal(ArsenalHit.Build(TowerType.Bolt, TestLayouts.X(2)), lay.Rows[0].ButtonHit);
         var intent = ArsenalIntent.FromHit(lay.Rows[0].ButtonHit, true);
-        Assert.Equal(new BuildTower(TowerType.Bolt, 2), intent!.Value.Command);
+        Assert.Equal(new BuildTower(TowerType.Bolt, TestLayouts.X(2)), intent!.Value.Command);
         // slot ocupado ou inexistente: sem seção de construir
-        Assert.Null(ArsenalModelBuilder.Build(s, Ctx, true, focusSlot: 0).BuildSlot);
+        Assert.Null(ArsenalModelBuilder.Build(s, Ctx, true, focusSlot: TestLayouts.X(0)).BuildSlot);
         Assert.Null(ArsenalModelBuilder.Build(s, Ctx, true, focusSlot: 9).BuildSlot);
     }
 
@@ -103,7 +103,7 @@ public sealed class ArsenalCampaignTests
     public void Intents_AreReturnedNotApplied()
     {
         var s = NewState();
-        s.Apply(Ctx, new BuildTower(TowerType.Bolt, 0));
+        s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(0)));
         long credits = s.Credits;
         var tower = s.Towers.At(0);
         var i = ArsenalIntent.FromHit(ArsenalHit.Upgrade(tower.Id), true)!.Value;
@@ -123,7 +123,7 @@ public sealed class ArsenalCampaignTests
     public void ArsenalLayout_Geometry_MatchesSpec()
     {
         var s = NewState();
-        s.Apply(Ctx, new BuildTower(TowerType.Bolt, 0));
+        s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(0)));
         var lay = ArsenalLayout.Compute(ArsenalModelBuilder.Build(s, Ctx, true), Tm);
         Assert.Equal(new DipRect(16, 14, 364, lay.AutoCard.Rect.H), lay.AutoCard.Rect);
         Assert.True(lay.AutoCard.Toggle.H >= 44 && lay.AutoCard.Toggle.W >= 44);
@@ -142,7 +142,7 @@ public sealed class ArsenalCampaignTests
     public void ArsenalHit_ButtonsToggleClipAndScroll()
     {
         var s = NewState();
-        s.Apply(Ctx, new BuildTower(TowerType.Bolt, 0));
+        s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(0)));
         int id = s.Towers.At(0).Id;
         var lay = ArsenalLayout.Compute(ArsenalModelBuilder.Build(s, Ctx, true), Tm);
         var b = lay.Rows[0].Button;
@@ -169,7 +169,7 @@ public sealed class ArsenalCampaignTests
         Assert.True(on.SameDisplay(ArsenalModelBuilder.Build(s, Ctx, true)));
         Assert.False(on.SameDisplay(off));
         Assert.Equal("OFF", ArsenalLayout.Compute(off, Tm).AutoCard.ToggleText);
-        s.Apply(Ctx, new BuildTower(TowerType.Bolt, 0));
+        s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(0)));
         Assert.False(on.SameDisplay(ArsenalModelBuilder.Build(s, Ctx, true)));
     }
 
@@ -177,8 +177,8 @@ public sealed class ArsenalCampaignTests
     public void Arsenal_FrostAndCannonStatsFollowDesignFormat()
     {
         var s = NewState();
-        s.Apply(Ctx, new BuildTower(TowerType.Frost, 0));
-        s.Apply(Ctx, new BuildTower(TowerType.Cannon, 1));
+        s.Apply(Ctx, new BuildTower(TowerType.Frost, TestLayouts.X(0)));
+        s.Apply(Ctx, new BuildTower(TowerType.Cannon, TestLayouts.X(1)));
         var m = ArsenalModelBuilder.Build(s, Ctx, true);
         Assert.Equal("Lentidão 35% · Alc 2", m.Rows[0].Stats);
         Assert.Equal("Dano 60 em área · Cad 2,1s", m.Rows[1].Stats);
@@ -227,7 +227,7 @@ public sealed class ArsenalCampaignTests
     public void PanelViewState_ContentHeightAndTabReset()
     {
         var s = NewState();
-        for (int i = 0; i < 4; i++) s.Apply(Ctx, new BuildTower(TowerType.Bolt, i));
+        for (int i = 0; i < 4; i++) s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(i)));
         var lay = ArsenalLayout.Compute(ArsenalModelBuilder.Build(s, Ctx, true), Tm);
         var v = new PanelViewState();
         v.SetContent(lay.ContentHeight, 491f);

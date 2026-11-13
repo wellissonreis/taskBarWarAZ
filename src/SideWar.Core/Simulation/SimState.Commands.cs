@@ -19,6 +19,8 @@ public sealed partial class SimState
         return command switch
         {
             BuildTower b => Build(ctx, b),
+            PlaceTower p => Place(p),
+            AutoPlaceUnpositioned => AutoPlace(),
             UpgradeTower u => Upgrade(ctx, u),
             SetTargeting s => SetMode(s),
             LayoutChanged l => ApplyLayoutCommand(l),
@@ -53,21 +55,83 @@ public sealed partial class SimState
         return null;
     }
 
+    private static CommandReason ToReason(PlacementReason r)
+        => r == PlacementReason.OutOfZone ? CommandReason.OutOfZone : CommandReason.Overlap;
+
     private CommandResult Build(SimContext ctx, BuildTower cmd)
     {
-        if (!_layout.HasSlot(cmd.Slot)) return CommandResult.Reject(CommandReason.SlotMissing);
-        if (!FindTowerAtSlot(cmd.Slot).IsNone) return CommandResult.Reject(CommandReason.SlotOccupied);
+        var placement = PlacementValidator.Validate(cmd.X, _layout, Towers);
+        if (placement != PlacementReason.None) return CommandResult.Reject(ToReason(placement));
+        if (Towers.Count >= TowerStore.MaxTowers) return CommandResult.Reject(CommandReason.TowerLimit);
         if (cmd.Type == TowerType.None || !IsTowerUnlocked(ctx, cmd.Type)) return CommandResult.Reject(CommandReason.TowerLocked);
-        if (Towers.Count >= Towers.Capacity) return CommandResult.Reject(CommandReason.TowerStoreFull);
-        // n inclui torres SEM SLOT (ADR-032).
+        // n inclui torres SEM POSIÇÃO (ADR-032).
         if (!TowerCosts.TryBuildCost(ctx.Tower(cmd.Type).Cost, Towers.Count, ctx.Content.Economy.BuildCostFactor, out long cost))
             return CommandResult.Reject(CommandReason.Unreachable);
         if (Credits < cost) return CommandResult.Reject(CommandReason.InsufficientCredits, cost - Credits);
 
         Credits -= cost;
-        Towers.Add(new Tower { Id = TakeId(), Type = cmd.Type, SlotIndex = cmd.Slot, Level = 1, Mode = Targeting.First });
-        Events.Add(new SimEvent(SimEventType.TowerBuilt, _layout.SlotXAt(cmd.Slot), 0f, cost, (int)cmd.Type));
+        // DP-33.2: âncora pela borda externa mais próxima, decidida na construção.
+        var (anchor, offset) = AnchorFor(cmd.X);
+        Towers.Add(new Tower { Id = TakeId(), Type = cmd.Type, Anchor = anchor, OffsetDip = offset, Placed = true, Level = 1, Mode = Targeting.First });
+        Events.Add(new SimEvent(SimEventType.TowerBuilt, cmd.X, 0f, cost, (int)cmd.Type));
         return CommandResult.Ok;
+    }
+
+    /// <summary><c>Start</c> se <c>x &lt; W/2</c>, senão <c>End</c> (DP-33.2); deslocamento inteiro ≥ 0 (zonas ficam dentro de [0, W]).</summary>
+    private (TowerAnchor Anchor, int Offset) AnchorFor(int x)
+        => 2L * x < _layout.Width ? (TowerAnchor.Start, x) : (TowerAnchor.End, _layout.Width - x);
+
+    private CommandResult Place(PlaceTower cmd)
+    {
+        var h = FindTowerById(cmd.TowerId);
+        if (h.IsNone) return CommandResult.Reject(CommandReason.TowerNotFound);
+        ref var tower = ref Towers.Get(h);
+        if (tower.Placed) return CommandResult.Reject(CommandReason.NotUnpositioned);
+        var placement = PlacementValidator.Validate(cmd.X, _layout, Towers, tower.Id);
+        if (placement != PlacementReason.None) return CommandResult.Reject(ToReason(placement));
+        PlaceAt(ref tower, cmd.X);
+        return CommandResult.Ok;
+    }
+
+    private void PlaceAt(ref Tower tower, int x)
+    {
+        var (anchor, offset) = AnchorFor(x);
+        tower.Anchor = anchor;
+        tower.OffsetDip = offset;
+        tower.Placed = true;
+        Events.Add(new SimEvent(SimEventType.TowerPlaced, x, 0f, tower.Id, (int)tower.Type));
+    }
+
+    /// <summary>
+    /// DP-33.7: para cada torre SEM POSIÇÃO em ordem de <c>Id</c>, a primeira posição válida varrendo as zonas da esquerda
+    /// para a direita em passos de 44 DIP a partir de <c>X0 + 22</c>; limpa a pendência. As que não couberem continuam SEM POSIÇÃO.
+    /// </summary>
+    private CommandResult AutoPlace()
+    {
+        if (!MigratedSlotsPending) return CommandResult.Reject(CommandReason.NotAvailable);
+        Span<int> order = stackalloc int[TowerStore.CapacityConst];
+        int n = Towers.CopyIndicesByIdAscending(order);
+        for (int k = 0; k < n; k++)
+        {
+            ref var t = ref Towers.At(order[k]);
+            if (t.Placed) continue;
+            if (TryFindFirstFree(t.Id, out int x)) PlaceAt(ref t, x);
+        }
+        MigratedSlotsPending = false;
+        return CommandResult.Ok;
+    }
+
+    private bool TryFindFirstFree(int ignoreId, out int found)
+    {
+        foreach (var z in _layout.FreeZones)
+        {
+            for (int x = z.X0 + PlacementValidator.HalfBox; x + PlacementValidator.HalfBox <= z.X1; x += PlacementValidator.BoxWidth)
+            {
+                if (PlacementValidator.Validate(x, _layout, Towers, ignoreId) == PlacementReason.None) { found = x; return true; }
+            }
+        }
+        found = 0;
+        return false;
     }
 
     private CommandResult Upgrade(SimContext ctx, UpgradeTower cmd)
@@ -84,7 +148,7 @@ public sealed partial class SimState
         Credits -= cost;
         tower.Level++;
         ManualUpgrades++;
-        float x = TowerHasSlot(in tower) ? _layout.SlotXAt(tower.SlotIndex) : 0f;
+        float x = tower.Placed ? TowerCenterX(in tower) : 0f;
         Events.Add(new SimEvent(SimEventType.TowerUpgraded, x, 0f, cost, tower.Level));
         return CommandResult.Ok;
     }
@@ -102,7 +166,7 @@ public sealed partial class SimState
     {
         if (cmd.Layout is null) return CommandResult.Reject(CommandReason.InvalidLayout);
         ApplyLayout(cmd.Layout);
-        Events.Add(new SimEvent(SimEventType.LayoutChanged, cmd.Layout.SpawnX, 0f, cmd.Layout.SlotCount, 0));
+        Events.Add(new SimEvent(SimEventType.LayoutChanged, cmd.Layout.SpawnX, 0f, cmd.Layout.FreeZoneCount, 0));
         return CommandResult.Ok;
     }
 }

@@ -10,12 +10,12 @@ public sealed class SimDamageTests
     private static readonly SimContext Ctx = new(Content);
 
     private static StripLayout Layout() =>
-        StripLayout.Create(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f });
+        TestLayouts.FromCenters(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f });
 
     private static SimState NewState() => SimState.CreateInitial(Content, Layout(), Rng.Seed(42, 54));
 
-    private static Handle AddTower(SimState s, TowerType type, int slot, int level = 1) =>
-        s.Towers.Add(new Tower { Id = s.TakeId(), Type = type, SlotIndex = slot, Level = level });
+    private static Handle AddTower(SimState s, TowerType type, int slot, int level = 1, bool placed = true) =>
+        s.Towers.Add(new Tower { Id = s.TakeId(), Type = type, Anchor = TowerAnchor.Start, OffsetDip = TestLayouts.X(slot), Placed = placed, Level = level });
 
     private static Handle AddEnemy(SimState s, float x, double hp = 1000, short armor = 0, EnemyKind kind = EnemyKind.Grunt,
         EnemyFlags flags = EnemyFlags.None, float speed = 0f) =>
@@ -147,7 +147,7 @@ public sealed class SimDamageTests
         Assert.Equal(1000 - 52, s.Enemies.Get(e).Hp);     // 18×3 − 2
     }
 
-    [Fact(DisplayName = "T-27.4 Scale Set: 14·1,12^(L−1)·(1+0,15·Raios com slot); SEM SLOT não conta")]
+    [Fact(DisplayName = "T-27.4 Scale Set: 14·1,12^(L−1)·(1+0,15·Raios posicionados); SEM POSIÇÃO não conta")]
     public void ScaleSet_Bonus()
     {
         var s = NewState();
@@ -155,7 +155,7 @@ public sealed class SimDamageTests
         AddTower(s, TowerType.Bolt, 3);
         AddTower(s, TowerType.Bolt, 3);
         AddTower(s, TowerType.Bolt, 2);
-        AddTower(s, TowerType.Bolt, 9);                   // SEM SLOT (layout tem 4)
+        AddTower(s, TowerType.Bolt, 9, placed: false);    // SEM POSIÇÃO
         Assert.Equal(3, s.CountActiveBolts());
         var e = AddEnemy(s, 100f, hp: 1e6);               // só o Scale Set alcança (dist 100 ≤ 144 vs 280)
         s.Step(Ctx);

@@ -29,7 +29,7 @@ public sealed partial class SimState
         }
     }
 
-    /// <summary>Passo 3: torres com slot, em ordem crescente de Id: cooldown, mira e acerto instantâneo.</summary>
+    /// <summary>Passo 3: torres posicionadas, em ordem crescente de Id: cooldown, mira e acerto instantâneo.</summary>
     private void TowerSystem(SimContext ctx)
     {
         Span<int> order = stackalloc int[TowerStore.CapacityConst];
@@ -37,10 +37,10 @@ public sealed partial class SimState
         for (int k = 0; k < n; k++)
         {
             ref var tower = ref Towers.At(order[k]);
-            if (!TowerHasSlot(in tower)) continue;           // SEM SLOT: não atira e não esfria
+            if (!tower.Placed) continue;                      // SEM POSIÇÃO: não atira e não esfria
             var p = ctx.Tower(tower.Type);
             tower.Cooldown = MathF.Max(0f, tower.Cooldown - SimContext.Dt);
-            int target = PickTarget(tower.Mode, _layout.SlotXAt(tower.SlotIndex), p.RangeDip);
+            int target = PickTarget(tower.Mode, TowerCenterX(in tower), p.RangeDip);
             if (target < 0 || tower.Cooldown != 0f) continue;
             ApplyInstantHit(ctx, ref tower, target);
             tower.Cooldown = p.Interval;

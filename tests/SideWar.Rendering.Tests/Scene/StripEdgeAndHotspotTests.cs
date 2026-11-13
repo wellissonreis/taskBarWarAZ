@@ -31,8 +31,8 @@ public sealed class StripEdgeAndHotspotTests : IDisposable
     {
         var slots = new float[8];
         for (int i = 0; i < 8; i++) slots[i] = 640 + 48 * i + 22;
-        var s = new SimState(StripLayout.Create(1290, 94, 10, 1256, slots)) { BaseHp = 50, MaxBaseHp = 100 };
-        s.Towers.Add(new Tower { Id = s.TakeId(), Type = TowerType.Bolt, SlotIndex = 0, Level = 14 });
+        var s = new SimState(TestLayouts.FromCenters(1290, 94, 10, 1256, slots)) { BaseHp = 50, MaxBaseHp = 100 };
+        s.Towers.Add(new Tower { Id = s.TakeId(), Type = TowerType.Bolt, Anchor = TowerAnchor.Start, OffsetDip = TestLayouts.SceneX(0), Placed = true, Level = 14 });
         return s;
     }
 

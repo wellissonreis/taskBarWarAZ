@@ -128,8 +128,9 @@ public sealed class EnemyStore() : EntityStore<Enemy>(CapacityConst)
     public const int CapacityConst = 64;
 }
 
-/// <summary>Capacidade 16 (no máximo 12 slots; SDD-21 RF-21.7).</summary>
+/// <summary>Capacidade 32; limite de jogo de 24 torres, inclusive as SEM POSIÇÃO (SDD-11 RF-11.2, DP-33.3).</summary>
 public sealed class TowerStore() : EntityStore<Tower>(CapacityConst)
 {
-    public const int CapacityConst = 16;
+    public const int CapacityConst = 32;
+    public const int MaxTowers = 24;
 }

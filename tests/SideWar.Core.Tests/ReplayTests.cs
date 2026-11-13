@@ -14,12 +14,12 @@ public sealed class ReplayTests
     private static readonly GameContent Content = ContentLoader.LoadEmbedded();
 
     private static StripLayout Narrow() =>
-        StripLayout.Create(900f, 94f, 10f, 880f, new[] { 300f, 350f, 400f, 450f, 500f, 550f });
+        TestLayouts.FromCenters(900f, 94f, 10f, 880f, new[] { 300f, 350f, 400f, 450f, 500f, 550f });
 
     private static StripLayout Tiny() =>
-        StripLayout.Create(700f, 94f, 10f, 680f, new[] { 300f, 360f, 420f });
+        TestLayouts.FromCenters(700f, 94f, 10f, 680f, new[] { 300f, 360f, 420f });
 
-    /// <summary>A: bot, fallback de 8 slots, 200 ondas concluídas; LayoutChanged estreita (6 slots) e depois restaura.</summary>
+    /// <summary>A: bot, layout de 8 posições, 200 ondas concluídas; LayoutChanged estreita (zona menor) e depois restaura.</summary>
     public static ReplayScript BotLong() => new("bot-200", 1, 1, SanityBot.FallbackLayout(),
         new[]
         {
@@ -32,16 +32,16 @@ public sealed class ReplayTests
     public static ReplayScript Manual() => new("manual", 7, 9, Narrow(),
         new[]
         {
-            new ReplayCommand(0, new BuildTower(TowerType.Bolt, 0)),
-            new ReplayCommand(0, new BuildTower(TowerType.Cannon, 1)),
-            new ReplayCommand(60, new BuildTower(TowerType.Frost, 2)),
+            new ReplayCommand(0, new BuildTower(TowerType.Bolt, 300)),
+            new ReplayCommand(0, new BuildTower(TowerType.Cannon, 350)),
+            new ReplayCommand(60, new BuildTower(TowerType.Frost, 400)),
             new ReplayCommand(900, new UpgradeTower(1)),
             new ReplayCommand(1200, new SetTargeting(1, Targeting.Strong)),
             new ReplayCommand(2400, new LayoutChanged(Tiny())),
-            new ReplayCommand(2400, new BuildTower(TowerType.Bolt, 5)), // rejeitado: slot inexistente no novo layout
+            new ReplayCommand(2400, new BuildTower(TowerType.Bolt, 550)), // rejeitado: OutOfZone no novo layout (Tiny)
             new ReplayCommand(3000, new UpgradeTower(2)),
             new ReplayCommand(4200, new LayoutChanged(Narrow())),
-            new ReplayCommand(4300, new BuildTower(TowerType.Bolt, 3)),
+            new ReplayCommand(4300, new BuildTower(TowerType.Bolt, 500)),
         }, UseBot: false, StopAfterWavesCleared: 0, MaxTicks: 6000);
 
     /// <summary>C: bot com outra seed e layout pequeno, 40 ondas, com LayoutChanged duas vezes.</summary>
@@ -73,6 +73,7 @@ public sealed class ReplayTests
     {
         var r = ReplayRunner.Run(Content, BotLong());
         Assert.Equal(200, r.WavesCleared);
+        Assert.Equal(0, r.Falls);
         Assert.True(r.Ticks < 600_000);
     }
 
@@ -98,9 +99,13 @@ public sealed class ReplayTests
         var s = SimState.CreateInitial(Content, SanityBot.FallbackLayout(), Rng.Seed(1, 1));
         s.Credits = 1_000_000;
         new SanityBot(ctx).Act(s);
-        var types = Enumerable.Range(0, 6).Select(i => s.Towers.At(s.FindTowerAtSlot(i).Index).Type).ToArray();
+        var byX = Enumerable.Range(0, s.Towers.Capacity).Where(s.Towers.IsAlive).Select(i => s.Towers.At(i))
+            .OrderBy(t => s.TowerCenterX(in t)).ToArray();
+        var types = byX.Take(6).Select(t => t.Type).ToArray();
+        Assert.Equal(662, s.TowerCenterX(in byX[0]));
+        Assert.Equal(706, s.TowerCenterX(in byX[1])); // passo de 44 a partir de X0 + 22
         Assert.Equal(new[] { TowerType.Bolt, TowerType.Bolt, TowerType.Frost, TowerType.Bolt, TowerType.Cannon, TowerType.Bolt }, types);
-        Assert.Equal(8, s.Towers.Count);        // 8 slots ocupados
+        Assert.Equal(8, s.Towers.Count);        // 8 posições ocupadas (zona [640, 1032))
         Assert.True(s.ManualUpgrades > 0);      // créditos sobrantes viram melhorias
     }
 
@@ -113,9 +118,12 @@ public sealed class ReplayTests
         Assert.Equal(0, new SanityBot(ctx).Act(s));
     }
 
-    // Goldens regenerados na T6.9a sobre o Core da TU.1 (antes na T6.9a sobre TU.1: 11744330168129418410, 7214345695300152346, 1541269599807180295; T6.7 mudou o hash; antes: T3.8; 7034930283139373023, 3780424209191337524, 17563337984345861725).
+    // TA.3 (ADR-034): goldens regenerados porque o modelo de torre mudou (posição livre X no lugar de slot: StateHash com Width/Host/FreeZones/
+    // Anchor/OffsetDip/Placed/migratedSlots; SanityBot e roteiros passam a usar X). Antes -> depois: bot-200 1868058130287024683 -> 8437507158511333366;
+    // manual 8001160168888604307 -> 10354625916190894376; bot-40 14429632012659513062 -> 8242615699584279062.
+    // Histórico: goldens regenerados na T6.9a sobre o Core da TU.1 (antes na T6.9a sobre TU.1: 11744330168129418410, 7214345695300152346, 1541269599807180295; T6.7 mudou o hash; antes: T3.8; 7034930283139373023, 3780424209191337524, 17563337984345861725).
     private static readonly Dictionary<string, ulong> Golden = new()
     {
-        ["bot-200"] = 1868058130287024683UL, ["manual"] = 8001160168888604307UL, ["bot-40"] = 14429632012659513062UL,
+        ["bot-200"] = 8437507158511333366UL, ["manual"] = 10354625916190894376UL, ["bot-40"] = 8242615699584279062UL,
     };
 }

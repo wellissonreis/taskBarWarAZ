@@ -33,10 +33,10 @@ public sealed class ArsenalCampaignRenderTests : IDisposable
 
     private static SimState State()
     {
-        var s = SimState.CreateInitial(Content, StripLayout.Create(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f }), Rng.Seed(1, 2));
+        var s = SimState.CreateInitial(Content, TestLayouts.FromCenters(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f }), Rng.Seed(1, 2));
         s.Credits = 1_000_000;
-        s.Apply(Ctx, new BuildTower(TowerType.Bolt, 0));
-        s.Apply(Ctx, new BuildTower(TowerType.Frost, 1));
+        s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(0)));
+        s.Apply(Ctx, new BuildTower(TowerType.Frost, TestLayouts.X(1)));
         return s;
     }
 

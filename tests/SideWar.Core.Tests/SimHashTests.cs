@@ -10,19 +10,19 @@ public sealed class SimHashTests
     private static readonly SimContext Ctx = new(Content);
 
     private static StripLayout Layout() =>
-        StripLayout.Create(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f });
+        TestLayouts.FromCenters(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f });
 
     private static SimState Scripted(int ticks)
     {
         var s = SimState.CreateInitial(Content, Layout(), Rng.Seed(42, 54));
         s.Credits = 100000;
-        s.Apply(Ctx, new BuildTower(TowerType.Bolt, 0));
-        s.Apply(Ctx, new BuildTower(TowerType.Frost, 1));
-        s.Apply(Ctx, new BuildTower(TowerType.Cannon, 2));
+        s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(0)));
+        s.Apply(Ctx, new BuildTower(TowerType.Frost, TestLayouts.X(1)));
+        s.Apply(Ctx, new BuildTower(TowerType.Cannon, TestLayouts.X(2)));
         for (int i = 0; i < ticks; i++)
         {
             if (i == 300) s.Apply(Ctx, new UpgradeTower(s.Towers.At(0).Id));
-            if (i == 500) s.Apply(Ctx, new LayoutChanged(StripLayout.Create(800f, 94f, 10f, 780f, new[] { 200f, 260f, 320f })));
+            if (i == 500) s.Apply(Ctx, new LayoutChanged(TestLayouts.FromCenters(800f, 94f, 10f, 780f, new[] { 200f, 260f, 320f })));
             s.Step(Ctx);
         }
         return s;
@@ -46,13 +46,13 @@ public sealed class SimHashTests
     [Fact(DisplayName = "CA-11.1 StateHash: roteiro de 900 ticks com construções, melhoria e LayoutChanged tem hash fixo (golden)")]
     public void Scripted_Hash_Golden() => Assert.Equal(GoldenScripted, Scripted(900).ComputeStateHash());
 
-    private const ulong GoldenInitial = 6707725020864436511UL;
-    private const ulong GoldenScripted = 13045396465325568388UL;
+    private const ulong GoldenInitial = 4665254451780095790UL;
+    private const ulong GoldenScripted = 2569215574220123801UL;
 
     private static SimState Base()
     {
         var s = SimState.CreateInitial(Content, Layout(), Rng.Seed(1, 2));
-        s.Towers.Add(new Tower { Id = s.TakeId(), Type = TowerType.Bolt, SlotIndex = 0, Level = 1 });
+        s.Towers.Add(new Tower { Id = s.TakeId(), Type = TowerType.Bolt, Anchor = TowerAnchor.Start, OffsetDip = TestLayouts.X(0), Placed = true, Level = 1 });
         s.Enemies.Add(new Enemy { Id = s.TakeId(), Kind = EnemyKind.Grunt, X = 500f, Speed = 45f, SpawnSpeed = 45f, Hp = 42, MaxHp = 42 });
         s.Step(Ctx);
         return s;
@@ -61,8 +61,8 @@ public sealed class SimHashTests
     public static TheoryData<string> Mutations() => new()
     {
         "tick", "stage", "wave", "falls", "credits", "carry", "reservas", "xp", "level", "basehp", "maxbasehp", "nextid",
-        "manual", "peak", "layout.spawn", "layout.leak", "layout.core", "layout.portal", "layout.slot", "layout.count",
-        "tower.cooldown", "tower.level", "tower.mode", "tower.hits", "tower.slot", "tower.type",
+        "manual", "peak", "layout.spawn", "layout.leak", "layout.core", "layout.portal", "layout.slot", "layout.count", "layout.width", "layout.host", "layout.zone", "migrated",
+        "tower.cooldown", "tower.level", "tower.mode", "tower.hits", "tower.anchor", "tower.offset", "tower.placed", "tower.type",
         "enemy.x", "enemy.speed", "enemy.spawnspeed", "enemy.hp", "enemy.maxhp", "enemy.armor", "enemy.flags", "enemy.lasthit", "enemy.kind",
         "waveclock", "rest", "nextspawn", "plan", "rng.state",
     };
@@ -75,6 +75,13 @@ public sealed class SimHashTests
         ulong before = s.ComputeStateHash();
         Mutate(s, what);
         Assert.NotEqual(before, s.ComputeStateHash());
+    }
+
+    private static StripLayout Rebuild(StripLayout l, int? width = null, TowerHost? host = null, int zoneDelta = 0)
+    {
+        var zones = l.FreeZones.ToArray();
+        zones[^1] = new FreeZone(zones[^1].X0, zones[^1].X1 + zoneDelta);
+        return StripLayout.Create(width ?? l.Width + zoneDelta, l.SpawnX, l.LeakX, l.CoreX, l.PortalX, host ?? l.Host, zones);
     }
 
     private static void Mutate(SimState s, string what)
@@ -95,17 +102,23 @@ public sealed class SimHashTests
             case "nextid": s.NextId++; break;
             case "manual": s.ManualUpgrades++; break;
             case "peak": s.PeakDamageFactor = 3.0; break;
-            case "layout.spawn": s.ApplyLayout(StripLayout.Create(1001f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f })); break;
-            case "layout.leak": s.ApplyLayout(StripLayout.Create(1000f, 95f, 10f, 980f, new[] { 200f, 260f, 320f, 380f })); break;
-            case "layout.core": s.ApplyLayout(StripLayout.Create(1000f, 94f, 11f, 980f, new[] { 200f, 260f, 320f, 380f })); break;
-            case "layout.portal": s.ApplyLayout(StripLayout.Create(1000f, 94f, 10f, 981f, new[] { 200f, 260f, 320f, 380f })); break;
-            case "layout.slot": s.ApplyLayout(StripLayout.Create(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 381f })); break;
-            case "layout.count": s.ApplyLayout(StripLayout.Create(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f })); break;
+            case "layout.spawn": s.ApplyLayout(TestLayouts.FromCenters(1001f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f })); break;
+            case "layout.leak": s.ApplyLayout(TestLayouts.FromCenters(1000f, 95f, 10f, 980f, new[] { 200f, 260f, 320f, 380f })); break;
+            case "layout.core": s.ApplyLayout(TestLayouts.FromCenters(1000f, 94f, 11f, 980f, new[] { 200f, 260f, 320f, 380f })); break;
+            case "layout.portal": s.ApplyLayout(TestLayouts.FromCenters(1000f, 94f, 10f, 981f, new[] { 200f, 260f, 320f, 380f })); break;
+            case "layout.slot": s.ApplyLayout(TestLayouts.FromCenters(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 381f })); break;
+            case "layout.count": s.ApplyLayout(TestLayouts.FromCenters(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f })); break;
             case "tower.cooldown": s.Towers.At(0).Cooldown += 0.25f; break;
             case "tower.level": s.Towers.At(0).Level++; break;
             case "tower.mode": s.Towers.At(0).Mode = Targeting.Weak; break;
             case "tower.hits": s.Towers.At(0).Hits++; break;
-            case "tower.slot": s.Towers.At(0).SlotIndex = 1; break;
+            case "tower.anchor": s.Towers.At(0).Anchor = TowerAnchor.End; break;
+            case "tower.offset": s.Towers.At(0).OffsetDip++; break;
+            case "tower.placed": s.Towers.At(0).Placed = !s.Towers.At(0).Placed; break;
+            case "layout.width": s.ApplyLayout(Rebuild(s.Layout, width: s.Layout.Width + 100)); break;
+            case "layout.host": s.ApplyLayout(Rebuild(s.Layout, host: TowerHost.Band)); break;
+            case "layout.zone": s.ApplyLayout(Rebuild(s.Layout, zoneDelta: 1)); break;
+            case "migrated": s.MigratedSlotsPending = true; break;
             case "tower.type": s.Towers.At(0).Type = TowerType.Frost; break;
             case "enemy.x": s.Enemies.At(0).X += 1f; break;
             case "enemy.speed": s.Enemies.At(0).Speed -= 1f; break;
@@ -150,8 +163,8 @@ public sealed class SimHashTests
         SimState Make(bool swap)
         {
             var s = SimState.CreateInitial(Content, Layout(), Rng.Seed(1, 2));
-            var a = new Tower { Id = 1, Type = TowerType.Bolt, SlotIndex = 0, Level = 1 };
-            var b = new Tower { Id = 2, Type = TowerType.Frost, SlotIndex = 1, Level = 1 };
+            var a = new Tower { Id = 1, Type = TowerType.Bolt, Anchor = TowerAnchor.Start, OffsetDip = TestLayouts.X(0), Placed = true, Level = 1 };
+            var b = new Tower { Id = 2, Type = TowerType.Frost, Anchor = TowerAnchor.Start, OffsetDip = TestLayouts.X(1), Placed = true, Level = 1 };
             if (swap) { s.Towers.Add(b); s.Towers.Add(a); } else { s.Towers.Add(a); s.Towers.Add(b); }
             s.NextId = 3;
             return s;

@@ -17,7 +17,7 @@ public sealed class PrestigeTests
     private static RegionDef WestEurope => Content.Regions[2];
 
     private static StripLayout Layout() =>
-        StripLayout.Create(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f });
+        TestLayouts.FromCenters(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f });
 
     private static SimState Mid(int waveMax = 37)
     {
@@ -33,8 +33,8 @@ public sealed class PrestigeTests
         s.BossQuestionsCorrect = 1;
         s.RestoreStageProgress(1, 20, 3);
         s.RestoreStageProgress(3, 20, 1);
-        s.Apply(Ctx, new BuildTower(TowerType.Bolt, 0));
-        s.Apply(Ctx, new BuildTower(TowerType.Frost, 1));
+        s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(0)));
+        s.Apply(Ctx, new BuildTower(TowerType.Frost, TestLayouts.X(1)));
         return s;
     }
 
@@ -183,7 +183,7 @@ public sealed class PrestigeTests
             s.Reservas = reservas;
             s.Credits = 0;
             s.StartWave(Ctx);
-            s.Apply(Ctx, new BuildTower(TowerType.Bolt, 0));
+            s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(0)));
             s.Credits = 0;
             for (int i = 0; i < 600 && s.Credits == 0; i++) s.Step(Ctx);
             return s.Credits;

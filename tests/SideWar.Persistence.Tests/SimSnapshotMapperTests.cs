@@ -105,7 +105,7 @@ public sealed class SimSnapshotMapperTests
         Assert.Equal(s.ComputeStateHash(), r.State!.ComputeStateHash());
 
         // layout menor: torres SEM SLOT continuam no estado
-        s.ApplyLayout(StripLayout.Create(900f, 94f, 10f, 880f, new[] { 300f, 350f }));
+        s.ApplyLayout(TestLayouts.FromCenters(900f, 94f, 10f, 880f, new[] { 300f, 350f }));
         r = SimSnapshotMapper.Restore(Ctx, ThroughJson(Save(s)));
         Assert.True(r.IsRestored, r.Detail);
         Assert.Equal(s.Towers.Count, r.State!.Towers.Count);

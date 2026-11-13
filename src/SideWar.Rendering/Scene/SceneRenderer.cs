@@ -134,22 +134,15 @@ public sealed class SceneRenderer : IDisposable
             Palette.BgTrilho, Palette.Menta, 0);
         DrawSprite(canvas, SpriteId.Core, SceneGeometry.Core(layout.CoreX), 0, null);
 
-        // 3. slots/torres
-        for (int i = 0; i < layout.SlotCount; i++)
+        // 3. torres posicionadas (ADR-034; compilação mínima da TA.3: o desenho na barra e o modo construção são TA.6/TA.7)
+        for (int i = 0; i < state.Towers.Capacity; i++)
         {
-            float cell = SceneGeometry.CellLeft(layout.SlotXAt(i));
-            var h = state.FindTowerAtSlot(i);
-            if (h.IsNone)
-            {
-                DrawSprite(canvas, SpriteId.SlotEmpty, SceneGeometry.EmptySlot(cell), 0, Palette.TxtBranco.WithAlpha(217));
-                DrawCentered(canvas, "+", cell, SceneGeometry.PlusBox(cell).Y, SceneGeometry.CellWidth, SceneGeometry.PlusFontDip, Palette.TxtBranco);
-            }
-            else
-            {
-                ref var t = ref state.Towers.Get(h);
-                DrawSprite(canvas, SceneGeometry.TowerSprite(t.Type), SceneGeometry.Tower(t.Type, cell), 0, null);
-                DrawCentered(canvas, _texts.Level(t.Level), cell, SceneGeometry.TowerLabelBox(cell).Y, SceneGeometry.CellWidth, SceneGeometry.LabelFontDip, Palette.TxtBranco);
-            }
+            if (!state.Towers.IsAlive(i)) continue;
+            ref var t = ref state.Towers.At(i);
+            if (!t.Placed) continue;
+            float cell = SceneGeometry.CellLeft(state.TowerCenterX(in t));
+            DrawSprite(canvas, SceneGeometry.TowerSprite(t.Type), SceneGeometry.Tower(t.Type, cell), 0, null);
+            DrawCentered(canvas, _texts.Level(t.Level), cell, SceneGeometry.TowerLabelBox(cell).Y, SceneGeometry.CellWidth, SceneGeometry.LabelFontDip, Palette.TxtBranco);
         }
 
         // 4. inimigos comuns, por nascimento (o mais novo por cima)

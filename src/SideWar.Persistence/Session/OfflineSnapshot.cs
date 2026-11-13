@@ -72,8 +72,16 @@ public sealed record LayoutData
     public float LeakX { get; init; }
     public float CoreX { get; init; }
     public float PortalX { get; init; }
+    /// <summary>Legado (ADR-020), ignorado no restore; a migração de <c>slotIndex</c> é da TA.4 (DP-33.7).</summary>
     public IReadOnlyList<float> SlotX { get; init; } = [];
+    // ADR-034 (campos aditivos da TA.3, só para o round-trip; schema +1 e migração são da TA.4).
+    public int Width { get; init; }
+    public string Host { get; init; } = "Taskbar";
+    public IReadOnlyList<FreeZoneData> FreeZones { get; init; } = [];
+    public bool MigratedSlots { get; init; }
 }
+
+public sealed record FreeZoneData(int X0, int X1);
 
 public sealed record SimData
 {
@@ -143,6 +151,10 @@ public sealed record TowerData
     public string Type { get; init; } = "";
     /// <summary>0-based. <c>≥ layout.SlotX.Count</c> = SEM SLOT (SDD-21 RF-21.8): continua gravado e volta sem custo.</summary>
     public int SlotIndex { get; init; }
+    // ADR-034 (aditivos da TA.3; schema +1 e migração são da TA.4).
+    public string Anchor { get; init; } = "Start";
+    public int OffsetDip { get; init; }
+    public bool Placed { get; init; }
     public int Level { get; init; } = 1;
     public float Cooldown { get; init; }
     public string Mode { get; init; } = "First";

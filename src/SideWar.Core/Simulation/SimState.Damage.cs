@@ -12,7 +12,7 @@ public sealed partial class SimState
     /// </summary>
     public double PeakDamageFactor { get; set; } = 1.0;
 
-    /// <summary>Quantidade de torres Raio com slot (base do bônus do Scale Set; ADR-032: SEM SLOT não conta).</summary>
+    /// <summary>Quantidade de torres Raio posicionadas (base do bônus do Scale Set; ADR-032: SEM POSIÇÃO não conta).</summary>
     public int CountActiveBolts()
     {
         int n = 0;
@@ -20,7 +20,7 @@ public sealed partial class SimState
         {
             if (!Towers.IsAlive(i)) continue;
             ref readonly var t = ref Towers.At(i);
-            if (t.Type == TowerType.Bolt && TowerHasSlot(in t)) n++;
+            if (t.Type == TowerType.Bolt && t.Placed) n++;
         }
         return n;
     }

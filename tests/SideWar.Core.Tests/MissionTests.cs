@@ -14,7 +14,7 @@ public sealed class MissionTests
 
     private static SimState NewState(double income = 10)
     {
-        var s = SimState.CreateInitial(Content, StripLayout.Create(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f }), Rng.Seed(42, 54));
+        var s = SimState.CreateInitial(Content, TestLayouts.FromCenters(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f }), Rng.Seed(42, 54));
         s.IncomePerSecond = income;
         return s;
     }
@@ -102,7 +102,7 @@ public sealed class MissionTests
     {
         var s = NewState();
         s.Credits = 100000;
-        s.Apply(Ctx, new BuildTower(TowerType.Bolt, 0));
+        s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(0)));
         var m = With("upgrade-towers");
         long cur = s.Events.Written;
         for (int i = 0; i < 3; i++) Assert.True(s.Apply(Ctx, new UpgradeTower(1)).IsOk);

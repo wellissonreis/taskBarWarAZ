@@ -96,7 +96,7 @@ public sealed class EventSchedulerTests
     public void Peak_Click_ActivatesTripleDamageForSixtySeconds_AndRaisesSimDamage()
     {
         var content = ContentLoader.LoadEmbedded();
-        var layout = StripLayout.Create(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f });
+        var layout = TestLayouts.FromCenters(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f });
         var sim = SimState.CreateInitial(content, layout, Rng.Seed(42, 54));
         var rng = new ScriptRng(0, 1000);
         var s = EventScheduler.Start(rng);
@@ -314,7 +314,7 @@ public sealed class EventSchedulerTests
     public void SimRngAdapter_IsDeterministicAndConsumesSimRng()
     {
         var content = ContentLoader.LoadEmbedded();
-        var layout = StripLayout.Create(1000f, 94f, 10f, 980f, new[] { 200f, 260f });
+        var layout = TestLayouts.FromCenters(1000f, 94f, 10f, 980f, new[] { 200f, 260f });
         SimState Make() => SimState.CreateInitial(content, layout, Rng.Seed(42, 54));
         var a = Make(); var b = Make();
         var ra = new SimRngAdapter(a); var rb = new SimRngAdapter(b);
@@ -330,7 +330,7 @@ public sealed class EventSchedulerTests
     public void Statistical_Draws_StayInRangeOverSeeds()
     {
         var content = ContentLoader.LoadEmbedded();
-        var layout = StripLayout.Create(1000f, 94f, 10f, 980f, new[] { 200f, 260f });
+        var layout = TestLayouts.FromCenters(1000f, 94f, 10f, 980f, new[] { 200f, 260f });
         for (ulong seed = 0; seed < 300; seed++)
         {
             var sim = SimState.CreateInitial(content, layout, Rng.Seed(seed, 54));

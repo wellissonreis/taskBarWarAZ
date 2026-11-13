@@ -26,10 +26,10 @@ public sealed class SceneRendererTests : IDisposable
     {
         var slots = new float[8];
         for (int i = 0; i < 8; i++) slots[i] = 640 + 48 * i + 22;
-        var layout = StripLayout.Create(1290, 94, 10, 1256, slots);
+        var layout = TestLayouts.FromCenters(1290, 94, 10, 1256, slots);
         var s = new SimState(layout) { BaseHp = 50, MaxBaseHp = 100 };
-        s.Towers.Add(new Tower { Id = s.TakeId(), Type = TowerType.Bolt, SlotIndex = 0, Level = 14 });
-        s.Towers.Add(new Tower { Id = s.TakeId(), Type = TowerType.Frost, SlotIndex = 1, Level = 3 });
+        s.Towers.Add(new Tower { Id = s.TakeId(), Type = TowerType.Bolt, Anchor = TowerAnchor.Start, OffsetDip = TestLayouts.SceneX(0), Placed = true, Level = 14 });
+        s.Towers.Add(new Tower { Id = s.TakeId(), Type = TowerType.Frost, Anchor = TowerAnchor.Start, OffsetDip = TestLayouts.SceneX(1), Placed = true, Level = 3 });
         return s;
     }
 
@@ -69,17 +69,19 @@ public sealed class SceneRendererTests : IDisposable
     }
 
     [Fact]
-    public void Draw_EmptySlotsAndTowers_PaintLabelsAndPlus()
+    public void Draw_PlacedTowers_PaintLabels_AndNoEmptySlotMarkers()
     {
         var s = NewState();
         using var r = NewRenderer();
         using var bmp = NewBitmap();
         using var canvas = new SKCanvas(bmp);
         r.Draw(canvas, s, 0, Normal);
-        Assert.True(HasOpaque(bmp, 640 + 48 * 2, 54, 44, 14), "'+' do slot 2");
-        Assert.True(HasOpaque(bmp, 640, 38, 44, 12), "rótulo LV14 do slot 0");
-        Assert.True(HasOpaque(bmp, 640 + 48 * 2 + 1, 70, 42, 26), "slot vazio 2");
-        Assert.False(HasOpaque(bmp, 640 + 48 * 4 + 1, 0, 40, 30), "sem nada acima do slot vazio 4");
+        // ADR-034 (TA.3, mínimo): só torres posicionadas são desenhadas; marcadores de slot vazio saíram (a barra e o modo construção são TA.6/TA.7).
+        Assert.True(HasOpaque(bmp, 640, 38, 44, 12), "rótulo LV14 da torre 0");
+        Assert.True(HasOpaque(bmp, 640 + 48, 38, 44, 12), "rótulo da torre 1");
+        Assert.False(HasOpaque(bmp, 640 + 48 * 2, 54, 44, 14), "sem '+' de slot vazio");
+        Assert.False(HasOpaque(bmp, 640 + 48 * 2 + 1, 70, 42, 26), "sem sprite de slot vazio");
+        Assert.False(HasOpaque(bmp, 640 + 48 * 4 + 1, 0, 40, 30), "sem nada acima de uma posição livre");
     }
 
     private static bool HasOpaque(SKBitmap b, int x, int y, int w, int h)

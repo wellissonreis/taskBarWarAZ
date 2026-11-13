@@ -14,7 +14,7 @@ public sealed class SimFarmWaveTests
     private static SimState Absent()
     {
         var s = SimState.CreateInitial(Content,
-            StripLayout.Create(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f }), Rng.Seed(42, 54));
+            TestLayouts.FromCenters(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f }), Rng.Seed(42, 54));
         s.Stage = 1;
         s.Wave = BossWave;
         s.StartEvents(Ctx);
@@ -92,7 +92,7 @@ public sealed class SimFarmWaveTests
         Assert.Equal((4, 0L), (level, xp));
 
         var s = SimState.CreateInitial(Content,
-            StripLayout.Create(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f }), Rng.Seed(1, 2));
+            TestLayouts.FromCenters(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f }), Rng.Seed(1, 2));
         s.Xp = 45 + 90 + 135 + 7;
         s.Step(Ctx);
         Assert.Equal(4, s.Level);

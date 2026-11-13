@@ -4,9 +4,10 @@ namespace SideWar.Core.Bot;
 
 /// <summary>
 /// Bot de sanidade idle (SDD-12 RF-12.10; só testes e benchmarks). Determinístico e usa apenas a API pública da
-/// simulação (<see cref="SimState.Apply"/>): a cada chamada, constrói em slots livres na ordem
+/// simulação (<see cref="SimState.Apply"/>): a cada chamada, constrói na primeira posição X livre (zonas da esquerda para a direita,
+/// passo de 44 DIP) na ordem
 /// <c>bolt, bolt, frost, bolt, cannon, bolt, …</c> (Scale Set no lugar do último Raio do ciclo após desbloquear);
-/// sem slot livre, melhora a torre com slot de menor nível (empate: menor Id). Chamar entre ticks.
+/// sem posição livre, melhora a torre posicionada de menor nível (empate: menor Id). Chamar entre ticks.
 /// </summary>
 public sealed class SanityBot
 {
@@ -23,13 +24,12 @@ public sealed class SanityBot
         _ctx = ctx;
     }
 
-    /// <summary>Layout fixo de teste: fallback virtual de 8 slots em 1440 DIP (SDD-21 RF-21.7; centros 662 + 48·i).</summary>
+    /// <summary>
+    /// Layout fixo de teste (ADR-034): 1440 DIP, portal em <c>W − 80</c> (SpawnX = W − 46), uma zona livre <c>[640, 1032)</c>
+    /// que comporta exatamente 8 torres de 44 DIP (mesma capacidade da versão com slots).
+    /// </summary>
     public static StripLayout FallbackLayout()
-    {
-        var slots = new float[8];
-        for (int i = 0; i < slots.Length; i++) slots[i] = 662f + 48f * i;
-        return StripLayout.Create(1240f, StripLayout.DefaultLeakX, 10f, 1220f, slots);
-    }
+        => StripLayout.Create(1440, 1394f, StripLayout.DefaultLeakX, 10f, 1360f, TowerHost.Taskbar, [new FreeZone(640, 1032)]);
 
     /// <summary>Executa as ações possíveis com os créditos atuais; devolve quantas foram aplicadas.</summary>
     public int Act(SimState state)
@@ -38,12 +38,12 @@ public sealed class SanityBot
         int done = 0;
         while (done < MaxActionsPerCall)
         {
-            int slot = FirstFreeSlot(state);
+            int x = FirstFreeX(state);
             CommandResult r;
-            bool isBuild = slot >= 0;
+            bool isBuild = x >= 0;
             if (isBuild)
             {
-                r = state.Apply(_ctx, new BuildTower(NextType(state), slot));
+                r = state.Apply(_ctx, new BuildTower(NextType(state), x));
                 if (r.IsOk) _built++;
             }
             else
@@ -66,11 +66,13 @@ public sealed class SanityBot
         return type;
     }
 
-    private static int FirstFreeSlot(SimState state)
+    private static int FirstFreeX(SimState state)
     {
-        int n = state.Layout.SlotCount;
-        for (int i = 0; i < n; i++)
-            if (state.FindTowerAtSlot(i).IsNone) return i;
+        if (state.Towers.Count >= TowerStore.MaxTowers) return -1;
+        var layout = state.Layout;
+        foreach (var z in layout.FreeZones)
+            for (int x = z.X0 + PlacementValidator.HalfBox; x + PlacementValidator.HalfBox <= z.X1; x += PlacementValidator.BoxWidth)
+                if (PlacementValidator.Validate(x, layout, state.Towers) == PlacementReason.None) return x;
         return -1;
     }
 
@@ -82,7 +84,7 @@ public sealed class SanityBot
         {
             if (!towers.IsAlive(i)) continue;
             ref readonly var t = ref towers.At(i);
-            if (!state.TowerHasSlot(in t)) continue;
+            if (!t.Placed) continue;
             if (t.Level < bestLevel || (t.Level == bestLevel && t.Id < bestId)) { bestLevel = t.Level; bestId = t.Id; }
         }
         return bestId;

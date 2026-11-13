@@ -13,7 +13,7 @@ public sealed class SimEventsTests
     private static int BossWave => Content.Waves.BossEvery;
 
     private static StripLayout Layout() =>
-        StripLayout.Create(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f });
+        TestLayouts.FromCenters(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f });
 
     private static SimState Boss(bool events = true)
     {
@@ -271,7 +271,7 @@ public sealed class SimEventsTests
         Steps(s, 2);
         Assert.True(s.Scheduler!.CrateActive);
         var spawned = Drain(s, ref c).First(e => e.Type == SimEventType.CrateSpawned);
-        Assert.InRange(spawned.X, 380 + 24, 980 - 24);
+        Assert.InRange(spawned.X, 94 + 24, 980 - 24); // ADR-034: entre o núcleo (LeakX) e o portal
         long before = s.Credits;
         Assert.True(s.Apply(Ctx, new ClickSupplyCrate()).IsOk);
         Assert.Equal(before + 120, s.Credits);   // max(50, 2×60)
@@ -295,7 +295,7 @@ public sealed class SimEventsTests
     public void Layout_Clamps_Crate()
     {
         var s = WithSched(Sched(crateActive: true, crateTimer: 30, crateX: 970));
-        var shorter = StripLayout.Create(1000f, 94f, 10f, 700f, new[] { 200f, 260f, 320f, 380f });
+        var shorter = TestLayouts.FromCenters(1000f, 94f, 10f, 700f, new[] { 200f, 260f, 320f, 380f });
         Assert.True(s.Apply(Ctx, new LayoutChanged(shorter)).IsOk);
         Assert.Equal(700 - 24, s.Scheduler!.CrateX);
     }

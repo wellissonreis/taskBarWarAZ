@@ -58,7 +58,8 @@ public static class SimSnapshotMapper
             Layout = new LayoutData
             {
                 SpawnX = layout.SpawnX, LeakX = layout.LeakX, CoreX = layout.CoreX, PortalX = layout.PortalX,
-                SlotX = layout.SlotX.ToArray(),
+                Width = layout.Width, Host = layout.Host.ToString(), MigratedSlots = s.MigratedSlotsPending,
+                FreeZones = layout.FreeZones.ToArray().Select(z => new FreeZoneData(z.X0, z.X1)).ToArray(),
             },
             Sim = ToSimData(s, ctx, profile),
             Events = ToEventsData(s),
@@ -105,7 +106,7 @@ public static class SimSnapshotMapper
         {
             if (!s.Towers.IsAlive(i)) continue;
             ref readonly var t = ref s.Towers.At(i);
-            towers.Add(new TowerData { Id = t.Id, Type = t.Type.ToString(), SlotIndex = t.SlotIndex, Level = t.Level, Cooldown = t.Cooldown, Mode = t.Mode.ToString(), Hits = t.Hits });
+            towers.Add(new TowerData { Id = t.Id, Type = t.Type.ToString(), Anchor = t.Anchor.ToString(), OffsetDip = t.OffsetDip, Placed = t.Placed, Level = t.Level, Cooldown = t.Cooldown, Mode = t.Mode.ToString(), Hits = t.Hits });
         }
         towers.Sort((a, b) => a.Id.CompareTo(b.Id));
         var enemies = new List<EnemyData>();
@@ -226,7 +227,8 @@ public static class SimSnapshotMapper
     private static RestoreResult RestoreCore(SimContext ctx, OfflineSnapshot snap)
     {
         var l = snap.Layout;
-        if (!StripLayout.TryCreate(l.SpawnX, l.LeakX, l.CoreX, l.PortalX, l.SlotX.ToArray(), out var layout, out var err))
+        if (!StripLayout.TryCreate(l.Width, l.SpawnX, l.LeakX, l.CoreX, l.PortalX, ParseEnum<TowerHost>(l.Host),
+                l.FreeZones.Select(z => new FreeZone(z.X0, z.X1)).ToArray(), out var layout, out var err))
             return new(RestoreStatus.Invalid, null, "layout inválido: " + err);
         var d = snap.Sim;
         var s = new SimState(layout!)
@@ -236,12 +238,13 @@ public static class SimSnapshotMapper
             UnlockedStage = d.UnlockedStage, StageFalls = d.Falls, StageWaveMax = d.OndaMax, BossQuestionsCorrect = d.BossQuestionsCorrect,
             PresenceMultiplier = d.PresenceMultiplier, XpCarry = d.XpCarry, ManualUpgrades = d.ManualUpgrades,
             IncomePerSecond = d.IncomePerSecond, Present = d.Present, StageAttempt = d.Attempt,
+            MigratedSlotsPending = l.MigratedSlots,
         };
         s.Rng = Rng.FromState(d.Rng.State, d.Rng.Inc);
         foreach (var t in d.Towers)
             if (s.Towers.Add(new Tower
             {
-                Id = t.Id, Type = ParseEnum<TowerType>(t.Type), SlotIndex = t.SlotIndex, Level = t.Level, Cooldown = t.Cooldown,
+                Id = t.Id, Type = ParseEnum<TowerType>(t.Type), Anchor = ParseEnum<TowerAnchor>(t.Anchor), OffsetDip = t.OffsetDip, Placed = t.Placed, Level = t.Level, Cooldown = t.Cooldown,
                 Mode = ParseEnum<Targeting>(t.Mode), Hits = checked((byte)t.Hits),
             }).IsNone) return new(RestoreStatus.Invalid, null, "torres além da capacidade");
         foreach (var e in d.Enemies)

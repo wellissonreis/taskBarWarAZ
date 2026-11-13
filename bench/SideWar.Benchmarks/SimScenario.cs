@@ -25,9 +25,9 @@ public sealed class SimScenario
     {
         Towers = towers;
         _targetEnemies = enemies;
-        var slots = new float[towers];
-        for (int i = 0; i < towers; i++) slots[i] = 662f + 48f * i; // até 662 + 48·11 = 1190 < portal 1220
-        var layout = StripLayout.Create(1240f, StripLayout.DefaultLeakX, 10f, 1220f, slots);
+        // ADR-034: uma zona livre [640, 640 + 44·towers) em 1440 DIP (portal em W − 80), uma torre de 44 DIP por posição.
+        var layout = StripLayout.Create(1440, 1394f, StripLayout.DefaultLeakX, 10f, 1360f, TowerHost.Taskbar,
+            [new FreeZone(640, 640 + 44 * Math.Max(towers, 1))]);
         State = SimState.CreateInitial(Content, layout, Rng.Seed(1, 1));
 
         var bot = new SanityBot(_ctx);

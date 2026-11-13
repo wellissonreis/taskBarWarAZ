@@ -13,7 +13,7 @@ public sealed class SimRestoreWaveTests
     private static SimState Fresh()
     {
         var s = SimState.CreateInitial(Content,
-            StripLayout.Create(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f }), Rng.Seed(7, 13));
+            TestLayouts.FromCenters(1000f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f }), Rng.Seed(7, 13));
         s.Stage = 1;
         s.Wave = 3;
         s.StartEvents(Ctx);

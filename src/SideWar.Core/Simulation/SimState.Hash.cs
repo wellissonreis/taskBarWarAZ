@@ -83,8 +83,11 @@ public sealed partial class SimState
         h.AddSingle(l.LeakX);
         h.AddSingle(l.CoreX);
         h.AddSingle(l.PortalX);
-        h.AddInt32(l.SlotCount);
-        foreach (float x in l.SlotX) h.AddSingle(x);
+        h.AddInt32(l.Width);
+        h.AddByte((byte)l.Host);
+        h.AddInt32(l.FreeZoneCount);
+        foreach (var z in l.FreeZones) { h.AddInt32(z.X0); h.AddInt32(z.X1); }
+        h.AddBool(MigratedSlotsPending);
     }
 
     private void HashTowers(ref StateHasher h)
@@ -97,7 +100,9 @@ public sealed partial class SimState
             ref var t = ref Towers.At(order[k]);
             h.AddInt32(t.Id);
             h.AddByte((byte)t.Type);
-            h.AddInt32(t.SlotIndex);
+            h.AddByte((byte)t.Anchor);
+            h.AddInt32(t.OffsetDip);
+            h.AddBool(t.Placed);
             h.AddSingle(t.Cooldown);
             h.AddInt32(t.Level);
             h.AddByte((byte)t.Mode);

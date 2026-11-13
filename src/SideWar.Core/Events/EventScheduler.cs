@@ -11,11 +11,13 @@ public enum SchedulerEventKind
 /// <summary>Evento emitido pelo agendador (para banners, números flutuantes e spawn dos extras). <see cref="Value"/>: índice do extra, x da caixa ou ganho.</summary>
 public readonly record struct SchedulerEvent(SchedulerEventKind Kind, double Value = 0);
 
-/// <summary>Limites do intervalo de x da caixa (SDD-26 RF-26.11): último slot e portal, em DIP.</summary>
+/// <summary>
+/// Limites do intervalo de x da caixa (SDD-26 RF-26.11, ADR-034): núcleo (<c>LeakX</c>) e portal, em DIP.
+/// (Campo <c>LastSlotX</c> mantido pelo nome; passa a receber <c>LeakX</c>. Ajuste completo: ficha TA.12.)
+/// </summary>
 public readonly record struct CrateBounds(float LastSlotX, float PortalX)
 {
-    public static CrateBounds From(StripLayout layout)
-        => new(layout.SlotCount > 0 ? layout.SlotXAt(layout.SlotCount - 1) : layout.LeakX, layout.PortalX);
+    public static CrateBounds From(StripLayout layout) => new(layout.LeakX, layout.PortalX);
 }
 
 public enum PeakPhase { Waiting, Offer, Bonus }

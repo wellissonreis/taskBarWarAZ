@@ -98,9 +98,10 @@ public sealed partial class SimState
     public int TakeId() => NextId++;
 
     /// <summary>
-    /// Aplica um <c>LayoutChanged</c> (ADR-026), <b>só entre ticks</b> (lança durante um tick).
+    /// Aplica um <c>LayoutChanged</c> (ADR-026, ADR-034), <b>só entre ticks</b> (lança durante um tick).
     /// Inimigos com <c>X</c> além do novo <c>SpawnX</c> são limitados a ele, sem tocar nos demais (ADR-031, DP-11.1).
-    /// Torres com slot fora do novo layout ficam SEM SLOT (<see cref="TowerHasSlot"/>); nada é removido.
+    /// As torres são reavaliadas em ordem crescente de <c>Id</c> (RF-11.3): inválida → <c>SEM POSIÇÃO</c>; <c>SEM POSIÇÃO</c> cuja
+    /// posição gravada voltou a ser válida → posicionada (sem custo). Nada é removido.
     /// </summary>
     public void ApplyLayout(StripLayout layout)
     {
@@ -114,20 +115,30 @@ public sealed partial class SimState
             ref var e = ref enemies.At(i);
             if (e.X > layout.SpawnX) e.X = layout.SpawnX;
         }
+        ReevaluateTowers();
         OnLayoutAppliedForEvents();
     }
 
-    /// <summary>False = SEM SLOT (a torre não dispara, não conta bônus; SDD-11 RF-11.2, ADR-032).</summary>
-    public bool TowerHasSlot(in Tower tower) => _layout.HasSlot(tower.SlotIndex);
-
-    /// <summary>X da torre no layout vigente (<c>SlotX[SlotIndex]</c>); NaN se SEM SLOT.</summary>
-    public float TowerX(in Tower tower) => TowerHasSlot(tower) ? _layout.SlotXAt(tower.SlotIndex) : float.NaN;
-
-    /// <summary>Handle da torre que ocupa o slot (inclui torres SEM SLOT com o mesmo índice), ou <see cref="Handle.None"/>. O(16).</summary>
-    public Handle FindTowerAtSlot(int slotIndex)
+    /// <summary>Reavaliação por <c>Id</c> crescente: só as torres de <c>Id</c> menor já reavaliadas contam na sobreposição.</summary>
+    private void ReevaluateTowers()
     {
-        for (int i = 0; i < Towers.Capacity; i++)
-            if (Towers.IsAlive(i) && Towers.At(i).SlotIndex == slotIndex) return Towers.HandleAt(i);
-        return Handle.None;
+        Span<int> order = stackalloc int[TowerStore.CapacityConst];
+        int n = Towers.CopyIndicesByIdAscending(order);
+        for (int k = 0; k < n; k++) Towers.At(order[k]).Placed = false;
+        for (int k = 0; k < n; k++)
+        {
+            ref var t = ref Towers.At(order[k]);
+            int x = PlacementValidator.CenterX(t.Anchor, t.OffsetDip, _layout.Width);
+            t.Placed = PlacementValidator.Validate(x, _layout, Towers) == PlacementReason.None;
+        }
     }
+
+    /// <summary>Centro X (DIP inteiro) da torre no layout vigente, pela âncora; vale também para torres SEM POSIÇÃO (posição gravada).</summary>
+    public int TowerCenterX(in Tower tower) => PlacementValidator.CenterX(tower.Anchor, tower.OffsetDip, _layout.Width);
+
+    /// <summary>
+    /// Pendência de <c>AutoPlaceUnpositioned</c> (<c>migratedSlots</c>, DP-33.7): ligada pelo restore de um save migrado (TA.4),
+    /// limpa pelo comando. Entra no hash.
+    /// </summary>
+    public bool MigratedSlotsPending { get; set; }
 }

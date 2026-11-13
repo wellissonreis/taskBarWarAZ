@@ -10,7 +10,7 @@ public sealed class SimCommandTests
     private static readonly SimContext Ctx = new(Content);
 
     private static StripLayout Layout(params float[] slots) =>
-        StripLayout.Create(1000f, 94f, 10f, 980f, slots.Length == 0 ? new[] { 200f, 260f, 320f, 380f } : slots);
+        TestLayouts.FromCenters(1000f, 94f, 10f, 980f, slots.Length == 0 ? new[] { 200f, 260f, 320f, 380f } : slots);
 
     private static SimState NewState(long credits = 100000, StripLayout? layout = null)
     {
@@ -23,11 +23,11 @@ public sealed class SimCommandTests
     public void Build_Costs_Follow_Example()
     {
         var s = NewState(1000);
-        Assert.True(s.Apply(Ctx, new BuildTower(TowerType.Bolt, 0)).IsOk);
+        Assert.True(s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(0))).IsOk);
         Assert.Equal(1000 - 45, s.Credits);
-        Assert.True(s.Apply(Ctx, new BuildTower(TowerType.Bolt, 1)).IsOk);
+        Assert.True(s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(1))).IsOk);
         Assert.Equal(1000 - 45 - 68, s.Credits);
-        Assert.True(s.Apply(Ctx, new BuildTower(TowerType.Bolt, 2)).IsOk);
+        Assert.True(s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(2))).IsOk);
         Assert.Equal(1000 - 45 - 68 - 102, s.Credits);
     }
 
@@ -37,8 +37,8 @@ public sealed class SimCommandTests
         var s = NewState();
         long c = s.Events.Written;
         int nextId = s.NextId;
-        Assert.True(s.Apply(Ctx, new BuildTower(TowerType.Frost, 2)).IsOk);
-        var h = s.FindTowerAtSlot(2);
+        Assert.True(s.Apply(Ctx, new BuildTower(TowerType.Frost, TestLayouts.X(2))).IsOk);
+        var h = TestLayouts.TowerAt(s, 2);
         ref var t = ref s.Towers.Get(h);
         Assert.Equal((nextId, TowerType.Frost, 1, Targeting.First), (t.Id, t.Type, t.Level, t.Mode));
         Assert.Equal(nextId + 1, s.NextId);
@@ -48,23 +48,23 @@ public sealed class SimCommandTests
         Assert.Equal(65.0, e.A);
     }
 
-    [Fact(DisplayName = "T-11.9 Build: SlotMissing, SlotOccupied, TowerLocked e Missing correto")]
+    [Fact(DisplayName = "T-11.9 Build: OutOfZone, Overlap, TowerLocked e Missing correto")]
     public void Build_Validation_Order()
     {
         var s = NewState(10);
-        Assert.Equal(CommandReason.SlotMissing, s.Apply(Ctx, new BuildTower(TowerType.Bolt, 4)).Reason);
-        Assert.Equal(CommandReason.SlotMissing, s.Apply(Ctx, new BuildTower(TowerType.Bolt, -1)).Reason);
-        var r = s.Apply(Ctx, new BuildTower(TowerType.Bolt, 0));
+        Assert.Equal(CommandReason.OutOfZone, s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(4))).Reason);
+        Assert.Equal(CommandReason.OutOfZone, s.Apply(Ctx, new BuildTower(TowerType.Bolt, -1)).Reason);
+        var r = s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(0)));
         Assert.Equal((CommandStatus.Rejected, CommandReason.InsufficientCredits, 35L), (r.Status, r.Reason, r.Missing));
         Assert.Equal(10, s.Credits);
         s.Credits = 1000;
-        Assert.True(s.Apply(Ctx, new BuildTower(TowerType.Bolt, 0)).IsOk);
-        Assert.Equal(CommandReason.SlotOccupied, s.Apply(Ctx, new BuildTower(TowerType.Frost, 0)).Reason);
-        // slot ocupado é checado antes do saldo e de torre travada
+        Assert.True(s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(0))).IsOk);
+        Assert.Equal(CommandReason.Overlap, s.Apply(Ctx, new BuildTower(TowerType.Frost, TestLayouts.X(0))).Reason);
+        // sobreposição é checada antes do saldo e de torre travada
         s.Credits = 0;
-        Assert.Equal(CommandReason.SlotOccupied, s.Apply(Ctx, new BuildTower(TowerType.ScaleSet, 0)).Reason);
-        Assert.Equal(CommandReason.TowerLocked, s.Apply(Ctx, new BuildTower(TowerType.ScaleSet, 1)).Reason);
-        Assert.Equal(CommandReason.TowerLocked, s.Apply(Ctx, new BuildTower(TowerType.None, 1)).Reason);
+        Assert.Equal(CommandReason.Overlap, s.Apply(Ctx, new BuildTower(TowerType.ScaleSet, TestLayouts.X(0))).Reason);
+        Assert.Equal(CommandReason.TowerLocked, s.Apply(Ctx, new BuildTower(TowerType.ScaleSet, TestLayouts.X(1))).Reason);
+        Assert.Equal(CommandReason.TowerLocked, s.Apply(Ctx, new BuildTower(TowerType.None, TestLayouts.X(1))).Reason);
     }
 
     [Fact(DisplayName = "T-11.9 Torre com unlockStage fica disponível ao chegar na fase")]
@@ -72,19 +72,19 @@ public sealed class SimCommandTests
     {
         var s = NewState(1_000_000);
         s.Stage = 9;
-        Assert.True(s.Apply(Ctx, new BuildTower(TowerType.ScaleSet, 0)).IsOk);
+        Assert.True(s.Apply(Ctx, new BuildTower(TowerType.ScaleSet, TestLayouts.X(0))).IsOk);
     }
 
-    [Fact(DisplayName = "T-11.9 ADR-032: torres SEM SLOT contam no n do custo e ocupam o índice")]
+    [Fact(DisplayName = "T-11.9 ADR-032: torres SEM POSIÇÃO contam no n do custo")]
     public void Build_Cost_Counts_NoSlot_Towers()
     {
         var s = NewState(100000);
-        Assert.True(s.Apply(Ctx, new BuildTower(TowerType.Bolt, 0)).IsOk);
-        Assert.True(s.Apply(Ctx, new BuildTower(TowerType.Bolt, 3)).IsOk);
-        Assert.True(s.Apply(Ctx, new LayoutChanged(Layout(200f, 260f))).IsOk);   // torre do slot 3 fica SEM SLOT
-        Assert.False(s.TowerHasSlot(in s.Towers.At(1)));
+        Assert.True(s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(0))).IsOk);
+        Assert.True(s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(3))).IsOk);
+        Assert.True(s.Apply(Ctx, new LayoutChanged(Layout(200f, 260f))).IsOk);   // torre de X=380 fica SEM POSIÇÃO
+        Assert.False(s.Towers.At(1).Placed);
         long before = s.Credits;
-        Assert.True(s.Apply(Ctx, new BuildTower(TowerType.Bolt, 1)).IsOk);
+        Assert.True(s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(1))).IsOk);
         Assert.Equal(before - 102, s.Credits);
     }
 
@@ -92,7 +92,7 @@ public sealed class SimCommandTests
     public void Upgrade_Costs()
     {
         var s = NewState(1000);
-        s.Apply(Ctx, new BuildTower(TowerType.Bolt, 0));
+        s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(0)));
         int id = s.Towers.At(0).Id;
         long c = s.Events.Written;
         long start = s.Credits;
@@ -112,7 +112,7 @@ public sealed class SimCommandTests
     {
         var s = NewState(1000);
         Assert.Equal(CommandReason.TowerNotFound, s.Apply(Ctx, new UpgradeTower(77)).Reason);
-        s.Apply(Ctx, new BuildTower(TowerType.Bolt, 0));
+        s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(0)));
         int id = s.Towers.At(0).Id;
         s.Credits = 50;
         var r = s.Apply(Ctx, new UpgradeTower(id));
@@ -130,7 +130,7 @@ public sealed class SimCommandTests
     public void Upgrade_NoSlot_Tower()
     {
         var s = NewState();
-        s.Apply(Ctx, new BuildTower(TowerType.Bolt, 3));
+        s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(3)));
         s.Apply(Ctx, new LayoutChanged(Layout(200f)));
         Assert.True(s.Apply(Ctx, new UpgradeTower(s.Towers.At(0).Id)).IsOk);
         Assert.Equal(2, s.Towers.At(0).Level);
@@ -140,7 +140,7 @@ public sealed class SimCommandTests
     public void SetTargeting_Works()
     {
         var s = NewState();
-        s.Apply(Ctx, new BuildTower(TowerType.Bolt, 0));
+        s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(0)));
         long credits = s.Credits;
         int id = s.Towers.At(0).Id;
         Assert.True(s.Apply(Ctx, new SetTargeting(id, Targeting.Strong)).IsOk);
@@ -156,29 +156,29 @@ public sealed class SimCommandTests
         Assert.Equal(CommandReason.UnknownCommand, s.Apply(Ctx, null).Reason);
         Assert.Equal(CommandReason.UnknownCommand, s.Apply(Ctx, new UnknownCmd()).Reason);
         s.BeginTick();
-        Assert.Throws<InvalidOperationException>(() => s.Apply(Ctx, new BuildTower(TowerType.Bolt, 0)));
+        Assert.Throws<InvalidOperationException>(() => s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(0))));
         Assert.Throws<InvalidOperationException>(() => s.Apply(Ctx, new LayoutChanged(Layout())));
         s.EndTick();
     }
 
     private sealed record UnknownCmd : IGameCommand;
 
-    [Fact(DisplayName = "T-11.3 LayoutChanged aplicado entre ticks: troca o layout, limita inimigos, torre SEM SLOT, evento")]
+    [Fact(DisplayName = "T-11.3 LayoutChanged aplicado entre ticks: troca o layout, limita inimigos, torre SEM POSIÇÃO, evento")]
     public void LayoutChanged_Applied()
     {
         var s = NewState();
-        s.Apply(Ctx, new BuildTower(TowerType.Bolt, 3));
+        s.Apply(Ctx, new BuildTower(TowerType.Bolt, TestLayouts.X(3)));
         s.Enemies.Add(new Enemy { Id = s.TakeId(), X = 900f, Hp = 10, MaxHp = 10, Speed = 45f, SpawnSpeed = 45f });
         s.Enemies.Add(new Enemy { Id = s.TakeId(), X = 300f, Hp = 10, MaxHp = 10, Speed = 45f, SpawnSpeed = 45f });
-        var small = StripLayout.Create(500f, 94f, 10f, 480f, new[] { 200f });
+        var small = TestLayouts.FromCenters(500f, 94f, 10f, 480f, new[] { 200f });
         long c = s.Events.Written;
         Assert.True(s.Apply(Ctx, new LayoutChanged(small)).IsOk);
         Assert.Same(small, s.Layout);
         Assert.Equal(500f, s.Enemies.At(0).X);
         Assert.Equal(300f, s.Enemies.At(1).X);
-        Assert.False(s.TowerHasSlot(in s.Towers.At(0)));
+        Assert.False(s.Towers.At(0).Placed);
         Assert.True(s.Events.TryRead(ref c, out var e));
-        Assert.Equal((SimEventType.LayoutChanged, 500f, 1.0), (e.Type, e.X, e.A));
+        Assert.Equal((SimEventType.LayoutChanged, 500f, 1.0), (e.Type, e.X, e.A)); // A = nº de zonas livres
     }
 
     [Fact(DisplayName = "T-11.3 LayoutChanged nulo é rejeitado; layout inválido nem existe (TryCreate falha)")]
@@ -186,7 +186,7 @@ public sealed class SimCommandTests
     {
         var s = NewState();
         Assert.Equal(CommandReason.InvalidLayout, s.Apply(Ctx, new LayoutChanged(null!)).Reason);
-        Assert.False(StripLayout.TryCreate(100f, 100f, 0, 0, ReadOnlySpan<float>.Empty, out _, out _));
-        Assert.False(StripLayout.TryCreate(1000f, 94f, 0, 0, new float[13], out _, out _));
+        Assert.False(StripLayout.TryCreate(100, 100f, 100f, 0, 0, TowerHost.Taskbar, [], out _, out _));
+        Assert.False(StripLayout.TryCreate(1000, 1000f, 94f, 0, 0, TowerHost.Taskbar, new FreeZone[9], out _, out _));
     }
 }

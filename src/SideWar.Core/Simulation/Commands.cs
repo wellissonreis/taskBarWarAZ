@@ -1,7 +1,13 @@
 namespace SideWar.Core.Simulation;
 
-/// <summary>Constrói uma torre <c>Level=1</c>, <c>Mode=First</c> no slot (SDD-27 RF-27.5).</summary>
-public sealed record BuildTower(TowerType Type, int Slot) : IGameCommand;
+/// <summary>Constrói uma torre <c>Level=1</c>, <c>Mode=First</c> na posição X (DIP inteiro) da faixa (SDD-27 RF-27.5, ADR-034).</summary>
+public sealed record BuildTower(TowerType Type, int X) : IGameCommand;
+
+/// <summary>Posiciona, sem custo, uma torre <c>SEM POSIÇÃO</c> em X (DP-33.1; SDD-11 RF-11.10).</summary>
+public sealed record PlaceTower(int TowerId, int X) : IGameCommand;
+
+/// <summary>Migração de save (DP-33.7): coloca as torres <c>SEM POSIÇÃO</c> na primeira posição válida, uma única vez.</summary>
+public sealed record AutoPlaceUnpositioned : IGameCommand;
 
 /// <summary>Melhora a torre de <c>Id</c> dado em um nível (SDD-27 RF-27.5). Conta como melhoria manual.</summary>
 public sealed record UpgradeTower(int TowerId) : IGameCommand;
@@ -32,9 +38,14 @@ public enum CommandReason : byte
     None = 0,
     UnknownCommand,
     InvalidLayout,
-    SlotMissing,
-    SlotOccupied,
-    TowerStoreFull,
+    /// <summary>A caixa de 44 DIP não cabe numa zona livre (SDD-11 RF-11.9).</summary>
+    OutOfZone,
+    /// <summary>A caixa intersecta a de outra torre posicionada (SDD-11 RF-11.9).</summary>
+    Overlap,
+    /// <summary>Já existem 24 torres, inclusive as SEM POSIÇÃO (DP-33.3).</summary>
+    TowerLimit,
+    /// <summary><c>PlaceTower</c> numa torre que já está posicionada (DP-33.1).</summary>
+    NotUnpositioned,
     TowerLocked,
     TowerNotFound,
     MaxLevel,
@@ -67,7 +78,7 @@ public static class TowerCosts
 {
     private const double Unreachable = long.MaxValue / 2.0;
 
-    /// <summary><c>ceil(base × factor^n)</c>; <c>n</c> = torres existentes de qualquer tipo, inclusive SEM SLOT (ADR-032).</summary>
+    /// <summary><c>ceil(base × factor^n)</c>; <c>n</c> = torres existentes de qualquer tipo, inclusive SEM POSIÇÃO (ADR-032).</summary>
     public static bool TryBuildCost(long baseCost, int existingTowers, double factor, out long cost)
     {
         double v = baseCost;
