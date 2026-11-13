@@ -264,6 +264,19 @@ public sealed class EventSchedulerTests
         Assert.Equal(2, rng2.Limits.Count); // ponto médio não consome o Rng
     }
 
+    [Fact(DisplayName = "CA-26.5 (ADR-034) CrateBounds.From usa núcleo (LeakX) e portal; x em [LeakX+24, PortalX−24]")]
+    public void CrateBounds_FromLayout_UsesCoreAndPortal()
+    {
+        var layout = StripLayout.Create(1440, 1394f, StripLayout.DefaultLeakX, 10f, 1360f, TowerHost.Taskbar, [new FreeZone(640, 1032)]);
+        var b = CrateBounds.From(layout);
+        Assert.Equal(layout.LeakX, b.LeakX);
+        Assert.Equal(layout.PortalX, b.PortalX);
+        var rng = new ScriptRng(1000, 0, 0, 0);
+        var s = EventScheduler.Start(rng);
+        for (int i = 0; i < 3600 && !s.CrateActive; i++) s.Advance(Dt, true, b, rng);
+        Assert.Equal((int)layout.LeakX + 24, s.CrateX);
+    }
+
     [Fact]
     public void Crate_RemovedWhenAbsent_AndLayoutChangeClampsX()
     {

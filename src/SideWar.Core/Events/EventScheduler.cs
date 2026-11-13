@@ -13,9 +13,9 @@ public readonly record struct SchedulerEvent(SchedulerEventKind Kind, double Val
 
 /// <summary>
 /// Limites do intervalo de x da caixa (SDD-26 RF-26.11, ADR-034): núcleo (<c>LeakX</c>) e portal, em DIP.
-/// (Campo <c>LastSlotX</c> mantido pelo nome; passa a receber <c>LeakX</c>. Ajuste completo: ficha TA.12.)
+/// O x sorteado fica em <c>[LeakX + 24, PortalX − 24]</c> (ponto médio se o intervalo for menor que 48 DIP).
 /// </summary>
-public readonly record struct CrateBounds(float LastSlotX, float PortalX)
+public readonly record struct CrateBounds(float LeakX, float PortalX)
 {
     public static CrateBounds From(StripLayout layout) => new(layout.LeakX, layout.PortalX);
 }
@@ -276,7 +276,7 @@ public sealed class EventScheduler
 
     private static (int lo, int hi) Range(CrateBounds b)
     {
-        int lo = (int)Math.Ceiling(b.LastSlotX) + CrateMargin;
+        int lo = (int)Math.Ceiling(b.LeakX) + CrateMargin;
         int hi = (int)Math.Floor(b.PortalX) - CrateMargin;
         return (lo, hi);
     }
@@ -284,8 +284,8 @@ public sealed class EventScheduler
     private static int DrawX(CrateBounds b, IQuestionRng rng)
     {
         var (lo, hi) = Range(b);
-        if (hi - lo < 0 || b.PortalX - b.LastSlotX < 2 * CrateMargin)
-            return (int)Math.Round((b.LastSlotX + b.PortalX) / 2.0, MidpointRounding.AwayFromZero);
+        if (hi - lo < 0 || b.PortalX - b.LeakX < 2 * CrateMargin)
+            return (int)Math.Round((b.LeakX + b.PortalX) / 2.0, MidpointRounding.AwayFromZero);
         return lo + rng.NextInt(hi - lo + 1);
     }
 
