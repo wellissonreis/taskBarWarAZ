@@ -52,11 +52,24 @@ public sealed class ReplayTests
             new ReplayCommand(15_000, new LayoutChanged(SanityBot.FallbackLayout())),
         }, UseBot: true, StopAfterWavesCleared: 40, MaxTicks: 200_000);
 
-    public static TheoryData<string> Names() => new() { "bot-200", "manual", "bot-40" };
+    /// <summary>D: como B, com coletas de missão (T6.11c, <c>GrantMissionReward</c>) entre ticks; o replay reproduz recompensa e acumulador.</summary>
+    public static ReplayScript ManualMissions() => Manual() with
+    {
+        Name = "manual-missions",
+        Commands = Manual().Commands.Concat(new[]
+        {
+            new ReplayCommand(1000, new GrantMissionReward("defeat-enemies", "xp", 500)),
+            new ReplayCommand(2000, new GrantMissionReward("stay-present", "reserves", 2)),
+            new ReplayCommand(3500, new GrantMissionReward("scale-spikes", "incomeMinutes", 10)),
+            new ReplayCommand(3500, new GrantMissionReward("collect-crates", "chestRare", 1)),
+        }).OrderBy(c => c.Tick).ToArray(),
+    };
+
+    public static TheoryData<string> Names() => new() { "bot-200", "manual", "bot-40", "manual-missions" };
 
     private static ReplayScript Get(string name) => name switch
     {
-        "bot-200" => BotLong(), "manual" => Manual(), _ => BotShort(),
+        "bot-200" => BotLong(), "manual" => Manual(), "manual-missions" => ManualMissions(), _ => BotShort(),
     };
 
     [Theory(DisplayName = "CA-11.2/CA-27.11 Replay: StateHash final idêntico em 5 execuções e igual ao golden")]
@@ -82,6 +95,15 @@ public sealed class ReplayTests
     {
         var r = ReplayRunner.Run(Content, Manual());
         Assert.True(r.CommandsRejected >= 1);
+    }
+
+    [Fact(DisplayName = "T6.11c Replay com coleta de missão: as 4 coletas são aceitas e mudam o hash")]
+    public void Mission_Grants_Replayed()
+    {
+        var m = ReplayRunner.Run(Content, ManualMissions());
+        var b = ReplayRunner.Run(Content, Manual());
+        Assert.Equal(b.CommandsRejected, m.CommandsRejected);
+        Assert.NotEqual(b.StateHash, m.StateHash);
     }
 
     [Fact(DisplayName = "CA-11.2 Replay: seed ou layout diferente muda o hash")]
@@ -118,6 +140,7 @@ public sealed class ReplayTests
         Assert.Equal(0, new SanityBot(ctx).Act(s));
     }
 
+    // T6.11c (ADR-026, SDD-27 DP-27.13): comando GrantMissionReward + acumulador MissionsCollected/MissionsCollectedXor entram no hash. Antes -> depois: bot-200 5774750835320769206 -> 530582171240162294; manual 15364067027734978088 -> 13299090699348105256; bot-40 13093119261165486294 -> 134478151661628630; SimHash inicial 3233948777650897134 -> 10880851112086112302; roteiro 900 ticks 6102606592928103353 -> 6761761969928038329. Novo: manual-missions (replay com coletas).
     // TA.3 (ADR-034): goldens regenerados porque o modelo de torre mudou (posição livre X no lugar de slot: StateHash com Width/Host/FreeZones/
     // Anchor/OffsetDip/Placed/migratedSlots; SanityBot e roteiros passam a usar X). Antes -> depois: bot-200 1868058130287024683 -> 8437507158511333366;
     // manual 8001160168888604307 -> 10354625916190894376; bot-40 14429632012659513062 -> 8242615699584279062.
@@ -125,6 +148,6 @@ public sealed class ReplayTests
     // Histórico: goldens regenerados na T6.9a sobre o Core da TU.1 (antes na T6.9a sobre TU.1: 11744330168129418410, 7214345695300152346, 1541269599807180295; T6.7 mudou o hash; antes: T3.8; 7034930283139373023, 3780424209191337524, 17563337984345861725).
     private static readonly Dictionary<string, ulong> Golden = new()
     {
-        ["bot-200"] = 5774750835320769206UL, ["manual"] = 15364067027734978088UL, ["bot-40"] = 13093119261165486294UL,
+        ["bot-200"] = 530582171240162294UL, ["manual"] = 13299090699348105256UL, ["bot-40"] = 134478151661628630UL, ["manual-missions"] = 17005671003809637273UL,
     };
 }

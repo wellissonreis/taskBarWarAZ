@@ -73,6 +73,8 @@ public sealed partial class SimState
         h.AddInt32(MaxBaseHp);
         h.AddInt32(NextId);
         h.AddInt64(ManualUpgrades);
+        h.AddInt64(MissionsCollected);
+        h.AddInt64(MissionsCollectedXor);
         h.AddDouble(PeakDamageFactor);
     }
 

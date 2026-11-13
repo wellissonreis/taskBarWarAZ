@@ -29,7 +29,7 @@ public sealed class DeterminismTests
     [Fact(DisplayName = "RF-17.7 Determinismo: grava artifacts/determinism/<os>.json com os hashes das 3 partidas")]
     public void Writes_Hash_File()
     {
-        var scripts = new[] { ReplayTests.BotLong(), ReplayTests.Manual(), ReplayTests.BotShort() };
+        var scripts = new[] { ReplayTests.BotLong(), ReplayTests.Manual(), ReplayTests.BotShort(), ReplayTests.ManualMissions() };
         var sb = new StringBuilder("{\n");
         for (int i = 0; i < scripts.Length; i++)
         {

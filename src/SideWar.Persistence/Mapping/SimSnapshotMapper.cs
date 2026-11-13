@@ -137,6 +137,7 @@ public static class SimSnapshotMapper
             Towers = towers, Enemies = enemies,
             TotalFalls = s.Falls, UnlockedStage = s.UnlockedStage, BossQuestionsCorrect = s.BossQuestionsCorrect,
             PresenceMultiplier = s.PresenceMultiplier, XpCarry = s.XpCarry, ManualUpgrades = s.ManualUpgrades,
+            MissionsCollected = s.MissionsCollected, MissionsCollectedXor = s.MissionsCollectedXor,
             IncomePerSecond = s.IncomePerSecond, RegionHp = s.RegionHpMultiplier, Present = s.Present, StageTable = stages,
         };
     }
@@ -245,6 +246,7 @@ public static class SimSnapshotMapper
             Xp = d.Xp, Level = d.Level, BaseHp = d.BaseHp, MaxBaseHp = d.MaxBaseHp, NextId = d.NextId,
             UnlockedStage = d.UnlockedStage, StageFalls = d.Falls, StageWaveMax = d.OndaMax, BossQuestionsCorrect = d.BossQuestionsCorrect,
             PresenceMultiplier = d.PresenceMultiplier, XpCarry = d.XpCarry, ManualUpgrades = d.ManualUpgrades,
+            MissionsCollected = d.MissionsCollected, MissionsCollectedXor = d.MissionsCollectedXor,
             IncomePerSecond = d.IncomePerSecond, Present = d.Present, StageAttempt = d.Attempt,
             MigratedSlotsPending = l.MigratedSlots,
         };

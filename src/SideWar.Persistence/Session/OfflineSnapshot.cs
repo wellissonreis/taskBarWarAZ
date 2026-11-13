@@ -125,6 +125,9 @@ public sealed record SimData
     public double PresenceMultiplier { get; init; } = 1.0;
     public double XpCarry { get; init; }
     public long ManualUpgrades { get; init; }
+    /// <summary>T6.11c: acumulador de missões coletadas (no hash); aditivo, padrão 0.</summary>
+    public long MissionsCollected { get; init; }
+    public long MissionsCollectedXor { get; init; }
     public double IncomePerSecond { get; init; }
     /// <summary>Multiplicador de HP da região usado na agenda da onda (<c>SimState.RegionHpMultiplier</c>).</summary>
     public double RegionHp { get; init; } = 1.0;

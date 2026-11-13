@@ -29,7 +29,8 @@ public sealed class MissionsMigrateController(MissionService missions, MigrateAr
         switch (hit.Kind)
         {
             case TabBodyHitKind.MissionCollect:
-                return missions.Collect(hit.Index, state, ctx) ? PanelBodyAction.MissionCollected : PanelBodyAction.None;
+                var grant = missions.Collect(hit.Index);   // valida e marca; a entrega é um comando (CommandLog)
+                return grant != null && state.Apply(ctx, grant).IsOk ? PanelBodyAction.MissionCollected : PanelBodyAction.None;
             case TabBodyHitKind.RegionRow:
                 var regions = ctx.Content.Regions;
                 if ((uint)hit.Index >= (uint)regions.Length

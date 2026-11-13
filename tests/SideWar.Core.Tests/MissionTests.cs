@@ -26,6 +26,13 @@ public sealed class MissionTests
         return svc;
     }
 
+    /// <summary>Coleta no serviço e aplica o comando devolvido pelo host (entre ticks).</summary>
+    private static bool Pay(MissionService m, int index, SimState s)
+    {
+        var g = m.Collect(index);
+        return g is not null && s.Apply(Ctx, g).IsOk;
+    }
+
     private static void Obs(MissionService m, SimEventType t, int n = 1)
     {
         for (int i = 0; i < n; i++) m.Observe(new SimEvent(t, 0, 0, 0, 0));
@@ -57,13 +64,13 @@ public sealed class MissionTests
         var s = NewState();
         ulong rng = s.Rng.State, hash = s.ComputeStateHash();
         var m = new MissionService(Content, 9);
-        Assert.Equal(0, m.Sync(D1, s, Ctx));
+        Assert.Equal(0, m.Sync(D1, new List<GrantMissionReward>()));
         Assert.Equal(rng, s.Rng.State);
         Assert.Equal(hash, s.ComputeStateHash());
         Assert.Equal("2026-11-10", m.Date);
         Assert.Equal(4, m.Missions.Count);
         var before = m.Missions.ToArray();
-        m.Sync(D1, s, Ctx);
+        m.Sync(D1, new List<GrantMissionReward>());
         Assert.Equal(before, m.Missions.ToArray());
     }
 
@@ -71,8 +78,8 @@ public sealed class MissionTests
     public void Sync_SameSeedAndDate_SameMissionsOnAnotherInstance()
     {
         var s = NewState();
-        var a = new MissionService(Content, 9); a.Sync(D1, s, Ctx);
-        var b = new MissionService(Content, 9); b.Sync(D1, s, Ctx);
+        var a = new MissionService(Content, 9); a.Sync(D1, new List<GrantMissionReward>());
+        var b = new MissionService(Content, 9); b.Sync(D1, new List<GrantMissionReward>());
         Assert.Equal(a.Missions.Select(x => x.Id), b.Missions.Select(x => x.Id));
     }
 
@@ -132,14 +139,14 @@ public sealed class MissionTests
     {
         var s = NewState();
         var m = With("stay-present");
-        Assert.False(m.Collect(0, s, Ctx));
+        Assert.Null(m.Collect(0));
         m.AddPresentSeconds(3600);
-        Assert.True(m.Collect(0, s, Ctx));
+        Assert.True(Pay(m, 0, s));
         Assert.Equal(2, s.Reservas);
         Assert.Equal(MissionStatus.Collected, m.Missions[0].Status);
-        Assert.False(m.Collect(0, s, Ctx));
+        Assert.Null(m.Collect(0));
         Assert.Equal(2, s.Reservas);
-        Assert.False(m.Collect(5, s, Ctx));
+        Assert.Null(m.Collect(5));
         Assert.Equal(0, m.Badge);
     }
 
@@ -153,18 +160,18 @@ public sealed class MissionTests
         Obs(m, SimEventType.TowerUpgraded, 10); Obs(m, SimEventType.BossAnswered, 3); m.AddPresentSeconds(3600);
         Assert.Equal(6, m.Badge);
 
-        Assert.True(m.Collect(0, s, Ctx));                    // 10 min de renda = 10 × 60 × 10
+        Assert.True(Pay(m, 0, s));                    // 10 min de renda = 10 × 60 × 10
         Assert.Equal(6000, s.Credits);
-        Assert.True(m.Collect(1, s, Ctx));                    // 5 min de renda
+        Assert.True(Pay(m, 1, s));                    // 5 min de renda
         Assert.Equal(9000, s.Credits);
-        Assert.True(m.Collect(2, s, Ctx));                    // 500 XP
+        Assert.True(Pay(m, 2, s));                    // 500 XP
         Assert.Equal(500, s.Xp);
-        Assert.True(m.Collect(3, s, Ctx));                    // 300 XP
+        Assert.True(Pay(m, 3, s));                    // 300 XP
         Assert.Equal(800, s.Xp);
-        Assert.True(m.Collect(4, s, Ctx));                    // baú raro: 15 min de renda + 1 Reserva
+        Assert.True(Pay(m, 4, s));                    // baú raro: 15 min de renda + 1 Reserva
         Assert.Equal(18000, s.Credits);
         Assert.Equal(1, s.Reservas);
-        Assert.True(m.Collect(5, s, Ctx));                    // 2 Reservas
+        Assert.True(Pay(m, 5, s));                    // 2 Reservas
         Assert.Equal(3, s.Reservas);
         Assert.Equal(0, m.Badge);
     }
@@ -177,7 +184,7 @@ public sealed class MissionTests
         s.PresenceMultiplier = 2.5;
         var m = With("scale-spikes");
         Obs(m, SimEventType.PeakScaled, 5);
-        m.Collect(0, s, Ctx);
+        Pay(m, 0, s);
         Assert.Equal(6000, s.Credits);
     }
 
@@ -187,7 +194,7 @@ public sealed class MissionTests
         var s = NewState();
         var m = With("stay-present");
         m.AddPresentSeconds(3600);
-        m.Collect(0, s, Ctx);
+        Pay(m, 0, s);
         Assert.Equal(2, s.Reservas);   // entra no multiplicador (1 + 0,01 × Reservas) na hora (DeathSystem lê Reservas)
     }
 
@@ -200,8 +207,12 @@ public sealed class MissionTests
         Obs(m, SimEventType.PeakScaled, 5);              // concluída, não coletada
         Obs(m, SimEventType.Kill, 50);                   // em andamento
         m.AddPresentSeconds(120);
-        int auto = m.Sync(new DateOnly(2026, 11, 11), s, Ctx);   // meia-noite local
+        var grants = new List<GrantMissionReward>();
+        int auto = m.Sync(new DateOnly(2026, 11, 11), grants);   // meia-noite local
         Assert.Equal(1, auto);
+        Assert.Equal(0, s.Credits);                              // o serviço não entrega: devolve o comando
+        foreach (var g in grants) Assert.True(s.Apply(Ctx, g).IsOk);
+        Assert.Equal(1, s.MissionsCollected);
         Assert.Equal(6000, s.Credits);
         Assert.Equal("2026-11-11", m.Date);
         Assert.Equal(4, m.Missions.Count);
@@ -216,9 +227,11 @@ public sealed class MissionTests
         var s = NewState(income: 10);
         var m = With("scale-spikes");
         Obs(m, SimEventType.PeakScaled, 5);
-        m.Collect(0, s, Ctx);
+        Pay(m, 0, s);
         long credits = s.Credits;
-        Assert.Equal(0, m.Sync(D1.AddDays(1), s, Ctx));
+        var gr = new List<GrantMissionReward>();
+        Assert.Equal(0, m.Sync(D1.AddDays(1), gr));
+        Assert.Empty(gr);
         Assert.Equal(credits, s.Credits);
     }
 
@@ -227,9 +240,9 @@ public sealed class MissionTests
     {
         var s = NewState();
         var m = new MissionService(Content, 5);
-        m.Sync(D1, s, Ctx);
+        m.Sync(D1, new List<GrantMissionReward>());
         Obs(m, SimEventType.Kill, 7); Obs(m, SimEventType.BossAnswered, 3); m.AddPresentSeconds(150);
-        m.Collect(0, s, Ctx);
+        Pay(m, 0, s);
         var snap = m.Snapshot();
         var n = new MissionService(Content, 5);
         n.Restore(snap);
@@ -237,5 +250,27 @@ public sealed class MissionTests
         Assert.Equal(m.Missions.ToArray(), n.Missions.ToArray());
         Assert.Equal(m.PresentSeconds, n.PresentSeconds);
         Assert.Equal(m.Badge, n.Badge);
+    }
+
+    [Fact]
+    public void GrantMissionReward_IsCommand_UpdatesHashedAccumulator_AndReplayReproducesHash()
+    {
+        var a = NewState(); var b = NewState();
+        var cmds = new[]
+        {
+            new GrantMissionReward("scale-spikes", "incomeMinutes", 10),
+            new GrantMissionReward("stay-present", "reserves", 2),
+            new GrantMissionReward("defeat-enemies", "xp", 500),
+        };
+        ulong h0 = a.ComputeStateHash();
+        foreach (var c in cmds) Assert.True(a.Apply(Ctx, c).IsOk);
+        Assert.Equal(3, a.MissionsCollected);
+        Assert.NotEqual(0, a.MissionsCollectedXor);
+        Assert.NotEqual(h0, a.ComputeStateHash());
+        foreach (var c in cmds) Assert.True(b.Apply(Ctx, c).IsOk);
+        Assert.Equal(a.ComputeStateHash(), b.ComputeStateHash());
+        Assert.False(a.Apply(Ctx, new GrantMissionReward("x", "bogus", 1)).IsOk);
+        Assert.False(a.Apply(Ctx, new GrantMissionReward("x", "xp", 0)).IsOk);
+        Assert.Equal(3, a.MissionsCollected);
     }
 }

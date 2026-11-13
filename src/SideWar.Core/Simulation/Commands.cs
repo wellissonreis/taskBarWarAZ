@@ -46,6 +46,14 @@ public sealed record DrawOfflineQuestion(long ReportId) : IGameCommand;
 /// </summary>
 public sealed record AnswerOfflineQuestion(long ReportId, int OptionIndex) : IGameCommand;
 
+/// <summary>
+/// Entrega da recompensa de uma missão diária coletada (SDD-27 RF-27.13, DP-27.13), aplicada entre ticks e registrada no
+/// <c>CommandLog</c> (ADR-026). <c>Kind</c>/<c>Amount</c> vêm do <c>missions.json</c> (id + valor explícito, não índice);
+/// o <c>Apply</c> só entrega via <c>GrantReward</c> e atualiza o acumulador <c>MissionsCollected</c> (no hash). A validação
+/// "Concluída" e a marcação "Coletada" são do <c>MissionService</c>, que devolve este comando em vez de entregar.
+/// </summary>
+public sealed record GrantMissionReward(string MissionId, string Kind, long Amount) : IGameCommand;
+
 /// <summary>Migrar para a região de índice dado (SDD-27 RF-27.10).</summary>
 public sealed record MigrateTo(int RegionIndex) : IGameCommand;
 

@@ -31,9 +31,38 @@ public sealed partial class SimState
             CollectOfflineRewards c => CollectOffline(c),
             DrawOfflineQuestion d => DrawOfflineQuestionFor(ctx, d),
             AnswerOfflineQuestion a => AnswerOfflineQuestionFor(a),
+            GrantMissionReward g => GrantMission(ctx, g),
             MigrateTo m => Prestige.PrestigeService.Migrate(this, ctx, m.RegionIndex),
             _ => CommandResult.Reject(CommandReason.UnknownCommand),
         };
+    }
+
+    /// <summary>Missões coletadas (contador; no hash e na sessão).</summary>
+    public long MissionsCollected { get; set; }
+
+    /// <summary>XOR dos hashes FNV-1a dos ids coletados (no hash e na sessão).</summary>
+    public long MissionsCollectedXor { get; set; }
+
+    private CommandResult GrantMission(SimContext ctx, GrantMissionReward cmd)
+    {
+        if (string.IsNullOrEmpty(cmd.MissionId) || cmd.Amount <= 0) return CommandResult.Reject(CommandReason.NotAvailable);
+        double income = IncomePerSecond * 60.0;
+        switch (cmd.Kind)
+        {
+            case "chestRare":
+                var chest = ctx.Content.Economy.Chests.Rare;
+                GrantReward(income * chest.IncomeMinutes, chest.Xp, chest.Reserves);
+                break;
+            case "incomeMinutes": GrantReward(income * cmd.Amount, 0, 0); break;
+            case "reserves": GrantReward(0, 0, cmd.Amount); break;
+            case "xp": GrantReward(0, cmd.Amount, 0); break;
+            default: return CommandResult.Reject(CommandReason.NotAvailable);
+        }
+        MissionsCollected++;
+        ulong f = 14695981039346656037UL;
+        foreach (char c in cmd.MissionId) { f = unchecked((f ^ (byte)(c & 0xFF)) * 1099511628211UL); f = unchecked((f ^ (byte)(c >> 8)) * 1099511628211UL); }
+        MissionsCollectedXor ^= unchecked((long)f);
+        return CommandResult.Ok;
     }
 
     private CommandResult CollectOffline(CollectOfflineRewards cmd)

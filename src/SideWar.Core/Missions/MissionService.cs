@@ -85,17 +85,17 @@ public sealed class MissionService
 
     /// <summary>
     /// Garante as missões do dia. Na virada (data diferente), coleta automaticamente as concluídas e não coletadas
-    /// (DP-27.13), zera o progresso e sorteia as novas. Devolve quantas foram coletadas na virada.
+    /// (DP-27.13), zera o progresso e sorteia as novas. Não entrega nada: as coletas da virada vão para
+    /// <paramref name="grants"/> (em ordem) e o host aplica cada <see cref="GrantMissionReward"/> entre ticks. Devolve quantas foram coletadas.
     /// </summary>
-    public int Sync(DateOnly today, SimState state, SimContext ctx)
+    public int Sync(DateOnly today, List<GrantMissionReward> grants)
     {
-        ArgumentNullException.ThrowIfNull(state);
-        ArgumentNullException.ThrowIfNull(ctx);
+        ArgumentNullException.ThrowIfNull(grants);
         string key = today.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
         if (key == Date) return 0;
         int collected = 0;
         for (int i = 0; i < _items.Count; i++)
-            if (_items[i].Status == MissionStatus.Completed && Collect(i, state, ctx)) collected++;
+            if (Collect(i) is { } g) { grants.Add(g); collected++; }
         _items.Clear();
         foreach (var id in Draw(_content.Missions, _seed, today)) _items.Add(new MissionEntry(id, 0, MissionStatus.InProgress));
         _presentSeconds = 0;
@@ -163,28 +163,17 @@ public sealed class MissionService
     }
 
     /// <summary>
-    /// COLETAR: só missão Concluída. Entrega a recompensa (<c>chestRare</c> = baú raro de economy.json; <c>incomeMinutes</c>;
-    /// <c>reserves</c>; <c>xp</c>) e marca Coletada. Só entre ticks. Devolve false se o índice é inválido ou não está Concluída.
+    /// COLETAR: só missão Concluída. Valida localmente, marca Coletada e DEVOLVE o <see cref="GrantMissionReward"/> (id + tipo + valor
+    /// explícitos); não entrega nada. O host o aplica entre ticks via <c>SimState.Apply</c>/<c>CommandLog</c> (ADR-026).
+    /// Devolve null se o índice é inválido ou a missão não está Concluída.
     /// </summary>
-    public bool Collect(int index, SimState state, SimContext ctx)
+    public GrantMissionReward? Collect(int index)
     {
-        ArgumentNullException.ThrowIfNull(state);
-        ArgumentNullException.ThrowIfNull(ctx);
-        if ((uint)index >= (uint)_items.Count || _items[index].Status != MissionStatus.Completed) return false;
-        var reward = Def(_items[index].Id).Reward;
-        double income = state.IncomePerSecond * 60.0;
-        switch (reward.Kind)
-        {
-            case "chestRare":
-                var chest = ctx.Content.Economy.Chests.Rare;
-                state.GrantReward(income * chest.IncomeMinutes, chest.Xp, chest.Reserves);
-                break;
-            case "incomeMinutes": state.GrantReward(income * reward.Amount, 0, 0); break;
-            case "reserves": state.GrantReward(0, 0, reward.Amount); break;
-            case "xp": state.GrantReward(0, reward.Amount, 0); break;
-        }
+        if ((uint)index >= (uint)_items.Count || _items[index].Status != MissionStatus.Completed) return null;
+        var id = _items[index].Id;
+        var reward = Def(id).Reward;
         _items[index] = _items[index] with { Status = MissionStatus.Collected };
-        return true;
+        return new GrantMissionReward(id, reward.Kind, reward.Amount);
     }
 
     public MissionServiceState Snapshot() => new(Date, _items.ToArray(), _presentSeconds);

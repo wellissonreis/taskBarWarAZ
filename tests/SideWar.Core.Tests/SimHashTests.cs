@@ -46,8 +46,8 @@ public sealed class SimHashTests
     [Fact(DisplayName = "CA-11.1 StateHash: roteiro de 900 ticks com construções, melhoria e LayoutChanged tem hash fixo (golden)")]
     public void Scripted_Hash_Golden() => Assert.Equal(GoldenScripted, Scripted(900).ComputeStateHash());
 
-    private const ulong GoldenInitial = 3233948777650897134UL;
-    private const ulong GoldenScripted = 6102606592928103353UL;
+    private const ulong GoldenInitial = 10880851112086112302UL;
+    private const ulong GoldenScripted = 6761761969928038329UL;
 
     private static SimState Base()
     {
@@ -61,7 +61,7 @@ public sealed class SimHashTests
     public static TheoryData<string> Mutations() => new()
     {
         "tick", "stage", "wave", "falls", "credits", "carry", "reservas", "xp", "level", "basehp", "maxbasehp", "nextid",
-        "manual", "peak", "layout.spawn", "layout.leak", "layout.core", "layout.portal", "layout.slot", "layout.count", "layout.width", "layout.host", "layout.zone", "migrated",
+        "manual", "missions", "missions.xor", "peak", "layout.spawn", "layout.leak", "layout.core", "layout.portal", "layout.slot", "layout.count", "layout.width", "layout.host", "layout.zone", "migrated",
         "tower.cooldown", "tower.level", "tower.mode", "tower.hits", "tower.anchor", "tower.offset", "tower.placed", "tower.type",
         "enemy.x", "enemy.speed", "enemy.spawnspeed", "enemy.hp", "enemy.maxhp", "enemy.armor", "enemy.flags", "enemy.lasthit", "enemy.kind",
         "waveclock", "rest", "nextspawn", "plan", "rng.state",
@@ -101,6 +101,8 @@ public sealed class SimHashTests
             case "maxbasehp": s.MaxBaseHp++; break;
             case "nextid": s.NextId++; break;
             case "manual": s.ManualUpgrades++; break;
+            case "missions": s.MissionsCollected++; break;
+            case "missions.xor": s.MissionsCollectedXor ^= 0x5A; break;
             case "peak": s.PeakDamageFactor = 3.0; break;
             case "layout.spawn": s.ApplyLayout(TestLayouts.FromCenters(1001f, 94f, 10f, 980f, new[] { 200f, 260f, 320f, 380f })); break;
             case "layout.leak": s.ApplyLayout(TestLayouts.FromCenters(1000f, 95f, 10f, 980f, new[] { 200f, 260f, 320f, 380f })); break;
