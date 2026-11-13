@@ -80,13 +80,16 @@ public sealed class FullscreenWatcherTests
 
     private const string Script = """
         Add-Type -AssemblyName System.Windows.Forms
+        Add-Type -Namespace W -Name U -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetForegroundWindow(System.IntPtr h); [DllImport("user32.dll")] public static extern void keybd_event(byte vk, byte scan, int flags, System.UIntPtr extra);'
         $f = New-Object System.Windows.Forms.Form
         $f.FormBorderStyle = 'None'
         $f.StartPosition = 'Manual'
         $f.Bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
         $f.TopMost = $true
         $f.Text = 'SideWar.TestFullscreenWindow'
-        $f.Add_Shown({ $f.Activate() })
+        # Form.Activate() is refused by the foreground lock when another app (e.g. a maximized browser) owns the foreground,
+        # so the watcher would never see this window as foreground. A synthetic Alt tap lifts the lock for this process.
+        $f.Add_Shown({ [W.U]::keybd_event(0x12, 0, 0, [System.UIntPtr]::Zero); [W.U]::keybd_event(0x12, 0, 2, [System.UIntPtr]::Zero); [void][W.U]::SetForegroundWindow($f.Handle); $f.Activate() })
         [System.Windows.Forms.Application]::Run($f)
         """;
 
