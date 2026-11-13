@@ -27,6 +27,13 @@ public sealed record AnswerBossQuestion(int OptionIndex) : IGameCommand;
 /// <summary>Clique na caixa de suprimentos (SDD-26 RF-26.15).</summary>
 public sealed record ClickSupplyCrate : IGameCommand;
 
+/// <summary>
+/// Coleta dos ganhos pendentes do card "Bem-vindo de volta" (SDD-25 RF-25.9, D-11). Os valores já vêm com o multiplicador
+/// (×1 ou ×2) aplicado pelo Runtime; entram no saldo e no XP entre ticks (o nível sobe no passo 7 do próximo tick,
+/// possivelmente vários níveis). Valor negativo é rejeitado. Fica no <c>CommandLog</c>, então o replay reproduz o efeito.
+/// </summary>
+public sealed record CollectOfflineRewards(long Credits, long Xp) : IGameCommand;
+
 /// <summary>Migrar para a região de índice dado (SDD-27 RF-27.10).</summary>
 public sealed record MigrateTo(int RegionIndex) : IGameCommand;
 

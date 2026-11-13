@@ -28,9 +28,18 @@ public sealed partial class SimState
             OpenBossQuestion => OpenBoss(),
             AnswerBossQuestion a => AnswerBoss(ctx, a),
             ClickSupplyCrate => ClickCrate(ctx),
+            CollectOfflineRewards c => CollectOffline(c),
             MigrateTo m => Prestige.PrestigeService.Migrate(this, ctx, m.RegionIndex),
             _ => CommandResult.Reject(CommandReason.UnknownCommand),
         };
+    }
+
+    private CommandResult CollectOffline(CollectOfflineRewards cmd)
+    {
+        if (cmd.Credits < 0 || cmd.Xp < 0) return CommandResult.Reject(CommandReason.NotAvailable);
+        AddCredits(cmd.Credits);
+        AddXp(cmd.Xp);
+        return CommandResult.Ok;
     }
 
     /// <summary>Handle da torre de <c>Id</c> dado, ou <see cref="Handle.None"/>.</summary>
