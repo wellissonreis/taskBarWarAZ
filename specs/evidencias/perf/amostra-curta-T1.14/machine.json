@@ -1,0 +1,51 @@
+{
+  "collectedAtUtc": "2026-11-13T12:49:48.8178316Z",
+  "source": "collected-automatically (D-05 not answered: not declared by the user)",
+  "computerName": null,
+  "cpu": [
+    {
+      "name": "12th Gen Intel(R) Core(TM) i7-12700T",
+      "cores": 12,
+      "logicalProcessors": 20,
+      "maxClockMHz": 1400
+    }
+  ],
+  "logicalCores": 20,
+  "ramGB": 63.7,
+  "gpu": [
+    {
+      "name": "Intel(R) UHD Graphics 770",
+      "driverVersion": "32.0.101.7088",
+      "adapterRamMB": 2048.0,
+      "refreshHz": 100,
+      "currentResolution": "1920x1080"
+    }
+  ],
+  "windows": {
+    "caption": "Microsoft Windows 11 Pro",
+    "version": "10.0.26300",
+    "buildNumber": "26300",
+    "ubr": 9711,
+    "displayVersion": "26H2"
+  },
+  "monitors": [
+    {
+      "device": "\\\\.\\DISPLAY1",
+      "primary": true,
+      "bounds": "1920x1080@0,0",
+      "workArea": "1920x1032"
+    },
+    {
+      "device": "\\\\.\\DISPLAY2",
+      "primary": false,
+      "bounds": "1920x1080@-1920,3",
+      "workArea": "1920x1032"
+    }
+  ],
+  "appliedDpi": 96,
+  "appDiag": null,
+  "powerPlan": "GUID do Esquema de Energia: 381b4222-f694-41f0-9685-ff5bb260df2e  (Equilibrado)",
+  "powerShell": "7.7.0",
+  "exe": "C:\\dev\\sidewar-T1.14\\src\\SideWar.App\\bin\\Release\\net10.0-windows10.0.22000.0\\SideWar.App.exe",
+  "exeVersion": ""
+}

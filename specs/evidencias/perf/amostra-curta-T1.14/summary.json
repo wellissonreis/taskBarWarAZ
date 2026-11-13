@@ -1,0 +1,577 @@
+{
+  "generatedAtUtc": "2026-11-13T12:51:03.1069680Z",
+  "parameters": {
+    "scenarios": [
+      "e1-synthetic",
+      "hidden",
+      "idle-static",
+      "baseline-wpf"
+    ],
+    "secondsPerRun": 16,
+    "repeats": 1,
+    "warmupSeconds": 5,
+    "dwmRestSeconds": 5,
+    "noInput": true,
+    "configuration": "Release",
+    "exe": "C:\\dev\\sidewar-T1.14\\src\\SideWar.App\\bin\\Release\\net10.0-windows10.0.22000.0\\SideWar.App.exe",
+    "logicalCores": 20,
+    "gpuCountersAvailable": true
+  },
+  "note": "Veredito por meta apenas informativo. A decisao go/no-go (CA-16.2) pertence a T1.15. Amostras com menos de 300 s sao curtas (shortSample).",
+  "machine": "machine.json",
+  "dwmRest": {
+    "seconds": 5,
+    "cpuDwm": {
+      "mean": 0.9579,
+      "p50": 0.9975,
+      "p95": 1.1394,
+      "max": 1.1394,
+      "n": 5
+    },
+    "gpuDwm": {
+      "mean": 8.4,
+      "p50": 9.0,
+      "p95": 9.0,
+      "max": 9.0,
+      "n": 5
+    }
+  },
+  "scenarios": {
+    "e1-synthetic": {
+      "runs": 1,
+      "secondsPerRun": 16,
+      "warmupDiscarded": 5,
+      "samplesAfterWarmup": 11,
+      "cpuProcPct": {
+        "mean": 0.2827,
+        "p50": 0.297,
+        "p95": 0.3899,
+        "max": 0.3899,
+        "n": 11
+      },
+      "cpuDwmPct": {
+        "mean": 1.2405,
+        "p50": 1.2724,
+        "p95": 1.4917,
+        "max": 1.4917,
+        "n": 11
+      },
+      "gpuProcPct": {
+        "mean": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 0.0,
+        "n": 11
+      },
+      "gpuDwmPct": {
+        "mean": 10.6364,
+        "p50": 11.0,
+        "p95": 11.0,
+        "max": 11.0,
+        "n": 11
+      },
+      "dwmDelta": {
+        "cpuPct": 0.2826,
+        "gpuPct": 2.2364
+      },
+      "fps": {
+        "mean": 29.9991,
+        "p50": 30.12,
+        "p95": 30.6,
+        "max": 30.6,
+        "n": 11
+      },
+      "wakesPerSec": {
+        "mean": 30.0909,
+        "p50": 30.0,
+        "p95": 32.0,
+        "max": 32.0,
+        "n": 11
+      },
+      "composeP50Ms": {
+        "mean": 0.4602,
+        "p50": 0.461,
+        "p95": 0.56,
+        "max": 0.56,
+        "n": 11
+      },
+      "composeP95Ms": {
+        "mean": 0.9513,
+        "p50": 0.738,
+        "p95": 2.017,
+        "max": 2.017,
+        "n": 11
+      },
+      "presentP50Ms": {
+        "mean": 0.2956,
+        "p50": 0.294,
+        "p95": 0.367,
+        "max": 0.367,
+        "n": 11
+      },
+      "presentP95Ms": {
+        "mean": 0.5414,
+        "p50": 0.491,
+        "p95": 0.851,
+        "max": 0.851,
+        "n": 11
+      },
+      "privateMB": {
+        "mean": 15.4982,
+        "p50": 15.45,
+        "p95": 16.91,
+        "max": 16.91,
+        "n": 11
+      },
+      "workingSetMB": {
+        "mean": 56.5,
+        "p50": 56.5,
+        "p95": 57.82,
+        "max": 57.82,
+        "n": 11
+      },
+      "handles": {
+        "mean": 367.1818,
+        "p50": 367.0,
+        "p95": 368.0,
+        "max": 368.0,
+        "n": 11
+      },
+      "uiaRetainedMB": null
+    },
+    "hidden": {
+      "runs": 1,
+      "secondsPerRun": 16,
+      "warmupDiscarded": 5,
+      "samplesAfterWarmup": 11,
+      "cpuProcPct": {
+        "mean": 0.1806,
+        "p50": 0.156,
+        "p95": 0.4095,
+        "max": 0.4095,
+        "n": 11
+      },
+      "cpuDwmPct": {
+        "mean": 1.5084,
+        "p50": 1.4829,
+        "p95": 1.8812,
+        "max": 1.8812,
+        "n": 11
+      },
+      "gpuProcPct": {
+        "mean": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 0.0,
+        "n": 11
+      },
+      "gpuDwmPct": {
+        "mean": 8.1818,
+        "p50": 8.0,
+        "p95": 9.0,
+        "max": 9.0,
+        "n": 11
+      },
+      "dwmDelta": {
+        "cpuPct": 0.5505,
+        "gpuPct": -0.2182
+      },
+      "fps": {
+        "mean": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 0.0,
+        "n": 11
+      },
+      "wakesPerSec": {
+        "mean": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 0.0,
+        "n": 11
+      },
+      "composeP50Ms": {
+        "mean": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 0.0,
+        "n": 11
+      },
+      "composeP95Ms": {
+        "mean": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 0.0,
+        "n": 11
+      },
+      "presentP50Ms": {
+        "mean": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 0.0,
+        "n": 11
+      },
+      "presentP95Ms": {
+        "mean": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 0.0,
+        "n": 11
+      },
+      "privateMB": {
+        "mean": 12.51,
+        "p50": 12.29,
+        "p95": 13.08,
+        "max": 13.08,
+        "n": 11
+      },
+      "workingSetMB": {
+        "mean": 43.8818,
+        "p50": 43.92,
+        "p95": 44.61,
+        "max": 44.61,
+        "n": 11
+      },
+      "handles": {
+        "mean": 297.7273,
+        "p50": 301.0,
+        "p95": 301.0,
+        "max": 301.0,
+        "n": 11
+      },
+      "uiaRetainedMB": null
+    },
+    "idle-static": {
+      "runs": 1,
+      "secondsPerRun": 16,
+      "warmupDiscarded": 5,
+      "samplesAfterWarmup": 11,
+      "cpuProcPct": {
+        "mean": 0.2739,
+        "p50": 0.2308,
+        "p95": 0.8126,
+        "max": 0.8126,
+        "n": 11
+      },
+      "cpuDwmPct": {
+        "mean": 2.406,
+        "p50": 1.8599,
+        "p95": 4.5021,
+        "max": 4.5021,
+        "n": 11
+      },
+      "gpuProcPct": {
+        "mean": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 0.0,
+        "n": 11
+      },
+      "gpuDwmPct": {
+        "mean": 17.8182,
+        "p50": 11.0,
+        "p95": 49.0,
+        "max": 49.0,
+        "n": 11
+      },
+      "dwmDelta": {
+        "cpuPct": 1.4481,
+        "gpuPct": 9.4182
+      },
+      "fps": {
+        "mean": 0.0918,
+        "p50": 0.0,
+        "p95": 1.01,
+        "max": 1.01,
+        "n": 11
+      },
+      "wakesPerSec": {
+        "mean": 8.7273,
+        "p50": 1.0,
+        "p95": 46.0,
+        "max": 46.0,
+        "n": 11
+      },
+      "composeP50Ms": {
+        "mean": 0.0596,
+        "p50": 0.0,
+        "p95": 0.656,
+        "max": 0.656,
+        "n": 11
+      },
+      "composeP95Ms": {
+        "mean": 0.0596,
+        "p50": 0.0,
+        "p95": 0.656,
+        "max": 0.656,
+        "n": 11
+      },
+      "presentP50Ms": {
+        "mean": 0.0302,
+        "p50": 0.0,
+        "p95": 0.332,
+        "max": 0.332,
+        "n": 11
+      },
+      "presentP95Ms": {
+        "mean": 0.0302,
+        "p50": 0.0,
+        "p95": 0.332,
+        "max": 0.332,
+        "n": 11
+      },
+      "privateMB": {
+        "mean": 15.22,
+        "p50": 14.86,
+        "p95": 16.21,
+        "max": 16.21,
+        "n": 11
+      },
+      "workingSetMB": {
+        "mean": 56.0664,
+        "p50": 55.95,
+        "p95": 57.16,
+        "max": 57.16,
+        "n": 11
+      },
+      "handles": {
+        "mean": 372.1818,
+        "p50": 373.0,
+        "p95": 378.0,
+        "max": 378.0,
+        "n": 11
+      },
+      "uiaRetainedMB": null
+    },
+    "baseline-wpf": {
+      "runs": 1,
+      "secondsPerRun": 16,
+      "warmupDiscarded": 5,
+      "samplesAfterWarmup": 11,
+      "cpuProcPct": {
+        "mean": 0.1427,
+        "p50": 0.15,
+        "p95": 0.3235,
+        "max": 0.3235,
+        "n": 11
+      },
+      "cpuDwmPct": {
+        "mean": 1.9867,
+        "p50": 1.9496,
+        "p95": 2.5496,
+        "max": 2.5496,
+        "n": 11
+      },
+      "gpuProcPct": {
+        "mean": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 0.0,
+        "n": 11
+      },
+      "gpuDwmPct": {
+        "mean": 10.2727,
+        "p50": 10.0,
+        "p95": 18.0,
+        "max": 18.0,
+        "n": 11
+      },
+      "dwmDelta": {
+        "cpuPct": 1.0288,
+        "gpuPct": 1.8727
+      },
+      "fps": {
+        "mean": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 0.0,
+        "n": 11
+      },
+      "wakesPerSec": {
+        "mean": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 0.0,
+        "n": 11
+      },
+      "composeP50Ms": {
+        "mean": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 0.0,
+        "n": 11
+      },
+      "composeP95Ms": {
+        "mean": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 0.0,
+        "n": 11
+      },
+      "presentP50Ms": {
+        "mean": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 0.0,
+        "n": 11
+      },
+      "presentP95Ms": {
+        "mean": 0.0,
+        "p50": 0.0,
+        "p95": 0.0,
+        "max": 0.0,
+        "n": 11
+      },
+      "privateMB": {
+        "mean": 12.2991,
+        "p50": 12.05,
+        "p95": 12.85,
+        "max": 12.85,
+        "n": 11
+      },
+      "workingSetMB": {
+        "mean": 43.3927,
+        "p50": 43.38,
+        "p95": 43.62,
+        "max": 43.62,
+        "n": 11
+      },
+      "handles": {
+        "mean": 295.7273,
+        "p50": 299.0,
+        "p95": 299.0,
+        "max": 299.0,
+        "n": 11
+      },
+      "uiaRetainedMB": null
+    }
+  },
+  "targets": [
+    {
+      "id": "P-00",
+      "scenario": "baseline-wpf",
+      "description": "Private bytes / Working set do app vazio (registrar; base de P-06)",
+      "status": "medido",
+      "verdict": "registrado",
+      "shortSample": true,
+      "checks": [
+        {
+          "metric": "privateMB.mean",
+          "value": 12.2991,
+          "limit": null,
+          "ok": null
+        },
+        {
+          "metric": "workingSetMB.mean",
+          "value": 43.3927,
+          "limit": null,
+          "ok": null
+        }
+      ]
+    },
+    {
+      "id": "P-01",
+      "scenario": "hidden",
+      "description": "CPU proc <= 0,1% · wakes/s <= 1 · frames 0",
+      "status": "medido",
+      "verdict": "reprovado",
+      "shortSample": true,
+      "checks": [
+        {
+          "metric": "cpuProcPct.mean",
+          "value": 0.1806,
+          "limit": 0.1,
+          "ok": false
+        },
+        {
+          "metric": "wakesPerSec.mean",
+          "value": 0.0,
+          "limit": 1,
+          "ok": true
+        },
+        {
+          "metric": "fps.max",
+          "value": 0.0,
+          "limit": 0,
+          "ok": true
+        }
+      ],
+      "note": "Meta definida para 5 min."
+    },
+    {
+      "id": "P-02",
+      "scenario": "idle-static",
+      "description": "CPU proc <= 0,2% · frames/s <= 0,1",
+      "status": "medido",
+      "verdict": "reprovado",
+      "shortSample": true,
+      "checks": [
+        {
+          "metric": "cpuProcPct.mean",
+          "value": 0.2739,
+          "limit": 0.2,
+          "ok": false
+        },
+        {
+          "metric": "fps.mean",
+          "value": 0.0918,
+          "limit": 0.1,
+          "ok": true
+        }
+      ],
+      "note": "Meta definida para 5 min."
+    },
+    {
+      "id": "P-11",
+      "scenario": "e1-synthetic",
+      "description": "Composicao do frame p50 <= 2,5 ms / p95 <= 4 ms",
+      "status": "medido",
+      "verdict": "aprovado",
+      "shortSample": true,
+      "checks": [
+        {
+          "metric": "composeP50Ms.p50",
+          "value": 0.461,
+          "limit": 2.5,
+          "ok": true
+        },
+        {
+          "metric": "composeP95Ms.p95",
+          "value": 2.017,
+          "limit": 4,
+          "ok": true
+        }
+      ],
+      "note": "Sobre e1-synthetic (quadro de teste, proxy do presente-onda-pesada em sprites; faixa de 96 DIP a 150% a confirmar na T1.15)."
+    },
+    {
+      "id": "P-12",
+      "scenario": "e1-synthetic",
+      "description": "UpdateLayeredWindowIndirect p50 <= 1 ms / p95 <= 2 ms",
+      "status": "medido",
+      "verdict": "aprovado",
+      "shortSample": true,
+      "checks": [
+        {
+          "metric": "presentP50Ms.p50",
+          "value": 0.294,
+          "limit": 1,
+          "ok": true
+        },
+        {
+          "metric": "presentP95Ms.p95",
+          "value": 0.851,
+          "limit": 2,
+          "ok": true
+        }
+      ],
+      "note": "Sobre e1-synthetic (quadro de teste, proxy do presente-onda-pesada em sprites; faixa de 96 DIP a 150% a confirmar na T1.15)."
+    },
+    {
+      "id": "P-22",
+      "scenario": "taskbar-uia",
+      "status": "não medido",
+      "reason": "Atualizacao da barra (UIA) depende de SDD-21 T-21.8 / --diag; uiaRetainedMB vazio no CSV; este script nao a mede."
+    }
+  ]
+}
