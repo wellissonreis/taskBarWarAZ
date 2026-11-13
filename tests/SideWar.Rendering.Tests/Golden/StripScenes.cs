@@ -42,7 +42,10 @@ public static class StripScenes
         _ => "strip-empty-slots",
     };
 
-    public static string GoldenName(StripScene scene, int dpi) => $"{Name(scene)}-{dpi * 100 / 96}";
+    public static string GoldenName(StripScene scene, int dpi, bool text = true) => $"{Name(scene)}-{dpi * 100 / 96}{(text ? "" : "-notext")}";
+
+    /// <summary>Cenas cujo texto vem dos hotspots (banner, selo): têm variante "sem texto" para a comparação entre SOs.</summary>
+    public static bool HasHotspotText(StripScene scene) => scene is StripScene.Peak or StripScene.Boss or StripScene.Away;
 
     private static SimState NewState(bool towers)
     {
@@ -69,7 +72,7 @@ public static class StripScenes
     }
 
     /// <summary>Renderiza a cena (<paramref name="dpi"/> 96 = 100%, 144 = 150%) como bitmap opaco.</summary>
-    public static SKBitmap Render(StripScene scene, int dpi)
+    public static SKBitmap Render(StripScene scene, int dpi, bool text = true)
     {
         using var typo = new Typography();
         using var icons = new IconCatalog();
@@ -78,6 +81,7 @@ public static class StripScenes
         renderer.SetDpi(dpi);
         using var hot = new HotspotRenderer(renderer.SpriteCache, typo, icons);
         hot.SetDpi(dpi);
+        hot.TextEnabled = text;
 
         bool away = scene == StripScene.Away;
         bool boss = scene == StripScene.Boss;

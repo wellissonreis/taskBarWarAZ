@@ -55,6 +55,12 @@ public sealed class HotspotRenderer : IDisposable
 
     public int Dpi => _dpi;
 
+    /// <summary>
+    /// Falso: o layout (larguras) é idêntico, mas nenhum glifo é desenhado. Serve às goldens "sem texto" de comparação
+    /// estrita entre SOs (SDD-17 RF-17.3), pois a rasterização de texto do Skia difere entre Linux e Windows.
+    /// </summary>
+    public bool TextEnabled { get; set; } = true;
+
     /// <summary>Define o DPI (chamar junto de <see cref="SceneRenderer.SetDpi"/> e <c>Typography.Clear()</c> em WM_DPICHANGED).</summary>
     public void SetDpi(int dpi)
     {
@@ -252,7 +258,7 @@ public sealed class HotspotRenderer : IDisposable
         foreach (char c in text)
         {
             var (blob, width) = Glyph(c, font, sizeDip);
-            if (c != ' ') canvas.DrawText(blob, MathF.Round(cursor), baseline, _text);
+            if (TextEnabled && c != ' ') canvas.DrawText(blob, MathF.Round(cursor), baseline, _text);
             cursor += width + spacing;
         }
         return (int)MathF.Round(cursor - x, MidpointRounding.AwayFromZero);

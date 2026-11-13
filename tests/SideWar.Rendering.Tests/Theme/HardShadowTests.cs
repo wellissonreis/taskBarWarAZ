@@ -38,6 +38,27 @@ public class HardShadowTests
     }
 
     [Fact]
+    public void Draw_IsThreadSafe_ConcurrentCallersKeepTheirOwnColor()
+    {
+        // Regressao do flake: o SKPaint estatico compartilhado era mutado (Color) por varios renderers/testes em paralelo.
+        var failures = new System.Collections.Concurrent.ConcurrentBag<string>();
+        Parallel.For(0, 8, new ParallelOptions { MaxDegreeOfParallelism = 8 }, t =>
+        {
+            var color = new SKColor((byte)(30 * t + 10), (byte)(255 - 30 * t), 77, 255);
+            using var bmp = new SKBitmap(new SKImageInfo(40, 40, SKColorType.Rgba8888, SKAlphaType.Premul));
+            using var canvas = new SKCanvas(bmp);
+            for (int i = 0; i < 3000; i++)
+            {
+                canvas.Clear(SKColors.Transparent);
+                HardShadow.Draw(canvas, new SKRect(4, 4, 20, 20), color, 96);
+                var px = bmp.GetPixel(15, 15);
+                if (px != color) { failures.Add($"t{t} i{i}: esperado {color}, obtido {px}"); return; }
+            }
+        });
+        Assert.True(failures.IsEmpty, string.Join("; ", failures));
+    }
+
+    [Fact]
     public void Source_UsesNoFilters()
     {
         var d = new DirectoryInfo(AppContext.BaseDirectory);

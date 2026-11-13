@@ -5,13 +5,12 @@ namespace SideWar.Rendering.Theme;
 /// <summary>
 /// Sombra dura (SDD-20 RF-20.4): retangulo preenchido deslocado (+6,+6) DIP,
 /// sem blur, sem SKImageFilter e sem SKMaskFilter. Chamar antes do corpo.
-/// Uso restrito a thread de render (paint estatico reutilizado, zero alocacao).
+/// Thread-safe: cada chamada usa seu proprio SKPaint (um paint estatico mutado por varios renderers em paralelo
+/// misturava cores e causava flake nos testes de Rendering).
 /// </summary>
 public static class HardShadow
 {
     public const int OffsetDip = 6;
-
-    private static readonly SKPaint Paint = new() { IsAntialias = false, Style = SKPaintStyle.Fill };
 
     /// <summary>Deslocamento fisico: round(6 x dpi/96), meio para cima.</summary>
     public static int OffsetPx(int dpi)
@@ -30,7 +29,7 @@ public static class HardShadow
     public static void Draw(SKCanvas canvas, SKRect body, SKColor color, int dpi)
     {
         ArgumentNullException.ThrowIfNull(canvas);
-        Paint.Color = color;
-        canvas.DrawRect(ShadowRect(body, dpi), Paint);
+        using var paint = new SKPaint { IsAntialias = false, Style = SKPaintStyle.Fill, Color = color };
+        canvas.DrawRect(ShadowRect(body, dpi), paint);
     }
 }

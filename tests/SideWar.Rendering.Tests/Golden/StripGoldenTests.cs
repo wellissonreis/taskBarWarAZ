@@ -15,14 +15,48 @@ public sealed class StripGoldenTests
         return d;
     }
 
+    public static TheoryData<StripScene, int> NoTextCases()
+    {
+        var d = new TheoryData<StripScene, int>();
+        foreach (var scene in Enum.GetValues<StripScene>().Where(StripScenes.HasHotspotText))
+            foreach (int dpi in new[] { 96, 144 })
+                d.Add(scene, dpi);
+        return d;
+    }
+
+    /// <summary>
+    /// Cenas com texto de hotspot comparam só no SO de referência das goldens (Linux/WSL): a rasterização de texto do Skia
+    /// difere entre SOs (SDD-17 RF-17.3). A comparação estrita entre SOs usa as variantes sem texto e as cenas sem hotspot de texto.
+    /// </summary>
     [Theory]
     [MemberData(nameof(Cases))]
     public void Strip_MatchesGolden(StripScene scene, int dpi)
     {
+        if (StripScenes.HasHotspotText(scene))
+            Assert.SkipUnless(OperatingSystem.IsLinux(), "texto Skia difere entre SOs; golden com texto só no Linux (RF-17.3)");
         using var bmp = StripScenes.Render(scene, dpi);
         Assert.Equal(StripScenes.WidthDip * dpi / 96, bmp.Width);
         string? failure = GoldenImage.Verify(StripScenes.GoldenName(scene, dpi), bmp);
         Assert.True(failure is null, failure);
+    }
+
+    [Theory]
+    [MemberData(nameof(NoTextCases))]
+    public void Strip_NoText_MatchesGolden_OnAnyOs(StripScene scene, int dpi)
+    {
+        using var bmp = StripScenes.Render(scene, dpi, text: false);
+        Assert.Equal(StripScenes.WidthDip * dpi / 96, bmp.Width);
+        string? failure = GoldenImage.Verify(StripScenes.GoldenName(scene, dpi, text: false), bmp);
+        Assert.True(failure is null, failure);
+    }
+
+    [Theory]
+    [MemberData(nameof(NoTextCases))]
+    public void Strip_NoText_DiffersFromTextVariant(StripScene scene, int dpi)
+    {
+        using var with = StripScenes.Render(scene, dpi);
+        using var without = StripScenes.Render(scene, dpi, text: false);
+        Assert.False(with.Bytes.AsSpan().SequenceEqual(without.Bytes));
     }
 
     [Theory]
