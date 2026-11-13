@@ -1,0 +1,62 @@
+<Window x:Class="SideWar.App.Windows.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Configurações — SideWar" Width="520" Height="480" ShowInTaskbar="False"
+        WindowStartupLocation="CenterScreen" ResizeMode="NoResize">
+  <DockPanel Margin="12">
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+      <TextBlock x:Name="SaveErrorText" Foreground="Firebrick" VerticalAlignment="Center" Margin="0,0,12,0" />
+      <Button x:Name="SaveButton" Content="Salvar" Width="90" Margin="0,0,8,0" IsDefault="True" Click="OnSave" />
+      <Button Content="Cancelar" Width="90" IsCancel="True" Click="OnCancel" />
+    </StackPanel>
+    <TabControl>
+      <TabItem Header="Geral">
+        <StackPanel Margin="12">
+          <CheckBox Content="Iniciar com o Windows" IsChecked="{Binding StartWithWindows}" Margin="0,0,0,8" />
+          <TextBlock Text="Ocultar em tela cheia" />
+          <ComboBox x:Name="HideCombo" Width="220" HorizontalAlignment="Left" Margin="0,2,0,8" />
+          <CheckBox Content="Usar UI Automation para a barra de tarefas" IsChecked="{Binding UseUia}" Margin="0,0,0,8" />
+          <CheckBox Content="Auto-escala" IsChecked="{Binding AutoScale}" Margin="0,0,0,8" />
+          <TextBlock x:Name="PresenceText" TextWrapping="Wrap" Foreground="Gray" />
+        </StackPanel>
+      </TabItem>
+      <TabItem Header="Desempenho">
+        <StackPanel Margin="12">
+          <TextBlock Text="FPS presente" />
+          <ComboBox x:Name="PresentCombo" Width="120" HorizontalAlignment="Left" Margin="0,2,0,8" />
+          <TextBlock Text="FPS ausente" />
+          <ComboBox x:Name="AbsentCombo" Width="120" HorizontalAlignment="Left" Margin="0,2,0,8" />
+          <CheckBox Content="Economia na bateria" IsChecked="{Binding SaverOnBattery}" Margin="0,0,0,8" />
+          <CheckBox Content="Forçar economia" IsChecked="{Binding ForceSaver}" />
+        </StackPanel>
+      </TabItem>
+      <TabItem Header="Atalhos">
+        <StackPanel Margin="12">
+          <TextBlock Text="Modo interativo da faixa" />
+          <TextBox x:Name="HkInteractive" Margin="0,2,0,2" />
+          <TextBlock x:Name="HkInteractiveErr" Foreground="Firebrick" Margin="0,0,0,8" />
+          <TextBlock Text="Visibilidade" />
+          <TextBox x:Name="HkVisibility" Margin="0,2,0,2" />
+          <TextBlock x:Name="HkVisibilityErr" Foreground="Firebrick" Margin="0,0,0,8" />
+          <TextBlock Text="Pausa" />
+          <TextBox x:Name="HkPause" Margin="0,2,0,2" />
+          <TextBlock x:Name="HkPauseErr" Foreground="Firebrick" Margin="0,0,0,8" />
+          <TextBlock x:Name="HkConflictText" Foreground="Firebrick" />
+          <Button Content="Restaurar padrão" HorizontalAlignment="Left" Click="OnRestoreHotkeys" Margin="0,8,0,0" />
+        </StackPanel>
+      </TabItem>
+      <TabItem Header="Acessibilidade">
+        <StackPanel Margin="12">
+          <CheckBox Content="Reduzir movimento" IsChecked="{Binding ReducedMotion}" />
+        </StackPanel>
+      </TabItem>
+      <TabItem Header="Diagnóstico">
+        <StackPanel Margin="12">
+          <CheckBox Content="Gravar comandos" IsChecked="{Binding RecordCommands}" Margin="0,0,0,8" />
+          <TextBlock Text="Nível de log" />
+          <ComboBox x:Name="LogCombo" Width="140" HorizontalAlignment="Left" Margin="0,2,0,0" />
+        </StackPanel>
+      </TabItem>
+    </TabControl>
+  </DockPanel>
+</Window>

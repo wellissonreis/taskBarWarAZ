@@ -9,6 +9,7 @@
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="SideWar.App.SmokeTests" />
+    <EmbeddedResource Include="../SideWar.Rendering/Fonts/LICENSE-*.txt" LogicalName="SideWar.App.Licenses.%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../SideWar.Core/SideWar.Core.csproj" />
