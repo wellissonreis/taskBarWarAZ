@@ -7,5 +7,6 @@
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <Deterministic>true</Deterministic>
+    <Version>0.1.0</Version>
   </PropertyGroup>
 </Project>
