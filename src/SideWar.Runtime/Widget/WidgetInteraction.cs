@@ -21,7 +21,7 @@ public readonly record struct PanelCommand(PanelCommandKind Kind, WidgetTab Tab,
 }
 
 /// <summary>Alvo do hit-test do widget (RF-23.8).</summary>
-public enum WidgetHitTarget { None, Background, Button }
+public enum WidgetHitTarget { None, Background, Button, Badge }
 
 /// <summary>Forma do widget: retângulo sem raio (ADR-034): todo pixel tem alfa ≥ 1 e consome o clique (RF-23.3, CA-23.9).</summary>
 public static class WidgetShape
@@ -40,6 +40,7 @@ public sealed class WidgetInteraction
     private readonly IPresenceSink _presence;
     private readonly Action<PanelCommand> _panel;
     private int _pressed = -1;
+    private bool _badgePressed;
 
     public WidgetInteraction(IPresenceSink presence, Action<PanelCommand> panel)
     {
@@ -56,9 +57,19 @@ public sealed class WidgetInteraction
     /// <summary>Botão pressionado (captura ativa), ou -1.</summary>
     public int PressedIndex => _pressed;
 
+    /// <summary>
+    /// Há ganhos pendentes do card "Bem-vindo de volta" recolhido: o badge "+X" aparece e é clicável (SDD-23 RF-23.7;
+    /// <c>WidgetModel.PendingText != null</c>). O host mantém em sincronia com o modelo.
+    /// </summary>
+    public bool BadgeVisible { get; set; }
+
+    /// <summary>Clique no badge: o host reabre o card (<c>OfflineCardController.ReopenFromBadge</c>), sem ativar a janela.</summary>
+    public Action? OnBadgeClick { get; set; }
+
     public WidgetHitTarget Hit(float x, float y)
     {
         if (!WidgetShape.Contains(x, y, Layout.WidthDip, Layout.HeightDip)) return WidgetHitTarget.None;
+        if (BadgeVisible && WidgetBadgeGeometry.Rect(Layout.Credits, Layout.HeightDip).Contains(x, y)) return WidgetHitTarget.Badge;
         return Layout.HitButton(x, y) >= 0 ? WidgetHitTarget.Button : WidgetHitTarget.Background;
     }
 
@@ -67,8 +78,9 @@ public sealed class WidgetInteraction
     {
         if (Hit(x, y) == WidgetHitTarget.None) return false;
         _presence.NotifyInteraction();
+        _badgePressed = Hit(x, y) == WidgetHitTarget.Badge;
         _pressed = Layout.HitButton(x, y);
-        return _pressed >= 0;
+        return _pressed >= 0 || _badgePressed;
     }
 
     /// <summary>WM_LBUTTONUP. Emite ToggleTab se solto no mesmo botão do pressionamento. Devolve true se havia captura.</summary>
@@ -76,6 +88,12 @@ public sealed class WidgetInteraction
     {
         int pressed = _pressed;
         _pressed = -1;
+        if (_badgePressed)
+        {
+            _badgePressed = false;
+            if (Hit(x, y) == WidgetHitTarget.Badge) OnBadgeClick?.Invoke();
+            return true;
+        }
         if (pressed < 0) return false;
         if (Hit(x, y) == WidgetHitTarget.Button && Layout.HitButton(x, y) == pressed)
             _panel(PanelCommand.ToggleTab((WidgetTab)pressed));
@@ -108,5 +126,5 @@ public sealed class WidgetInteraction
     }
 
     /// <summary>WM_CAPTURECHANGED: cancela o clique em andamento.</summary>
-    public void OnCaptureLost() => _pressed = -1;
+    public void OnCaptureLost() { _pressed = -1; _badgePressed = false; }
 }

@@ -12,6 +12,10 @@ public enum SimEventType : byte
     Migrated,
     /// <summary>ADR-034: torre posicionada por <c>PlaceTower</c>/<c>AutoPlaceUnpositioned</c>. X = centro, A = Id da torre, B = <see cref="TowerType"/>.</summary>
     TowerPlaced,
+    /// <summary>SDD-26 RF-26.16: pergunta do COLETAR ×2 sorteada. A = id do relatório.</summary>
+    OfflineQuestionDrawn,
+    /// <summary>SDD-26 RF-26.16: COLETAR ×2 respondido. A = id do relatório, B = 1 se acertou (0 erro/tempo).</summary>
+    OfflineQuestionAnswered,
 }
 
 /// <summary>

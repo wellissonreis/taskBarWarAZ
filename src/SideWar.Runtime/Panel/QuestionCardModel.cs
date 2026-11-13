@@ -1,3 +1,4 @@
+using SideWar.Runtime.Localization;
 using SideWar.Core.Events;
 
 namespace SideWar.Runtime.Panel;
@@ -72,8 +73,40 @@ public sealed record QuestionCardModel(
                 ? o.ChosenExplanation + " " + o.CorrectExplanation
                 : o.CorrectExplanation;
         }
-        return new($"CHEFE · ONDA {wave} · {topic.ToUpperInvariant()}", FormatTimer(encounter.Remaining),
+        return new(Strings.BossQuestionHeader(wave, topic), FormatTimer(encounter.Remaining),
             q.Problem, texts, visuals, state, explanation);
+    }
+
+    /// <summary>
+    /// Card da pergunta do COLETAR ×2 (SDD-24 RF-24.9 reaproveitado; T6.4b): mesmo modelo e renderer do chefe, cabeçalho
+    /// <c>COLETAR ×2 · FASE nn</c>. Leitura apenas da sessão.
+    /// </summary>
+    public static QuestionCardModel FromOfflineSession(Presence.OfflineQuestionSession session, int stage)
+    {
+        ArgumentNullException.ThrowIfNull(session);
+        var q = session.Question;
+        var texts = new string[q.Options.Length];
+        var visuals = new OptionVisual[q.Options.Length];
+        for (var i = 0; i < texts.Length; i++)
+            texts[i] = $"{(char)('A' + i)} · {q.Options[i].Text}";
+        var state = QuestionCardState.Waiting;
+        string? explanation = null;
+        if (session.Result is { } result)
+        {
+            state = result switch
+            {
+                BossResult.Correct => QuestionCardState.Correct,
+                BossResult.Wrong => QuestionCardState.Wrong,
+                _ => QuestionCardState.TimedOut,
+            };
+            var correct = q.CorrectIndex;
+            if (correct >= 0) visuals[correct] = OptionVisual.Correct;
+            if (result == BossResult.Wrong && session.OptionIndex is { } chosen) visuals[chosen] = OptionVisual.Wrong;
+            var correctExp = correct >= 0 ? q.Options[correct].Explanation : "";
+            var chosenExp = result == BossResult.Wrong && session.OptionIndex is { } c2 ? q.Options[c2].Explanation : null;
+            explanation = !string.IsNullOrWhiteSpace(chosenExp) ? chosenExp + " " + correctExp : correctExp;
+        }
+        return new(Strings.CollectQuestionHeader(stage), FormatTimer(session.Remaining), q.Problem, texts, visuals, state, explanation);
     }
 
     /// <summary>Dados de teste do design (Presence.dc.html): onda 40, IAAS, 4 alternativas, 0:45, aguardando.</summary>

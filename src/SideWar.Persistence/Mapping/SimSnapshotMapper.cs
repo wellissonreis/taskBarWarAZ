@@ -95,6 +95,7 @@ public static class SimSnapshotMapper
             Stages = merged,
             Ledger = LedgerData(s),
             DrawnQuestions = DrawnData(s),
+            CollectLedger = OfflineLedgerData(s),
             Counters = baseProfile.Counters with { ManualUpgrades = s.ManualUpgrades },
         };
     }
@@ -142,7 +143,7 @@ public static class SimSnapshotMapper
 
     private static EventsData ToEventsData(SimState s)
     {
-        if (!s.EventsEnabled) return new EventsData { StageAttempt = s.StageAttempt, Ledger = LedgerData(s), DrawnQuestions = DrawnData(s) };
+        if (!s.EventsEnabled) return new EventsData { StageAttempt = s.StageAttempt, Ledger = LedgerData(s), DrawnQuestions = DrawnData(s), OfflineLedger = OfflineLedgerData(s) };
         var st = s.Scheduler!.Snapshot();
         BossEncounterData? enc = null;
         if (s.Encounter is { } e)
@@ -164,7 +165,7 @@ public static class SimSnapshotMapper
                 CrateX = st.CrateX, NeedsCrateDraw = st.NeedsCrateDraw, CrateCountdown = st.CrateCountdown,
                 PeaksClicked = st.PeaksClicked, CratesCollected = st.CratesCollected,
             },
-            Ledger = LedgerData(s), DrawnQuestions = DrawnData(s),
+            Ledger = LedgerData(s), DrawnQuestions = DrawnData(s), OfflineLedger = OfflineLedgerData(s),
         };
     }
 
@@ -173,6 +174,13 @@ public static class SimSnapshotMapper
         {
             Stage = kv.Key.Stage, Attempt = kv.Key.Attempt, Wave = kv.Key.Wave, QuestionId = kv.Value.QuestionId,
             OptionIndex = kv.Value.OptionIndex, Correct = kv.Value.Correct, BonusConsumed = kv.Value.BonusConsumed,
+        })];
+
+    private static List<CollectLedgerEntryData> OfflineLedgerData(SimState s) =>
+        [.. s.OfflineLedger.Snapshot().Select(kv => new CollectLedgerEntryData
+        {
+            ReportId = kv.Key, QuestionId = kv.Value.QuestionId, Answered = kv.Value.Answered,
+            OptionIndex = kv.Value.OptionIndex, Correct = kv.Value.Correct,
         })];
 
     private static List<DrawnQuestionsData> DrawnData(SimState s) =>
@@ -278,6 +286,9 @@ public static class SimSnapshotMapper
             s.RestoreEvents(ctx, sched, ledger, used, enc, ev.BossHold, ev.PeakQueue);
         }
         else s.Ledger.Restore(ledger);
+
+        s.OfflineLedger.Restore(ev.OfflineLedger.Select(x => new KeyValuePair<long, OfflineLedgerEntry>(
+            x.ReportId, new OfflineLedgerEntry(x.QuestionId, x.Answered, x.OptionIndex, x.Correct))));
 
         string actual = FormatStateHash(s.ComputeStateHash());
         if (snap.StateHash != OfflineSnapshot.MigratedStateHash && !string.Equals(actual, snap.StateHash, StringComparison.OrdinalIgnoreCase))

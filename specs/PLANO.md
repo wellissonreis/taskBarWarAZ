@@ -174,7 +174,7 @@ T3.4 a T3.8 compartilham contratos de `SimState`: **não paralelizar entre si** 
 | T6.1 ✅ | `PresenceTracker` e `PresenceMultiplier` (5 min, ×1,5/×2,0/×2,5/×0,25) | SDD-25 RF-25.1, RF-25.3 | Sonnet | WSL | CA-25.1, CA-25.2 |
 | T6.2 ✅ | Modo Ausente (simulação real a 8 fps) e `AutoScaler` | RF-25.4, RF-25.5 | Sonnet | WSL | CA-25.3, CA-25.4, CA-25.8 |
 | T6.3 ✅ | `OfflineCalculator` e `OfflineReport` (analítico, teto de 12 h) | RF-25.6 a RF-25.8 | Sonnet | WSL | CA-25.5, CA-25.6 |
-| T6.4 | Card "Bem-vindo de volta" (lógica, COLETAR ×2, recolhimento em 60 s) e aplicação do resultado (D-11) | RF-25.9, RF-25.10, SDD-24 | Sonnet | Windows | CA-25.7, CA-24.11 |
+| T6.4 🟡 | Card "Bem-vindo de volta" (lógica, COLETAR ×2, recolhimento em 60 s) e aplicação do resultado (D-11) | RF-25.9, RF-25.10, SDD-24 | Sonnet | Windows | CA-25.7, CA-24.11 |
 | T6.5 ✅ | `EventScheduler`, pico de demanda e caixas de suprimentos | SDD-26 RF-26.2, RF-26.3, RF-26.11, RF-26.12 | Sonnet | WSL | CA-26.1, CA-26.5, CA-26.6 |
 | T6.6 ✅ | Chefe com pergunta Azure, `QuestionLedger`, banco `questions.json` e validador | RF-26.4 a RF-26.10 | Sonnet | WSL | CA-26.2 a CA-26.4, CA-26.7, CA-26.8 |
 | T6.7 ✅ | `PrestigeService` ("Migrar", regiões) e `MissionService` | SDD-27 RF-27.10, RF-27.11, RF-27.13 | Sonnet | WSL | CA-27.8, CA-27.9 |

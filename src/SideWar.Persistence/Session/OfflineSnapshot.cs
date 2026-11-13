@@ -57,6 +57,15 @@ public sealed record PendingData
     public int OndaPara { get; init; }
     public double TempoS { get; init; }
     public LossesData Perdas { get; init; } = new();
+
+    // ---- T6.4b: o restante do OfflineReport, para o card reabrir idêntico (todos aditivos, com padrão) ----
+    /// <summary>Crédito bruto do relatório (a ×0,25), antes do gasto da auto-escala; <see cref="Credits"/> é o pendente líquido.</summary>
+    public long RawCredits { get; init; }
+    public int LevelFrom { get; init; }
+    public int LevelTo { get; init; }
+    public int NMelhorias { get; init; }
+    public long GastoAuto { get; init; }
+    public bool ParouNoChefe { get; init; }
 }
 
 public sealed record UpgradeLineData(string Tower, int From, int To);
@@ -189,6 +198,8 @@ public sealed record EventsData
     public IReadOnlyList<LedgerEntryData> Ledger { get; init; } = [];
     public IReadOnlyList<DrawnQuestionsData> DrawnQuestions { get; init; } = [];
     public int StageAttempt { get; init; } = 1;
+    /// <summary>Ledger do COLETAR ×2 por relatório (SDD-26 RF-26.16; T6.4b). Aditivo: sessão antiga lê como vazio.</summary>
+    public IReadOnlyList<CollectLedgerEntryData> OfflineLedger { get; init; } = [];
 }
 
 public sealed record SchedulerData

@@ -121,9 +121,10 @@ public sealed class ReplayTests
     // TA.3 (ADR-034): goldens regenerados porque o modelo de torre mudou (posição livre X no lugar de slot: StateHash com Width/Host/FreeZones/
     // Anchor/OffsetDip/Placed/migratedSlots; SanityBot e roteiros passam a usar X). Antes -> depois: bot-200 1868058130287024683 -> 8437507158511333366;
     // manual 8001160168888604307 -> 10354625916190894376; bot-40 14429632012659513062 -> 8242615699584279062.
+    // T6.4b (SDD-26 RF-26.16, ADR-032): ledger do COLETAR ×2 entra no hash. Antes -> depois: bot-200 8437507158511333366 -> 5774750835320769206; manual 10354625916190894376 -> 15364067027734978088; bot-40 8242615699584279062 -> 13093119261165486294; SimHash inicial 4665254451780095790 -> 3233948777650897134; roteiro 900 ticks 2569215574220123801 -> 6102606592928103353.
     // Histórico: goldens regenerados na T6.9a sobre o Core da TU.1 (antes na T6.9a sobre TU.1: 11744330168129418410, 7214345695300152346, 1541269599807180295; T6.7 mudou o hash; antes: T3.8; 7034930283139373023, 3780424209191337524, 17563337984345861725).
     private static readonly Dictionary<string, ulong> Golden = new()
     {
-        ["bot-200"] = 8437507158511333366UL, ["manual"] = 10354625916190894376UL, ["bot-40"] = 8242615699584279062UL,
+        ["bot-200"] = 5774750835320769206UL, ["manual"] = 15364067027734978088UL, ["bot-40"] = 13093119261165486294UL,
     };
 }

@@ -93,6 +93,8 @@ public sealed record CollectLedgerEntryData
 {
     public long ReportId { get; init; }
     public string QuestionId { get; init; } = "";
+    /// <summary>false = pergunta sorteada e ainda sem resposta (T6.4b); entradas antigas valem como respondidas.</summary>
+    public bool Answered { get; init; } = true;
     public int? OptionIndex { get; init; }
     public bool Correct { get; init; }
 }

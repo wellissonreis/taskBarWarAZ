@@ -30,6 +30,9 @@ public sealed partial class SimState
     /// <summary><c>taxaRenda</c> (SDD-27 RF-27.3, sem multiplicador de presença): base da caixa e do baú. Escrito de fora; no hash.</summary>
     public double IncomePerSecond { get; set; }
 
+    /// <summary>Ledger do COLETAR ×2 por relatório de retorno (RF-26.16); entra no hash.</summary>
+    public OfflineQuestionLedger OfflineLedger { get; } = new();
+
     public bool EventsEnabled => _sched is not null;
     public EventScheduler? Scheduler => _sched;
     public QuestionSelector? Selector => _selector;
@@ -205,6 +208,36 @@ public sealed partial class SimState
         return CommandResult.Ok;
     }
 
+    /// <summary>Pergunta sorteada para o relatório (RF-26.16), ou null.</summary>
+    public QuestionDef? OfflineQuestion(long reportId)
+        => OfflineLedger.Get(reportId) is { } e ? _bank?.Find(e.QuestionId) : null;
+
+    private CommandResult DrawOfflineQuestionFor(SimContext ctx, DrawOfflineQuestion cmd)
+    {
+        if (_selector is null || cmd.ReportId <= 0) return CommandResult.Reject(CommandReason.NotAvailable);
+        if (OfflineLedger.Has(cmd.ReportId)) return CommandResult.Reject(CommandReason.AlreadyUsed);
+        var stages = ctx.Content.Stages;
+        string topic = stages[Math.Clamp(Stage - 1, 0, stages.Length - 1)].StageTopic;
+        var q = _selector.Draw(Stage, StageAttempt, topic, RngAdapter);
+        OfflineLedger.RecordDraw(cmd.ReportId, q.Id);
+        Events.Add(new SimEvent(SimEventType.OfflineQuestionDrawn, 0f, 0f, cmd.ReportId, 0));
+        return CommandResult.Ok;
+    }
+
+    private CommandResult AnswerOfflineQuestionFor(AnswerOfflineQuestion cmd)
+    {
+        var entry = OfflineLedger.Get(cmd.ReportId);
+        if (entry is null) return CommandResult.Reject(CommandReason.NotAvailable);
+        if (entry.Answered) return CommandResult.Reject(CommandReason.AlreadyUsed);
+        var q = _bank?.Find(entry.QuestionId);
+        if (q is null || cmd.OptionIndex >= q.Options.Length) return CommandResult.Reject(CommandReason.UnknownCommand);
+        int? option = cmd.OptionIndex < 0 ? null : cmd.OptionIndex;
+        bool correct = option is { } i && q.Options[i].Correct;
+        OfflineLedger.RecordAnswer(cmd.ReportId, option, correct);
+        Events.Add(new SimEvent(SimEventType.OfflineQuestionAnswered, 0f, 0f, cmd.ReportId, correct ? 1 : 0));
+        return CommandResult.Ok;
+    }
+
     private CommandResult ClickCrate(SimContext ctx)
     {
         if (_sched is null || !Present || !_sched.CrateActive) return CommandResult.Reject(CommandReason.NotAvailable);
@@ -279,6 +312,13 @@ public sealed partial class SimState
             h.AddBool(s.CrateActive); h.AddDouble(s.CrateTimer); h.AddInt32(s.CrateX); h.AddBool(s.NeedsCrateDraw);
             h.AddDouble(s.CrateCountdown); h.AddInt32(s.PeaksClicked); h.AddInt32(s.CratesCollected);
         }
+        h.AddInt32(OfflineLedger.Count);
+        if (OfflineLedger.Count > 0)
+            foreach (var (id, v) in OfflineLedger.Snapshot())
+            {
+                h.AddInt64(id); h.AddString(v.QuestionId); h.AddBool(v.Answered);
+                h.AddInt32(v.OptionIndex ?? -1); h.AddBool(v.Correct);
+            }
         h.AddBool(_encounter is not null);
         if (_encounter is { } e)
         {

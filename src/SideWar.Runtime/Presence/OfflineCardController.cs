@@ -69,6 +69,9 @@ public sealed class OfflineCardController(IClock clock, double collapseSeconds =
     public string? BadgeText => State == OfflineCardState.Collapsed && Pending is { } p
         ? "+" + Core.Economy.CreditFormatter.Format(p.Credits) : null;
 
+    /// <summary>Créditos do badge para <c>WidgetInputs.Pending</c> (SDD-23): o pendente enquanto recolhido; senão 0 (sem badge).</summary>
+    public double BadgeCredits => State == OfflineCardState.Collapsed && Pending is { } p ? p.Credits : 0;
+
     /// <summary>Existe pendência a persistir (<c>pending</c> e <c>cardState</c>, RF-25.11).</summary>
     public bool HasPending => Pending is not null;
 
@@ -90,11 +93,21 @@ public sealed class OfflineCardController(IClock clock, double collapseSeconds =
         return Open(OfflineCardEventKind.Presented);
     }
 
-    /// <summary>Restore (SDD-14): pendência persistida. <paramref name="collapsed"/> = <c>cardState == Recolhido</c>.</summary>
-    public void Restore(PendingRewards pending, bool collapsed)
+    /// <summary>Garante que os próximos ids de relatório ficam acima de <paramref name="lastUsedId"/> (ledger persistido).</summary>
+    public void SeedReportIds(long lastUsedId)
+    {
+        if (lastUsedId >= _nextId) _nextId = lastUsedId + 1;
+    }
+
+    /// <summary>
+    /// Restore (SDD-14): pendência persistida. <paramref name="collapsed"/> = <c>cardState == Recolhido</c>.
+    /// <paramref name="alreadyAsked"/> = o ledger do Core já tem pergunta para este relatório (COLETAR ×2 vale ×1; RF-26.16).
+    /// </summary>
+    public void Restore(PendingRewards pending, bool collapsed, bool alreadyAsked = false)
     {
         ArgumentNullException.ThrowIfNull(pending);
         Pending = pending;
+        if (alreadyAsked) _asked.Add(pending.ReportId);
         if (pending.ReportId >= _nextId) _nextId = pending.ReportId + 1;
         if (collapsed) { State = OfflineCardState.Collapsed; DeadlineTicks = 0; Version++; }
         else Open(OfflineCardEventKind.Presented);

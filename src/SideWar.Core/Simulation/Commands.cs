@@ -34,6 +34,18 @@ public sealed record ClickSupplyCrate : IGameCommand;
 /// </summary>
 public sealed record CollectOfflineRewards(long Credits, long Xp) : IGameCommand;
 
+/// <summary>
+/// Sorteia a pergunta do COLETAR ×2 para o relatório de retorno (SDD-26 RF-26.16): mesmo sorteio e mesmo conjunto de usadas
+/// do tema da fase; consome 1 valor do <c>Rng</c>. Uma vez por <c>ReportId</c>. Fica no <c>CommandLog</c>.
+/// </summary>
+public sealed record DrawOfflineQuestion(long ReportId) : IGameCommand;
+
+/// <summary>
+/// Registra a resposta do COLETAR ×2 no ledger do relatório (RF-26.16). <c>OptionIndex</c> negativo = tempo esgotado ou
+/// card fechado (×1). Não conta para estrelas nem missões. O multiplicador sai de <c>CollectOfflineRewards</c>.
+/// </summary>
+public sealed record AnswerOfflineQuestion(long ReportId, int OptionIndex) : IGameCommand;
+
 /// <summary>Migrar para a região de índice dado (SDD-27 RF-27.10).</summary>
 public sealed record MigrateTo(int RegionIndex) : IGameCommand;
 

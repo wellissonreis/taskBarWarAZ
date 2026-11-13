@@ -29,6 +29,8 @@ public sealed partial class SimState
             AnswerBossQuestion a => AnswerBoss(ctx, a),
             ClickSupplyCrate => ClickCrate(ctx),
             CollectOfflineRewards c => CollectOffline(c),
+            DrawOfflineQuestion d => DrawOfflineQuestionFor(ctx, d),
+            AnswerOfflineQuestion a => AnswerOfflineQuestionFor(a),
             MigrateTo m => Prestige.PrestigeService.Migrate(this, ctx, m.RegionIndex),
             _ => CommandResult.Reject(CommandReason.UnknownCommand),
         };

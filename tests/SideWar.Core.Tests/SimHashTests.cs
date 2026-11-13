@@ -46,8 +46,8 @@ public sealed class SimHashTests
     [Fact(DisplayName = "CA-11.1 StateHash: roteiro de 900 ticks com construções, melhoria e LayoutChanged tem hash fixo (golden)")]
     public void Scripted_Hash_Golden() => Assert.Equal(GoldenScripted, Scripted(900).ComputeStateHash());
 
-    private const ulong GoldenInitial = 4665254451780095790UL;
-    private const ulong GoldenScripted = 2569215574220123801UL;
+    private const ulong GoldenInitial = 3233948777650897134UL;
+    private const ulong GoldenScripted = 6102606592928103353UL;
 
     private static SimState Base()
     {
