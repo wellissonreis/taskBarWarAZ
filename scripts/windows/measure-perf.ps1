@@ -2,7 +2,9 @@
 .SYNOPSIS
   Mede desempenho dos cenarios --bench do SideWar (SDD-16 RF-16.3): machine.json, CSV por execucao e summary.json.
 .PARAMETER Scenario
-  Nome de um cenario implementado (e1-synthetic, hidden, idle-static, baseline-wpf) ou 'e1' para os quatro.
+  Nome de um cenario implementado: e1-synthetic, hidden, idle-static, baseline-wpf, presente-onda-media (alias presente-onda),
+  presente-onda-pesada, ausente (alias strip-away) ou varias-janelas (SanityBot; T4.11), ou 'e1' para os quatro primeiros.
+  Os cenarios de jogo abrem as janelas reais (faixa, widget, painel, hotspots): rodar so em desktop isolado (MTC-MED).
 .PARAMETER Seconds
   Duracao de cada execucao do App (inclui o aquecimento). Deve ser maior que -WarmupSeconds.
 .PARAMETER Repeats
@@ -30,9 +32,13 @@ Set-Location $repo
 $inv = [Globalization.CultureInfo]::InvariantCulture
 if ($Seconds -le $WarmupSeconds) { throw "-Seconds ($Seconds) must be greater than -WarmupSeconds ($WarmupSeconds)." }
 
-$implemented = @('e1-synthetic', 'hidden', 'idle-static', 'baseline-wpf')
-$scenarios = if ($Scenario -eq 'e1') { $implemented } else { @($Scenario) }
-foreach ($s in $scenarios) { if ($s -notin $implemented) { throw "Unknown scenario '$s'. Available: $($implemented -join ', '), e1." } }
+$e1Scenarios = @('e1-synthetic', 'hidden', 'idle-static', 'baseline-wpf')
+$gameScenarios = @('presente-onda-media', 'presente-onda-pesada', 'ausente', 'varias-janelas')
+$aliases = @{ 'presente-onda' = 'presente-onda-media'; 'strip-away' = 'ausente' }
+$implemented = $e1Scenarios + $gameScenarios
+if ($aliases.ContainsKey($Scenario)) { $Scenario = $aliases[$Scenario] }
+$scenarios = if ($Scenario -eq 'e1') { $e1Scenarios } else { @($Scenario) }
+foreach ($s in $scenarios) { if ($s -notin $implemented) { throw "Unknown scenario '$s'. Available: $($implemented -join ', '), presente-onda, strip-away, e1." } }
 
 if (-not $Exe) {
     $Exe = Join-Path $repo "src/SideWar.App/bin/$Configuration/net10.0-windows/SideWar.App.exe"
@@ -293,6 +299,24 @@ if ($syn) {
 } else {
     $targets += [ordered]@{ id = 'P-11'; scenario = 'e1-synthetic'; status = 'não medido'; reason = 'cenario nao executado nesta rodada' }
     $targets += [ordered]@{ id = 'P-12'; scenario = 'e1-synthetic'; status = 'não medido'; reason = 'cenario nao executado nesta rodada' }
+}
+# Cenarios de jogo (T4.11, SanityBot): so entram no summary se executados. Metas de P-18 (SDD-16/SDD-22 RNF-22.4); os demais sao
+# registrados (metas de P-04/P-05/P-10 a P-13 nao recalibradas, SDD-16 RF-16.1) ate haver medicao oficial na maquina de referencia (D-05).
+$gameNote = 'Cenario de jogo (SanityBot, faixa sobre a barra, towersInBar=false/Band). Amostra de desktop isolado nao substitui a medicao oficial.'
+foreach ($g in $gameScenarios) {
+    $r = $results[$g]
+    if (-not $r) { continue }
+    $dwmCpu = if ($r.dwmDelta) { $r.dwmDelta.cpuPct } else { $null }
+    if ($g -eq 'ausente') {
+        $targets += New-Target 'P-18' $g 'CPU proc <= 0,4% · DWM delta <= 0,3% · 8 +- 1 Presents/s' @(
+            @{ metric = 'cpuProcPct.mean'; value = (M $r.cpuProcPct 'mean'); limit = 0.4 }, @{ metric = 'dwmDelta.cpuPct'; value = $dwmCpu; limit = 0.3 },
+            @{ metric = 'fps.mean'; value = (M $r.fps 'mean'); limit = 9 }, @{ metric = 'fps.max'; value = (M $r.fps 'max'); limit = 9 }) ($gameNote + ' fps.mean deve ficar em [7, 9]: conferir o minimo no CSV.')
+    } else {
+        $targets += New-Target ('REG-' + $g) $g 'Registrar CPU, fps, composicao, present e memoria (sem meta recalibrada)' @(
+            @{ metric = 'cpuProcPct.mean'; value = (M $r.cpuProcPct 'mean'); limit = $null }, @{ metric = 'fps.mean'; value = (M $r.fps 'mean'); limit = $null },
+            @{ metric = 'composeP95Ms.p95'; value = (M $r.composeP95Ms 'p95'); limit = $null }, @{ metric = 'presentP95Ms.p95'; value = (M $r.presentP95Ms 'p95'); limit = $null },
+            @{ metric = 'privateMB.mean'; value = (M $r.privateMB 'mean'); limit = $null }, @{ metric = 'handles.max'; value = (M $r.handles 'max'); limit = $null }) $gameNote
+    }
 }
 $targets += [ordered]@{ id = 'P-22'; scenario = 'taskbar-uia'; status = 'não medido'; reason = 'Atualizacao da barra (UIA) depende de SDD-21 T-21.8 / --diag; uiaRetainedMB vazio no CSV; este script nao a mede.' }
 

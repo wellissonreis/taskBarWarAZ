@@ -140,7 +140,7 @@ T3.4 a T3.8 compartilham contratos de `SimState`: **não paralelizar entre si** 
 | T4.8 ✅ | Golden images `strip-present`, `strip-away`, `strip-peak`, `strip-boss`, `strip-fallback`, `strip-empty-slots` a 100% e 150% | SDD-22 CA-22.7, SDD-17 RF-17.3 | Sonnet | WSL | CA-22.7, CA-08.3 |
 | T4.9 ✅ | Linha de borda de estado, **modo ausente** (selo click-through) e janelas hotspot (banners e caixas) | RF-22.6 a RF-22.8 | Sonnet | Windows | CA-22.5, CA-22.6 |
 | T4.10 🟡 | Integração `GameHost` + simulação + render + `RenderPolicy` por presença (presente 30 fps, ausente 8 fps) | SDD-10, SDD-08 | Sonnet | Windows | CA-08.4, CA-10.3 |
-| T4.11 | Cenários `presente-onda`, `ausente` e `varias-janelas` do `--bench` com o `SanityBot` | SDD-16 RF-16.2 | Sonnet | Windows | CA-16.5 (parcial) |
+| T4.11 🟡 (código; execução no desktop isolado pendente) | Cenários `presente-onda`, `ausente` e `varias-janelas` do `--bench` com o `SanityBot` | SDD-16 RF-16.2 | Sonnet | Windows | CA-16.5 (parcial) |
 | T4.12 | Medição P-11 e P-12 (primeira passada), P-17 e P-18, memória do atlas e `specs/evidencias/E4.md` | SDD-16, SDD-09 | Haiku | Windows | CA-09.5, CA-22.9 |
 
 **Aprovação:** CA-08.3, CA-08.4, CA-09.1 a CA-09.6, CA-20.1 a CA-20.7, CA-22.1 a CA-22.10. Metas de desempenho são registradas (aprovadas ou reprovadas), sem bloquear; a comprovação final é da E7. **Evidência obrigatória:** `specs/evidencias/E4.md` com golden images no Linux e no Windows, memória do atlas e CSVs dos cenários.

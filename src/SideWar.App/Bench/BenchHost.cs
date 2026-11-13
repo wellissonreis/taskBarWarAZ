@@ -19,7 +19,7 @@ namespace SideWar.App.Bench;
 /// `idle-static` (one static strip frame, no timers), `hidden` (everything created but hidden) and `baseline-wpf`
 /// (P-00: nothing at all). Every member except the thread-safe counters runs on T-Game.
 /// </summary>
-internal sealed class BenchHost : IGameLoopHost, IDisposable
+internal sealed class BenchHost : IBenchHost
 {
     private const int WidgetEveryFrames = 15; // ~2 fps for the widget text
     private readonly string scenario;

@@ -24,18 +24,21 @@ internal static class BenchRunner
         try
         {
             var stats = new BenchStats();
-            var host = new BenchHost(options.Scenario, stats, options.NoInput, m => output.WriteLine(m));
+            var gameScenario = BenchScenarios.Find(options.Scenario);
+            IBenchHost host = gameScenario is not null
+                ? new BenchGameHost(gameScenario, stats, m => output.WriteLine(m))
+                : new BenchHost(options.Scenario, stats, options.NoInput, m => output.WriteLine(m));
             game = new GameThread(host, e => { lock (errors) errors.Add(e); output.WriteLine(e.ToString()); }, m => output.WriteLine(m));
             host.Bind(game);
             await game.StartAsync();
             var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             game.Post(() => { try { host.Setup(); ready.SetResult(); } catch (Exception e) { ready.SetException(e); } });
             await ready.Task;
-            if (withTray && !options.NoInput && options.Scenario == "e1-synthetic")
+            if (withTray && !options.NoInput && host is BenchHost e1Host && options.Scenario == "e1-synthetic")
             {
                 tray = new TrayIcon("SideWar bench");
                 var current = game;
-                tray.ToggleVisibilityRequested += () => { try { current.Post(host.ToggleVisibility); } catch (InvalidOperationException) { } };
+                tray.ToggleVisibilityRequested += () => { try { current.Post(e1Host.ToggleVisibility); } catch (InvalidOperationException) { } };
             }
 
             var directory = Path.GetDirectoryName(Path.GetFullPath(options.OutPath));

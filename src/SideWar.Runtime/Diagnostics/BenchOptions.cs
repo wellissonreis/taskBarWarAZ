@@ -8,14 +8,15 @@ public sealed record BenchOptions(string Scenario, int Seconds, string OutPath, 
     public const string Flag = "--bench";
     public const int DefaultSeconds = 60;
 
-    /// <summary>Scenarios implemented for E1 (T1.13). `baseline-wpf` is P-00: WPF without windows plus an idle T-Game.</summary>
-    public static readonly IReadOnlyList<string> Implemented = ["e1-synthetic", "hidden", "idle-static", "baseline-wpf"];
+    /// <summary>Scenarios implemented: E1 (T1.13) and the SanityBot game scenarios (T4.11; aliases `presente-onda`, `strip-away`). `baseline-wpf` is P-00: WPF without windows plus an idle T-Game.</summary>
+    public static readonly IReadOnlyList<string> Implemented =
+        ["e1-synthetic", "hidden", "idle-static", "baseline-wpf",
+         BenchScenarios.PresenteOndaMedia, BenchScenarios.PresenteOndaPesada, BenchScenarios.Ausente, BenchScenarios.VariasJanelas];
 
     /// <summary>Scenarios named by RF-16.2 that belong to later phases (SanityBot, painel, offline, ...).</summary>
     public static readonly IReadOnlyList<string> Deferred =
     [
-        "presente-onda-media", "presente-onda-pesada", "soak", "strip-present", "strip-away", "ausente",
-        "offline-retorno", "painel-aberto", "varias-janelas",
+        "soak", "strip-present", "offline-retorno", "painel-aberto",
     ];
 
     public static bool IsRequested(string[] args) => args.Contains(Flag, StringComparer.Ordinal);
@@ -29,7 +30,8 @@ public sealed record BenchOptions(string Scenario, int Seconds, string OutPath, 
     {
         var scenario = Value(args, Flag);
         if (string.IsNullOrWhiteSpace(scenario) || scenario.StartsWith("--", StringComparison.Ordinal))
-            return (null, "Usage: --bench <" + string.Join('|', Implemented) + "> [--seconds N] [--out file.csv] [--no-input]");
+            return (null, "Usage: --bench <" + string.Join('|', Implemented) + "|presente-onda|strip-away> [--seconds N] [--out file.csv] [--no-input]");
+        if (BenchScenarios.Find(scenario) is { } game) scenario = game.Name; // aliases → canonical name
         if (Deferred.Contains(scenario, StringComparer.Ordinal))
             return (null, $"Scenario '{scenario}' is defined by RF-16.2 but is not available in this phase.");
         if (!Implemented.Contains(scenario, StringComparer.Ordinal))
