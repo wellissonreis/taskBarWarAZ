@@ -1,0 +1,28 @@
+{
+  "rules": {
+    "coreIntegrity": 20,
+    "sellRefund": 0.7,
+    "waveBonusBase": 20,
+    "waveBonusPerWave": 4,
+    "hpWaveGrowth": 1.08,
+    "hpStageStep": 0.1,
+    "spawnJitter": 0.1,
+    "maxEnemiesOnField": 44,
+    "callNext": { "bonusBase": 0.6, "bonusPerWave": 0.05, "bonusCapFactor": 2.0, "abilityCooldownReduction": 0.25 },
+    "autoStart": { "defaultMode": "off", "defaultCountdownSeconds": 15, "minCountdownSeconds": 5, "maxCountdownSeconds": 60 },
+    "stars": { "twoStarMaxLoss": 6, "threeStarMaxLoss": 2 },
+    "challenges": [
+      { "id": "frugal",   "name": "Frugal",   "description": "Concluir com no máximo 4 torres.", "maxTowers": 4, "noAbilities": false, "noCallNext": false, "startingCreditsFactor": 1.0 },
+      { "id": "purist",   "name": "Purista",  "description": "Concluir sem usar habilidades.", "maxTowers": null, "noAbilities": true, "noCallNext": false, "startingCreditsFactor": 1.0 },
+      { "id": "marathon", "name": "Maratona", "description": "Concluir sem chamar ondas antes e com 30% menos créditos iniciais.", "maxTowers": null, "noAbilities": false, "noCallNext": true, "startingCreditsFactor": 0.7 }
+    ]
+  },
+  "stages": [
+    { "id": 1, "title": "Brazil South",    "region": "brazilsouth",   "concept": "Tutorial: construir e iniciar a onda", "waves": 10, "startingCredits": 150, "maxTowers": 6, "challenge": "frugal" },
+    { "id": 2, "title": "East US",         "region": "eastus",        "concept": "Blindados e mira", "waves": 12, "startingCredits": 180, "maxTowers": 7, "challenge": "purist" },
+    { "id": 3, "title": "West Europe",     "region": "westeurope",    "concept": "Controle, habilidade e o primeiro chefe", "waves": 12, "startingCredits": 200, "maxTowers": 8, "challenge": "marathon" },
+    { "id": 4, "title": "Japan East",      "region": "japaneast",     "concept": "Voadores e suporte (respiro)", "waves": 14, "startingCredits": 240, "maxTowers": 8, "challenge": "frugal" },
+    { "id": 5, "title": "UK South",        "region": "uksouth",       "concept": "Regeneração e drenagem", "waves": 14, "startingCredits": 260, "maxTowers": 8, "challenge": "purist" },
+    { "id": 6, "title": "Australia East",  "region": "australiaeast", "concept": "Prova final", "waves": 15, "startingCredits": 300, "maxTowers": 8, "challenge": "marathon" }
+  ]
+}

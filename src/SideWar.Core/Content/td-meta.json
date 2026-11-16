@@ -1,0 +1,24 @@
+{
+  "sealsPerStar": 1,
+  "sealsPerChallenge": 1,
+  "branches": [
+    { "id": "infrastructure", "name": "Infraestrutura", "nodes": [
+      { "id": "infrastructure.credits",  "name": "Orçamento inicial", "cost": 1, "effects": [ { "kind": "startingCredits", "value": 10, "target": null } ] },
+      { "id": "infrastructure.sell75",   "name": "Revenda 75%",       "cost": 2, "effects": [ { "kind": "sellRefund", "value": 0.75, "target": null } ] },
+      { "id": "infrastructure.slots1",   "name": "Mais uma posição",  "cost": 3, "effects": [ { "kind": "maxTowers", "value": 1, "target": null } ] },
+      { "id": "infrastructure.slots2",   "name": "Revenda 80% e posição extra", "cost": 4, "effects": [ { "kind": "maxTowers", "value": 1, "target": null }, { "kind": "sellRefund", "value": 0.8, "target": null } ] }
+    ] },
+    { "id": "defense", "name": "Defesa", "nodes": [
+      { "id": "defense.damage1",    "name": "Dano +3%",        "cost": 1, "effects": [ { "kind": "damagePercent", "value": 3, "target": null } ] },
+      { "id": "defense.range",      "name": "Alcance +5%",     "cost": 2, "effects": [ { "kind": "rangePercent", "value": 5, "target": null } ] },
+      { "id": "defense.integrity1", "name": "Integridade +1",  "cost": 3, "effects": [ { "kind": "integrity", "value": 1, "target": null } ] },
+      { "id": "defense.integrity2", "name": "Integridade +1 e dano +3%", "cost": 4, "effects": [ { "kind": "integrity", "value": 1, "target": null }, { "kind": "damagePercent", "value": 3, "target": null } ] }
+    ] },
+    { "id": "operation", "name": "Operação", "nodes": [
+      { "id": "operation.cooldown1", "name": "Recarga -10%",         "cost": 1, "effects": [ { "kind": "abilityCooldownPercent", "value": 10, "target": null } ] },
+      { "id": "operation.snapshot",  "name": "Restaurar snapshot",   "cost": 2, "effects": [ { "kind": "unlockAbility", "value": 1, "target": "snapshot" } ] },
+      { "id": "operation.cooldown2", "name": "Recarga -10%",         "cost": 3, "effects": [ { "kind": "abilityCooldownPercent", "value": 10, "target": null } ] },
+      { "id": "operation.autostart", "name": "Auto-início +25%",     "cost": 4, "effects": [ { "kind": "autoStartBonusPercent", "value": 25, "target": null } ] }
+    ] }
+  ]
+}
