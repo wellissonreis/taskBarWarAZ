@@ -283,6 +283,20 @@ Fluxo mínimo:
 6. **Durante a Onda:** construir é permitido e **a simulação não pausa** (RF-28.4); a escolha em andamento não congela nada. Se os créditos mudarem enquanto o popover está aberto, a habilitação das opções é reavaliada; se a posição ficar inválida (`LayoutChanged`, caixa-bomba destruindo/liberando torre, RF-28.19), o modo volta ao passo 2 com aviso. O comando só é emitido no passo 4; o Core **revalida** (`PlacementValidator`) e rejeita sem efeito se inválido.
 7. O modo construção é **estado de UI**, não vai ao log nem ao `StateHash`.
 
+### RF-28.21: Recompensas por perfeição e patente local (decisão do usuário, 2026-11-16)
+
+Pedido após jogar: premiar quem joga bem, **sem internet** (ADR-014; nada de ranking online).
+
+- **Coroa:** fase vencida **sem perder nenhuma integridade** (`IntegrityLost == 0`). Independe das estrelas (a ★3 aceita até 2 de perda).
+- **Medalhas (só em Vitória; cada uma é um bit gravado no perfil):** **Sem vender** (nenhum `SellTower`), **Sem habilidades** (nenhum `UseAbility` aceito), **Pressa** (todas as ondas depois da primeira foram iniciadas por `CallNextWave`; fase com ≥ 2 ondas) e **Desafio** (o desafio da fase, RF-28.10: Frugal = no máximo 4 torres simultâneas, Purista = sem habilidades, Maratona = sem chamada antecipada; *o fator de 70% de créditos do Maratona não é aplicado*: o desafio é avaliado a posteriori sobre a mesma partida; decisão de mercado registrada, pode virar modo de partida pós-MVP).
+- **Selos bônus (só na primeira vez de cada coroa/medalha por fase):** coroa **+2**, cada medalha de feito **+1**, Desafio **+`sealsPerChallenge`** (=1; o selo que já existia). Constantes em código (`TdProfileRules.SealsPerCrown/SealsPerMedal`), não em JSON: o `ContentHash` e, portanto, os `StateHash` TD não mudam.
+- **Pontuação** (inteira e determinística; só em Vitória; fora do `StateHash`, derivada dos contadores da partida): `soma = 1000 + 50 × integridade restante + max(0, 1000 − segundos de combate) + 100 × chamadas antecipadas + min(2000, créditos sobrando) ÷ 4`; `pontuação = soma × mult% ÷ 100`, com `mult` = 100 (1★), 110 (2★), 125 (3★) e **+25 com coroa**. Segundos de combate = `Tick ÷ 30` (relógio de mundo, sem Preparo, sem relógio real). Implementação: `TdScoring.Compute`.
+- **Recorde pessoal por fase** (só sobe) e **patente** pela **soma dos recordes das fases**: Estagiário (0) → Júnior (5.000) → Pleno (12.000) → Sênior (20.000) → Arquiteto (25.000) → MVP (31.000). Limiares calibrados com o `TdSanityBot` (melhor de 20 seeds por fase): Otimizado 33,5k (MVP; média 32,0k), Médio 21,6k (Sênior; média 18,3k = Pleno), Novato 19,2k (Pleno), SemContra 0 (Estagiário). Implementação: `TdRank`.
+- **Perfil:** `sidewar.td-profile` v2 (`crown`, `medals`, `bestScore` por fase); a migração v1 → v2 acrescenta os campos zerados e não perde nada. Derrota não altera coroa, medalhas nem recorde.
+- **UI:** o card de Vitória mostra estrelas, coroa, medalhas ganhas, pontuação, **NOVO RECORDE**, selos bônus e a barra da patente; o Mapa mostra, por fase aberta, coroa/medalhas (ícones desenhados por código em `Palette`: coroa dourada e medalhas V/H/P/D, apagadas se não ganhas) e o recorde, além da patente com barra até a próxima; o Menu mostra a patente.
+
+**Critérios:** CA-28.16 e CA-28.17 (§9). **Testes:** T-28.16 a T-28.18 (§10).
+
 ## 6. Requisitos não funcionais
 
 - **RNF-28.1 (determinismo):** mesma seed, conteúdo e comandos geram o mesmo `StateHash` entre execuções e SOs (Linux e Windows). Verificado por replay de partidas scriptadas das 6 fases.
@@ -320,6 +334,8 @@ SDD-21 (mantido), SDD-22 RF-22.8 (hotspots, mantido), SDD-10/11 (a revisar), SDD
 - **CA-28.13:** `CollectCrate` dentro de 8 s paga ~1 bônus de onda e reduz a recarga restante de uma habilidade em 20 s; sem clique, aos 8 s de SimTime a torre **mais próxima do ponto X** (empate pela menor `id`) é destruída sem reembolso; durante a contagem essa torre está marcada e a marca acompanha mudanças do alvo (T-28.13).
 - **CA-28.14:** Mesma seed, conteúdo e comandos (incluindo `SetPresence` e `CollectCrate`) geram o mesmo `StateHash` com caixas e explosões (T-28.14); pausa e ocultação param a contagem.
 - **CA-28.15:** Modo construção: clique ou arraste até um ponto livre mostra fantasma com alcance, abre o popover de torres, `BuildTower` é emitido ao escolher; ESC, clique direito, ocultação e 30 s cancelam sem alterar o log; construir durante a Onda não pausa a simulação; fora do modo a cena não bloqueia ícones (T-28.15 no Core/UI lógico; MTC-28.5 no Windows isolado e **com autorização do usuário**).
+- **CA-28.16:** Vitória sem perda de integridade dá coroa; medalhas (Sem vender, Sem habilidades, Pressa, Desafio) seguem os feitos; derrota não dá nada; a pontuação segue a fórmula da RF-28.21 e coroa/medalhas/recorde não entram no `StateHash` (goldens TD antigos = novos) (T-28.16, T-28.17).
+- **CA-28.17:** O perfil guarda coroas, medalhas e recorde por fase, concede os selos bônus só na primeira vez, migra do v1 sem perda, e a patente local deriva da soma dos recordes: o bot Otimizado chega a MVP, o Médio fica em Pleno/Sênior, o SemContra em Estagiário (T-28.17, T-28.18).
 
 ## 10. Cenários de teste
 
@@ -340,6 +356,9 @@ SDD-21 (mantido), SDD-22 RF-22.8 (hotspots, mantido), SDD-10/11 (a revisar), SDD
 | T-28.13 | Caixa-bomba: coleta (créditos, recarga de habilidade) e explosão (torre mais próxima, empate, sem torres, sem reembolso, marca de risco) |
 | T-28.14 | Caixa-bomba: replay com `StateHash` igual (inclui pausa) |
 | T-28.15 | Colocação: máquina de estados do modo construção (entrar, ponto inválido, popover, confirmar, cancelar por ESC/direito/ocultar/30 s, créditos mudando, posição invalidada) |
+| T-28.16 | Coroa, medalhas e pontuação: fórmula, monotonicidade, vender/habilidade/chamada/desafio, derrota sem prêmio, fora do hash (`TdScoreTests`) |
+| T-28.17 | Perfil: selos bônus uma vez, recorde só sobe, migração v1 → v2, saneamento, soma dos recordes (`TdProfileStoreTests`) |
+| T-28.18 | Patente: limiares, progresso, calibração com o bot por perfil; UI: card de Vitória, Mapa e Menu (`TdScoreTests`, `TdUiControllerTests`, goldens `td-ui-*`) |
 
 ## 11. Riscos técnicos e decisões pendentes
 
@@ -395,6 +414,7 @@ Legenda: 🟢 WSL puro, 🟡 WSL + Windows, 🔴 só Windows. Todas dependem da 
 | TD.9 | Arte e visual: ícones de 8 inimigos, 3 chefes, 5 torres + ramos, código de cor (SDD-20/09 revistos) | TD.7 | 🟡 |
 | TD.10 | `SanityBot` novo e curva de balanceamento das 6 fases; evidência E-TD | TD.3 | 🟢 |
 | TD.11 | Pós-MVP: modo infinito, desafio do dia, políticas (DP-28.9) | TD.8, TD.10 | 🟡 |
+| TD.13 ✅ | Recompensas por perfeição e patente local (RF-28.21): coroa, medalhas, pontuação, recorde e patente; perfil v2; UI | TD.8, TD.10 | 🟡 |
 | TD.12 | Limpeza e documentação: arquivar SDD-25/26/27, marcar substituições, `PLANO.md`, `README.md`, MTC-28 | todas | 🟢 |
 
 **Ordem sugerida:** TD.0 → (TD.1 → TD.2 → TD.3 ‖ TD.4 ‖ TD.10) → TD.5 e TD.6 → TD.3b → TD.7 (gate TA.1) → TD.8 → TD.9 → TD.12; TD.11 por último.

@@ -9,6 +9,7 @@ using BuildTower = SideWar.Core.Td.BuildTower;
 using LayoutChanged = SideWar.Core.Td.LayoutChanged;
 using SetTargeting = SideWar.Core.Td.SetTargeting;
 using UpgradeTower = SideWar.Core.Td.UpgradeTower;
+using StartWave = SideWar.Core.Td.StartWave;
 
 namespace SideWar.Runtime.Tests.Td;
 
@@ -29,6 +30,11 @@ public sealed class TdUiControllerTests
         public int StageCount => 6;
         public bool StageUnlocked(int stageId) => stageId <= 2;
         public int StageStars(int stageId) => stageId == 1 ? 2 : 0;
+        public bool StageCrown(int stageId) => stageId == 1;
+        public int StageMedals(int stageId) => stageId == 1 ? 5 : 0;
+        public int StageBestScore(int stageId) => stageId == 1 ? 4123 : 0;
+        public SideWar.Core.Td.TdRankProgress Rank => SideWar.Core.Td.TdRank.Progress(7000);
+        public SideWar.Core.Td.TdRecordOutcome LastOutcome { get; set; }
         public int SealsAvailable { get; set; } = 3;
         public bool NodePurchased(string nodeId) => false;
         public bool PurchaseNode(string nodeId) { Calls.Add("buy:" + nodeId); return true; }
@@ -231,6 +237,49 @@ public sealed class TdUiControllerTests
         r.Match = Create(1);
         r.Ui.Sync();
         Assert.Equal(TdUiMode.None, r.Ui.Mode);
+    }
+
+    [Fact]
+    public void Victory_card_shows_crown_medals_score_record_and_rank()
+    {
+        var content = TdContentLoader.LoadEmbedded();
+        var waves = new[] { new TdWaveDef(1, false, 1.0, [new TdWaveGroupDef("grunt", 0, 0.0, 1.1)]) };
+        content = content with
+        {
+            Waves = new TdWavesDef([new TdStageWavesDef(1, waves), .. content.Waves.Stages.Skip(1)]),
+            Stages = content.Stages with { Stages = [content.Stages.Stages[0] with { Waves = 1 }, .. content.Stages.Stages.Skip(1)] },
+        };
+        var r = new Rig { Match = TdMatchState.Create(content, 1, Rng.Seed(7, 54)) };
+        r.Match.Apply(new StartWave());
+        for (int i = 0; i < 3000 && r.Match.Phase == MatchPhase.Onda; i++) r.Match.Step();
+        Assert.Equal(MatchPhase.Vitoria, r.Match.Phase);
+        r.Host.LastOutcome = new TdRecordOutcome(true, true, TdMedals.SemVender, 3);
+        r.Ui.Sync();
+        var card = r.Ui.BuildPopover()!;
+        Assert.StartsWith("VITORIA", card.Title, StringComparison.Ordinal);
+        var badges = card.Items.Single(i => i.Kind == TdUiKind.Badges);
+        Assert.True(badges.Selected);                                   // coroa
+        Assert.True(((TdMedals)badges.Arg).HasFlag(TdMedals.SemVender)); // medalhas ganhas
+        Assert.Contains(card.Items, i => i.Text.StartsWith("Pontuacao: ", StringComparison.Ordinal) && i.Right == "NOVO RECORDE");
+        Assert.Contains(card.Items, i => i.Text == "Selos bonus: +3");
+        Assert.Contains(card.Items, i => i.Kind == TdUiKind.Bar && i.Text.StartsWith("Patente: ", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Map_and_menu_show_per_stage_badges_record_and_rank()
+    {
+        var r = new Rig();
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "...", TdUiAction.Menu));
+        Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Kind == TdUiKind.Bar && i.Text == "Patente: Júnior");
+        r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.MapOpen));
+        var map = r.Ui.BuildPopover()!;
+        var badges = map.Items.Where(i => i.Kind == TdUiKind.Badges).ToArray();
+        Assert.Equal(2, badges.Length); // só as fases abertas
+        Assert.True(badges[0].Selected);
+        Assert.Equal(5, badges[0].Arg);
+        Assert.Equal("Recorde 4123", badges[0].Right);
+        Assert.False(badges[1].Selected);
+        Assert.Equal("sem recorde", badges[1].Right);
     }
 
     [Fact]

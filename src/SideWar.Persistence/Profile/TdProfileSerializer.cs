@@ -13,6 +13,9 @@ public static class TdProfileSerializer
     public const int MaxStages = 64;
     public const int MaxListEntries = 4096;
     public const int MaxWave = 1_000_000;
+    public const int MaxScore = 100_000_000;
+    /// <summary>Máscara das medalhas conhecidas (<c>TdMedals</c>: 1, 2, 4, 8).</summary>
+    public const int AllMedals = 15;
 
     public static void Write(Utf8JsonWriter w, TdProfileData p) =>
         JsonSerializer.Serialize(w, p, TdProfileJsonContext.Default.TdProfileData);
@@ -32,6 +35,9 @@ public static class TdProfileSerializer
                 Unlocked = g.Any(s => s.Unlocked) || g.Any(s => s.Stars > 0),
                 Stars = Math.Clamp(g.Max(s => s.Stars), 0, 3),
                 ChallengeCompleted = g.Any(s => s.ChallengeCompleted),
+                Crown = g.Any(s => s.Crown),
+                Medals = g.Aggregate(0, (a, s) => a | s.Medals) & AllMedals,
+                BestScore = Math.Clamp(g.Max(s => s.BestScore), 0, MaxScore),
             })
             .OrderBy(s => s.StageId).Take(MaxStages).ToList();
         var stage1 = stages.FindIndex(s => s.StageId == 1);

@@ -23,6 +23,11 @@ public sealed class TdUiGoldenTests
         public int StageCount => 6;
         public bool StageUnlocked(int stageId) => stageId <= 2;
         public int StageStars(int stageId) => stageId == 1 ? 3 : 0;
+        public bool StageCrown(int stageId) => stageId == 1;
+        public int StageMedals(int stageId) => stageId == 1 ? 5 : stageId == 2 ? 2 : 0;
+        public int StageBestScore(int stageId) => stageId == 1 ? 4123 : stageId == 2 ? 2987 : 0;
+        public TdRankProgress Rank => TdRank.Progress(7110);
+        public TdRecordOutcome LastOutcome => new(true, true, TdMedals.SemVender | TdMedals.Pressa, 4);
         public int SealsAvailable => 2;
         public bool NodePurchased(string nodeId) => nodeId == "infrastructure.credits";
         public bool PurchaseNode(string nodeId) => true;

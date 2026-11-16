@@ -8,7 +8,7 @@ namespace SideWar.Persistence.Profile;
 public sealed record TdProfileData
 {
     public const string Schema = "sidewar.td-profile";
-    public const int SchemaVersion = 1;
+    public const int SchemaVersion = 2;
 
     /// <summary>Total de selos já ganhos (1 por estrela nova, 1 por desafio, mais os iniciais da migração do idle).</summary>
     public int SealsEarned { get; init; }
@@ -36,6 +36,12 @@ public sealed record TdStageProgressData
     public bool Unlocked { get; init; }
     public int Stars { get; init; }
     public bool ChallengeCompleted { get; init; }
+    /// <summary>Coroa: fase vencida sem perder nenhuma integridade (RF-28.21; schema v2).</summary>
+    public bool Crown { get; init; }
+    /// <summary>Medalhas ganhas (bits de <c>TdMedals</c>, RF-28.21; schema v2).</summary>
+    public int Medals { get; init; }
+    /// <summary>Recorde pessoal de pontuação da fase (0 = nunca vencida; schema v2).</summary>
+    public int BestScore { get; init; }
 }
 
 /// <summary>Melhor onda por seed do modo infinito. A seed é <c>ulong</c> (PCG32, ADR-026): vai ao JSON como número exato.</summary>

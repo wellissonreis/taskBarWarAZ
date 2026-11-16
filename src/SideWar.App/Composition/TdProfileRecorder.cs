@@ -54,6 +54,18 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
 
     public int StageStars(int id) => Profile.Stages.FirstOrDefault(s => s.StageId == id)?.Stars ?? 0;
 
+    public bool StageCrown(int id) => Profile.Stages.FirstOrDefault(s => s.StageId == id)?.Crown ?? false;
+
+    public int StageMedals(int id) => Profile.Stages.FirstOrDefault(s => s.StageId == id)?.Medals ?? 0;
+
+    public int StageBestScore(int id) => Profile.Stages.FirstOrDefault(s => s.StageId == id)?.BestScore ?? 0;
+
+    /// <summary>Patente local pela soma dos recordes (RF-28.21).</summary>
+    public TdRankProgress Rank => TdProfileRules.Rank(Profile);
+
+    /// <summary>Novidades do último resultado gravado (recorde, coroa, medalhas, selos bônus).</summary>
+    public TdRecordOutcome LastOutcome { get; private set; }
+
     public int SealsAvailable => TdProfileRules.SealsAvailable(Profile, _meta);
 
     public bool NodePurchased(string id) => Profile.PurchasedNodes.Contains(id, StringComparer.Ordinal);
@@ -72,8 +84,8 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
 
     public void OnMatchEnded(TdMatchState match, TdMatchResult result)
     {
-        int stars = result.Phase == MatchPhase.Vitoria ? result.Stars : 0;
-        Profile = TdProfileRules.RecordStageResult(Profile, _meta, match.StageId, stars, challenge: false, _stageCount);
+        Profile = TdProfileRules.RecordMatch(Profile, _meta, match.StageId, result, _stageCount, out var outcome);
+        LastOutcome = outcome;
         if (!_store.Save(Profile))
         {
             SaveFailures++;

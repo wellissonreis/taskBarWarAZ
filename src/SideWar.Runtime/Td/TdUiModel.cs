@@ -1,3 +1,4 @@
+using SideWar.Core.Td;
 using SideWar.Runtime.Geometry;
 
 namespace SideWar.Runtime.Td;
@@ -6,7 +7,7 @@ namespace SideWar.Runtime.Td;
 public enum TdUiMode : byte { None, Build, Inspector, Preview, Menu, Map, End }
 
 /// <summary>Tipo de item de UI: rótulo, botão, cabeçalho de seção ou separador.</summary>
-public enum TdUiKind : byte { Label, Button, Header, Separator }
+public enum TdUiKind : byte { Label, Button, Header, Separator, Badges, Bar }
 
 /// <summary>Tom de cor semântico (o renderer mapeia para a paleta).</summary>
 public enum TdTone : byte { Normal, Good, Warn, Bad, Accent, Dim }
@@ -49,7 +50,7 @@ public sealed record TdPopoverView(string Title, TdUiItem[] Items, float Width, 
         h.Add(Title); h.Add(IconTower);
         foreach (var it in Items)
         {
-            h.Add(it.Text); h.Add(it.Right); h.Add(it.Sub); h.Add(it.Enabled); h.Add(it.Selected); h.Add((int)it.Tone); h.Add((int)(it.Fill * 100));
+            h.Add(it.Text); h.Add(it.Right); h.Add(it.Sub); h.Add(it.Arg); h.Add(it.Enabled); h.Add(it.Selected); h.Add((int)it.Tone); h.Add((int)(it.Fill * 100));
         }
         return h.ToHashCode();
     }
@@ -95,6 +96,16 @@ public interface ITdUiHost
     int StageCount { get; }
     bool StageUnlocked(int stageId);
     int StageStars(int stageId);
+    /// <summary>Coroa da fase (vencida sem perder integridade, RF-28.21).</summary>
+    bool StageCrown(int stageId);
+    /// <summary>Medalhas ganhas na fase (bits de <see cref="TdMedals"/>).</summary>
+    int StageMedals(int stageId);
+    /// <summary>Recorde pessoal de pontuação da fase (0 = nunca vencida).</summary>
+    int StageBestScore(int stageId);
+    /// <summary>Patente local e progresso até a próxima.</summary>
+    TdRankProgress Rank { get; }
+    /// <summary>O que a última partida encerrada trouxe de novo ao perfil (para o card de Vitória).</summary>
+    TdRecordOutcome LastOutcome { get; }
     int SealsAvailable { get; }
     bool NodePurchased(string nodeId);
     bool PurchaseNode(string nodeId);

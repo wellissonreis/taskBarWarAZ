@@ -119,7 +119,7 @@ public sealed partial class TdMatchState
     public IReadOnlyList<TdNode> Nodes => _nodes;
     public IReadOnlyList<TdZone> Zones => _zones;
     public IReadOnlyList<TdEvent> Events => _events;
-    public TdMatchResult Result => new(Phase, Stars, IntegrityLost);
+    public TdMatchResult Result => ComputeResult();
     public ulong RngState => _rng.State;
 
     public void ClearEvents() => _events.Clear();
@@ -240,6 +240,7 @@ public sealed partial class TdMatchState
         if (w == 0) return Reject(CommandReason.NotAvailable);
         foreach (var a in _active)
             if (!a.SpawnsDone) return Reject(CommandReason.NotAvailable);
+        _earlyCalls++;
         var rules = _content.Stages.Rules;
         double eta = EtaSeconds();
         long bonus = CeilEps(eta * CallBonusFactor(w));
@@ -283,6 +284,7 @@ public sealed partial class TdMatchState
         Credits -= def.Cost;
         var t = new TdTower { Id = _nextTowerId++, DefIndex = di, X = px, Placed = true, Level = 1, Invested = def.Cost, Targeting = (byte)ParseTargeting(def.DefaultTargeting) };
         _towers.Add(t);
+        if (_towers.Count > _peakTowers) _peakTowers = _towers.Count;
         Emit(TdEventType.TowerBuilt, t.Id, def.Cost);
         return CommandResult.Ok;
     }
@@ -294,6 +296,7 @@ public sealed partial class TdMatchState
         if (i < 0) return Reject(CommandReason.TowerNotFound);
         long refund = (long)Math.Floor(_towers[i].Invested * _content.Stages.Rules.SellRefund + 1e-9);
         Credits = Sat.Add(Credits, refund);
+        _sold = true;
         Emit(TdEventType.TowerSold, _towers[i].Id, refund);
         _nodes.RemoveAll(n => n.TowerId == _towers[i].Id);
         _towers.RemoveAt(i);

@@ -1,4 +1,5 @@
 using SideWar.Core.Content.Td;
+using SideWar.Core.Td;
 
 namespace SideWar.Persistence.Profile;
 
@@ -41,6 +42,49 @@ public static class TdProfileRules
             Stages = stages,
             SealsEarned = p.SealsEarned + newStars * meta.SealsPerStar + (newChallenge ? meta.SealsPerChallenge : 0),
         };
+    }
+
+    /// <summary>Selos bônus por coroa (primeira vez, RF-28.21).</summary>
+    public const int SealsPerCrown = 2;
+    /// <summary>Selos bônus por medalha de feito (primeira vez). A medalha Desafio paga <c>SealsPerChallenge</c>.</summary>
+    public const int SealsPerMedal = 1;
+
+    /// <summary>Soma dos recordes de pontuação por fase: define a patente (<see cref="TdRank"/>).</summary>
+    public static int TotalScore(TdProfileData p) => (int)Math.Min(int.MaxValue, p.Stages.Sum(s => (long)Math.Max(0, s.BestScore)));
+
+    public static TdRankProgress Rank(TdProfileData p) => TdRank.Progress(TotalScore(p));
+
+    /// <summary>
+    /// Registra o resultado completo de uma partida (RF-28.21): estrelas/selos como em <see cref="RecordStageResult"/>, mais coroa
+    /// (+<see cref="SealsPerCrown"/>) e cada medalha nova (+<see cref="SealsPerMedal"/>, Desafio +<c>SealsPerChallenge</c>), só na primeira vez,
+    /// e o recorde de pontuação (só sobe). Derrota não altera coroa, medalhas nem recorde.
+    /// </summary>
+    public static TdProfileData RecordMatch(TdProfileData p, TdMetaDef meta, int stageId, TdMatchResult r, int stageCount, out TdRecordOutcome outcome)
+    {
+        bool win = r.Phase == MatchPhase.Vitoria;
+        var medals = win ? r.Medals : TdMedals.None;
+        bool challenge = medals.HasFlag(TdMedals.Desafio);
+        var before = p.Stages.FirstOrDefault(s => s.StageId == stageId) ?? new TdStageProgressData { StageId = stageId, Unlocked = true };
+        var next = RecordStageResult(p, meta, stageId, win ? r.Stars : 0, challenge, stageCount);
+        int i = next.Stages.ToList().FindIndex(s => s.StageId == stageId);
+        var cur = next.Stages[i];
+
+        bool newCrown = win && r.Crown && !before.Crown;
+        var newMedals = medals & ~(TdMedals)before.Medals;
+        bool newRecord = win && r.Score > before.BestScore;
+        int bonus = (newCrown ? SealsPerCrown : 0);
+        foreach (var m in new[] { TdMedals.SemVender, TdMedals.SemHabilidades, TdMedals.Pressa })
+            if (newMedals.HasFlag(m)) bonus += SealsPerMedal;
+        // O selo do Desafio já foi pago por RecordStageResult (challenge && !ChallengeCompleted), sem duplicar aqui.
+        var stages = next.Stages.ToList();
+        stages[i] = cur with
+        {
+            Crown = cur.Crown || newCrown,
+            Medals = cur.Medals | (int)medals,
+            BestScore = newRecord ? r.Score : cur.BestScore,
+        };
+        outcome = new(newRecord, newCrown, newMedals, bonus);
+        return next with { Stages = stages, SealsEarned = next.SealsEarned + bonus };
     }
 
     /// <summary>Compra um nó se houver selos e ainda não foi comprado; devolve o mesmo perfil se não puder.</summary>

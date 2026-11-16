@@ -217,6 +217,11 @@ internal sealed class TdUiPresenter : ITdUiHost, IDisposable
     public int StageCount => td.StageCount;
     public bool StageUnlocked(int stageId) => td.Recorder.StageUnlocked(stageId);
     public int StageStars(int stageId) => td.Recorder.StageStars(stageId);
+    public bool StageCrown(int stageId) => td.Recorder.StageCrown(stageId);
+    public int StageMedals(int stageId) => td.Recorder.StageMedals(stageId);
+    public int StageBestScore(int stageId) => td.Recorder.StageBestScore(stageId);
+    public TdRankProgress Rank => td.Recorder.Rank;
+    public TdRecordOutcome LastOutcome => td.Recorder.LastOutcome;
     public int SealsAvailable => td.Recorder.SealsAvailable;
     public bool NodePurchased(string nodeId) => td.Recorder.NodePurchased(nodeId);
     public bool PurchaseNode(string nodeId) => td.Recorder.Purchase(nodeId);

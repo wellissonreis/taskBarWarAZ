@@ -18,7 +18,7 @@ namespace SideWar.Runtime.Td;
 /// </summary>
 public sealed class TdUiController
 {
-    public const float PopoverWidth = 300f, Pad = 6f, RowH = 20f, TwoLineH = 34f, HeaderH = 22f;
+    public const float PopoverWidth = 300f, Pad = 6f, RowH = 20f, TwoLineH = 34f, HeaderH = 22f, BadgeH = 14f;
     public const double BuildTimeoutSeconds = 30.0;
 
     private static readonly string[] TargetLabels = ["Primeiro", "Ultimo", "Forte", "Fraco", "Proximo"];
@@ -420,6 +420,30 @@ public sealed class TdUiController
         }
     }
 
+    private static void AddBadges(Stack s, bool crown, int medals, string? right)
+    {
+        s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, s.Width - 2 * Pad, BadgeH), TdUiKind.Badges, "", Arg: medals, Selected: crown, Right: right));
+        s.Y += BadgeH + 2;
+    }
+
+    private static void AddRankBar(Stack s, TdRankProgress r)
+    {
+        string right = r.Next is { } n ? $"{r.Total}/{r.NextThreshold} p. > {TdRank.DisplayName(n)}" : $"{r.Total} p.";
+        s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, s.Width - 2 * Pad, RowH - 2), TdUiKind.Bar, $"Patente: {TdRank.DisplayName(r.Current)}", Right: right,
+            Tone: TdTone.Accent, Fill: (float)r.Fraction));
+        s.Y += RowH;
+    }
+
+    private static string MedalNames(TdMedals m)
+    {
+        var parts = new List<string>(4);
+        if (m.HasFlag(TdMedals.SemVender)) parts.Add("Sem vender");
+        if (m.HasFlag(TdMedals.SemHabilidades)) parts.Add("Sem habilidades");
+        if (m.HasFlag(TdMedals.Pressa)) parts.Add("Pressa");
+        if (m.HasFlag(TdMedals.Desafio)) parts.Add("Desafio");
+        return string.Join(", ", parts);
+    }
+
     private static TdPopoverView Finish(string title, Stack s, float anchorX, string? iconTower = null)
     {
         var items = new List<TdUiItem>(s.Items.Count + 1)
@@ -554,7 +578,8 @@ public sealed class TdUiController
 
     private TdPopoverView BuildMenu(TdMatchState m)
     {
-        var s = new Stack(190f);
+        var s = new Stack(260f);
+        AddRankBar(s, _host.Rank);
         s.Add(TdUiKind.Button, "Proxima onda", RowH, TdUiAction.Preview);
         s.Add(TdUiKind.Button, "Mapa de fases e selos", RowH, TdUiAction.MapOpen);
         s.Add(TdUiKind.Button, _host.Paused ? "Retomar" : "Pausar", RowH, TdUiAction.Pause);
@@ -572,6 +597,7 @@ public sealed class TdUiController
         s.Y += RowH + 4;
         if (!_mapSeals)
         {
+            AddRankBar(s, _host.Rank);
             foreach (var st in m.Content.Stages.Stages)
             {
                 bool open = _host.StageUnlocked(st.Id);
@@ -579,6 +605,11 @@ public sealed class TdUiController
                 string right = open ? new string('*', stars) + new string('-', 3 - stars) : "bloqueada";
                 s.Add(TdUiKind.Button, $"{st.Id}. {st.Title}", RowH + 2, TdUiAction.SelectStage, st.Id, right: right, sub: null, enabled: open,
                     selected: st.Id == m.StageId, tone: open ? TdTone.Normal : TdTone.Dim);
+                if (open)
+                {
+                    int best = _host.StageBestScore(st.Id);
+                    AddBadges(s, _host.StageCrown(st.Id), _host.StageMedals(st.Id), best > 0 ? $"Recorde {best}" : "sem recorde");
+                }
             }
             s.Add(TdUiKind.Label, "Clicar numa fase reinicia a partida.", RowH - 4, tone: TdTone.Dim);
         }
@@ -601,10 +632,22 @@ public sealed class TdUiController
 
     private TdPopoverView BuildEnd(TdMatchState m)
     {
-        var s = new Stack(220f);
+        var s = new Stack(260f);
         bool won = m.Phase == MatchPhase.Vitoria;
+        var r = m.Result;
         string title = won ? $"VITORIA  {new string('*', m.Stars)}{new string('-', 3 - m.Stars)}" : "DERROTA";
         s.Add(TdUiKind.Label, won ? $"Fase {m.StageId} concluida. Integridade perdida: {m.IntegrityLost}" : $"O nucleo caiu na onda {m.WaveNumber}/{m.TotalWaves}.", TwoLineH - 8, tone: won ? TdTone.Good : TdTone.Bad);
+        if (won)
+        {
+            var o = _host.LastOutcome;
+            AddBadges(s, r.Crown, (int)r.Medals, r.Crown ? "COROA" : null);
+            var earned = MedalNames(r.Medals);
+            s.Add(TdUiKind.Label, earned.Length > 0 ? $"Medalhas: {earned}" : "Sem medalhas desta vez.", TwoLineH - 8, tone: TdTone.Dim);
+            s.Add(TdUiKind.Label, $"Pontuacao: {r.Score}", RowH - 4, right: o.NewRecord ? "NOVO RECORDE" : $"Recorde {_host.StageBestScore(m.StageId)}",
+                tone: o.NewRecord ? TdTone.Accent : TdTone.Normal);
+            if (o.BonusSeals > 0) s.Add(TdUiKind.Label, $"Selos bonus: +{o.BonusSeals}", RowH - 4, tone: TdTone.Good);
+            AddRankBar(s, _host.Rank);
+        }
         s.Add(TdUiKind.Button, "Repetir fase", RowH + 2, TdUiAction.Restart);
         if (won && m.StageId < _host.StageCount && _host.StageUnlocked(m.StageId + 1))
             s.Add(TdUiKind.Button, "Proxima fase", RowH + 2, TdUiAction.NextStage, tone: TdTone.Good);

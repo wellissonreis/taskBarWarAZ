@@ -15,7 +15,7 @@ public sealed class TdProfileStore
     {
         var now = utcNow ?? (() => DateTime.UtcNow);
         _doc = new VersionedDocumentStore<TdProfileData>(fs, Path.Combine(dataDirectory, FileName), TdProfileData.Schema,
-            TdProfileData.SchemaVersion, migrations ?? MigrationRegistry.Empty, TdProfileSerializer.Read, TdProfileSerializer.Write,
+            TdProfileData.SchemaVersion, migrations ?? TdProfileMigrations.Default, TdProfileSerializer.Read, TdProfileSerializer.Write,
             appVersion, now, log, writer ?? new AtomicFileWriter(fs, log), new CorruptQuarantine(fs, Path.Combine(dataDirectory, "corrupt"), now, log));
     }
 

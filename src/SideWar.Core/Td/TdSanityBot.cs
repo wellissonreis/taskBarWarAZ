@@ -20,7 +20,7 @@ public enum TdBotProfile : byte
 public sealed record TdBotResult(
     int Stage, TdBotProfile Profile, ulong Seed, MatchPhase Phase, int Stars, int IntegrityLost, long CreditsLeft,
     int WaveReached, double CombatSeconds, double TotalSeconds, int TowersBuilt, int CommandsRejected,
-    IReadOnlyDictionary<string, int> KillsByTowerType, ulong StateHash, IReadOnlyList<int> LostByWave)
+    IReadOnlyDictionary<string, int> KillsByTowerType, ulong StateHash, IReadOnlyList<int> LostByWave, TdMatchResult Match = default)
 {
     public bool Won => Phase == MatchPhase.Vitoria;
 }
@@ -121,7 +121,7 @@ public static class TdSanityBot
             }
             double combat = _s.Tick / (double)TdWorld.TicksPerSecond;
             return new TdBotResult(_s.StageId, _profile, seed, _s.Phase, _s.Stars, _s.IntegrityLost, _s.Credits, _s.WaveNumber,
-                combat, combat + PrepSecondsPerWave * _s.WaveNumber, _builtCount, _rejected, kills, _s.ComputeStateHash(), _lostByWave);
+                combat, combat + PrepSecondsPerWave * _s.WaveNumber, _builtCount, _rejected, kills, _s.ComputeStateHash(), _lostByWave, _s.Result);
         }
 
         private readonly Dictionary<int, string> _types = [];

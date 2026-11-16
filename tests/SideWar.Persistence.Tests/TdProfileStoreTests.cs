@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using SideWar.Core.Content.Td;
+using SideWar.Core.Td;
 using SideWar.Persistence.Migrations;
 using SideWar.Persistence.Profile;
 using Xunit;
@@ -21,8 +22,8 @@ public class TdProfileStoreTests
     private static TdProfileData Full() => new()
     {
         SealsEarned = 9, MigratedSeals = 4, IdleImportDone = true,
-        Stages = [new TdStageProgressData { StageId = 1, Unlocked = true, Stars = 3, ChallengeCompleted = true },
-                  new TdStageProgressData { StageId = 2, Unlocked = true, Stars = 1 }],
+        Stages = [new TdStageProgressData { StageId = 1, Unlocked = true, Stars = 3, ChallengeCompleted = true, Crown = true, Medals = 15, BestScore = 4123 },
+                  new TdStageProgressData { StageId = 2, Unlocked = true, Stars = 1, Crown = false, Medals = 5, BestScore = 2987 }],
         PurchasedNodes = ["defense.damage1", "infrastructure.credits"],
         UnlockedTowers = ["bolt", "frost", "cannon", "balancer"],
         InfiniteRuns = [new TdInfiniteRunData { Seed = ulong.MaxValue, MaxWave = 41 }, new TdInfiniteRunData { Seed = 7, MaxWave = 12 }],
@@ -44,7 +45,7 @@ public class TdProfileStoreTests
     {
         var (fs, st) = Make();
         Assert.True(st.Save(Full()));
-        Assert.Equal(1, SchemaVersionOnDisk(fs.Files[F]));
+        Assert.Equal(2, SchemaVersionOnDisk(fs.Files[F]));
         var r = st.Load();
         Assert.Equal(TdProfileSource.File, r.Source);
         Assert.Equal(J(TdProfileSerializer.Sanitize(Full())), J(r.Profile));
@@ -240,5 +241,103 @@ public class TdProfileStoreTests
         Assert.NotNull(r.RejectReason);
         Assert.Equal(0, r.Profile.SealsEarned);
         Assert.Single(Corrupt(fs));
+    }
+
+    // ---------------------------------------------------------------- TD.13: coroa, medalhas, recorde, migração v1 → v2
+
+    private const string V1Payload = """
+        {"sealsEarned":9,"migratedSeals":4,"idleImportDone":true,
+         "stages":[{"stageId":1,"unlocked":true,"stars":3,"challengeCompleted":true},{"stageId":2,"unlocked":true,"stars":1,"challengeCompleted":false}],
+         "purchasedNodes":["defense.damage1"],"unlockedTowers":["bolt"],"infiniteRuns":[{"seed":7,"maxWave":12}]}
+        """;
+
+    [Fact]
+    public void Migration_V1ToV2_KeepsEverythingAndAddsDefaults_AndWritesBackV2()
+    {
+        var (fs, st) = Make();
+        fs.Files[F] = Envelope(V1Payload, TdProfileData.Schema, 1);
+        var r = st.Load();
+        Assert.Equal(TdProfileSource.File, r.Source);
+        Assert.Null(r.RejectReason);
+        Assert.Empty(Corrupt(fs));
+        var p = r.Profile;
+        Assert.Equal(9, p.SealsEarned);
+        Assert.Equal(4, p.MigratedSeals);
+        Assert.Equal(3, p.Stages[0].Stars);
+        Assert.True(p.Stages[0].ChallengeCompleted);
+        Assert.Equal(1, p.Stages[1].Stars);
+        Assert.All(p.Stages, s => { Assert.False(s.Crown); Assert.Equal(0, s.Medals); Assert.Equal(0, s.BestScore); });
+        Assert.Equal(["defense.damage1"], p.PurchasedNodes);
+        Assert.Equal((ulong)7, p.InfiniteRuns.Single().Seed);
+        Assert.Equal(2, SchemaVersionOnDisk(fs.Files[F])); // gravado de volta na versão nova
+        Assert.Equal(J(p), J(st.Load().Profile));
+    }
+
+    private static TdMatchResult Win(int stars, int lost, bool crown, TdMedals medals, int score) =>
+        new(MatchPhase.Vitoria, stars, lost, crown, medals, score);
+
+    [Fact]
+    public void RecordMatch_CrownAndMedalsGrantBonusSealsOnlyOnce_AndBestScoreOnlyRises()
+    {
+        var p = TdProfileData.Default;
+        var all = TdMedals.SemVender | TdMedals.SemHabilidades | TdMedals.Pressa | TdMedals.Desafio;
+        p = TdProfileRules.RecordMatch(p, Meta, 1, Win(3, 0, true, all, 4000), 6, out var o1);
+        // 3 estrelas (3) + desafio (1) + coroa (2) + 3 medalhas de feito (3)
+        Assert.Equal(3 * Meta.SealsPerStar + Meta.SealsPerChallenge + TdProfileRules.SealsPerCrown + 3 * TdProfileRules.SealsPerMedal, p.SealsEarned);
+        Assert.True(o1.NewRecord); Assert.True(o1.NewCrown);
+        Assert.Equal(TdProfileRules.SealsPerCrown + 3 * TdProfileRules.SealsPerMedal, o1.BonusSeals);
+        var st = p.Stages.Single(s => s.StageId == 1);
+        Assert.True(st.Crown); Assert.Equal(15, st.Medals); Assert.Equal(4000, st.BestScore);
+
+        int seals = p.SealsEarned;
+        p = TdProfileRules.RecordMatch(p, Meta, 1, Win(3, 0, true, all, 3500), 6, out var o2); // pior, nada novo
+        Assert.Equal(seals, p.SealsEarned);
+        Assert.False(o2.NewRecord); Assert.False(o2.NewCrown); Assert.Equal(0, o2.BonusSeals);
+        Assert.Equal(4000, p.Stages.Single(s => s.StageId == 1).BestScore);
+
+        p = TdProfileRules.RecordMatch(p, Meta, 1, Win(3, 0, true, all, 4500), 6, out var o3); // recorde sem selos
+        Assert.True(o3.NewRecord);
+        Assert.Equal(seals, p.SealsEarned);
+        Assert.Equal(4500, p.Stages.Single(s => s.StageId == 1).BestScore);
+    }
+
+    [Fact]
+    public void RecordMatch_NewMedalLater_PaysOnlyTheNewOne_DefeatChangesNothing()
+    {
+        var p = TdProfileRules.RecordMatch(TdProfileData.Default, Meta, 1, Win(1, 5, false, TdMedals.SemVender, 1500), 6, out _);
+        int seals = p.SealsEarned; // 1 estrela + 1 medalha
+        Assert.Equal(Meta.SealsPerStar + TdProfileRules.SealsPerMedal, seals);
+        p = TdProfileRules.RecordMatch(p, Meta, 1, Win(1, 5, false, TdMedals.SemVender | TdMedals.Pressa, 1800), 6, out var o);
+        Assert.Equal(seals + TdProfileRules.SealsPerMedal, p.SealsEarned);
+        Assert.Equal(TdMedals.Pressa, o.NewMedals);
+        var lost = TdProfileRules.RecordMatch(p, Meta, 1, new TdMatchResult(MatchPhase.Derrota, 0, 20, false, TdMedals.None, 0), 6, out var ol);
+        Assert.Equal(p.SealsEarned, lost.SealsEarned);
+        Assert.Equal(p.Stages.Single(s => s.StageId == 1), lost.Stages.Single(s => s.StageId == 1));
+        Assert.False(ol.NewRecord);
+    }
+
+    [Fact]
+    public void Rank_IsTheSumOfStageRecords()
+    {
+        var p = new TdProfileData
+        {
+            Stages = [new TdStageProgressData { StageId = 1, Unlocked = true, BestScore = 4000 }, new TdStageProgressData { StageId = 2, Unlocked = true, BestScore = 4100 },
+                      new TdStageProgressData { StageId = 3, Unlocked = true, BestScore = 4000 }],
+        };
+        Assert.Equal(12_100, TdProfileRules.TotalScore(p));
+        Assert.Equal(TdRankLevel.Pleno, TdProfileRules.Rank(p).Current);
+        Assert.Equal(TdRankLevel.Estagiario, TdProfileRules.Rank(TdProfileData.Default).Current);
+    }
+
+    [Fact]
+    public void Sanitize_ClampsNewFields()
+    {
+        var p = TdProfileSerializer.Sanitize(new TdProfileData
+        {
+            Stages = [new TdStageProgressData { StageId = 1, Unlocked = true, Medals = 0xFF, BestScore = -5 }, new TdStageProgressData { StageId = 2, BestScore = int.MaxValue }],
+        });
+        Assert.Equal(15, p.Stages[0].Medals);
+        Assert.Equal(0, p.Stages[0].BestScore);
+        Assert.Equal(TdProfileSerializer.MaxScore, p.Stages[1].BestScore);
     }
 }

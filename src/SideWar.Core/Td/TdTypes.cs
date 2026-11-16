@@ -147,5 +147,23 @@ public enum TdEventType : byte
 /// <summary>Evento observável (não entra no hash). <c>A</c>/<c>B</c>: valores do evento (onda, créditos, id etc.).</summary>
 public readonly record struct TdEvent(TdEventType Type, long Tick, long A, long B);
 
-/// <summary>Resultado ao fim da partida (RF-28.10): estrelas 0 (derrota) a 3.</summary>
-public readonly record struct TdMatchResult(MatchPhase Phase, int Stars, int IntegrityLost);
+/// <summary>Resultado ao fim da partida (RF-28.10, RF-28.21): estrelas 0 (derrota) a 3, coroa, medalhas e pontuação (0 se não venceu).</summary>
+public readonly record struct TdMatchResult(MatchPhase Phase, int Stars, int IntegrityLost, bool Crown = false, TdMedals Medals = TdMedals.None, int Score = 0);
+
+/// <summary>Medalhas por feitos (RF-28.21); só valem em Vitória. Valores são bits gravados no perfil: não renumerar.</summary>
+[Flags]
+public enum TdMedals
+{
+    None = 0,
+    /// <summary>Nenhuma torre vendida.</summary>
+    SemVender = 1,
+    /// <summary>Nenhuma habilidade usada.</summary>
+    SemHabilidades = 2,
+    /// <summary>Todas as ondas (exceto a primeira) chamadas antecipadamente.</summary>
+    Pressa = 4,
+    /// <summary>Desafio da fase concluído (RF-28.10).</summary>
+    Desafio = 8,
+}
+
+/// <summary>O que o resultado trouxe de novo ao perfil (card de Vitória, RF-28.21): recorde, coroa e medalhas inéditos e selos bônus (coroa/medalhas; os das estrelas ficam fora).</summary>
+public readonly record struct TdRecordOutcome(bool NewRecord, bool NewCrown, TdMedals NewMedals, int BonusSeals);

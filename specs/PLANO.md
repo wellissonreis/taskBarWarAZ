@@ -374,6 +374,7 @@ Em paralelo, pode começar a **E3** (SDD-12, SDD-11 e SDD-27 no Core), pois não
 | TD.9 ✅ | Arte e visual: **sprites do design** (`TdArtMap`: tower-bolt/frost/cannon, core, portal, supply-crate, 6 inimigos) na faixa TD, popover de construção e inspetor; balancer/scaleset, runner/regen/leech e 3 chefes = sprite existente com tinta, **PROVISÓRIOS** (`MANIFEST.json` → `tdMapping`); indicadores de traço/vida/nível/ramo/risco por cima; goldens td-strip/td-ui regenerados (concluída em 2026-11-16; `specs/evidencias/TD.9/`) | TD.7 | 🟡 |
 | TD.10 ✅ | `SanityBot` novo e curva de balanceamento das 6 fases; evidência E-TD (concluída em 2026-11-16; `TdSanityBot`, `specs/evidencias/TD.10.md`) | TD.3 | 🟢 |
 | TD.11 | Pós-MVP: modo infinito, desafio do dia, políticas (DP-28.9) | TD.8, TD.10 | 🟡 |
+| TD.13 ✅ | Recompensas por perfeição e patente local (concluída em 2026-11-16; RF-28.21: coroa por fase sem perda de integridade, medalhas Sem vender/Sem habilidades/Pressa/Desafio, selos bônus, pontuação determinística, recorde por fase e patente Estagiário→MVP pela soma dos recordes; perfil `sidewar.td-profile` v2 com migração; UI no card de Vitória, Mapa e Menu) | TD.8, TD.10 | 🟡 |
 | TD.12 | Limpeza e documentação: arquivar SDD-25/26/27, marcar substituições, `PLANO.md`, `README.md`, MTC-28 | todas | 🟢 |
 
 **Ordem:** TD.0 → (TD.1 → TD.2 → TD.3 ‖ TD.4 ‖ TD.10) → TD.5 e TD.6 → TD.3b → TD.7 (gate TA.1) → TD.8 → TD.9 → TD.12; TD.11 por último.

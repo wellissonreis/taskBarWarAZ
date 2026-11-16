@@ -69,6 +69,15 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             case TdUiKind.Header:
                 _p.Text(c, it.Text, PanelFont.JetBrainsMono, 9f, r, Palette.TxtRotulo);
                 return;
+            case TdUiKind.Badges:
+                DrawBadges(c, it);
+                return;
+            case TdUiKind.Bar:
+                _p.Text(c, it.Text, PanelFont.JetBrainsMono, 9f, r, color);
+                if (it.Right is not null) _p.Text(c, it.Right, PanelFont.JetBrainsMono, 8f, r, Palette.TxtRotulo, TextAlign.Right);
+                _p.Fill(c, new DipRect(r.X, r.Y + r.H - 3, r.W, 3), Palette.BgTrilho);
+                if (it.Fill > 0f) _p.Fill(c, new DipRect(r.X, r.Y + r.H - 3, r.W * Math.Clamp(it.Fill, 0f, 1f), 3), Palette.Ambar);
+                return;
             case TdUiKind.Label:
                 if (!small && r.H >= 24f && _p.TextEnabled && _p.Font(PanelFont.JetBrainsMono, size).MeasureText(it.Text) > _p.Px(r.W))
                 {
@@ -97,6 +106,55 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         _p.Text(c, it.Text, small ? PanelFont.Silkscreen : PanelFont.JetBrainsMono, small ? 8.5f : size, box, textColor, small && it.Right is null ? TextAlign.Center : TextAlign.Left);
         if (it.Right is not null) _p.Text(c, it.Right, small ? PanelFont.Silkscreen : PanelFont.JetBrainsMono, small ? 8.5f : size, box, enabled ? Palette.Ambar : Palette.TxtRotulo, TextAlign.Right);
         if (it.Sub is not null && !small) DrawWrapped(c, it.Sub, new DipRect(r.X + 4 + shift, r.Y + 16, r.W - 8 - shift, r.H - 17), Palette.TxtTerciario);
+    }
+
+    private static readonly (int Bit, string Glyph)[] MedalGlyphs = [(1, "V"), (2, "H"), (4, "P"), (8, "D")];
+
+    private static SKColor MedalColor(int bit) => bit switch { 1 => Palette.Menta, 2 => Palette.AzulClaro, 4 => Palette.Prestigio, _ => Palette.Gelo };
+
+    /// <summary>Coroa dourada (acesa se <c>Selected</c>) e 4 medalhas com letra (V sem vender, H sem habilidades, P pressa, D desafio): ganhas coloridas, demais apagadas.</summary>
+    private void DrawBadges(SKCanvas c, in TdUiItem it)
+    {
+        var r = it.Rect;
+        DrawCrown(c, r.X + 2, r.Y + 1, 16f, 11f, it.Selected);
+        float x = r.X + 24;
+        foreach (var (bit, glyph) in MedalGlyphs)
+        {
+            bool got = (it.Arg & bit) != 0;
+            DrawMedal(c, x, r.Y + 1, 12f, MedalColor(bit), got, glyph);
+            x += 15f;
+        }
+        if (it.Right is not null) _p.Text(c, it.Right, PanelFont.JetBrainsMono, 8.5f, r, Palette.TxtRotulo, TextAlign.Right);
+    }
+
+    private void DrawCrown(SKCanvas c, float xDip, float yDip, float wDip, float hDip, bool on)
+    {
+        float x = _p.Px(xDip), y = _p.Px(yDip), w = _p.Px(wDip), h = _p.Px(hDip);
+        using var b = new SKPathBuilder();
+        b.MoveTo(x, y + h);
+        b.LineTo(x, y + h * 0.25f);
+        b.LineTo(x + w * 0.25f, y + h * 0.6f);
+        b.LineTo(x + w * 0.5f, y);
+        b.LineTo(x + w * 0.75f, y + h * 0.6f);
+        b.LineTo(x + w, y + h * 0.25f);
+        b.LineTo(x + w, y + h);
+        b.Close();
+        using var path = b.Detach();
+        using var fill = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Fill, Color = on ? Palette.Ambar : Palette.BgTrilho };
+        using var line = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = Math.Max(1f, _p.Px(1f)), Color = on ? Palette.AmbarHover : Palette.BordaForte };
+        c.DrawPath(path, fill);
+        c.DrawPath(path, line);
+    }
+
+    private void DrawMedal(SKCanvas c, float xDip, float yDip, float sizeDip, SKColor color, bool on, string glyph)
+    {
+        float s = _p.Px(sizeDip);
+        float cx = _p.Px(xDip) + s / 2f, cy = _p.Px(yDip) + s / 2f;
+        using var fill = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Fill, Color = on ? color : Palette.BgTrilho };
+        using var line = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = Math.Max(1f, _p.Px(1f)), Color = on ? Palette.TxtBranco : Palette.BordaForte };
+        c.DrawCircle(cx, cy, s / 2f - 0.5f, fill);
+        c.DrawCircle(cx, cy, s / 2f - 0.5f, line);
+        _p.Text(c, glyph, PanelFont.Silkscreen, 7f, new DipRect(xDip, yDip + 1.5f, sizeDip, sizeDip - 2f), on ? Palette.BgAbismo : Palette.TxtRotulo, TextAlign.Center);
     }
 
     // Ícone da torre (sprite do design, TdArtMap) pré-escalado por altura física e cacheado: desenhado em pixels inteiros.
