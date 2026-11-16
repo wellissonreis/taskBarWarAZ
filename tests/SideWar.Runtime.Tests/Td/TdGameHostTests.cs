@@ -26,12 +26,13 @@ public sealed class TdGameHostTests
         public readonly FakeClock Clock = new();
         public readonly AppStateMachine App = new();
         public readonly Observer Obs = new();
-        public readonly TdMatchState Match = TdMatchState.Create(Content, 1, Rng.Seed(42, 54));
+        public TdMatchState Match = TdMatchState.Create(Content, 1, Rng.Seed(42, 54));
         public readonly TdGameHost Host;
 
-        public Rig(bool visible = true)
+        public Rig(bool visible = true, ITdInputSource? input = null, TdMatchState? match = null)
         {
-            Host = new TdGameHost(Clock, App, Match, Obs);
+            if (match is not null) Match = match;
+            Host = new TdGameHost(Clock, App, Match, Obs, input);
             if (visible) App.LeaveHidden(HiddenReason.Starting);
             Wake();
         }
@@ -239,6 +240,69 @@ public sealed class TdGameHostTests
         r.Run(20);
         var script = new TdReplayScript(1, 42, 54, r.Host.CommandLog, r.Match.Frame);
         var replay = TdReplayRunner.Run(Content, script);
+        Assert.Equal(r.Match.ComputeStateHash(), replay.StateHash);
+    }
+
+    private sealed class FakeInput : ITdInputSource
+    {
+        public double Seconds = 100;
+        public double SecondsSinceLastInput() => Seconds;
+    }
+
+    [Fact]
+    public void Presence_is_sent_to_the_log_only_on_change_and_only_in_wave()
+    {
+        var input = new FakeInput { Seconds = 1 };
+        var r = new Rig(input: input);
+        r.Run(1);
+        Assert.DoesNotContain(r.Host.CommandLog, e => e.Command is SetPresence); // Preparo: não observa
+        r.Host.OnCommand(new StartWave());
+        r.Run(2);
+        Assert.Single(r.Host.CommandLog, e => e.Command is SetPresence { Present: true }); // presente, enviado uma vez
+        Assert.True(r.Match.Present);
+        input.Seconds = 2; r.Run(2);                                                       // continua presente: nada novo
+        Assert.Single(r.Host.CommandLog, e => e.Command is SetPresence);
+        input.Seconds = 6; r.Run(1);                                                       // > 5 s sem entrada: ausente
+        Assert.False(r.Match.Present);
+        Assert.Equal(2, r.Host.CommandLog.Count(e => e.Command is SetPresence));
+        r.Run(2);
+        Assert.Equal(2, r.Host.CommandLog.Count(e => e.Command is SetPresence));
+        input.Seconds = 0; r.Run(1);
+        Assert.True(r.Match.Present);
+        Assert.Equal(3, r.Host.CommandLog.Count(e => e.Command is SetPresence));
+    }
+
+    [Fact]
+    public void Without_an_input_source_presence_is_never_sent()
+    {
+        var r = new Rig();
+        r.Host.OnCommand(new StartWave());
+        r.Run(3);
+        Assert.DoesNotContain(r.Host.CommandLog, e => e.Command is SetPresence);
+    }
+
+    [Fact]
+    public void Presence_log_replays_to_the_same_hash_and_RequestCollectCrate_collects()
+    {
+        var bc = Content.Stages.Rules.BombCrate with { Chance = 1.0, MinDropSeconds = 1 };
+        var stages = Content.Stages.Stages.Select(s => s with { StartingCredits = 1_000_000, MaxTowers = 12 }).ToArray();
+        var content = Content with { Stages = Content.Stages with { Rules = Content.Stages.Rules with { BombCrate = bc, CoreIntegrity = 100_000 }, Stages = stages } };
+        var match = TdMatchState.Create(content, 2, Rng.Seed(42, 54));
+        var input = new FakeInput { Seconds = 0 };
+        var r = new Rig(input: input, match: match);
+        Assert.False(r.Host.RequestCollectCrate()); // sem caixa: nada enfileirado
+        r.Host.OnCommand(new BuildTower("bolt", 300));
+        r.Host.OnCommand(new StartWave());
+        long credits = 0;
+        for (int i = 0; i < 20 && !r.Match.CrateActive; i++) r.Run(1);
+        Assert.True(r.Match.CrateActive);
+        credits = r.Match.Credits;
+        Assert.True(r.Host.RequestCollectCrate());
+        r.Run(1); // o comando entra no próximo Wake; um passo depois fecha o Frame do replay
+        Assert.False(r.Match.CrateActive);
+        Assert.Contains(r.Host.CommandLog, e => e.Command is CollectCrate);
+        Assert.True(r.Match.Credits >= credits + r.Match.WaveBonusFor(r.Match.WaveNumber));
+        var replay = TdReplayRunner.Run(content, new TdReplayScript(2, 42, 54, r.Host.CommandLog, r.Match.Frame));
         Assert.Equal(r.Match.ComputeStateHash(), replay.StateHash);
     }
 }

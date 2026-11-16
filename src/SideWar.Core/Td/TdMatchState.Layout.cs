@@ -128,6 +128,7 @@ public sealed partial class TdMatchState
         if (!Running) return Reject(CommandReason.InvalidPhase);
         int i = FindTower(cmd.TowerId);
         if (i < 0) return Reject(CommandReason.TowerNotFound);
+        if (_towers[i].Placed) return Reject(CommandReason.NotUnpositioned); // só torre SEM POSIÇÃO muda de lugar
         return Reposition(i, cmd.X);
     }
 

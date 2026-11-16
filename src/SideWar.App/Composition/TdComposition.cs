@@ -27,7 +27,7 @@ internal sealed class TdComposition
     public TdProfileRecorder Recorder { get; }
 
     public static TdComposition Create(string dataDirectory, string version, AppStateMachine app, IClock clock, AppSettings settings,
-        Action<string> log, IFileSystem? fileSystem = null, ulong? seed = null)
+        Action<string> log, IFileSystem? fileSystem = null, ulong? seed = null, ITdInputSource? input = null)
     {
         var fs = fileSystem ?? RealFileSystem.Instance;
         var content = TdContentLoader.LoadEmbedded();
@@ -35,8 +35,8 @@ internal sealed class TdComposition
         var idle = new ProfileStore(fs, dataDirectory, version, log: log);
         var recorder = TdProfileRecorder.Load(tdStore, () => idle.Load(), content.Meta, content.Stages.Stages.Length, log);
         var rng = Rng.Seed(seed ?? (ulong)DateTime.UtcNow.Ticks, 54UL);
-        var match = TdMatchState.Create(content, recorder.SuggestedStage(), rng);
-        var host = new TdGameHost(clock, app, match, recorder);
+        var match = TdMatchState.Create(content, recorder.SuggestedStage(), rng, recorder.Profile.PurchasedNodes);
+        var host = new TdGameHost(clock, app, match, recorder, input ?? new TdLastInputSource());
         var td = new TdComposition(host, recorder);
         td.ApplySettings(settings);
         return td;

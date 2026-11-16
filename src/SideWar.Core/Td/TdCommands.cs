@@ -39,5 +39,11 @@ public sealed record LayoutChanged(SideWar.Core.Simulation.StripLayout Layout) :
 /// <summary>Posiciona, sem custo, uma torre SEM POSIÇÃO em X lógico (snap de 44 DIP, RF-28.20); torre já posicionada é rejeitada.</summary>
 public sealed record PlaceTower(int TowerId, int X) : IGameCommand;
 
-/// <summary>Reposiciona, sem custo, uma torre (posicionada ou não) em X lógico (snap de 44 DIP); mantém nível, ramo e recarga.</summary>
+/// <summary>Reposiciona, sem custo, uma torre SEM POSIÇÃO em X lógico (snap de 44 DIP); mantém nível, ramo e recarga. Torre posicionada é rejeitada (NotUnpositioned).</summary>
 public sealed record MoveTower(int TowerId, int X) : IGameCommand;
+
+/// <summary>Sinal "presente agora" do hospedeiro (RF-28.19): enviado ao log só quando muda; o Core nunca lê relógio nem entrada.</summary>
+public sealed record SetPresence(bool Present) : IGameCommand;
+
+/// <summary>Coleta a caixa-bomba ativa a tempo (RF-28.19): créditos de um bônus de onda e redução de recarga de habilidade.</summary>
+public sealed record CollectCrate(int CrateId) : IGameCommand;

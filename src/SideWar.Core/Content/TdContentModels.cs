@@ -52,11 +52,16 @@ public sealed record TdStarsDef(int TwoStarMaxLoss, int ThreeStarMaxLoss);
 public sealed record TdChallengeDef(
     string Id, string Name, string Description, int? MaxTowers, bool NoAbilities, bool NoCallNext, double StartingCreditsFactor);
 
+/// <summary>Caixa-bomba (RF-28.19): chance por onda elegível, janela de queda, contagem, recompensa e janela de presença do host.</summary>
+public sealed record TdBombCrateDef(
+    double Chance, int FirstEligibleWaveStage1, int MinDropSeconds, double DropMaxSpawnFraction, int CountdownSeconds,
+    int EdgeMargin, int CooldownReductionSeconds, int PresenceWindowSeconds);
+
 /// <summary>Regras de partida (RF-28.1 a RF-28.4, RF-28.10, RF-28.12).</summary>
 public sealed record TdMatchRulesDef(
     int CoreIntegrity, double SellRefund, int WaveBonusBase, int WaveBonusPerWave, double HpWaveGrowth, double HpStageStep,
     double SpawnJitter, int MaxEnemiesOnField, TdCallNextDef CallNext, TdAutoStartDef AutoStart, TdStarsDef Stars,
-    TdChallengeDef[] Challenges);
+    TdChallengeDef[] Challenges, TdBombCrateDef BombCrate);
 
 public sealed record TdStageDef(
     int Id, string Title, string Region, string Concept, int Waves, long StartingCredits, int MaxTowers, string Challenge);

@@ -196,6 +196,8 @@ public sealed partial class TdMatchState
             ChooseBranch c => DoChooseBranch(c),
             SetTargeting g => DoSetTargeting(g),
             UseAbility u => DoUseAbility(u),
+            SetPresence sp => DoSetPresence(sp),
+            CollectCrate cc => DoCollectCrate(cc),
             _ => Reject(CommandReason.UnknownCommand),
         };
     }
@@ -382,6 +384,7 @@ public sealed partial class TdMatchState
         }
         var ordered = spawns.OrderBy(s => s.Due).ThenBy(s => s.Seq).Select(s => new TdSpawn(s.Due, s.Index, s.Boss)).ToArray();
         _active.Add(new TdActiveWave(w, Tick, ordered, def.BonusFactor));
+        RollCrate(w, ordered);
         WaveNumber = w;
         Phase = MatchPhase.Onda;
         _countdownActive = false;
@@ -393,6 +396,7 @@ public sealed partial class TdMatchState
     private void SettlePhase()
     {
         if (_active.Count > 0 || _enemies.Count > 0 || Phase != MatchPhase.Onda) return;
+        CrateLeaveWave();
         if (WaveNumber >= _waves.Length)
         {
             Phase = MatchPhase.Vitoria;

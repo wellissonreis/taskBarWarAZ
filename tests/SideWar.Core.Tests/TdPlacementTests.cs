@@ -156,8 +156,8 @@ public sealed class TdPlacementTests
         Assert.Equal(242, Tw(s, b).X);               // (250-0)/44 = 5 → 22 + 220
         Assert.Equal(credits, s.Credits);            // sem custo
 
-        Assert.True(s.Apply(new MoveTower(a, 20)).IsOk);
-        Assert.Equal(22, Tw(s, a).X);
+        Assert.Equal(CommandReason.NotUnpositioned, s.Apply(new MoveTower(a, 20)).Reason); // TD.3b: só torre SEM POSIÇÃO
+        Assert.Equal(CommandReason.NotUnpositioned, s.Apply(new MoveTower(b, 20)).Reason); // b acabou de ser posicionada
         Assert.Equal(credits, s.Credits);
         Assert.Equal(1, Tw(s, a).Level);
 
@@ -214,9 +214,9 @@ public sealed class TdPlacementTests
     {
         var first = TdReplayRunner.Run(Content, Script());
         for (int i = 0; i < 4; i++) Assert.Equal(first.StateHash, TdReplayRunner.Run(Content, Script()).StateHash);
-        Assert.Equal(2, first.CommandsRejected); // build sobreposto e build fora da zona
+        Assert.Equal(3, first.CommandsRejected); // build sobreposto, build fora da zona e MoveTower de torre posicionada (TD.3b)
         Assert.Equal(Golden, first.StateHash);
     }
 
-    private const ulong Golden = 1644250459363546342UL;
+    private const ulong Golden = 1649672874497974502UL;
 }

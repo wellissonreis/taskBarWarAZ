@@ -84,4 +84,24 @@ public sealed class TdCompositionTests : IDisposable
         Assert.Contains(saved.Profile.Stages, s => s.StageId == 1 && s.Unlocked && s.Stars == 0);
         Assert.Equal(0, td.Recorder.SaveFailures);
     }
+
+    [Fact]
+    public void Profile_purchased_nodes_reach_the_match()
+    {
+        Directory.CreateDirectory(dir);
+        var clock = new ManualClock();
+        var store = new TdProfileStore(RealFileSystem.Instance, dir, "0.1.0");
+        Assert.True(store.Save(new TdProfileData { IdleImportDone = true, PurchasedNodes = ["operation.snapshot"] }));
+        var td = TdComposition.Create(dir, "0.1.0", VisibleApp(), clock, new AppSettings(), _ => { }, seed: 7);
+        Assert.True(td.Host.Match.AbilityStatuses.First(a => a.Id == "snapshot").Unlocked);
+
+        var dir2 = dir + "-b";
+        try
+        {
+            Directory.CreateDirectory(dir2);
+            var td2 = TdComposition.Create(dir2, "0.1.0", VisibleApp(), clock, new AppSettings(), _ => { }, seed: 7);
+            Assert.False(td2.Host.Match.AbilityStatuses.First(a => a.Id == "snapshot").Unlocked);
+        }
+        finally { try { Directory.Delete(dir2, true); } catch (IOException) { } }
+    }
 }

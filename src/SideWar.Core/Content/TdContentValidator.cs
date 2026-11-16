@@ -91,6 +91,19 @@ public static class TdContentValidator
             "td-stages.rules.autoStart: 0 < min <= default <= max");
         Req(e, r.Stars.ThreeStarMaxLoss >= 0 && r.Stars.ThreeStarMaxLoss <= r.Stars.TwoStarMaxLoss && r.Stars.TwoStarMaxLoss < r.CoreIntegrity,
             "td-stages.rules.stars: 0 <= threeStarMaxLoss <= twoStarMaxLoss < coreIntegrity");
+        var bc = r.BombCrate;
+        Req(e, bc is not null, "td-stages.rules.bombCrate ausente");
+        if (bc is not null)
+        {
+            Req(e, bc.Chance is >= 0 and <= 1, "td-stages.rules.bombCrate.chance deve estar em [0, 1]");
+            Req(e, bc.FirstEligibleWaveStage1 >= 1, "td-stages.rules.bombCrate.firstEligibleWaveStage1 deve ser >= 1");
+            Req(e, bc.MinDropSeconds >= 0, "td-stages.rules.bombCrate.minDropSeconds deve ser >= 0");
+            Req(e, bc.DropMaxSpawnFraction is > 0 and <= 1, "td-stages.rules.bombCrate.dropMaxSpawnFraction deve estar em (0, 1]");
+            Req(e, bc.CountdownSeconds >= 1, "td-stages.rules.bombCrate.countdownSeconds deve ser >= 1");
+            Req(e, bc.EdgeMargin is >= 0 and < 600, "td-stages.rules.bombCrate.edgeMargin deve estar em [0, 600)");
+            Req(e, bc.CooldownReductionSeconds >= 0, "td-stages.rules.bombCrate.cooldownReductionSeconds deve ser >= 0");
+            Req(e, bc.PresenceWindowSeconds >= 1, "td-stages.rules.bombCrate.presenceWindowSeconds deve ser >= 1");
+        }
 
         var challenges = Ids(r.Challenges, x => x.Id, "td-stages.challenges", e);
         foreach (var ch in r.Challenges)

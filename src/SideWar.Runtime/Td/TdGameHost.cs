@@ -17,6 +17,12 @@ public interface ITdMatchObserver
     void OnMatchEnded(TdMatchState match, TdMatchResult result);
 }
 
+/// <summary>Fonte do sinal "presente agora" (RF-28.19): segundos desde a última entrada de mouse/teclado do usuário no sistema.</summary>
+public interface ITdInputSource
+{
+    double SecondsSinceLastInput();
+}
+
 /// <summary>
 /// Pedido "Iniciar onda" (hotkey/bandeja): vira <see cref="StartWave"/> em Preparo ou <see cref="CallNextWave"/> em Onda,
 /// decidido no momento da aplicação (entre ticks). Só o comando traduzido entra no <see cref="TdGameHost.CommandLog"/>.
@@ -38,6 +44,7 @@ public sealed class TdGameHost : ILoopParticipant
     private readonly IClock _clock;
     private readonly AppStateMachine _app;
     private readonly ITdMatchObserver? _observer;
+    private readonly ITdInputSource? _input;
     private readonly FixedStepper _stepper = new();
     private readonly Queue<IGameCommand> _pending = new();
     private readonly List<TdLogEntry> _log = [];
@@ -46,8 +53,9 @@ public sealed class TdGameHost : ILoopParticipant
     private bool _started;
     private bool _endReported;
 
-    public TdGameHost(IClock clock, AppStateMachine app, TdMatchState match, ITdMatchObserver? observer = null)
+    public TdGameHost(IClock clock, AppStateMachine app, TdMatchState match, ITdMatchObserver? observer = null, ITdInputSource? input = null)
     {
+        _input = input;
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _app = app ?? throw new ArgumentNullException(nameof(app));
         Match = match ?? throw new ArgumentNullException(nameof(match));
@@ -106,6 +114,17 @@ public sealed class TdGameHost : ILoopParticipant
     public void ApplyAutoStart(bool enabled, int seconds) =>
         OnCommand(new SetAutoStart(enabled ? AutoStartMode.Countdown : AutoStartMode.Off, Math.Clamp(seconds, 5, 60)));
 
+    /// <summary>
+    /// Clique na caixa-bomba ativa (ligado ao hit-test na TD.7/TD.8): enfileira <see cref="CollectCrate"/> com o id vigente.
+    /// Devolve false (nada enfileirado) se não há caixa ativa.
+    /// </summary>
+    public bool RequestCollectCrate()
+    {
+        if (IsShutdown || !Match.CrateActive) return false;
+        OnCommand(new CollectCrate(Match.CrateId));
+        return true;
+    }
+
     /// <summary>Troca a partida (nova fase/revanche). O log recomeça.</summary>
     public void Restart(TdMatchState next)
     {
@@ -122,6 +141,7 @@ public sealed class TdGameHost : ILoopParticipant
         double now = clock.NowTicks / clock.TicksPerSecond;
 
         DrainCommands();
+        UpdatePresence();
 
         bool running = Running;
         int ticks = _stepper.Advance(now, running);
@@ -151,6 +171,18 @@ public sealed class TdGameHost : ILoopParticipant
         _pending.Clear();
     }
 
+    /// <summary>
+    /// Sinal "presente agora" (RF-28.19): só em Onda e com a simulação rodando, compara a última entrada do usuário com a janela
+    /// (<c>rules.bombCrate.presenceWindowSeconds</c>) e envia <see cref="SetPresence"/> ao log apenas quando o estado muda.
+    /// O Core usa só o último estado registrado (determinismo).
+    /// </summary>
+    private void UpdatePresence()
+    {
+        if (_input is null || !_app.SimulationRunning || Match.Phase != MatchPhase.Onda) return;
+        bool present = _input.SecondsSinceLastInput() <= Match.Content.Stages.Rules.BombCrate.PresenceWindowSeconds;
+        if (present != Match.Present) Apply(new SetPresence(present));
+    }
+
     private void DrainCommands()
     {
         while (_pending.TryDequeue(out var cmd))
@@ -158,9 +190,14 @@ public sealed class TdGameHost : ILoopParticipant
             var applied = cmd is TdWaveRequest
                 ? (Match.Phase == MatchPhase.Preparo ? new StartWave() : (IGameCommand)new CallNextWave())
                 : cmd;
-            var result = Match.Apply(applied);
-            _log.Add(new TdLogEntry(Match.Frame, applied));
-            _results.Enqueue((applied, result));
+            Apply(applied);
         }
+    }
+
+    private void Apply(IGameCommand applied)
+    {
+        var result = Match.Apply(applied);
+        _log.Add(new TdLogEntry(Match.Frame, applied));
+        _results.Enqueue((applied, result));
     }
 }
