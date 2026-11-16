@@ -217,7 +217,7 @@ MVP: **6 fases** ("regiões" Azure como flavor: Brazil South, East US, West Euro
 
 ### RF-28.14: HUD e controle (o mínimo para caber na barra)
 
-- **HUD compacto dentro da barra** (no canto livre mais perto do núcleo, ou sobre a zona esquerda se houver, DP-28.1): `❤ 20 · 💰 240 · Onda 4/12 · ▶`; texto Silkscreen/JetBrains Mono (ADR-025), 11 a 12 DIP. Tudo o mais é um **popover temporário** (acima da barra, fechável com clique fora ou Esc) acionado por clique no HUD: inspetor de torre (alcance, mira, ramo, vender), construção (arrastar o ícone para uma posição livre ou clicar), pré-visualização da onda, habilidades, Mapa de fases e árvore de selos. O popover **não é gameplay**: nenhuma torre fica nele.
+- **HUD compacto dentro da barra** (no canto livre mais perto do núcleo, ou sobre a zona esquerda se houver, DP-28.1): `❤ 20 · 💰 240 · Onda 4/12 · ▶`; texto Silkscreen/JetBrains Mono (ADR-025), 11 a 12 DIP. Tudo o mais é um **popover temporário** (acima da barra, fechável com clique fora ou Esc) acionado por clique no HUD: inspetor de torre (alcance, mira, ramo, vender), construção (fluxo de colocação em RF-28.20), pré-visualização da onda, habilidades, Mapa de fases e árvore de selos. O popover **não é gameplay**: nenhuma torre fica nele.
 - **Alvos de clique:** torres e HUD via **janelas hotspot** (SDD-22 RF-22.8) pequenas; a cena de desenho é `WS_EX_TRANSPARENT` por padrão para **não bloquear ícones** da barra quando um inimigo passa por cima (ver RF-28.15 e §6). Sem estado "esmaecer": a opacidade é sempre 100% por padrão; existe opção em Configurações "opacidade em segundo plano" (0% a 70% de redução), **desligada** (decisão 5).
 - **Bandeja** (ADR do ícone próprio, decisão do usuário 2026-11-16): menu Iniciar onda, Pausar/Retomar, Minimizar (ocultar cena), Configurações, Sair.
 - Atalhos globais mínimos: Ctrl+Alt+Espaço (iniciar/chamar), Ctrl+Alt+P (pausar), Ctrl+Alt+G (mostrar/ocultar; já existe).
@@ -233,7 +233,7 @@ MVP: **6 fases** ("regiões" Azure como flavor: Brazil South, East US, West Euro
 
 ### RF-28.16: Determinismo e replay (ADR-026, mantido)
 
-- Toda ação do jogador é **comando** no log: `StartWave`, `CallNextWave`, `BuildTower(type, x)`, `SellTower(id)` (**volta**, antes removido), `UpgradeTower(id)`, `ChooseBranch(id, A|B)`, `SetTargeting(id, mode)`, `UseAbility(id)`, `PlaceTower` e `LayoutChanged` (entre ticks). `StateHash` inclui integridade, créditos, torres (ramo, nível, cooldowns), inimigos (traços, regeneração, timers), habilidades (recargas), pads lógicos e o `Rng` (PCG32 semeado por **seed da partida**, não por perfil).
+- Toda ação do jogador é **comando** no log: `StartWave`, `CallNextWave`, `BuildTower(type, x)`, `SellTower(id)` (**volta**, antes removido), `UpgradeTower(id)`, `ChooseBranch(id, A|B)`, `SetTargeting(id, mode)`, `UseAbility(id)`, `CollectCrate(id)` (RF-28.19), `SetPresence(present)` (RF-28.19; entrada do host), `PlaceTower` e `LayoutChanged` (entre ticks). `StateHash` inclui integridade, créditos, torres (ramo, nível, cooldowns), inimigos (traços, regeneração, timers), habilidades (recargas), pads lógicos e o `Rng` (PCG32 semeado por **seed da partida**, não por perfil).
 - Proibido no tick: `Math.Pow/Sin/Cos/Exp/Log`, `DateTime`, `Random` (SDD-11 RF-11.1). Regeneração, paralisia, nós e auras usam inteiros/`float` com operações permitidas.
 - `ReplayRunner` e `SanityBot` são **reescritos** para o novo loop (TD.3, TD.10) e continuam rodando no Linux.
 
@@ -244,8 +244,8 @@ MVP: **6 fases** ("regiões" Azure como flavor: Brazil South, East US, West Euro
 | Cartão de pergunta do chefe, banco `questions.json`, ledger, estrelas por respostas (SDD-26, SDD-24 RF-24.9, SDD-27 RF-27.9) | **Cortar** do gameplay. O banco pode ser arquivado; **não** reaproveitar como quiz. |
 | Temas "AZ-900" por fase (`stageTopic`), nomes de torre por serviço Azure | **Viram flavor**: um texto de uma linha no tooltip ("Raio — como uma Azure VM: capacidade bruta sob demanda"). Sem pergunta, sem pontuação por acerto, sem tela de explicação. |
 | "Picos de demanda" por clique (SDD-26) | Substituído pela habilidade **Escalar** (RF-28.9) |
-| Caixas de suprimentos por clique (SDD-26) | Cortar do MVP (DP-28.9: se voltar, vira drop opcional e sem pressa) |
-| Cartão "Bem-vindo de volta", relatório offline, presença, auto-escala (SDD-25) | **Cortar** (não há progresso offline) |
+| Caixas de suprimentos por clique (SDD-26) | **Substituídas pela caixa-bomba** (RF-28.19, decisão de 2026-11-16): aparece só em onda, com contagem regressiva e risco de perder uma torre; sem renda por minuto e sem missão |
+| Cartão "Bem-vindo de volta", relatório offline, presença, auto-escala (SDD-25) | **Cortar** (não há progresso offline nem presença econômica). **Exceção mínima (2026-11-16):** o sinal binário "presente agora" (mouse/teclado ativo nos últimos segundos) permanece **só** para a caixa-bomba (RF-28.19); não gera crédito, não acumula tempo e não existe sem partida em Onda |
 | Missões diárias, Migrar, Reservas, regiões (SDD-27) | **Cortar**; substituídos por RF-28.10, 28.11, 28.13 |
 | Perfil com `Reservas`, `ondaMax` por fase | Migração de save (DP-28.4) |
 
@@ -254,6 +254,34 @@ MVP: **6 fases** ("regiões" Azure como flavor: Brazil South, East US, West Euro
 - Toda a premissa visual (cena **dentro** da barra, sobre ícones) depende do **spike TA.1** (PLANO §ADR-034): janela layered topmost sobre `Shell_TrayWnd`, reaparecimento após clique em Iniciar/pesquisa/bandeja, cliques passantes. **Esta ficha não pode ser aprovada para execução antes do resultado de TA.1** (DP-28.11).
 - **Se TA.1 reprovar:** o fallback permitido é **`Band` mínima** (faixa de **28 a 32 DIP** acima da barra, só para trilho e torres; **uma decisão do usuário**, pois contradiz "sem faixa acima"). Alternativa: o jogo desliga as torres na barra e exige `towersInBar = false` com faixa mínima. Isso não é proposto como padrão.
 - Mantêm-se: UIA somente leitura, `BuildZoneMap`, reavaliação por `LayoutChanged`, `SEM POSIÇÃO`, `FullscreenWatcher` (com o conserto da referência WINEVENTPROC já em andamento em `WinEventHook.cs`) e `ZOrderCoordinator`.
+
+### RF-28.19: Caixa-bomba (decisão do usuário, 2026-11-16)
+
+Mecânica de atenção opcional **dentro da Onda**: uma caixa cai na barra e o jogador escolhe entre **ganhar** (clicar a tempo) e **perder uma torre** (deixar explodir). Substitui as caixas de suprimentos do SDD-26 (RF-28.17).
+
+- **Quando aparece:** somente com a partida em **Onda** (nunca em Preparo, Pausa, oculto, Vitória ou Derrota) e **nunca nas 2 primeiras ondas da fase 1** (a partir da onda 3 da fase 1; nas demais fases, desde a onda 1). **Frequência: cerca de 1 caixa a cada 2 ondas**, **no máximo 1 caixa por vez**.
+- **Sorteio (proposta de valores, ajustáveis em `rules` do JSON de fase):** ao iniciar cada onda elegível, o `Rng` da seed sorteia (a) **se** há caixa (50%), (b) o **instante de queda** (segundo inteiro entre 5 s e ~70% da duração dos spawns da onda) e (c) o **ponto X** (inteiro em unidades lógicas, RF-28.15, no intervalo `[LeakX + 24, PortalX − 24]`, com ponto médio se o intervalo for menor que 48; limitado ao novo intervalo após `LayoutChanged`). A caixa cai no ponto X **sorteado** da barra (cena de trilho/torres, RF-28.15), não necessariamente sobre uma torre.
+- **Presença (sinal mínimo):** a caixa **só aparece se o usuário estiver presente**: o host (TD.3b/TD.6) observa mouse/teclado e envia o comando **`SetPresence(present)`** ao log **apenas quando o estado muda** (presente = houve entrada nos últimos ~5 s). O Core nunca lê relógio nem entrada: usa o último estado registrado no log (determinismo, ADR-026). Se no instante de queda não houver presença, a queda é **adiada** (reavaliada a cada segundo de simulação até o fim da onda); se a onda acabar sem queda, o sorteio é **perdido sem punição**. Se a presença cair **com a caixa ativa**, a caixa **some sem explodir** (ausência nunca é punida).
+- **Contagem regressiva:** a caixa fica visível por **8 s de SimTime** (pausa e ocultação param a contagem, RF-28.1/DP-28.12), com **contagem regressiva visível** (número ou anel) e piscar, no render (SDD-22/RF-28.15).
+- **Torre em risco:** durante a contagem, a **torre mais próxima do ponto X** (distância 1D em unidades lógicas; empate pela menor `id`) fica **visualmente marcada** (borda vermelha pulsante + símbolo, nunca só cor, RF-28.15) e o tooltip diz "Vai explodir em N s". Se essa torre for vendida ou a próxima mudar (venda, construção mais perto), a marca acompanha o novo alvo **na hora**.
+- **Clicar a tempo** (`CollectCrate(id)`, comando do log; hotspot pequeno, SDD-22 RF-22.8): a caixa some e dá **(a) créditos de ~1 bônus de onda** (`20 + 4 × w`, RF-28.4) e **(b) reduz a recarga restante de uma habilidade** em 20 s (a de **maior** recarga restante; empate pela menor `id`; sem efeito se todas estiverem prontas, mas os créditos são pagos). Número flutuante (SDD-22).
+- **Não clicar:** ao zerar a contagem, a caixa **explode e destrói a torre mais próxima do ponto X, sem reembolso** (diferente de `SellTower`). Se não houver torres, apenas some. A destruição libera a posição e reduz o uso de `maxTowers` na hora; entra no `StateHash`. A torre destruída não é reconstruída automaticamente.
+- **Sem restos de economia idle:** a caixa **não** dá renda por tempo, **não** conta para missão e **não** traz de volta presença econômica nem progresso offline (cortados, RF-28.17). O sinal "presente agora" existe **só** para esta mecânica.
+- **Reaproveitado da caixa idle existente (TA.12 ✅, SDD-26 RF-26.11, `SupplyCrateSystem`):** a regra "no máximo 1 por vez"; o sorteio de X inteiro entre núcleo e portal com margem de 24, ponto médio se curto e limitação após `LayoutChanged` (ADR-034/ADR-032); a estrutura de agendamento determinístico por `Rng` e a ordem fixa de consumo do `Rng` (RF-26.13, com os novos sorteios **ao fim** da ordem, para não alterar replays existentes); o hotspot de clique, o número flutuante e o piscar. **Não reaproveitado:** intervalo de 3 a 6 min de tempo presente, duração de 45 s, recompensa de "1 min de renda", missão "colete 10 caixas" e contagem por tempo de relógio. O código idle fica **lado a lado** até TD.12; a ficha **TD.3b** cria `BombCrateSystem` no namespace `SideWar.Core.Td` copiando só o que serve.
+
+### RF-28.20: Colocação de torres (parte do MVP)
+
+**Contexto:** no App idle atual o arrastar do Arsenal para a cena **nunca funcionou** (a ficha **TA.8** nunca foi implementada). No TD a colocação **é parte do MVP** (sem ela não há jogo) e **substitui TA.8**, sendo entregue em **TD.8** (UI/popover) com a captura de mouse da cena em **TD.7**.
+
+Fluxo mínimo:
+
+1. **Entrar no modo construção:** botão "Construir" no HUD/popover (RF-28.14), ou **arrastar** o botão para a barra (pressionar, mover, soltar). A cena deixa de ser transparente a cliques **apenas durante o modo** (janela de captura temporária sobre a barra); fora do modo a cena nunca bloqueia ícones (RNF-28.2).
+2. **Escolher o ponto:** o jogador **clica** (ou solta o arraste) num **ponto livre da barra** (zona livre do `BuildZoneMap`, snap de 44 DIP, RF-28.15, DP-28.3). Um **fantasma** segue o mouse com o **preview de alcance** (barra fina no trilho) da torre candidata; posição inválida (fora de zona livre, ocupada, `maxTowers` atingido) mostra o fantasma **laranja** e não aceita o clique (SDD-21).
+3. **Escolher a torre:** no clique válido abre um **popover ancorado no ponto** com as torres desbloqueadas (nome, custo, ícone, alcance em tooltip); torres com custo maior que os créditos ficam desabilitadas (com o motivo). Passar o mouse numa opção atualiza o preview de alcance.
+4. **Confirmar:** clicar numa torre do popover emite `BuildTower(type, x)` (RF-28.16) e encerra o modo (uma torre por entrada; sem repetição automática no MVP).
+5. **Cancelar:** **ESC** (registrado por `RegisterHotKey` **só enquanto o modo estiver ativo**, reaproveitando o `HotkeyService` dinâmico, T1.12/T5.7), **clique direito**, clique no botão/HUD, **ocultação da cena** (tela cheia, sessão bloqueada) ou **30 s** sem ação. Cancelar não altera o estado do jogo nem o log.
+6. **Durante a Onda:** construir é permitido e **a simulação não pausa** (RF-28.4); a escolha em andamento não congela nada. Se os créditos mudarem enquanto o popover está aberto, a habilitação das opções é reavaliada; se a posição ficar inválida (`LayoutChanged`, caixa-bomba destruindo/liberando torre, RF-28.19), o modo volta ao passo 2 com aviso. O comando só é emitido no passo 4; o Core **revalida** (`PlacementValidator`) e rejeita sem efeito se inválido.
+7. O modo construção é **estado de UI**, não vai ao log nem ao `StateHash`.
 
 ## 6. Requisitos não funcionais
 
@@ -287,6 +315,11 @@ SDD-21 (mantido), SDD-22 RF-22.8 (hotspots, mantido), SDD-10/11 (a revisar), SDD
 - **CA-28.8:** Com o App em execução (MTC, Windows isolado e **com autorização do usuário**, memória `sem-testes-interativos-sem-aviso`): trilho e torres dentro da barra, sem faixa acima, ícones continuam clicáveis, o jogo **não esmaece sozinho** (MTC-28.1 a 28.4).
 - **CA-28.9:** Em Preparo e em Pausa o App fica a 0 fps (medição de SDD-16; rótulo "não medido" até medir).
 - **CA-28.10:** Nenhuma tela do jogo exibe pergunta, resposta ou pontuação de conhecimento (inspeção + T-28.10 sobre `Strings.cs`).
+- **CA-28.11:** A caixa-bomba nunca aparece em Preparo, Pausa ou nas 2 primeiras ondas da fase 1, nunca há mais de 1 caixa ativa, e a frequência média em 50 partidas scriptadas fica em ~1 caixa a cada 2 ondas (T-28.11).
+- **CA-28.12:** Sem `SetPresence(true)` no log nenhuma caixa aparece (a queda é adiada e, no fim da onda, perdida sem punição); com presença que cai com a caixa ativa, a caixa some sem explodir (T-28.12).
+- **CA-28.13:** `CollectCrate` dentro de 8 s paga ~1 bônus de onda e reduz a recarga restante de uma habilidade em 20 s; sem clique, aos 8 s de SimTime a torre **mais próxima do ponto X** (empate pela menor `id`) é destruída sem reembolso; durante a contagem essa torre está marcada e a marca acompanha mudanças do alvo (T-28.13).
+- **CA-28.14:** Mesma seed, conteúdo e comandos (incluindo `SetPresence` e `CollectCrate`) geram o mesmo `StateHash` com caixas e explosões (T-28.14); pausa e ocultação param a contagem.
+- **CA-28.15:** Modo construção: clique ou arraste até um ponto livre mostra fantasma com alcance, abre o popover de torres, `BuildTower` é emitido ao escolher; ESC, clique direito, ocultação e 30 s cancelam sem alterar o log; construir durante a Onda não pausa a simulação; fora do modo a cena não bloqueia ícones (T-28.15 no Core/UI lógico; MTC-28.5 no Windows isolado e **com autorização do usuário**).
 
 ## 10. Cenários de teste
 
@@ -302,6 +335,11 @@ SDD-21 (mantido), SDD-22 RF-22.8 (hotspots, mantido), SDD-10/11 (a revisar), SDD
 | T-28.8 | Migração de save do idle (DP-28.4) |
 | T-28.9 | `LayoutChanged` reavalia pads e `SEM POSIÇÃO` com `maxTowers` |
 | T-28.10 | Varredura de textos: nenhuma pergunta ou quiz no jogo |
+| T-28.11 | Caixa-bomba: elegibilidade (Preparo, ondas 1 e 2 da fase 1), no máximo 1, frequência em 50 seeds |
+| T-28.12 | Caixa-bomba e presença: sem `SetPresence` nada cai; queda adiada; presença cai com caixa ativa → some sem explodir |
+| T-28.13 | Caixa-bomba: coleta (créditos, recarga de habilidade) e explosão (torre mais próxima, empate, sem torres, sem reembolso, marca de risco) |
+| T-28.14 | Caixa-bomba: replay com `StateHash` igual (inclui pausa) |
+| T-28.15 | Colocação: máquina de estados do modo construção (entrar, ponto inválido, popover, confirmar, cancelar por ESC/direito/ocultar/30 s, créditos mudando, posição invalidada) |
 
 ## 11. Riscos técnicos e decisões pendentes
 
@@ -321,18 +359,20 @@ SDD-21 (mantido), SDD-22 RF-22.8 (hotspots, mantido), SDD-10/11 (a revisar), SDD
 | **DP-28.1** | Onde andam os inimigos se não há faixa acima? | Trilho de ~14 DIP no topo da própria barra, sobre os ícones (RF-28.15). Alternativa: faixa mínima de 16 DIP acima | Decidida (2026-11-16): trilho de ~14 DIP no topo da própria barra, sobre os ícones |
 | **DP-28.2** | Mundo lógico fixo (1.200 unidades) ou DIP físico (como hoje)? | Lógico fixo, dificuldade igual em qualquer monitor | Decidida (2026-11-16): aceita a proposta (mundo lógico fixo de 1.200 unidades) |
 | **DP-28.3** | Torres em pads discretos ou X livre com snap de 44 DIP? | X livre com snap (mantém ADR-034) e limite `maxTowers` | Decidida (2026-11-16): aceita a proposta (X livre com snap de 44 DIP e `maxTowers`) |
-| **DP-28.4** | Cortar presença/offline e o que fazer com saves antigos (Reservas, torres, onda)? | Cortar tudo; migrar convertendo `ondaMax` em selos iniciais ou recomeçar | Decidida (2026-11-16): cortar presença, offline, Reservas, Migrar e missões; save antigo convertido em selos iniciais pela onda máxima |
+| **DP-28.4** | Cortar presença/offline e o que fazer com saves antigos (Reservas, torres, onda)? | Cortar tudo; migrar convertendo `ondaMax` em selos iniciais ou recomeçar | Decidida (2026-11-16): cortar presença, offline, Reservas, Migrar e missões; save antigo convertido em selos iniciais pela onda máxima. **Ajuste (2026-11-16):** só o sinal binário "presente agora" (mouse/teclado nos últimos segundos) permanece, e apenas para a caixa-bomba (RF-28.19); presença econômica e offline continuam cortados |
 | **DP-28.5** | Banco de perguntas Azure: arquivar, usar como "Códex" opcional sem quiz ou apagar? | Arquivar; só flavor de uma linha em tooltips | Decidida (2026-11-16): banco de perguntas arquivado; Azure só como flavor curto nos tooltips |
 | DP-28.6 | Chamada antecipada: fórmula do bônus, teto e se reduz recargas | `ceil(ETA × (0,6 + 0,05·w))`; reduz recargas em `ETA × 0,25` | Decidida (2026-11-16): aceita a proposta (bônus `ceil(ETA × (0,6 + 0,05·w))`, reduz recargas em `ETA × 0,25`) |
 | DP-28.7 | Venda 70% (inclusive durante onda) e juros de economia | 70% sempre; sem juros | Decidida (2026-11-16): aceita a proposta (venda 70% sempre, sem juros) |
 | **DP-28.8** | Estrelas: ★3 = 0 de integridade perdida ou ≤ 2? | ≤ 2 (menos frustrante para quem joga trabalhando) | Decidida (2026-11-16): três estrelas com até 2 de integridade perdida |
-| **DP-28.9** | Conteúdo pós-MVP: modo infinito, desafio do dia, políticas roguelite, caixas, missões como metas de partida | MVP só com 6 fases, estrelas, desafios e árvore de selos | Decidida (2026-11-16): MVP enxuto (6 fases, estrelas, desafios, árvore de selos); modo infinito e desafio do dia pós-MVP |
+| **DP-28.9** | Conteúdo pós-MVP: modo infinito, desafio do dia, políticas roguelite, caixas, missões como metas de partida | MVP só com 6 fases, estrelas, desafios e árvore de selos | Decidida (2026-11-16): MVP enxuto (6 fases, estrelas, desafios, árvore de selos); modo infinito e desafio do dia pós-MVP. **Ajuste (2026-11-16):** a caixa-bomba (RF-28.19) entra no MVP como ficha TD.3b |
 | DP-28.10 | Número de fases e duração de partida no MVP | 6 fases, 8 a 15 min | Decidida (2026-11-16): aceita a proposta (6 fases, 8 a 15 min) |
 | **DP-28.11** | Se TA.1 reprovar: aceitar `Band` mínima (28 a 32 DIP) ou cancelar o redesenho visual | `Band` mínima como último recurso | Decidida (2026-11-16): se TA.1 reprovar, aceitar `Band` mínima de 28 a 32 DIP |
 | DP-28.12 | Pausar a simulação ao ocultar (fullscreen/sessão bloqueada) | Sim, sempre | Decidida (2026-11-16): aceita a proposta (pausar sempre ao ocultar) |
 | DP-28.13 | Hotkeys globais padrão (Ctrl+Alt+Espaço/P/G) | Como proposto, configuráveis | Decidida (2026-11-16): aceita a proposta (hotkeys padrão configuráveis) |
 | DP-28.14 | HUD: posição na barra (canto livre mais próximo do núcleo) e se cabe no widget existente | Canto livre; popover para o resto | Decidida (2026-11-16): aceita a proposta (canto livre mais próximo do núcleo; popover para o resto) |
 | DP-28.15 | Modos de mira expostos: Primeiro, Último, Mais forte, Mais fraco, Mais próximo | Todos | Decidida (2026-11-16): aceita a proposta (todos os modos de mira) |
+| **DP-28.16** | Caixa-bomba: entra na mecânica do jogo? | Sim, só em Onda, ~1 a cada 2 ondas, 8 s, só com usuário presente, explode na torre mais próxima | Decidida (2026-11-16, pelo usuário): RF-28.19; valores numéricos (50%, 20 s, janela de presença ~5 s) são propostas ajustáveis em JSON |
+| **DP-28.17** | Colocação de torres no MVP | Modo construção com ponto livre + popover de torre, em TD.8 | Decidida (2026-11-16, pelo usuário): RF-28.20; substitui TA.8 |
 
 ## 12. Plano de migração
 
@@ -346,21 +386,22 @@ Legenda: 🟢 WSL puro, 🟡 WSL + Windows, 🔴 só Windows. Todas dependem da 
 | TD.1 | Conteúdo TD v2: `towers.json` (ramos), `enemies.json` (traços), `waves.json` autoral por fase, `stages.json` (6), `abilities.json`, `meta.json` (selos e árvore); `ContentValidator` com fraqueza declarada | TD.0 | 🟢 |
 | TD.2 | Core: máquina de partida (`Preparo/Onda/Derrota/Vitória`), `StartWave`, `CallNextWave`, auto-início, integridade, `SellTower`, créditos e bônus | TD.1 | 🟢 |
 | TD.3 | Core: combate com traços (voador, blindado, regenera, drena), balanceador/nós, ramos/capstones, mira `Close`, habilidades, chefes; `StateHash` | TD.2 | 🟢 |
+| TD.3b | Caixa-bomba (Core: spawn, coleta, explosão; host: sinal de presença) (RF-28.19): `BombCrateSystem`, comandos `SetPresence` e `CollectCrate`, marca de torre em risco, `StateHash`; host envia `SetPresence` por mouse/teclado dos últimos ~5 s (parte host junto de TD.6) | TD.3, TD.6 | 🟡 |
 | TD.4 | Core: mundo lógico 1.200 e pads (`LayoutChanged` → mapa lógico→físico), `maxTowers`, `SEM POSIÇÃO` | TD.2, SDD-21 | 🟢 |
 | TD.5 | Perfil v2 e persistência (selos, estrelas, árvore, desbloqueios, seed), migração do save do idle (DP-28.4) | TD.1, TD.2, SDD-14 | 🟢 |
 | TD.6 | Runtime/host: remover presença/offline/eventos do `GameHost`, pausa por ocultação, auto-início, hotkeys, bandeja | TD.2 | 🟡 |
 | TD.7 | Render: cena só na barra (`SceneLayout` com altura da barra), trilho, torres, indicadores de traço, hotspots, 0 fps em Preparo; **gate: TA.1 aprovado** | TD.4, TD.6, TA.1, TA.5 | 🟡/🔴 |
-| TD.8 | UI: HUD compacto, popover (inspetor, construção, preview de onda, habilidades, Mapa, árvore), Configurações (auto-início, opacidade em segundo plano desligada) | TD.6, TD.7 | 🟡 |
+| TD.8 | UI: HUD compacto, popover (inspetor, **colocação de torres: modo construção, fantasma com alcance, popover de torre, cancelar por ESC/clique direito, RF-28.20**, preview de onda, habilidades, Mapa, árvore), exibição da caixa-bomba (contagem, marca de risco), Configurações (auto-início, opacidade em segundo plano desligada) | TD.6, TD.7, TD.3b | 🟡 |
 | TD.9 | Arte e visual: ícones de 8 inimigos, 3 chefes, 5 torres + ramos, código de cor (SDD-20/09 revistos) | TD.7 | 🟡 |
 | TD.10 | `SanityBot` novo e curva de balanceamento das 6 fases; evidência E-TD | TD.3 | 🟢 |
 | TD.11 | Pós-MVP: modo infinito, desafio do dia, políticas (DP-28.9) | TD.8, TD.10 | 🟡 |
 | TD.12 | Limpeza e documentação: arquivar SDD-25/26/27, marcar substituições, `PLANO.md`, `README.md`, MTC-28 | todas | 🟢 |
 
-**Ordem sugerida:** TD.0 → (TD.1 → TD.2 → TD.3 ‖ TD.4 ‖ TD.10) → TD.5 e TD.6 → TD.7 (gate TA.1) → TD.8 → TD.9 → TD.12; TD.11 por último.
+**Ordem sugerida:** TD.0 → (TD.1 → TD.2 → TD.3 ‖ TD.4 ‖ TD.10) → TD.5 e TD.6 → TD.3b → TD.7 (gate TA.1) → TD.8 → TD.9 → TD.12; TD.11 por último.
 
 ### 12.2 O que é reaproveitado (sem retrabalho)
 
-`PCG32`/`StateHash`/`ReplayRunner` (estrutura), `PowTable`, `CreditFormatter`, `ContentLoader`/`ContentValidator`/`ContentHash`, `EntityStore`/`Handle`, `StripLayout` e `LayoutChanged`, `PlacementValidator` 1D, `BuildZoneMap`, UIA (SDD-21), `FullscreenWatcher`/`WinEventHook`, `ZOrderCoordinator`, hotspots (SDD-22 RF-22.8), `TrayIcon`.
+`PCG32`/`StateHash`/`ReplayRunner` (estrutura), `PowTable`, `CreditFormatter`, `ContentLoader`/`ContentValidator`/`ContentHash`, `EntityStore`/`Handle`, `StripLayout` e `LayoutChanged`, `PlacementValidator` 1D, `BuildZoneMap`, UIA (SDD-21), `FullscreenWatcher`/`WinEventHook`, `ZOrderCoordinator`, hotspots (SDD-22 RF-22.8), `TrayIcon`, e da caixa idle (TA.12/SDD-26 RF-26.11) a parte listada em RF-28.19.
 
 ### 12.3 Fichas e SDDs substituídos ou a revisar (não editados nesta ficha)
 
@@ -368,7 +409,8 @@ Legenda: 🟢 WSL puro, 🟡 WSL + Windows, 🔴 só Windows. Todas dependem da 
 |---|---|
 | **SDD-27** (economia idle) | **Substituída**, exceto RF-27.2 (`CreditFormatter`), RF-27.3 (`RateMeter`, opcional) e a ideia de `PowTable` |
 | **SDD-25** (presença e offline) | **Substituída por completo** |
-| **SDD-26** (eventos ao vivo, perguntas) | **Substituída**; só ficam o ledger/RNG como utilitários, se úteis |
+| **SDD-26** (eventos ao vivo, perguntas) | **Substituída**; só ficam o ledger/RNG como utilitários, se úteis; a caixa de suprimentos (RF-26.11, TA.12) é substituída pela caixa-bomba (RF-28.19), reaproveitando X sorteado, 1 por vez e ordem do `Rng` |
+| **TA.8** (plataforma do modo construção: arraste do Arsenal até a cena; PLANO §8) | **Substituída pela série TD** (nunca implementada; o arrastar nunca funcionou no App idle). A colocação passa a RF-28.20, em TD.8 (UI) com a captura de mouse em TD.7; ESC dinâmico, cursores e cancelamentos (clique direito, ocultar, 30 s) são reaproveitados como especificação |
 | **SDD-13** | Já parcialmente substituída; passa a **substituída** |
 | **SDD-24** (painel e cards) | **Reescrita** (RF-24.6 Campanha → Mapa, 24.7 Missões e 24.8 Migrar removidos, 24.9/24.10 cards removidos; Arsenal vira o popover de construção) |
 | **SDD-23** (widget HUD) | **Reescrita** como HUD compacto (RF-28.14) |

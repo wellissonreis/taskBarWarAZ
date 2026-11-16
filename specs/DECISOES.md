@@ -292,6 +292,7 @@ Para alterar uma decisão aceita, é preciso registrar uma nova ADR com justific
 - **Substitui:** ADR-019, ADR-022 e ADR-024; SDD-27, SDD-25 e SDD-26 (SDD-13 passa a substituída), com as exceções de SDD-28 §12.3.
 - **Refina:** ADR-016, ADR-018, ADR-031 e ADR-034 (ver as notas de status em cada uma); mantém ADR-026 (layout como estado) e ADR-027.
 - **Obsoletas por esta ADR (histórico preservado):** D-08, D-10, D-11, D-14 e D-18 (dependiam do idle, de presença/offline, de missões ou da economia de SDD-27).
+- **Adendo (2026-11-16, ficha TD.0b):** o usuário acrescentou (a) a **caixa-bomba** (SDD-28 RF-28.19, DP-28.16; só em onda, só com usuário presente), o que mantém **apenas** o sinal "presente agora" (ajuste de DP-28.4: presença econômica e offline seguem cortados), e (b) a **colocação de torres** como parte do MVP (RF-28.20, DP-28.17), substituindo TA.8. Fichas TD.3b e TD.8.
 - **Revisões em SDDs (fichas TD.1 a TD.12, não editadas aqui):** SDD-07, 10, 11, 12, 14, 15, 16, 17, 22, 23, 24 (lista em SDD-28 §12.3). Série de execução em PLANO.md, seção 9.
 
 ---
