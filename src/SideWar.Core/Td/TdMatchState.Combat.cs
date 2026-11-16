@@ -82,7 +82,7 @@ public sealed partial class TdMatchState
         double bestD = double.MaxValue;
         for (int i = 0; i < _towers.Count; i++)
         {
-            if (_towers[i].DisabledTicks > 0) continue;
+            if (_towers[i].DisabledTicks > 0 || !_towers[i].Placed) continue;
             double d = Dist(_towers[i].X, e.X);
             if (d <= st.ActRange && d < bestD) { best = i; bestD = d; }
         }
@@ -116,7 +116,7 @@ public sealed partial class TdMatchState
                 if (j == i) continue;
                 var s = _towers[j];
                 var sd = _content.Towers[s.DefIndex];
-                if (sd.Kind != "support" || s.DisabledTicks > 0 || Dist(s.X, t.X) > sd.Range) continue;
+                if (sd.Kind != "support" || s.DisabledTicks > 0 || !s.Placed || Dist(s.X, t.X) > sd.Range) continue;
                 double c = s.Branch == 0 ? BaseAura * LevelMult(s, sd) : Stat(s, sd, "neighborCadenceBonus", 0);
                 if (c > 0 && scale) c *= Stat(s, sd, "bonusMultiplierDuringScale", 1.0);
                 cad += c;
@@ -144,7 +144,7 @@ public sealed partial class TdMatchState
             if (t.NodeCdTicks > 0) t.NodeCdTicks--;
             bool disabled = t.DisabledTicks > 0;
             if (disabled) t.DisabledTicks--;
-            if (!disabled)
+            if (!disabled && t.Placed)
             {
                 if (def.Kind == "attack" && t.CooldownTicks == 0) FireAttack(ref t, def, ti, scale);
                 else if (def.Kind == "blocker") SpawnNodes(ref t, def, ti);

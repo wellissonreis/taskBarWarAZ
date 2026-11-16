@@ -29,3 +29,15 @@ public sealed record SetTargeting(int TowerId, TdTargeting Mode) : IGameCommand;
 
 /// <summary>Usa uma habilidade (<c>scale</c>, <c>firewall</c>, <c>snapshot</c>); só em Onda (RF-28.9).</summary>
 public sealed record UseAbility(string AbilityId) : IGameCommand;
+
+/// <summary>
+/// Novo layout da barra (RF-28.15, ADR-026): largura e zonas livres em DIP, vindas do <c>BuildZoneMap</c> pelo hospedeiro (o Core não chama o Runtime).
+/// Muda só o mapa lógico → físico (<c>DIP = X × Largura / 1200</c>); torres cuja zona sumiu ficam SEM POSIÇÃO, e as que voltarem a caber são reposicionadas.
+/// </summary>
+public sealed record LayoutChanged(SideWar.Core.Simulation.StripLayout Layout) : IGameCommand;
+
+/// <summary>Posiciona, sem custo, uma torre SEM POSIÇÃO em X lógico (snap de 44 DIP, RF-28.20); torre já posicionada é rejeitada.</summary>
+public sealed record PlaceTower(int TowerId, int X) : IGameCommand;
+
+/// <summary>Reposiciona, sem custo, uma torre (posicionada ou não) em X lógico (snap de 44 DIP); mantém nível, ramo e recarga.</summary>
+public sealed record MoveTower(int TowerId, int X) : IGameCommand;

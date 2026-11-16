@@ -27,7 +27,10 @@ public struct TdTower
 {
     public int Id { get; set; }
     public int DefIndex { get; set; }
+    /// <summary>Posição em unidades lógicas (mundo fixo 1.200, RF-28.15). Vale também para torre sem posição (posição gravada).</summary>
     public int X { get; set; }
+    /// <summary>false = SEM POSIÇÃO (ADR-034): a zona sumiu após <c>LayoutChanged</c>; não atira, não dá aura, não conta no bônus de maxTowers.</summary>
+    public bool Placed { get; set; }
     public int Level { get; set; }
     public int CooldownTicks { get; set; }
     public long Invested { get; set; }
@@ -133,6 +136,8 @@ public enum TdEventType : byte
     CallNextBonus, Victory, Defeat,
     // TD.3 (anexados ao fim: valores anteriores não mudam).
     TowerBranched, TowerTargeting, AbilityUsed, TowerDisabled, BossSplit, NodeSpawned, NodeEnded,
+    // TD.4 (anexados ao fim). A = id da torre; LayoutApplied: A = largura em DIP, B = torres sem posição.
+    TowerPlaced, TowerUnplaced, LayoutApplied,
 }
 
 /// <summary>Evento observável (não entra no hash). <c>A</c>/<c>B</c>: valores do evento (onda, créditos, id etc.).</summary>

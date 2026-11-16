@@ -28,6 +28,7 @@ public sealed partial class TdMatchState
     private readonly HashSet<int> _held = [];
     private readonly List<TdEvent> _events = [];
     private Rng _rng;
+    private SideWar.Core.Simulation.StripLayout? _layout;
     private int _nextTowerId = 1;
     private int _nextEnemyId = 1;
     private int _nextNodeId = 1;
@@ -95,7 +96,7 @@ public sealed partial class TdMatchState
         {
             int n = _stage.MaxTowers;
             foreach (var t in _towers)
-                if (t.Level >= 5 && Stat(t, _content.Towers[t.DefIndex], "maxTowersBonus", 0) > 0) n++;
+                if (t.Placed && t.Level >= 5 && Stat(t, _content.Towers[t.DefIndex], "maxTowersBonus", 0) > 0) n++;
             return n;
         }
     }
@@ -186,6 +187,9 @@ public sealed partial class TdMatchState
             StartWave => DoStartWave(),
             CallNextWave => DoCallNextWave(),
             BuildTower b => DoBuild(b),
+            LayoutChanged l => DoLayoutChanged(l),
+            PlaceTower p => DoPlace(p),
+            MoveTower m => DoMove(m),
             SellTower s => DoSell(s),
             UpgradeTower u => DoUpgrade(u),
             SetAutoStart a => DoSetAutoStart(a),
@@ -270,11 +274,12 @@ public sealed partial class TdMatchState
         if (di < 0) return Reject(CommandReason.TowerNotFound);
         var def = _content.Towers[di];
         if (_stage.Id < def.UnlockStage) return Reject(CommandReason.TowerLocked);
-        if (cmd.X < 0 || cmd.X > TdWorld.PathLength) return Reject(CommandReason.OutOfZone);
+        var reason = ResolvePlacement(cmd.X, 0, out int px);
+        if (reason != CommandReason.None) return Reject(reason);
         if (_towers.Count >= MaxTowers) return Reject(CommandReason.TowerLimit);
         if (Credits < def.Cost) return Reject(CommandReason.InsufficientCredits, def.Cost - Credits);
         Credits -= def.Cost;
-        var t = new TdTower { Id = _nextTowerId++, DefIndex = di, X = cmd.X, Level = 1, Invested = def.Cost, Targeting = (byte)ParseTargeting(def.DefaultTargeting) };
+        var t = new TdTower { Id = _nextTowerId++, DefIndex = di, X = px, Placed = true, Level = 1, Invested = def.Cost, Targeting = (byte)ParseTargeting(def.DefaultTargeting) };
         _towers.Add(t);
         Emit(TdEventType.TowerBuilt, t.Id, def.Cost);
         return CommandResult.Ok;

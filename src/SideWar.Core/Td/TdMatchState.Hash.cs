@@ -28,10 +28,13 @@ public sealed partial class TdMatchState
         h.AddInt32(_nextTowerId);
         h.AddInt32(_nextEnemyId);
         h.AddInt32(_nextNodeId);
+        h.AddInt32(_layout?.Width ?? 0);
+        h.AddInt32(_layout?.FreeZoneCount ?? 0);
+        for (int i = 0; _layout is not null && i < _layout.FreeZoneCount; i++) { h.AddInt32(_layout.ZoneAt(i).X0); h.AddInt32(_layout.ZoneAt(i).X1); }
         h.AddInt32(_towers.Count);
         foreach (var t in _towers)
         {
-            h.AddInt32(t.Id); h.AddInt32(t.DefIndex); h.AddInt32(t.X); h.AddInt32(t.Level);
+            h.AddInt32(t.Id); h.AddInt32(t.DefIndex); h.AddInt32(t.X); h.AddBool(t.Placed); h.AddInt32(t.Level);
             h.AddInt32(t.CooldownTicks); h.AddInt64(t.Invested); h.AddByte(t.Branch);
             h.AddByte(t.Targeting); h.AddInt32(t.DisabledTicks); h.AddInt32(t.FocusTargetId); h.AddInt32(t.FocusHits);
             h.AddInt32(t.ShotCount); h.AddInt32(t.ParalyzeCdTicks); h.AddInt32(t.NodeCdTicks);
