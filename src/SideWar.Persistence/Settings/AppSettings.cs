@@ -35,13 +35,22 @@ public sealed record DockSettings
     public bool ReserveSpace { get; init; }
 }
 
-public sealed record OpacitySettings { public int Peek { get; init; } = 60; }
+/// <summary>
+/// Opacidade da faixa (0-255). Por padrão nunca esmaece sozinha: <see cref="Peek"/> só vale com Behavior.PeekOnHover
+/// e <see cref="Absent"/> só vale com <see cref="FadeWhenAbsent"/>.
+/// </summary>
+public sealed record OpacitySettings
+{
+    public int Peek { get; init; } = 60;
+    public bool FadeWhenAbsent { get; init; }
+    public int Absent { get; init; } = 128;
+}
 
 public sealed record BehaviorSettings
 {
     public HideOnFullscreenMode HideOnFullscreen { get; init; } = HideOnFullscreenMode.SameMonitor;
     public int AutoPassiveSeconds { get; init; } = 8;
-    public bool PeekOnHover { get; init; } = true;
+    public bool PeekOnHover { get; init; }
     public bool StartWithWindows { get; init; }
 }
 

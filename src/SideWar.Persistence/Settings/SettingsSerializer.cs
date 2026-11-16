@@ -23,6 +23,8 @@ public static class SettingsSerializer
         w.WriteEndObject();
         w.WriteStartObject("opacity");
         w.WriteNumber("peek", s.Opacity.Peek);
+        w.WriteBoolean("fadeWhenAbsent", s.Opacity.FadeWhenAbsent);
+        w.WriteNumber("absent", s.Opacity.Absent);
         w.WriteEndObject();
         w.WriteStartObject("behavior");
         w.WriteString("hideOnFullscreen", s.Behavior.HideOnFullscreen.ToString());
@@ -81,7 +83,12 @@ public static class SettingsSerializer
                 BoundsHint = Bounds(dock, "boundsHint"),
                 ReserveSpace = Bool(dock, "reserveSpace", d.Dock.ReserveSpace),
             },
-            Opacity = new OpacitySettings { Peek = IntRange(opacity, "peek", 0, 255, d.Opacity.Peek) },
+            Opacity = new OpacitySettings
+            {
+                Peek = IntRange(opacity, "peek", 0, 255, d.Opacity.Peek),
+                FadeWhenAbsent = Bool(opacity, "fadeWhenAbsent", d.Opacity.FadeWhenAbsent),
+                Absent = IntRange(opacity, "absent", 0, 255, d.Opacity.Absent),
+            },
             Behavior = new BehaviorSettings
             {
                 HideOnFullscreen = EnumVal(behavior, "hideOnFullscreen", d.Behavior.HideOnFullscreen),

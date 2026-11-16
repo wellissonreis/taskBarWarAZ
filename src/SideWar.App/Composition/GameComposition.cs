@@ -208,6 +208,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         game.Mode.TargetClicked += OnTargetClicked;
         game.Mode.ModeChanged += OnModeChanged;
         game.Mode.SetPeekEnabled(settings.Behavior.PeekOnHover);
+        ApplyOpacityLevels(settings.Opacity);
         game.Mode.SetPowerProfile(runtime.App.PowerProfile); // T7.6 D8: peek só no perfil Normal
         game.Mode.Reapply();
         res.Started("mode", () =>
@@ -262,12 +263,17 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         return persistence.Write(session, profile);
     }
 
+    /// <summary>Padrão: nunca esmaece. Ausente só reduz a opacidade se o usuário ligou FadeWhenAbsent.</summary>
+    private void ApplyOpacityLevels(OpacitySettings o) =>
+        game.Mode.SetOpacityLevels((byte)o.Peek, o.FadeWhenAbsent ? (byte)o.Absent : OverlayModeController.PresentAlpha);
+
     /// <summary>Novas configurações salvas pela janela WPF (T-UI → T-Game).</summary>
     public void ApplySettings(AppSettings value)
     {
         settings = value;
         runtime.ApplySettings(value.Performance.PresentFps, value.Performance.AbsentFps, value.Accessibility.ReducedMotion, value.AutoScale);
         game.Mode.SetPeekEnabled(value.Behavior.PeekOnHover);
+        ApplyOpacityLevels(value.Opacity);
         if (taskbar is not null) taskbar.UseUia = value.Taskbar.UseUia;
         if (power is not null)
         {

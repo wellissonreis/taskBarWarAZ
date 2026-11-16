@@ -30,7 +30,7 @@ public sealed record MenuState(
 public sealed record MenuEntry(string Text, MenuCommand? Command = null, bool Checked = false, bool Grayed = false,
     bool Separator = false, IReadOnlyList<MenuEntry>? Children = null);
 
-/// <summary>Pure builder of the RF-15.8 menu (pt-BR). While hidden only "Mostrar overlay" acts (RF-15.6).</summary>
+/// <summary>Pure builder of the RF-15.8 menu (pt-BR). While hidden only "Mostrar SideWar" acts (RF-15.6).</summary>
 public static class MenuModel
 {
     public static IReadOnlyList<MenuEntry> Build(MenuState state)
@@ -43,13 +43,13 @@ public static class MenuModel
         [
             new("Modo interativo", new(MenuCommandKind.ToggleInteractive), Checked: state.InteractiveActive, Grayed: state.OverlayHidden),
             new(state.Paused ? "Retomar" : "Pausar", new(MenuCommandKind.TogglePause), Grayed: state.OverlayHidden),
-            new(state.OverlayHidden ? "Mostrar overlay" : "Ocultar overlay", new(MenuCommandKind.ToggleVisibility)),
+            new(state.OverlayHidden ? "Mostrar SideWar" : "Minimizar (ocultar)", new(MenuCommandKind.ToggleVisibility)),
             new("", Separator: true),
             new("Monitor", Grayed: children.Count == 0 || state.OverlayHidden, Children: children),
             new("", Separator: true),
             new("Configurações…", new(MenuCommandKind.OpenSettings)),
             new("Sobre o SideWar…", new(MenuCommandKind.OpenAbout)),
-            new("Sair", new(MenuCommandKind.Exit)),
+            new("Sair (fechar o SideWar)", new(MenuCommandKind.Exit)),
         ];
     }
 }

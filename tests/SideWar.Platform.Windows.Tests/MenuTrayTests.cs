@@ -14,7 +14,7 @@ public sealed class MenuModelTests
     {
         var entries = MenuModel.Build(new MenuState(InteractiveActive: true, Paused: false, OverlayHidden: false,
             MonitorLabels: ["1 (1920×1080)", "2 (2560×1440)"], SelectedMonitor: 1));
-        Assert.Equal(["Modo interativo", "Pausar", "Ocultar overlay", "", "Monitor", "", "Configurações…", "Sobre o SideWar…", "Sair"],
+        Assert.Equal(["Modo interativo", "Pausar", "Minimizar (ocultar)", "", "Monitor", "", "Configurações…", "Sobre o SideWar…", "Sair (fechar o SideWar)"],
             entries.Select(e => e.Text));
         Assert.True(entries[0].Checked);
         Assert.All(entries.Where(e => !e.Separator && e.Children is null), e => Assert.False(e.Grayed));
@@ -27,7 +27,7 @@ public sealed class MenuModelTests
     {
         var entries = MenuModel.Build(new MenuState(Paused: true, OverlayHidden: true, MonitorLabels: ["1"]));
         Assert.Equal("Retomar", entries[1].Text);
-        Assert.Equal("Mostrar overlay", entries[2].Text);
+        Assert.Equal("Mostrar SideWar", entries[2].Text);
         Assert.True(entries[0].Grayed);
         Assert.True(entries[1].Grayed);
         Assert.False(entries[2].Grayed);

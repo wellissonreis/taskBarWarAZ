@@ -21,9 +21,9 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     private readonly Func<AppSettings, bool> save;
     private readonly Dictionary<string, string?> errors = [];
 
-    private bool startWithWindows, autoScale, reducedMotion, saverOnBattery, forceSaver, useUia, peekOnHover, audioEnabled, recordCommands;
+    private bool startWithWindows, autoScale, reducedMotion, saverOnBattery, forceSaver, useUia, peekOnHover, fadeWhenAbsent, audioEnabled, recordCommands;
     private HideOnFullscreenMode hideOnFullscreen;
-    private int presentFps, absentFps, peekOpacity, autoPassiveSeconds, volumePercent;
+    private int presentFps, absentFps, peekOpacity, absentOpacity, autoPassiveSeconds, volumePercent;
     private LogLevelSetting logLevel;
     private string toggleInteractive = "", toggleVisibility = "", togglePause = "";
     private string? saveError;
@@ -43,6 +43,8 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     public bool AutoScale { get => autoScale; set => Set(ref autoScale, value); }
     public bool PeekOnHover { get => peekOnHover; set => Set(ref peekOnHover, value); }
     public int PeekOpacity { get => peekOpacity; set { if (Set(ref peekOpacity, value)) Check(nameof(PeekOpacity), value is >= 0 and <= 255 ? null : "Opacidade entre 0 e 255."); } }
+    public bool FadeWhenAbsent { get => fadeWhenAbsent; set => Set(ref fadeWhenAbsent, value); }
+    public int AbsentOpacity { get => absentOpacity; set { if (Set(ref absentOpacity, value)) Check(nameof(AbsentOpacity), value is >= 0 and <= 255 ? null : "Opacidade entre 0 e 255."); } }
     public int AutoPassiveSeconds { get => autoPassiveSeconds; set { if (Set(ref autoPassiveSeconds, value)) Check(nameof(AutoPassiveSeconds), value is >= 1 and <= 300 ? null : "Entre 1 e 300 segundos."); } }
     public int PresentFps { get => presentFps; set { if (Set(ref presentFps, value)) Check(nameof(PresentFps), PresentFpsChoices.Contains(value) ? null : "Use 20, 30 ou 60."); } }
     public int AbsentFps { get => absentFps; set { if (Set(ref absentFps, value)) Check(nameof(AbsentFps), AbsentFpsChoices.Contains(value) ? null : "Use 4 ou 8."); } }
@@ -93,7 +95,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     {
         AutoScale = autoScale,
         Dock = original.Dock,
-        Opacity = original.Opacity with { Peek = peekOpacity },
+        Opacity = original.Opacity with { Peek = peekOpacity, FadeWhenAbsent = fadeWhenAbsent, Absent = absentOpacity },
         Behavior = original.Behavior with
         {
             HideOnFullscreen = hideOnFullscreen,
@@ -140,6 +142,8 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         autoScale = s.AutoScale;
         peekOnHover = s.Behavior.PeekOnHover;
         peekOpacity = s.Opacity.Peek;
+        fadeWhenAbsent = s.Opacity.FadeWhenAbsent;
+        absentOpacity = s.Opacity.Absent;
         autoPassiveSeconds = s.Behavior.AutoPassiveSeconds;
         presentFps = s.Performance.PresentFps;
         absentFps = s.Performance.AbsentFps;

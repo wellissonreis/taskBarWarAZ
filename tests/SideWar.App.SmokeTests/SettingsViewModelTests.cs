@@ -101,6 +101,21 @@ public class SettingsViewModelTests
     }
 
     [Fact]
+    public void Defaults_never_fade_and_opacity_settings_roundtrip()
+    {
+        var vm = Make(out _);
+        Assert.False(vm.PeekOnHover);
+        Assert.False(vm.FadeWhenAbsent);
+        vm.FadeWhenAbsent = true;
+        vm.AbsentOpacity = 90;
+        var o = vm.ToSettings().Opacity;
+        Assert.True(o.FadeWhenAbsent);
+        Assert.Equal(90, o.Absent);
+        vm.AbsentOpacity = 300;
+        Assert.False(vm.IsValid);
+    }
+
+    [Fact]
     public void Non_edited_fields_are_preserved()
     {
         var orig = AppSettings.Default with { Dock = new DockSettings { MonitorDevice = "X", ReserveSpace = true } };

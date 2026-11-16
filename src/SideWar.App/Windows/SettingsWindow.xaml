@@ -20,6 +20,20 @@
           <TextBlock x:Name="PresenceText" TextWrapping="Wrap" Foreground="Gray" />
         </StackPanel>
       </TabItem>
+      <TabItem Header="Aparência">
+        <StackPanel Margin="12">
+          <TextBlock TextWrapping="Wrap" Foreground="Gray" Margin="0,0,0,8"
+                     Text="Por padrão a faixa nunca esmaece sozinha (opacidade 100%). Ligue as opções abaixo para permitir." />
+          <CheckBox Content="Esmaecer ao passar o mouse sobre a faixa" IsChecked="{Binding PeekOnHover}" Margin="0,0,0,4" />
+          <TextBlock Text="Opacidade ao passar o mouse (0–255)" />
+          <Slider Minimum="0" Maximum="255" Value="{Binding PeekOpacity}" IsEnabled="{Binding PeekOnHover}" Margin="0,2,0,0" />
+          <TextBlock Text="{Binding PeekOpacity}" Margin="0,0,0,12" />
+          <CheckBox Content="Esmaecer quando eu estiver ausente" IsChecked="{Binding FadeWhenAbsent}" Margin="0,0,0,4" />
+          <TextBlock Text="Opacidade quando ausente (0–255)" />
+          <Slider Minimum="0" Maximum="255" Value="{Binding AbsentOpacity}" IsEnabled="{Binding FadeWhenAbsent}" Margin="0,2,0,0" />
+          <TextBlock Text="{Binding AbsentOpacity}" />
+        </StackPanel>
+      </TabItem>
       <TabItem Header="Desempenho">
         <StackPanel Margin="12">
           <TextBlock Text="FPS presente" />

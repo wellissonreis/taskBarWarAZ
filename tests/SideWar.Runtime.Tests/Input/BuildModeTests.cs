@@ -39,6 +39,15 @@ public sealed class BuildModeControllerTests
     }
 
     [Fact]
+    public void AbsentAlphaIsConfigurable()
+    {
+        var m = new OverlayModeController(Tps);
+        Assert.Null(m.SetAbsentAlpha(255)); // not absent: nothing visible changes
+        Assert.Equal(255, m.SetAbsent(true)!.Value.Alpha);
+        Assert.Equal(40, m.SetAbsentAlpha(40)!.Value.Alpha);
+    }
+
+    [Fact]
     public void PressStartsPressedWithoutOverlay()
     {
         var c = New();

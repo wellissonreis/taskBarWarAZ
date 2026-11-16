@@ -21,6 +21,7 @@ public sealed class OverlayModeController
     private bool cursorOver;
     private bool dragActive;
     private bool absent;
+    private byte absentAlpha = AbsentAlpha;
     private long? deadline;
     private bool buildActive;
     private OverlayMode modeBeforeBuild;
@@ -43,7 +44,7 @@ public sealed class OverlayModeController
     public long? NextDeadline => deadline;
 
     /// <summary>Current effects (initial application at startup).</summary>
-    public ModeEffects Effects => new(Mode == OverlayMode.Passive, absent ? AbsentAlpha : PresentAlpha, false);
+    public ModeEffects Effects => new(Mode == OverlayMode.Passive, absent ? absentAlpha : PresentAlpha, false);
 
     /// <summary>Hotkey / widget control / menu: Passive ⇄ Interactive.</summary>
     public ModeEffects? Toggle(long now) => SetMode(Mode == OverlayMode.Passive ? OverlayMode.Interactive : OverlayMode.Passive, now);
@@ -132,6 +133,14 @@ public sealed class OverlayModeController
         if (absent == value) return null;
         absent = value;
         return Effects;
+    }
+
+    /// <summary>Alpha used while absent (default <see cref="AbsentAlpha"/>; 255 = never fade). Returns effects if the current alpha changed.</summary>
+    public ModeEffects? SetAbsentAlpha(byte alpha)
+    {
+        if (absentAlpha == alpha) return null;
+        absentAlpha = alpha;
+        return absent ? Effects : null;
     }
 
     /// <summary>Called at or after <see cref="NextDeadline"/>; returns Passive effects when the deadline elapsed.</summary>

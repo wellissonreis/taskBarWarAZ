@@ -28,6 +28,7 @@ public sealed class SceneModeController
     private float barHeightDip = SceneHitTester.DefaultBarHeight;
     private bool tracking;
     private bool peekEnabled;
+    private byte peekAlpha = PeekController.PeekAlpha;
     private PowerProfile powerProfile = PowerProfile.Normal;
 
     internal SceneModeController(GameThread owner) => this.owner = owner;
@@ -84,6 +85,15 @@ public sealed class SceneModeController
     {
         owner.VerifyAccess();
         mode.SetDragActive(active, Now);
+    }
+
+    /// <summary>Fade levels from settings: alpha while peeking and while absent (255 = never fades when absent).</summary>
+    public void SetOpacityLevels(byte peek, byte absent)
+    {
+        owner.VerifyAccess();
+        peekAlpha = peek;
+        var fx = mode.SetAbsentAlpha(absent);
+        if (fx is not null) Apply(fx, modeChanged: false); else ApplyOpacity();
     }
 
     /// <summary>Peek is opt-in for the strip (DP-22.3); polling runs only while enabled, Passive and visible.</summary>
@@ -186,7 +196,7 @@ public sealed class SceneModeController
     private void ApplyOpacity()
     {
         var alpha = mode.Effects.Alpha;
-        if (peek.Peeking) alpha = Math.Min(alpha, PeekController.PeekAlpha);
+        if (peek.Peeking) alpha = Math.Min(alpha, peekAlpha);
         ActiveSurface?.SetOpacity(alpha);
     }
 

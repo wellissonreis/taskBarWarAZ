@@ -44,8 +44,8 @@ public class SettingsStoreTests
         var s = new AppSettings
         {
             Dock = new DockSettings { MonitorDevice = "\\\\.\\DISPLAY2", BoundsHint = [0, 0, 1920, 1080], ReserveSpace = true },
-            Opacity = new OpacitySettings { Peek = 90 },
-            Behavior = new BehaviorSettings { HideOnFullscreen = HideOnFullscreenMode.Never, AutoPassiveSeconds = 12, PeekOnHover = false, StartWithWindows = true },
+            Opacity = new OpacitySettings { Peek = 90, FadeWhenAbsent = true, Absent = 77 },
+            Behavior = new BehaviorSettings { HideOnFullscreen = HideOnFullscreenMode.Never, AutoPassiveSeconds = 12, PeekOnHover = true, StartWithWindows = true },
             AutoScale = false,
             Performance = new PerformanceSettings { PresentFps = 60, AbsentFps = 4, SaverOnBattery = false, ForceSaver = true },
             Accessibility = new AccessibilitySettings { ReducedMotion = true },
@@ -99,6 +99,9 @@ public class SettingsStoreTests
         Assert.True(s.Behavior.StartWithWindows);
         Assert.Equal(0.6, s.Audio.Volume);
         Assert.Equal(60, s.Opacity.Peek);
+        Assert.False(s.Opacity.FadeWhenAbsent);
+        Assert.Equal(128, s.Opacity.Absent);
+        Assert.False(s.Behavior.PeekOnHover); // novo padrão: nunca esmaece sozinho
         Assert.Equal("Ctrl+Alt+P", s.Hotkeys.TogglePause);
         Assert.Equal("Ctrl+Alt+K", s.Hotkeys.ToggleVisibility);
         Assert.True(s.Accessibility.ReducedMotion);
