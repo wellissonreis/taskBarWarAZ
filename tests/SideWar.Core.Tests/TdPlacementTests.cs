@@ -13,7 +13,7 @@ namespace SideWar.Core.Tests;
 /// <summary>TD.4: mundo lógico 1.200, mapa lógico → DIP, snap de 44 DIP, sobreposição, SEM POSIÇÃO e LayoutChanged.</summary>
 public sealed class TdPlacementTests
 {
-    private static readonly TdContent Content = TdContentLoader.LoadEmbedded();
+    private static readonly TdContent Content = TdMechanicsContent.Load();
 
     private static TdContent Rich(int maxTowers = 12)
     {

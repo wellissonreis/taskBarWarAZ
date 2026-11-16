@@ -2,13 +2,13 @@
   {
     "id": "bolt", "name": "Raio", "flavor": "Como uma Azure VM: capacidade bruta sob demanda.",
     "role": "Alvo único, longo alcance, polivalente", "kind": "attack", "targets": "both", "defaultTargeting": "first",
-    "cost": 70, "range": 150, "damage": 14, "interval": 0.6, "unlockStage": 1, "stats": {},
+    "cost": 90, "range": 150, "damage": 24, "interval": 0.9, "unlockStage": 1, "stats": {},
     "levels": [ { "level": 1, "costFactor": 1.0, "damageMultiplier": 1.0 }, { "level": 2, "costFactor": 0.9, "damageMultiplier": 1.5 }, { "level": 3, "costFactor": 1.6, "damageMultiplier": 2.2 } ],
     "strong": ["flying", "drain", "durable"], "weak": ["swarm"], "weaknessText": "Dano por tiro baixo contra enxames e blindados.",
     "branches": [
       { "id": "A", "name": "Atirador (GPU)", "costFactor": 2.4, "gain": "Dano x2,6, ignora 50% da armadura.", "weakness": "Cadência 1,5x mais lenta: ruim contra enxames.", "weakAgainst": ["swarm"],
-        "stats": { "damageMultiplier": 2.6, "intervalMultiplier": 1.5, "armorPenetration": 0.5 },
-        "capstone": { "name": "Desligamento", "costFactor": 3.6, "effect": "A cada 5º tiro causa 6x de dano.", "stats": { "superHitEvery": 5, "superHitMultiplier": 6 } } },
+        "stats": { "damageMultiplier": 3.0, "intervalMultiplier": 1.5, "armorPenetration": 0.5 },
+        "capstone": { "name": "Desligamento", "costFactor": 3.6, "effect": "A cada 5º tiro causa 6x de dano.", "stats": { "superHitEvery": 5, "superHitMultiplier": 8 } } },
       { "id": "B", "name": "Rajada (série B)", "costFactor": 2.4, "gain": "Cadência x0,55; +8% de dano por acerto seguido no mesmo alvo (até +64%).", "weakness": "Dano por tiro baixo: ruim contra blindados.", "weakAgainst": ["armored"],
         "stats": { "intervalMultiplier": 0.55, "focusBonusPerHit": 0.08, "focusBonusCap": 0.64 },
         "capstone": { "name": "Sobrecarga", "costFactor": 3.6, "effect": "O bônus de foco passa a durar entre alvos.", "stats": { "focusKeepsBetweenTargets": 1 } } }
@@ -17,7 +17,7 @@
   {
     "id": "frost", "name": "Gelo", "flavor": "Como um WAF: filtra e retarda o que chega.",
     "role": "Controle: lentidão e marca", "kind": "attack", "targets": "both", "defaultTargeting": "first",
-    "cost": 90, "range": 100, "damage": 5, "interval": 0.9, "unlockStage": 1, "stats": { "slowFactor": 0.7 },
+    "cost": 90, "range": 100, "damage": 9, "interval": 0.9, "unlockStage": 1, "stats": { "slowFactor": 0.7 },
     "levels": [ { "level": 1, "costFactor": 1.0, "damageMultiplier": 1.0 }, { "level": 2, "costFactor": 0.9, "damageMultiplier": 1.5 }, { "level": 3, "costFactor": 1.6, "damageMultiplier": 2.2 } ],
     "strong": ["fast", "flying"], "weak": ["regen", "armored", "boss"], "weaknessText": "Dano quase nulo: não mata sozinha; chefes resistem ao controle.",
     "branches": [
@@ -32,7 +32,7 @@
   {
     "id": "cannon", "name": "Canhão", "flavor": "Como a proteção contra DDoS: absorve o grosso do ataque.",
     "role": "Área e dano pesado, só solo", "kind": "attack", "targets": "ground", "defaultTargeting": "strong",
-    "cost": 120, "range": 110, "damage": 45, "interval": 1.9, "unlockStage": 1, "stats": { "splashRadius": 40, "splashFactor": 0.5 },
+    "cost": 120, "range": 110, "damage": 100, "interval": 2.2, "unlockStage": 1, "stats": { "splashRadius": 40, "splashFactor": 0.5 },
     "levels": [ { "level": 1, "costFactor": 1.0, "damageMultiplier": 1.0 }, { "level": 2, "costFactor": 0.9, "damageMultiplier": 1.5 }, { "level": 3, "costFactor": 1.6, "damageMultiplier": 2.2 } ],
     "strong": ["swarm", "armored", "basic"], "weak": ["flying", "fast"], "weaknessText": "Não acerta voadores e erra os muito rápidos.",
     "branches": [
@@ -40,7 +40,7 @@
         "stats": { "splashRadiusMultiplier": 1.6, "splashFactor": 0.7 },
         "capstone": { "name": "Saturação", "costFactor": 3.6, "effect": "Deixa zona de queimadura por 3 s.", "stats": { "burnZoneSeconds": 3 } } },
       { "id": "B", "name": "Penetrador", "costFactor": 2.4, "gain": "Dano x2,2 contra blindados e chefes, sem área.", "weakness": "Sem área: ruim contra enxames.", "weakAgainst": ["swarm"],
-        "stats": { "damageMultiplierVsArmoredAndBoss": 2.2, "splashFactor": 0 },
+        "stats": { "damageMultiplierVsArmoredAndBoss": 2.6, "splashFactor": 0 },
         "capstone": { "name": "Perfuração total", "costFactor": 3.6, "effect": "Ignora 100% da armadura.", "stats": { "armorPenetration": 1 } } }
     ]
   },
@@ -67,10 +67,10 @@
     "strong": ["durable"], "weak": ["drain"], "weaknessText": "Não ataca e perde o efeito quando desativado por drenagem.",
     "branches": [
       { "id": "A", "name": "Autoscale", "costFactor": 2.4, "gain": "+25% de cadência nas torres vizinhas no alcance.", "weakness": "Não dá dano extra.", "weakAgainst": ["boss"],
-        "stats": { "neighborCadenceBonus": 0.25 },
+        "stats": { "neighborCadenceBonus": 0.3 },
         "capstone": { "name": "Elasticidade", "costFactor": 3.6, "effect": "Bônus x1,5 durante a habilidade Escalar.", "stats": { "bonusMultiplierDuringScale": 1.5 } } },
       { "id": "B", "name": "Réplica", "costFactor": 2.4, "gain": "+25% de dano nas torres vizinhas e +1 de alcance no Raio.", "weakness": "Não dá cadência.", "weakAgainst": ["swarm"],
-        "stats": { "neighborDamageBonus": 0.25, "boltRangeBonus": 1 },
+        "stats": { "neighborDamageBonus": 0.3, "boltRangeBonus": 1 },
         "capstone": { "name": "Capacidade reservada", "costFactor": 3.6, "effect": "+1 em maxTowers.", "stats": { "maxTowersBonus": 1 } } }
     ]
   }

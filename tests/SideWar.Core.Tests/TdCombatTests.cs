@@ -14,7 +14,7 @@ namespace SideWar.Core.Tests;
 /// <summary>TD.3: traços, ramos/capstones, mira, controle (slow/paralisia), habilidades, chefes e determinismo do combate.</summary>
 public sealed class TdCombatTests
 {
-    private static readonly TdContent Content = TdContentLoader.LoadEmbedded();
+    private static readonly TdContent Content = TdMechanicsContent.Load();
 
     private readonly record struct G(string Enemy, int Count, double Interval = 1.0, double Offset = 0.0);
 

@@ -104,6 +104,8 @@ public struct TdEnemy
     public int AbilityCdTicks { get; set; }
     /// <summary>Gatilhos de chefe já disparados (bit0/1 divisões, bit2/3 invulnerabilidades).</summary>
     public byte Triggers { get; set; }
+    /// <summary>Id da torre do último dano recebido (0 = zona); só observação, fora do hash.</summary>
+    public int LastHitTowerId { get; set; }
 }
 
 /// <summary>Spawn agendado: <c>DueTick</c> relativo ao início da onda (ticks de mundo).</summary>

@@ -372,7 +372,7 @@ Em paralelo, pode começar a **E3** (SDD-12, SDD-11 e SDD-27 no Core), pois não
 | TD.7 ✅ | Render: ~~cena só na barra~~ **faixa Band mínima de 32 DIP acima da barra** (TA.1 reprovou torres na barra, DP-28.11; `towersInBar=false`), trilho, núcleo, portal, torres, indicadores de traço, SEM POSIÇÃO, caixa-bomba, hit-test básico, 0 fps em Preparo (concluída em 2026-11-16: `TdBand`/`TdHitTester`/`TdRenderDriver` em `SideWar.Runtime/Td`, `SceneLayout.ComputeTdBand`, `BuildZoneMap.TdBand`, `TdBandRenderer` em `SideWar.Rendering/Scene`, `TdFrameSink` no App; evidência `specs/evidencias/TD.7.md`) | TD.4, TD.6, TA.1, TA.5 | 🟡/🔴 |
 | TD.8 | UI: HUD compacto, popover (inspetor, **colocação de torres: modo construção, fantasma com alcance, popover de torre, cancelar por ESC/clique direito, SDD-28 RF-28.20; substitui TA.8**, preview de onda, habilidades, Mapa, árvore), caixa-bomba (contagem e marca de risco), Configurações | TD.6, TD.7, TD.3b | 🟡 |
 | TD.9 | Arte e visual: ícones de 8 inimigos, 3 chefes, 5 torres + ramos, código de cor (SDD-20/09 revistos) | TD.7 | 🟡 |
-| TD.10 | `SanityBot` novo e curva de balanceamento das 6 fases; evidência E-TD | TD.3 | 🟢 |
+| TD.10 ✅ | `SanityBot` novo e curva de balanceamento das 6 fases; evidência E-TD (concluída em 2026-11-16; `TdSanityBot`, `specs/evidencias/TD.10.md`) | TD.3 | 🟢 |
 | TD.11 | Pós-MVP: modo infinito, desafio do dia, políticas (DP-28.9) | TD.8, TD.10 | 🟡 |
 | TD.12 | Limpeza e documentação: arquivar SDD-25/26/27, marcar substituições, `PLANO.md`, `README.md`, MTC-28 | todas | 🟢 |
 

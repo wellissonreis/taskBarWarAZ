@@ -24,6 +24,12 @@ public sealed partial class TdMatchState
     private const int ResetFocusCap = 1000;
 
     private double[] _auraCadence = new double[8];
+    private int _damageSource;
+    private readonly Dictionary<int, int> _killsByTower = [];
+
+    /// <summary>Mortes por id de torre (0 = zona de queimadura). Só observação (SanityBot/balanceamento); fora do hash.</summary>
+    public IReadOnlyDictionary<int, int> KillsByTower => _killsByTower;
+
     private double[] _auraDamage = new double[8];
     private double[] _auraRange = new double[8];
 
@@ -178,6 +184,7 @@ public sealed partial class TdMatchState
         int every = (int)Stat(t, def, "superHitEvery", 0);
         if (every > 0 && t.ShotCount % every == 0) burst *= Stat(t, def, "superHitMultiplier", 1.0);
 
+        _damageSource = t.Id;
         DealDamage(target, ComputeDamage(t, def, e, st, ti, 1.0, burst));
         ApplyOnHit(ref t, def, target);
 
@@ -249,6 +256,7 @@ public sealed partial class TdMatchState
         var e = _enemies[idx];
         if (e.InvulnTicks > 0 || dmg <= 0) return;
         e.Hp -= dmg;
+        e.LastHitTowerId = _damageSource;
         e.SinceDamageTicks = 0;
         _enemies[idx] = e;
     }
@@ -368,6 +376,7 @@ public sealed partial class TdMatchState
                 if (e.Flying || e.Hp <= 0 || _held.Contains(e.Id) || Dist(e.X, n.X) > NodeCatchRadius) continue;
                 _held.Add(e.Id);
                 held++;
+                _damageSource = n.TowerId;
                 DealDamage(i, n.Dps / TdWorld.TicksPerSecond);
                 pressure += e.CoreDamage * NodeHpDrainPerCoreDamage / TdWorld.TicksPerSecond;
             }
@@ -386,6 +395,7 @@ public sealed partial class TdMatchState
         for (int zi = 0; zi < _zones.Count;)
         {
             var z = _zones[zi];
+            _damageSource = 0;
             for (int i = 0; i < _enemies.Count; i++)
                 if (!_enemies[i].Flying && _enemies[i].Hp > 0 && Dist(_enemies[i].X, z.X) <= z.Radius) DealDamage(i, z.DamagePerTick);
             if (--z.TicksLeft > 0) _zones[zi++] = z;
@@ -399,6 +409,7 @@ public sealed partial class TdMatchState
         if ((n.Flags & 1) != 0)
         {
             double dmg = n.Dps * NodeExplosionDpsFactor;
+            _damageSource = n.TowerId;
             for (int i = 0; i < _enemies.Count; i++)
                 if (!_enemies[i].Flying && _enemies[i].Hp > 0 && Dist(_enemies[i].X, n.X) <= NodeExplosionRadius) DealDamage(i, dmg);
         }
@@ -429,6 +440,7 @@ public sealed partial class TdMatchState
                 _enemies.RemoveAt(i);
                 Credits = Sat.Add(Credits, e.Gold);
                 Emit(TdEventType.EnemyKilled, e.Id, e.Gold);
+                _killsByTower[e.LastHitTowerId] = _killsByTower.GetValueOrDefault(e.LastHitTowerId) + 1;
                 WaveOf(e.Wave).Alive--;
                 continue;
             }

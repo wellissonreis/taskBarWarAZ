@@ -10,7 +10,7 @@ namespace SideWar.Core.Tests;
 
 public sealed class TdMatchTests
 {
-    private static readonly TdContent Content = TdContentLoader.LoadEmbedded();
+    private static readonly TdContent Content = TdMechanicsContent.Load();
 
     private static TdMatchState New(int stage = 1, TdContent? content = null, ulong seed = 42) =>
         TdMatchState.Create(content ?? Content, stage, Rng.Seed(seed, 54));

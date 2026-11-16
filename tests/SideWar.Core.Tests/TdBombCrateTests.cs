@@ -11,7 +11,7 @@ namespace SideWar.Core.Tests;
 /// <summary>TD.3b (RF-28.19): caixa-bomba, sinal de presença, coleta, explosão e restrição do MoveTower.</summary>
 public sealed class TdBombCrateTests
 {
-    private static readonly TdContent Base = TdContentLoader.LoadEmbedded();
+    private static readonly TdContent Base = TdMechanicsContent.Load();
 
     /// <summary>Conteúdo com créditos fartos, integridade alta e a caixa sempre sorteada (chance 1), editável por <paramref name="bc"/>.</summary>
     private static TdContent Cfg(Func<TdBombCrateDef, TdBombCrateDef>? bc = null, int stageId = 1)
