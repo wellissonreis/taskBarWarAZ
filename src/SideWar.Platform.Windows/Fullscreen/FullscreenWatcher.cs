@@ -19,16 +19,14 @@ public sealed class FullscreenWatcher : IDisposable
     private const int ObjIdWindow = 0; // OBJID_WINDOW (winuser.h)
     private readonly int ownerThread = Environment.CurrentManagedThreadId;
     private readonly Action<Exception> report;
-    private readonly WinEventProc foregroundProc;
-    private readonly WinEventProc minimizeProc;
-    private readonly WinEventProc locationProc;
+    private readonly WINEVENTPROC foregroundProc;
+    private readonly WINEVENTPROC minimizeProc;
+    private readonly WINEVENTPROC locationProc;
     private readonly FullscreenController controller;
     private readonly AppBarProbeWindow probe;
-    private UnhookWinEventSafeHandle? foregroundHook, minimizeHook, locationHook;
+    private WinEventHook? foregroundHook, minimizeHook, locationHook;
     private nint locationHwnd;
     private bool disposed;
-
-    private delegate void WinEventProc(HWINEVENTHOOK hook, uint @event, HWND hwnd, int idObject, int idChild, uint thread, uint time);
 
     /// <param name="clock">Same monotonic timebase the host passes to its loop (Stopwatch).</param>
     public FullscreenWatcher(IClock clock, HideOnFullscreen mode, string overlayMonitor, Action<Exception> report,
@@ -36,14 +34,14 @@ public sealed class FullscreenWatcher : IDisposable
     {
         this.report = report;
         controller = new FullscreenController(clock, windowProbe ?? new WindowProbe(), (uint)Environment.ProcessId, mode, overlayMonitor);
-        foregroundProc = OnForeground;
-        minimizeProc = OnMinimize;
-        locationProc = OnLocation;
+        foregroundProc = new WINEVENTPROC(OnForeground);
+        minimizeProc = new WINEVENTPROC(OnMinimize);
+        locationProc = new WINEVENTPROC(OnLocation);
         probe = new AppBarProbeWindow(Signal, report);
         try
         {
-            foregroundHook = Hook(PInvoke.EVENT_SYSTEM_FOREGROUND, PInvoke.EVENT_SYSTEM_FOREGROUND, foregroundProc, 0, 0, true);
-            minimizeHook = Hook(PInvoke.EVENT_SYSTEM_MINIMIZESTART, PInvoke.EVENT_SYSTEM_MINIMIZEEND, minimizeProc, 0, 0, true);
+            foregroundHook = WinEventHook.Install(PInvoke.EVENT_SYSTEM_FOREGROUND, PInvoke.EVENT_SYSTEM_FOREGROUND, foregroundProc, 0, 0, true);
+            minimizeHook = WinEventHook.Install(PInvoke.EVENT_SYSTEM_MINIMIZESTART, PInvoke.EVENT_SYSTEM_MINIMIZEEND, minimizeProc, 0, 0, true);
             RehookLocation(PInvoke.GetForegroundWindow());
             Signal(); // initial evaluation
         }
@@ -87,15 +85,7 @@ public sealed class FullscreenWatcher : IDisposable
         probe.Dispose();
     }
 
-    private static UnhookWinEventSafeHandle Hook(uint min, uint max, WinEventProc proc, uint pid, uint thread, bool skipOwn)
-    {
-        uint flags = PInvoke.WINEVENT_OUTOFCONTEXT | (skipOwn ? PInvoke.WINEVENT_SKIPOWNPROCESS : 0);
-        var hook = PInvoke.SetWinEventHook(min, max, default, new WINEVENTPROC(proc.Invoke), pid, thread, flags);
-        if (hook.IsInvalid) throw new System.ComponentModel.Win32Exception(System.Runtime.InteropServices.Marshal.GetLastWin32Error(), "SetWinEventHook failed");
-        return hook;
-    }
-
-    private static void Unhook(ref UnhookWinEventSafeHandle? hook)
+    private static void Unhook(ref WinEventHook? hook)
     {
         hook?.Dispose();
         hook = null;
@@ -109,7 +99,7 @@ public sealed class FullscreenWatcher : IDisposable
         if (foreground.IsNull) return;
         uint thread = PInvoke.GetWindowThreadProcessId(foreground, out uint pid);
         if (thread == 0 || pid == 0) return;
-        try { locationHook = Hook(PInvoke.EVENT_OBJECT_LOCATIONCHANGE, PInvoke.EVENT_OBJECT_LOCATIONCHANGE, locationProc, pid, 0, true); }
+        try { locationHook = WinEventHook.Install(PInvoke.EVENT_OBJECT_LOCATIONCHANGE, PInvoke.EVENT_OBJECT_LOCATIONCHANGE, locationProc, pid, 0, true); }
         catch (Exception error) { report(error); }
     }
 
