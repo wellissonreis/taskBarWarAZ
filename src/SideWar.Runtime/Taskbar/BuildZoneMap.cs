@@ -14,6 +14,9 @@ public readonly record struct BuildZoneOptions
     public bool UseUia { get; init; } = true;
     public bool TowersInBar { get; init; }
 
+    /// <summary>Modo TD (TD.7): faixa Band mínima de 32 DIP acima da barra; ignora UIA e <c>TowersInBar</c> (TA.1 reprovou torres na barra).</summary>
+    public bool TdBand { get; init; }
+
     public BuildZoneOptions() { }
 }
 
@@ -29,6 +32,7 @@ public static class BuildZoneMap
     public static BuildZones From(TaskbarLayout layout, int stripWidthDip, BuildZoneOptions options)
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(stripWidthDip);
+        if (options.TdBand) return TdBand(stripWidthDip);
         if (!(options.UseUia && options.TowersInBar && layout.Source == TaskbarSource.Uia &&
               layout.Edge == TaskbarEdge.Bottom && !layout.AutoHide && layout.AppButtons.Count > 0 &&
               layout.Blocked.Count > 0))
@@ -50,6 +54,15 @@ public static class BuildZoneMap
         }
         return new(TowerHost.Taskbar, Array.AsReadOnly(free.ToArray()), TaskbarHostTopDip,
             (int)Math.Round(layout.HeightDip, MidpointRounding.AwayFromZero));
+    }
+
+    /// <summary>Faixa TD: uma zona livre entre o núcleo e o portal (<see cref="Td.TdBand.EdgeClearDip"/> em cada ponta); torres só ali, sem UIA.</summary>
+    public static BuildZones TdBand(int stripWidthDip)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(stripWidthDip);
+        var free = new List<FreeZone>();
+        Add(free, Td.TdBand.EdgeClearDip, stripWidthDip - Td.TdBand.EdgeClearDip);
+        return new(TowerHost.Band, Array.AsReadOnly(free.ToArray()), 0, Td.TdBand.HeightDip);
     }
 
     private static BuildZones Band(int w)

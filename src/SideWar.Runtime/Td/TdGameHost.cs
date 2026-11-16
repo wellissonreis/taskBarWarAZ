@@ -39,7 +39,7 @@ public sealed record TdWaveRequest : IGameCommand;
 /// ocultar por bandeja/hotkey, pausa do usuário): sem Step, sem deadline, sem acúmulo de tempo na volta.</item>
 /// </list>
 /// </summary>
-public sealed class TdGameHost : ILoopParticipant
+public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
 {
     private readonly IClock _clock;
     private readonly AppStateMachine _app;
@@ -106,6 +106,9 @@ public sealed class TdGameHost : ILoopParticipant
         if (IsShutdown) return;
         _pending.Enqueue(command);
     }
+
+    /// <summary>Destino do <c>SceneLayoutWatcher</c> do modo TD: <c>LayoutChanged</c> entra na fila e é aplicado entre ticks (TD.7).</summary>
+    void IGameCommandSink.Post(IGameCommand command) => OnCommand(command);
 
     /// <summary>"Iniciar onda" da hotkey/bandeja.</summary>
     public void RequestWave() => OnCommand(new TdWaveRequest());

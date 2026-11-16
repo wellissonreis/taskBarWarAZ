@@ -49,6 +49,9 @@ public sealed class SceneModeController
     /// <summary>A click on a tower or on the build overlay while Interactive (SDD-22 RF-22.3, RF-22.11). TA.8 maps the BuildOverlay click (position, right button) to <c>BuildModeController</c>.</summary>
     public event Action<HitTarget>? TargetClicked;
 
+    /// <summary>TD mode (TD.7): hit test in DIP for the TD band (<c>TdHitTester</c>); null = the idle test.</summary>
+    public Func<float, float, HitTarget>? TdHitTest { get; set; }
+
     /// <summary>The mode left Interactive with a drag in progress; the game must abort it (RF-04.2).</summary>
     public event Action? DragCancelled;
 
@@ -69,6 +72,7 @@ public sealed class SceneModeController
     {
         owner.VerifyAccess();
         var (x, y) = SceneHitTester.ToDip(clientX, clientY, Scale);
+        if (TdHitTest is { } td) return td(x, y);
         return hitState is null ? HitTarget.None : SceneHitTester.Test(hitState, barHeightDip, mode.BuildActive, x, y);
     }
 

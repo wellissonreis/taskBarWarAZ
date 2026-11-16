@@ -1,3 +1,4 @@
+using SideWar.Core;
 using SideWar.Core.Simulation;
 using SideWar.Runtime.Geometry;
 
@@ -12,7 +13,7 @@ public readonly record struct SceneLayoutUpdate(PixelRect Scene, TowerHost Host,
 /// (ADR-026, SDD-11 RF-11.3). Never reads the system; the Windows side feeds it (DockController / TaskbarService events).
 /// Not thread-safe: call on the game thread.
 /// </summary>
-public sealed class SceneLayoutWatcher(IGameCommandSink sink, StripLayout? initial = null)
+public sealed class SceneLayoutWatcher(IGameCommandSink sink, StripLayout? initial = null, Func<StripLayout, IGameCommand>? commandFactory = null)
 {
     private readonly IGameCommandSink _sink = sink ?? throw new ArgumentNullException(nameof(sink));
     private StripLayout? _layout = initial;
@@ -23,10 +24,12 @@ public sealed class SceneLayoutWatcher(IGameCommandSink sink, StripLayout? initi
     /// <summary>Returns <c>null</c> when nothing changed (same monitor geometry, DPI, bar and options).</summary>
     public SceneLayoutUpdate? Observe(MonitorInfo monitor, TaskbarLayout bar, BuildZoneOptions options)
     {
-        var widthDip = StripLayoutFactory.WidthDip(monitor.WorkArea.Width, monitor.Dpi);
+        // TD (TD.7): a janela é a faixa de 32 DIP (largura da área de trabalho menos a área do HUD) e a faixa lógica tem a largura dela.
+        var tdScene = options.TdBand ? SceneLayout.ComputeTdBand(monitor, bar) : (PixelRect?)null;
+        var widthDip = StripLayoutFactory.WidthDip(tdScene?.Width ?? monitor.WorkArea.Width, monitor.Dpi);
         var zones = BuildZoneMap.From(bar, widthDip, options);
         var layout = StripLayoutFactory.Create(zones, widthDip);
-        var scene = SceneLayout.Compute(monitor, bar, zones.Host);
+        var scene = tdScene ?? SceneLayout.Compute(monitor, bar, zones.Host);
 
         var sceneChanged = _scene != scene;
         var layoutChanged = _layout is null || !Same(_layout, layout);
@@ -36,7 +39,7 @@ public sealed class SceneLayoutWatcher(IGameCommandSink sink, StripLayout? initi
         if (layoutChanged)
         {
             _layout = layout;
-            _sink.Post(new LayoutChanged(layout));
+            _sink.Post(commandFactory is null ? new LayoutChanged(layout) : commandFactory(layout));
         }
         return new SceneLayoutUpdate(scene, zones.Host, layout, sceneChanged, layoutChanged);
     }

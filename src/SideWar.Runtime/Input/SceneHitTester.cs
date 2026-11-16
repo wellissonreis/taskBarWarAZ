@@ -2,7 +2,8 @@ using SideWar.Core.Simulation;
 
 namespace SideWar.Runtime.Input;
 
-public enum HitKind : byte { None, SceneTower, BuildOverlay }
+/// <summary><c>TdTower</c>/<c>TdCrate</c>: faixa do modo TD (TD.7); o id é o da torre/caixa da partida TD.</summary>
+public enum HitKind : byte { None, SceneTower, BuildOverlay, TdTower, TdCrate }
 
 /// <summary>Click target of the strip (SDD-22 RF-22.3, ADR-034): <c>SceneTower(towerId) | BuildOverlay | None</c>.</summary>
 public readonly record struct HitTarget(HitKind Kind, int TowerId)
@@ -10,6 +11,8 @@ public readonly record struct HitTarget(HitKind Kind, int TowerId)
     public static HitTarget None => new(HitKind.None, -1);
     public static HitTarget Overlay => new(HitKind.BuildOverlay, -1);
     public static HitTarget Tower(int towerId) => new(HitKind.SceneTower, towerId);
+    public static HitTarget TdTower(int towerId) => new(HitKind.TdTower, towerId);
+    public static HitTarget Crate(int crateId) => new(HitKind.TdCrate, crateId);
 }
 
 /// <summary>

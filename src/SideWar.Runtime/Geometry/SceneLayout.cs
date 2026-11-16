@@ -32,4 +32,26 @@ public static class SceneLayout
         var barPx = onBar ? (int)Math.Round(Math.Max(0f, t.HeightDip) * scale, MidpointRounding.AwayFromZero) : 0;
         return new PixelRect(work.Left, top, work.Right, checked(bottom + barPx));
     }
+
+    /// <summary>
+    /// Faixa TD (TD.7): <see cref="Td.TdBand.HeightDip"/> DIP logo acima da área de trabalho (acima da barra), da esquerda da área de
+    /// trabalho até <see cref="Td.TdBand.HudAreaDip"/> DIP antes da borda direita (área do HUD, TD.8). Elevada 2 px com a barra em
+    /// ocultação automática, como o Band padrão.
+    /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">DPI inválido ou área de trabalho pequena demais.</exception>
+    public static PixelRect ComputeTdBand(MonitorInfo m, TaskbarLayout t)
+    {
+        if (m.Dpi == 0 || m.Dpi > int.MaxValue / 2)
+            throw new ArgumentOutOfRangeException(nameof(m), "DPI must be positive and fit physical pixel coordinates.");
+        var scale = m.Dpi / 96.0;
+        var heightPx = (int)Math.Round(Td.TdBand.HeightDip * scale, MidpointRounding.AwayFromZero);
+        var hudPx = (int)Math.Round(Td.TdBand.HudAreaDip * scale, MidpointRounding.AwayFromZero);
+        var marginPx = t.AutoHide ? 2 : 0;
+        var work = m.WorkArea;
+        if ((long)work.Right - work.Left <= hudPx + (long)Math.Round(135 * scale) ||
+            (long)work.Bottom - work.Top < (long)heightPx + marginPx)
+            throw new ArgumentOutOfRangeException(nameof(m), "WorkArea must fit the TD band and the HUD area.");
+        var bottom = checked(work.Bottom - marginPx);
+        return new PixelRect(work.Left, checked(bottom - heightPx), work.Right - hudPx, bottom);
+    }
 }

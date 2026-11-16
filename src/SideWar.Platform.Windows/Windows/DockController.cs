@@ -33,6 +33,9 @@ public sealed class DockController
     /// <summary>The strip's own surface, resized with the scene (set by whoever created it; may be null).</summary>
     public LayeredSurface? SceneSurface { get; set; }
 
+    /// <summary>TD mode (TD.7): the scene is the 32-DIP band above the bar (<see cref="SceneLayout.ComputeTdBand"/>) and the idle widget is not placed.</summary>
+    public bool TdMode { get; set; }
+
     /// <summary>Raised after a relayout changed anything, so the host can redraw and drop scaled caches (RF-05.6).</summary>
     public event Action<DockLayoutResult>? LayoutApplied;
 
@@ -88,14 +91,18 @@ public sealed class DockController
         // A taskbar that lives on another monitor says nothing about this one: no autohide margin, the bar is ignored.
         TaskbarLayout? bar = taskbar is { } t && (string.IsNullOrEmpty(t.MonitorDevice) || t.MonitorDevice == monitor.DeviceName)
             ? t : null;
-        var sceneBounds = SceneLayout.Compute(monitor, bar ?? default, TowerHost.Band);
+        var sceneBounds = TdMode ? SceneLayout.ComputeTdBand(monitor, bar ?? default) : SceneLayout.Compute(monitor, bar ?? default, TowerHost.Band);
         var scene = owner.Scene;
         var previous = Current;
         if (previous is null || previous.Scene != sceneBounds) scene.SetBounds(sceneBounds);
         if (SceneSurface is { } surface && surface.Size != new PixelSize(sceneBounds.Width, sceneBounds.Height))
             surface.Resize(new PixelSize(sceneBounds.Width, sceneBounds.Height));
-        WidgetPlacement placement = WidgetGeometry.Compute(monitor, sceneBounds, WidgetGeometry.NominalWidthDip); // TODO(TA.10-Windows): largura medida (WidgetRenderer.MeasureWidthDip)
-        scene.Widget?.Apply(placement);
+        WidgetPlacement placement = default; // TD: no idle widget (the compact HUD is TD.8)
+        if (!TdMode)
+        {
+            placement = WidgetGeometry.Compute(monitor, sceneBounds, WidgetGeometry.NominalWidthDip); // TODO(TA.10-Windows): largura medida (WidgetRenderer.MeasureWidthDip)
+            scene.Widget?.Apply(placement);
+        }
         var result = new DockLayoutResult(monitor, sceneBounds, placement);
         Current = result;
         dirty = false;

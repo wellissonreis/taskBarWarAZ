@@ -24,6 +24,7 @@ using SideWar.Runtime.Input;
 using SideWar.Runtime.Lifecycle;
 using SideWar.Runtime.Presence;
 using SideWar.Runtime.Taskbar;
+using SideWar.Runtime.Td;
 using SideWar.Runtime.Widget;
 
 namespace SideWar.App.Composition;
@@ -80,6 +81,11 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     private float barHeightDip = SceneGeometry.DefaultBarHeight;
     private MenuSnapshot menu = MenuSnapshot.Initial;
     private readonly TdComposition? td;
+    private TdBandRenderer? tdRenderer;
+    private TdFrameSink? tdSink;
+    private TdRenderDriver? tdDriver;
+    private SceneLayoutWatcher? tdWatcher;
+    private int crateSeen;
 
     public GameComposition(GameRuntime runtime, CompositeLoopHost loop, SceneFrameSink sink, SessionPersistence persistence,
         AppSettings settings, Action<string> log, Action<Exception> report, Action<UiRequest> ui,
@@ -145,8 +151,28 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             icons.Dispose();
             typography.Dispose();
         });
-        sink.Attach(surface, sceneRenderer);
-        res.Started("frame-sink", sink.Dispose);
+        if (td is null)
+        {
+            sink.Attach(surface, sceneRenderer);
+            res.Started("frame-sink", sink.Dispose);
+        }
+        else
+        {
+            // TD.7: a cena é a faixa de 32 DIP desenhada pelo TdBandRenderer (render por evento: 0 fps em Preparo/pausa, 30 fps em Onda).
+            // O sink idle fica sem superfície (não desenha) e o idle está em NoRun.
+            tdRenderer = new TdBandRenderer(typography);
+            tdSink = new TdFrameSink(surface, tdRenderer);
+            tdDriver = new TdRenderDriver(td.Host, runtime.App, clock, tdSink);
+            tdWatcher = new SceneLayoutWatcher(td.Host, null, layout => new SideWar.Core.Td.LayoutChanged(layout));
+            loop.AddAfter(tdDriver); // depois do TdGameHost: um frame por tick novo, ou por evento/comando
+            loop.AddAfter(new LoopParticipant(() => null, _ => SyncCrateMode()));
+            res.Started("td-frame-sink", () =>
+            {
+                tdSink.Dispose();
+                tdRenderer.Dispose();
+                sink.Dispose();
+            });
+        }
 
         // 2. Widget (SDD-23) com o menu nativo (T5.8) e a presença (SDD-25).
         var widgetWindow = game.Scene.GetOrCreateWidget();
@@ -195,6 +221,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         // 3. Dock (SDD-05): monitor salvo, geometria da cena e do widget.
         var dock = game.Dock;
         dock.SceneSurface = surface;
+        dock.TdMode = td is not null; // TD.7: Band de 32 DIP, sem o widget idle
         dock.LayoutApplied += OnLayoutApplied;
         res.Started("dock", () => dock.LayoutApplied -= OnLayoutApplied);
         if (settings.Dock.MonitorDevice is { Length: > 0 } device && settings.Dock.BoundsHint is [var l, var t, var r, var b])
@@ -215,6 +242,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
 
         // 5. Modo Passivo/Interativo e peek (SDD-04).
         game.Mode.Surface = surface;
+        if (td is not null) game.Mode.TdHitTest = (x, y) => TdHitTester.Test(td.Host.Match, x, y);
         game.Mode.TargetClicked += OnTargetClicked;
         game.Mode.ModeChanged += OnModeChanged;
         game.Mode.SetPeekEnabled(settings.Behavior.PeekOnHover);
@@ -302,8 +330,9 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     public void Show(HiddenReason cause)
     {
         // RF-07.6 passo 4: um frame completo antes do ShowWindow (sem conteúdo velho).
-        sink.Present(runtime.State, runtime.Host.PresentationSeconds);
-        game.Scene.Widget?.Show();
+        if (tdDriver is not null) tdDriver.ForceDraw();
+        else sink.Present(runtime.State, runtime.Host.PresentationSeconds);
+        if (td is null) game.Scene.Widget?.Show();
         game.Scene.Show();
         taskbar?.SetVisible(true);
         InstallWatcher();
@@ -336,6 +365,8 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     {
         surface?.Release();
         sink.Invalidate();
+        tdSink?.Invalidate();
+        tdDriver?.MarkDirty();
         widgetPainter?.Invalidate();
         GC.Collect(2, GCCollectionMode.Optimized, blocking: false, compacting: true);
     }
@@ -428,6 +459,21 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     {
         runtime.NotifyInteraction();
         if (target.Kind == HitKind.SceneTower) panel?.OpenArsenal(target.TowerId);
+        else if (target.Kind == HitKind.TdCrate) td?.Host.RequestCollectCrate(); // TD.7: clique na caixa-bomba (a UI completa é a TD.8)
+        else if (target.Kind == HitKind.TdTower) tdDriver?.SetSelected(target.TowerId);
+    }
+
+    /// <summary>
+    /// A caixa-bomba só recebe clique no modo Interativo (a cena é passante por padrão, RF-28.14): quando uma caixa nova cai, a cena
+    /// passa a Interativo (o retorno automático ao Passivo vale como no resto). Decisão da TD.7 até a TD.8 tratar o modo na UI.
+    /// </summary>
+    private void SyncCrateMode()
+    {
+        var match = td!.Host.Match;
+        int id = match.CrateActive ? match.CrateId : 0;
+        if (id == crateSeen) return;
+        crateSeen = id;
+        if (id != 0 && runtime.App.IsVisible) game.Mode.SetMode(OverlayMode.Interactive);
     }
 
     private void OnModeChanged(OverlayMode mode) => PublishMenu();
@@ -463,6 +509,9 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         float scale = dpi / 96f;
         if (surface is not null) surface.Scale = scale;
         sceneRenderer?.SetDpi(dpi);
+        tdRenderer?.SetDpi(dpi);
+        tdSink?.Invalidate();
+        tdDriver?.MarkDirty();
         widget?.SetDpi(dpi);
         cardPresenter?.Relayout();
         livePresenter?.Relayout();
@@ -484,6 +533,12 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         // TA.5-Windows (cena sobre a barra) depende do spike TA.1: o dock segue com o hospedeiro Band e a
         // simulação recebe o layout do mesmo hospedeiro enquanto towersInBar for falso (padrão, DP-33.4).
         var options = new BuildZoneOptions { UseUia = settings.Taskbar.UseUia, TowersInBar = settings.Taskbar.TowersInBar };
+        if (tdWatcher is not null)
+        {
+            // TD.7 (RF-28.18 após TA.1): faixa de 32 DIP, LayoutChanged ao TdMatchState pelo TdGameHost, ao iniciar e a cada mudança de barra/DPI/monitor.
+            if (tdWatcher.Observe(current.Monitor, bar, options with { TdBand = true }) is not null) tdDriver?.MarkDirty();
+            return;
+        }
         runtime.ObserveLayout(current.Monitor, bar, options);
     }
 
@@ -532,6 +587,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
 
     private void ScheduleWidget(bool now)
     {
+        if (td is not null) { widgetAt = null; return; } // TD: sem o widget idle (HUD compacto é a TD.8)
         if (!runtime.App.IsVisible) { widgetAt = null; return; }
         widgetAt = now ? clock.NowTicks : clock.NowTicks + (long)(WidgetIntervalSeconds * clock.TicksPerSecond);
     }

@@ -181,6 +181,16 @@ public static class Palette
         public static readonly SKColor Edge = new(0x10, 0x14, 0x20);
     }
 
+    /// <summary>Faixa TD (TD.7): tons da cena de 32 DIP que não têm token em SDD-20 (código de cor por traço de inimigo, trilho, placa de torre).</summary>
+    public static class Td
+    {
+        public static readonly SKColor EnemySolo = new(0x8a, 0xa0, 0xc0);
+        public static readonly SKColor EnemyDrain = new(0xff, 0x4d, 0xd2);
+        public static readonly SKColor Plate = new(0x0b, 0x1a, 0x2e, 0xe6);
+        public static readonly SKColor RailFill = new(0x07, 0x13, 0x23, 0xd0);
+        public static readonly SKColor PortalGlow = new(0x8a, 0x5c, 0xff, 90);
+    }
+
     /// <summary>Hover: canal x 1,08, arredondado, teto 255 (RF-20.1).</summary>
     public static SKColor Hover(SKColor c) =>
         new(Scale(c.Red), Scale(c.Green), Scale(c.Blue), c.Alpha);

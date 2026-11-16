@@ -1,0 +1,15 @@
+settings dir existed before: True
+user app running: True path=C:\dev\sidewar\src\SideWar.App\bin\Debug\net10.0-windows10.0.22000.0\SideWar.App.exe
+primary: {X=0,Y=0,Width=1920,Height=1080} work: {X=0,Y=0,Width=1920,Height=1032}
+alive after 4s: True
+alive at end: True
+
+Name             Length
+----             ------
+corrupt
+profile-td.json  423
+profile.json     1159
+profile.json.bak 1159
+settings.json    953
+
+user app restarted (default mode)
