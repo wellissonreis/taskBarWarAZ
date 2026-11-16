@@ -26,6 +26,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     private int presentFps, absentFps, peekOpacity, absentOpacity, autoPassiveSeconds, volumePercent;
     private LogLevelSetting logLevel;
     private string toggleInteractive = "", toggleVisibility = "", togglePause = "", startWave = "";
+    private GameMode gameMode;
     private bool tdAutoStart;
     private int tdAutoStartSeconds;
     private string? saveError;
@@ -61,6 +62,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     public string ToggleVisibility { get => toggleVisibility; set { if (Set(ref toggleVisibility, value)) Check(nameof(ToggleVisibility), ValidateHotkey(value)); } }
     public string StartWave { get => startWave; set { if (Set(ref startWave, value)) Check(nameof(StartWave), ValidateHotkey(value)); } }
     /// <summary>Auto-início das ondas TD (padrão desligado).</summary>
+    public GameMode GameMode { get => gameMode; set => Set(ref gameMode, value); }
     public bool TdAutoStart { get => tdAutoStart; set => Set(ref tdAutoStart, value); }
     public int TdAutoStartSeconds { get => tdAutoStartSeconds; set { if (Set(ref tdAutoStartSeconds, value)) Check(nameof(TdAutoStartSeconds), value is >= TdSettings.MinAutoStartSeconds and <= TdSettings.MaxAutoStartSeconds ? null : "Entre 5 e 60 segundos."); } }
     public string TogglePause { get => togglePause; set { if (Set(ref togglePause, value)) Check(nameof(TogglePause), ValidateHotkey(value)); } }
@@ -100,6 +102,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     /// <summary>Valida tudo e devolve os settings editados (preservando o que a janela não edita).</summary>
     public AppSettings ToSettings() => original with
     {
+        GameMode = gameMode,
         AutoScale = autoScale,
         Dock = original.Dock,
         Opacity = original.Opacity with { Peek = peekOpacity, FadeWhenAbsent = fadeWhenAbsent, Absent = absentOpacity },
@@ -167,6 +170,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         toggleVisibility = s.Hotkeys.ToggleVisibility;
         togglePause = s.Hotkeys.TogglePause;
         startWave = s.Hotkeys.StartWave;
+        gameMode = s.GameMode;
         tdAutoStart = s.Td.AutoStartEnabled;
         tdAutoStartSeconds = s.Td.AutoStartSeconds;
     }

@@ -19,6 +19,11 @@ public partial class SettingsWindow : Window
         this.onClosed = onClosed;
         DataContext = viewModel;
 
+        ModeCombo.ItemsSource = new[] { ("Tower Defense (novo)", GameMode.Td), ("Clássico (idle)", GameMode.Idle) };
+        ModeCombo.DisplayMemberPath = "Item1";
+        ModeCombo.SelectedValuePath = "Item2";
+        ModeCombo.SelectedValue = viewModel.GameMode;
+        ModeCombo.SelectionChanged += (_, _) => { if (ModeCombo.SelectedValue is GameMode g) viewModel.GameMode = g; };
         HideCombo.ItemsSource = Enum.GetValues<HideOnFullscreenMode>();
         HideCombo.SelectedItem = viewModel.HideOnFullscreen;
         HideCombo.SelectionChanged += (_, _) => viewModel.HideOnFullscreen = (HideOnFullscreenMode)HideCombo.SelectedItem;

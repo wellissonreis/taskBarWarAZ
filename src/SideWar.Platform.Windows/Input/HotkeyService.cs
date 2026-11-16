@@ -20,7 +20,7 @@ public sealed class HotkeyService : IDisposable
     private const int FirstId = 0x5701;
     internal static int IdFor(HotkeyAction action) => FirstId + (int)action;
     private static readonly HotkeyAction[] BaseActions = [HotkeyAction.ToggleInteractive, HotkeyAction.ToggleVisibility, HotkeyAction.TogglePause];
-    private const int ActionCount = 4;
+    private const int ActionCount = 5;
 
     private readonly GameThread owner;
     private readonly SceneWindow scene;
@@ -59,6 +59,7 @@ public sealed class HotkeyService : IDisposable
         HotkeyAction.ToggleVisibility => "Ctrl+Alt+H",
         HotkeyAction.TogglePause => "Ctrl+Alt+P",
         HotkeyAction.StartWave => "Ctrl+Alt+Space",
+        HotkeyAction.CancelBuild => "Esc",
         _ => throw new ArgumentOutOfRangeException(nameof(action)),
     };
 
@@ -109,6 +110,25 @@ public sealed class HotkeyService : IDisposable
         return all;
     }
 
+    /// <summary>Registra/libera o ESC global (sem modificadores) só enquanto o modo construção/popover TD está ativo (RF-28.20 passo 5).</summary>
+    public void SetEscapeActive(bool active)
+    {
+        owner.VerifyAccess();
+        if (disposed) return;
+        int i = (int)HotkeyAction.CancelBuild;
+        var hwnd = new HWND(scene.Handle);
+        if (active && status[i] != HotkeyStatus.Registered)
+        {
+            status[i] = PInvoke.RegisterHotKey(hwnd, FirstId + i, HOT_KEY_MODIFIERS.MOD_NOREPEAT, 0x1B)
+                ? HotkeyStatus.Registered : HotkeyStatus.Unavailable;
+        }
+        else if (!active && status[i] == HotkeyStatus.Registered)
+        {
+            PInvoke.UnregisterHotKey(hwnd, FirstId + i);
+            status[i] = HotkeyStatus.NotRegistered;
+        }
+    }
+
     private void Notify(int i, HotkeyAction action, string message)
     {
         if (notified[i]) return;
@@ -119,7 +139,7 @@ public sealed class HotkeyService : IDisposable
     private void OnHotkey(int id)
     {
         int i = id - FirstId;
-        if (i < 0 || i >= ActionCount || Array.IndexOf(Actions, (HotkeyAction)i) < 0 || status[i] != HotkeyStatus.Registered) return;
+        if (i < 0 || i >= ActionCount || (i != (int)HotkeyAction.CancelBuild && Array.IndexOf(Actions, (HotkeyAction)i) < 0) || status[i] != HotkeyStatus.Registered) return;
         sink.Post(new HotkeyCommand((HotkeyAction)i));
     }
 

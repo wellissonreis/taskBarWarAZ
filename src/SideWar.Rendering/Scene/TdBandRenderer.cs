@@ -67,6 +67,10 @@ public sealed class TdBandRenderer : IDisposable
         canvas.Save();
         canvas.Scale(_s);
 
+        // Alfa 1/255 em toda a faixa: o Windows só entrega o mouse (modo Interativo, TD.8) a pixels com alfa > 0; invisível a olho nu.
+        _fill.Color = new SKColor(0, 0, 0, 1);
+        canvas.DrawRect(0, 0, w, TdBand.HeightDip, _fill);
+
         DrawRail(canvas, match, w);
         DrawSelectedRange(canvas, match, view, w);
         DrawZones(canvas, match, w);
@@ -76,6 +80,7 @@ public sealed class TdBandRenderer : IDisposable
         DrawEnemies(canvas, match, w);
         DrawTowers(canvas, match, view, w);
         DrawUnplaced(canvas, match, view);
+        DrawGhost(canvas, match, view, w);
         DrawFire(canvas, match, w);
         DrawCrate(canvas, match, view, now, w);
         canvas.Restore();
@@ -294,6 +299,31 @@ public sealed class TdBandRenderer : IDisposable
             float cx = TdBand.TowerCenterDip(m, t, w);
             DrawTowerPlate(c, cx, TdBand.TowerTop, t, view.SelectedTowerId == t.Id, view.HoverTowerId == t.Id, risk == t.Id, false);
         }
+    }
+
+    // Fantasma do modo construção (RF-28.20): caixa da torre no ponto (snap), barra de alcance no trilho; laranja se inválido.
+    private void DrawGhost(SKCanvas c, TdMatchState m, in TdView view, int w)
+    {
+        if (view.GhostX < 0) return;
+        float cx = m.Layout is null ? TdBand.ToDip(view.GhostX, w) : TdPlacement.ToDip(view.GhostX, w);
+        var color = view.GhostValid ? Palette.Menta : Palette.Ambar;
+        int def = view.GhostDef;
+        float range = def >= 0 && def < _content!.Towers.Length ? TdBand.ToDip(_content.Towers[def].Range, w) : 0f;
+        if (range > 0)
+        {
+            float x0 = MathF.Max(0, cx - range), x1 = MathF.Min(w, cx + range);
+            _fill.Color = color.WithAlpha(48);
+            c.DrawRect(x0, TdBand.RailTop, x1 - x0, TdBand.RailHeight, _fill);
+            _fill.Color = color.WithAlpha(210);
+            c.DrawRect(x0, 0, x1 - x0, 2, _fill);
+        }
+        float x = cx - TdBand.TowerWidth / 2f;
+        _fill.Color = color.WithAlpha((byte)(view.ChosenX >= 0 ? 110 : 70));
+        c.DrawRoundRect(x, TdBand.TowerTop, TdBand.TowerWidth, TdBand.TowerHeight, 3, 3, _fill);
+        _stroke.Color = color;
+        _stroke.PathEffect = _dash;
+        c.DrawRoundRect(x + 0.5f, TdBand.TowerTop + 0.5f, TdBand.TowerWidth - 1, TdBand.TowerHeight - 1, 3, 3, _stroke);
+        _stroke.PathEffect = null;
     }
 
     private void DrawTowerPlate(SKCanvas c, float cx, float top, in TdTower t, bool selected, bool hover, bool atRisk, bool unplaced)

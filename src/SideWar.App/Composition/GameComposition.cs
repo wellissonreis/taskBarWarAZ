@@ -84,6 +84,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     private TdBandRenderer? tdRenderer;
     private TdFrameSink? tdSink;
     private TdRenderDriver? tdDriver;
+    private TdUiPresenter? tdUi;
     private SceneLayoutWatcher? tdWatcher;
     private int crateSeen;
 
@@ -187,36 +188,40 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             widgetRenderer.Dispose();
         });
 
-        // 2b. Card "Bem-vindo de volta" (SDD-24/25, T4.10b): controlador + janelas sob demanda + coordenador no laço.
-        card = new OfflineCardController(clock);
-        persistence.RestorePending(card, runtime.State); // RF-25.11: pending/cardState do save
-        cardPresenter = new OfflineCardPresenter(game, typography, icons, card, () => runtime.Host.AutoScaleEnabled,
-            () => ScheduleWidget(now: true));
-        offline = new OfflineReturnCoordinator(runtime, card, cardPresenter, clock, log: log);
-        cardPresenter.Attach(offline);
-        widget.Interaction.OnBadgeClick = offline.BadgeClicked; // badge "+X" → ReopenFromBadge
-        if (persistence.RestoredSession is { } restored) // RF-25.6: o snapshot offline é o do save
-            offline.SetBaseline(restored.SavedUtc, restored.AutoScaleOn, restored.Presence.AutoScaleAccumSeconds);
-        loop.AddBefore(offline); // prazo de 60 s do card, tick e 45 s da pergunta (oculto = sem deadline)
-        res.Started("offline-card", cardPresenter.Dispose);
+        // TD: sem card offline, missões, eventos ao vivo e painel idle (o jogo é a partida TD).
+        if (td is null)
+        {
+            // 2b. Card "Bem-vindo de volta" (SDD-24/25, T4.10b): controlador + janelas sob demanda + coordenador no laço.
+            card = new OfflineCardController(clock);
+            persistence.RestorePending(card, runtime.State); // RF-25.11: pending/cardState do save
+            cardPresenter = new OfflineCardPresenter(game, typography, icons, card, () => runtime.Host.AutoScaleEnabled,
+                () => ScheduleWidget(now: true));
+            offline = new OfflineReturnCoordinator(runtime, card, cardPresenter, clock, log: log);
+            cardPresenter.Attach(offline);
+            widget.Interaction.OnBadgeClick = offline.BadgeClicked; // badge "+X" → ReopenFromBadge
+            if (persistence.RestoredSession is { } restored) // RF-25.6: o snapshot offline é o do save
+                offline.SetBaseline(restored.SavedUtc, restored.AutoScaleOn, restored.Presence.AutoScaleAccumSeconds);
+            loop.AddBefore(offline); // prazo de 60 s do card, tick e 45 s da pergunta (oculto = sem deadline)
+            res.Started("offline-card", cardPresenter.Dispose);
 
-        // 2c. Missões, eventos ao vivo (banner, caixa, card do chefe) e painel das 4 abas (T6.11b).
-        missions = new MissionService(runtime.Content, MissionSeed);
-        persistence.BindMissions(missions); // profile.missions → dia salvo
-        livePresenter = new LiveEventsPresenter(game, runtime, typography, icons, sceneRenderer, () => Animation,
-            () => offline.Question is not null, () => ScheduleWidget(now: true));
-        live = new LiveEventsCoordinator(runtime, missions, livePresenter, clock, log: log, missionsChanged: () => ScheduleWidget(now: true));
-        livePresenter.Attach(live);
-        runtime.Host.AddHook(live); // Consume/AddPresentSeconds por tick
-        loop.AddAfter(live); // depois do GameHost: vira o dia, aplica coletas entre ticks, remonta a visão a ~1 Hz
-        loop.AddAfter(livePresenter); // anel/piscar a ≤ 15 Hz só visível e com a simulação andando
-        res.Started("live-events", livePresenter.Dispose);
-        panelPresenter = new PanelPresenter(game, runtime, typography, icons, () => sceneRenderer.SpriteCache);
-        panel = new PanelCoordinator(runtime, missions, panelPresenter, new PanelTextMetricsSkia(typography), clock, () => ScheduleWidget(now: true));
-        panelPresenter.Attach(panel);
-        loop.AddAfter(panel); // 1 Hz de dados, 5 s do MIGRAR, 30 s do modo construção
-        res.Started("panel", panelPresenter.Dispose);
-        live.Start(); // Sync(hoje): sorteia/restaura o dia e coleta a virada pendente
+            // 2c. Missões, eventos ao vivo (banner, caixa, card do chefe) e painel das 4 abas (T6.11b).
+            missions = new MissionService(runtime.Content, MissionSeed);
+            persistence.BindMissions(missions); // profile.missions → dia salvo
+            livePresenter = new LiveEventsPresenter(game, runtime, typography, icons, sceneRenderer, () => Animation,
+                () => offline.Question is not null, () => ScheduleWidget(now: true));
+            live = new LiveEventsCoordinator(runtime, missions, livePresenter, clock, log: log, missionsChanged: () => ScheduleWidget(now: true));
+            livePresenter.Attach(live);
+            runtime.Host.AddHook(live); // Consume/AddPresentSeconds por tick
+            loop.AddAfter(live); // depois do GameHost: vira o dia, aplica coletas entre ticks, remonta a visão a ~1 Hz
+            loop.AddAfter(livePresenter); // anel/piscar a ≤ 15 Hz só visível e com a simulação andando
+            res.Started("live-events", livePresenter.Dispose);
+            panelPresenter = new PanelPresenter(game, runtime, typography, icons, () => sceneRenderer.SpriteCache);
+            panel = new PanelCoordinator(runtime, missions, panelPresenter, new PanelTextMetricsSkia(typography), clock, () => ScheduleWidget(now: true));
+            panelPresenter.Attach(panel);
+            loop.AddAfter(panel); // 1 Hz de dados, 5 s do MIGRAR, 30 s do modo construção
+            res.Started("panel", panelPresenter.Dispose);
+            live.Start(); // Sync(hoje): sorteia/restaura o dia e coleta a virada pendente
+        }
 
         // 3. Dock (SDD-05): monitor salvo, geometria da cena e do widget.
         var dock = game.Dock;
@@ -267,6 +272,16 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         hotkeys.Conflict += (_, message) => log(message);
         hotkeys.Register();
         res.Started("hotkeys", hotkeys.Dispose); // UnregisterHotKey
+
+        if (td is not null && tdDriver is not null)
+        {
+            // TD.8: HUD, popover, modo construção (ESC temporário) e Interativo ao passar o mouse sobre a faixa.
+            tdUi = new TdUiPresenter(game, runtime, td, tdDriver, typography!, clock, ui, () => hotkeys);
+            game.Mode.EnableTdHover(1.5);
+            tdUi.Setup();
+            loop.AddAfter(new LoopParticipant(() => tdUi.NextDeadline, _ => tdUi.OnWake()));
+            res.Started("td-ui", () => tdUi.Dispose());
+        }
 
         // 7. Sessão e energia (SDD-07 RF-07.1/07.5/07.7).
         power = new SessionPowerCoordinator(runtime.App);
@@ -345,6 +360,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         offline?.OnHide(); // RF-25.6: snapshot offline congelado no Hide
         watcher?.Uninstall();
         taskbar?.SetVisible(false);
+        tdUi?.OnSceneHidden();
         game.Scene.Hide(); // Passivo, peek e z-order cancelados pela cena
         widgetAt = null;
         PublishMenu();
@@ -394,6 +410,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
                     HotkeyAction.ToggleInteractive => AppCommandKind.ToggleInteractive,
                     HotkeyAction.ToggleVisibility => AppCommandKind.ToggleVisibility,
                     HotkeyAction.StartWave => AppCommandKind.StartWave,
+                    HotkeyAction.CancelBuild => AppCommandKind.CancelBuild,
                     _ => AppCommandKind.TogglePause,
                 });
                 return true;
@@ -416,6 +433,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             case AppCommandKind.ToggleVisibility: runtime.ToggleVisibilityByUser(); break;
             case AppCommandKind.TogglePause: runtime.TogglePause(); break;
             case AppCommandKind.StartWave: td?.Host.RequestWave(); break;
+            case AppCommandKind.CancelBuild: tdUi?.Controller.Cancel(); break;
             case AppCommandKind.SelectMonitor: SelectMonitor(monitorIndex); break;
             case AppCommandKind.ShowAndInteract:
                 runtime.ShowByUser();
@@ -512,6 +530,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         tdRenderer?.SetDpi(dpi);
         tdSink?.Invalidate();
         tdDriver?.MarkDirty();
+        tdUi?.Relayout();
         widget?.SetDpi(dpi);
         cardPresenter?.Relayout();
         livePresenter?.Relayout();

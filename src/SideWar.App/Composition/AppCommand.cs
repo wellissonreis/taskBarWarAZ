@@ -12,6 +12,8 @@ internal enum AppCommandKind
     SelectMonitor,
     /// <summary>Segunda instância (SDD-07 RF-07.8): remove <c>HiddenReason.User</c> e entra no modo Interativo.</summary>
     ShowAndInteract,
+    /// <summary>ESC temporário do modo construção/popover TD.</summary>
+    CancelBuild,
 }
 
 /// <summary>Comando do App (bandeja, instância única) postado à T-Game; interceptado antes da simulação.</summary>

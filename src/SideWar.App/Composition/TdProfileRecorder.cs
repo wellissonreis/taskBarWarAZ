@@ -50,6 +50,24 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
         return Math.Clamp(next?.StageId ?? 1, 1, _stageCount);
     }
 
+    public bool StageUnlocked(int id) => id == 1 || Profile.Stages.Any(s => s.StageId == id && s.Unlocked);
+
+    public int StageStars(int id) => Profile.Stages.FirstOrDefault(s => s.StageId == id)?.Stars ?? 0;
+
+    public int SealsAvailable => TdProfileRules.SealsAvailable(Profile, _meta);
+
+    public bool NodePurchased(string id) => Profile.PurchasedNodes.Contains(id, StringComparer.Ordinal);
+
+    /// <summary>Compra um nó da árvore de selos e grava; vale a partir da próxima partida criada.</summary>
+    public bool Purchase(string nodeId)
+    {
+        var next = TdProfileRules.TryPurchase(Profile, _meta, nodeId);
+        if (ReferenceEquals(next, Profile)) return false;
+        Profile = next;
+        if (!_store.Save(Profile)) { SaveFailures++; _log("falha ao gravar profile-td.json"); }
+        return true;
+    }
+
     public void OnEvents(TdMatchState match, IReadOnlyList<TdEvent> events) { }
 
     public void OnMatchEnded(TdMatchState match, TdMatchResult result)

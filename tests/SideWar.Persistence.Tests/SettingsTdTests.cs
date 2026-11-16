@@ -20,11 +20,11 @@ public class SettingsTdTests
     public void Defaults_keep_idle_and_autostart_off()
     {
         var s = AppSettings.Default;
-        Assert.Equal(GameMode.Idle, s.GameMode);
+        Assert.Equal(GameMode.Td, s.GameMode);
         Assert.False(s.Td.AutoStartEnabled);
         Assert.InRange(s.Td.AutoStartSeconds, TdSettings.MinAutoStartSeconds, TdSettings.MaxAutoStartSeconds);
         Assert.Equal("Ctrl+Alt+Space", s.Hotkeys.StartWave);
-        Assert.Equal(GameMode.Idle, ReadPayload("{}").GameMode);
+        Assert.Equal(GameMode.Td, ReadPayload("{}").GameMode);
     }
 
     [Fact]
@@ -67,7 +67,7 @@ public class SettingsTdTests
     public void Unknown_game_mode_and_invalid_hotkey_fall_back()
     {
         var s = ReadPayload("""{"gameMode":"Banana","hotkeys":{"StartTdWave":"???"}}""");
-        Assert.Equal(GameMode.Idle, s.GameMode);
+        Assert.Equal(GameMode.Td, s.GameMode);
         Assert.Equal("Ctrl+Alt+Space", s.Hotkeys.StartWave);
     }
 }

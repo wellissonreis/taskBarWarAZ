@@ -89,6 +89,12 @@ public sealed class SceneWindow : IDisposable
         return supplyBox ??= new HotspotWindow(owner, this, HotspotKind.SupplyBox);
     }
 
+    private TdUiWindow? tdHud, tdPopover;
+
+    /// <summary>HUD and popover windows of the TD match (TD.8), created on first use.</summary>
+    public TdUiWindow GetOrCreateTdHud() { CheckAccess(); return tdHud ??= new TdUiWindow(owner, this, "SideWar.TdHud"); }
+    public TdUiWindow GetOrCreateTdPopover() { CheckAccess(); return tdPopover ??= new TdUiWindow(owner, this, "SideWar.TdPopover"); }
+
     /// <summary>Click-through absent-mode seal window, created on first use (RF-22.7, ADR-028).</summary>
     public SceneSealWindow GetOrCreateSeal()
     {
@@ -104,6 +110,8 @@ public sealed class SceneWindow : IDisposable
         if (ReferenceEquals(child, banner)) banner = null;
         if (ReferenceEquals(child, supplyBox)) supplyBox = null;
         if (ReferenceEquals(child, seal)) seal = null;
+        if (ReferenceEquals(child, tdHud)) tdHud = null;
+        if (ReferenceEquals(child, tdPopover)) tdPopover = null;
     }
 
     internal void ReassertChildren()

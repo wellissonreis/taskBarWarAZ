@@ -22,7 +22,9 @@ namespace SideWar.Platform.Windows.Windows;
 public sealed class SceneModeController
 {
     private readonly GameThread owner;
-    private readonly OverlayModeController mode = new(Stopwatch.Frequency);
+    private OverlayModeController mode = new(Stopwatch.Frequency);
+    private bool tdHover;
+    private long hoverNext;
     private readonly PeekController peek = new(Stopwatch.Frequency);
     private SideWar.Core.Simulation.SimState? hitState;
     private float barHeightDip = SceneHitTester.DefaultBarHeight;
@@ -51,6 +53,20 @@ public sealed class SceneModeController
 
     /// <summary>TD mode (TD.7): hit test in DIP for the TD band (<c>TdHitTester</c>); null = the idle test.</summary>
     public Func<float, float, HitTarget>? TdHitTest { get; set; }
+
+    /// <summary>TD (TD.8): the scene turns Interactive while the cursor is over it (polled at 10 Hz) and returns to Passive shortly after it leaves.</summary>
+    public void EnableTdHover(double returnSeconds)
+    {
+        owner.VerifyAccess();
+        mode = new OverlayModeController(Stopwatch.Frequency, returnSeconds);
+        tdHover = true;
+        hoverNext = Now;
+    }
+
+    /// <summary>TD pointer over the scene while Interactive: (xDip, yDip) move; click with its hit target; right click.</summary>
+    public event Action<float, float>? TdPointerMoved;
+    public event Action<float, float, HitTarget>? TdLeftClicked;
+    public event Action? TdRightClicked;
 
     /// <summary>The mode left Interactive with a drag in progress; the game must abort it (RF-04.2).</summary>
     public event Action? DragCancelled;
@@ -119,11 +135,16 @@ public sealed class SceneModeController
     /// <summary>Applies the current effects, e.g. after the surface was created (initial Passive).</summary>
     public void Reapply() => Apply(mode.Effects, modeChanged: false);
 
-    internal long? NextDeadline => Min(mode.NextDeadline, peek.NextPoll);
+    internal long? NextDeadline => Min(Min(mode.NextDeadline, peek.NextPoll), tdHover && owner.Scene.IsVisible ? hoverNext : null);
 
     internal void OnWake(long now)
     {
         Apply(mode.OnTick(now));
+        if (tdHover && now >= hoverNext)
+        {
+            hoverNext = now + Stopwatch.Frequency / 10;
+            if (owner.Scene.IsVisible && mode.Mode == OverlayMode.Passive && !mode.BuildActive && CursorInStrip()) SetMode(OverlayMode.Interactive);
+        }
         if (peek.PollDue(now) && peek.OnSample(now, CursorInStrip())) ApplyOpacity();
     }
 
@@ -144,6 +165,14 @@ public sealed class SceneModeController
             case PInvoke.WM_MOUSEMOVE when mode.Mode == OverlayMode.Interactive:
                 mode.OnMouseMove();
                 if (!tracking) tracking = TrackLeave(hwnd);
+                if (TdPointerMoved is not null)
+                {
+                    var (mx, my) = SceneHitTester.ToDip((short)(lParam & 0xFFFF), (short)((lParam >> 16) & 0xFFFF), Scale);
+                    TdPointerMoved(mx, my);
+                }
+                break;
+            case PInvoke.WM_RBUTTONDOWN when mode.Mode == OverlayMode.Interactive:
+                TdRightClicked?.Invoke();
                 break;
             case PInvoke.WM_MOUSELEAVE:
                 tracking = false;
@@ -151,7 +180,12 @@ public sealed class SceneModeController
                 break;
             case PInvoke.WM_LBUTTONDOWN when mode.Mode == OverlayMode.Interactive:
                 var target = HitTest((short)(lParam & 0xFFFF), (short)((lParam >> 16) & 0xFFFF));
-                if (target.Kind != HitKind.None) TargetClicked?.Invoke(target);
+                if (TdLeftClicked is { } tdClick)
+                {
+                    var (cx, cy) = SceneHitTester.ToDip((short)(lParam & 0xFFFF), (short)((lParam >> 16) & 0xFFFF), Scale);
+                    tdClick(cx, cy, target);
+                }
+                else if (target.Kind != HitKind.None) TargetClicked?.Invoke(target);
                 break;
         }
     }

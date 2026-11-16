@@ -27,8 +27,8 @@ public sealed record AppSettings
     public DiagnosticsSettings Diagnostics { get; init; } = new();
     public TaskbarSettings Taskbar { get; init; } = new();
 
-    /// <summary>Setting oculto/experimental (sem UI): seleciona o host TD no lugar do idle. Padrão Idle.</summary>
-    public GameMode GameMode { get; init; } = GameMode.Idle;
+    /// <summary>Modo de jogo (Configurações): Td (padrão desde a TD.8) ou Idle (clássico, até a TD.12).</summary>
+    public GameMode GameMode { get; init; } = GameMode.Td;
 
     public TdSettings Td { get; init; } = new();
 

@@ -17,8 +17,11 @@ namespace SideWar.App.Composition;
 /// </summary>
 internal sealed class TdComposition
 {
-    private TdComposition(TdGameHost host, TdProfileRecorder recorder)
+    private readonly TdContent _content;
+
+    private TdComposition(TdGameHost host, TdProfileRecorder recorder, TdContent content)
     {
+        _content = content;
         Host = host;
         Recorder = recorder;
     }
@@ -37,9 +40,19 @@ internal sealed class TdComposition
         var rng = Rng.Seed(seed ?? (ulong)DateTime.UtcNow.Ticks, 54UL);
         var match = TdMatchState.Create(content, recorder.SuggestedStage(), rng, recorder.Profile.PurchasedNodes);
         var host = new TdGameHost(clock, app, match, recorder, input ?? new TdLastInputSource());
-        var td = new TdComposition(host, recorder);
+        var td = new TdComposition(host, recorder, content);
         td.ApplySettings(settings);
         return td;
+    }
+
+    public int StageCount => _content.Stages.Stages.Length;
+
+    /// <summary>Cria uma partida nova na fase (nós comprados incluídos) e a entrega ao host (reaplica o layout da barra).</summary>
+    public void StartStage(int stageId)
+    {
+        stageId = Math.Clamp(stageId, 1, StageCount);
+        var rng = Rng.Seed((ulong)DateTime.UtcNow.Ticks, 54UL);
+        Host.Restart(TdMatchState.Create(_content, stageId, rng, Recorder.Profile.PurchasedNodes));
     }
 
     /// <summary>Auto-início: padrão desligado; segundos 5 a 60.</summary>

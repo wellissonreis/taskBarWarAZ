@@ -1,0 +1,140 @@
+using SideWar.Core.Td;
+using SideWar.Rendering.Panel;
+using SideWar.Rendering.Text;
+using SideWar.Runtime.Input;
+using SideWar.Runtime.Td;
+using SkiaSharp;
+using Xunit;
+
+namespace SideWar.Rendering.Tests.Golden;
+
+/// <summary>TD.8: goldens do HUD compacto, do popover de torres, do inspetor, do preview/Mapa e dos cards de fim (100% e 150%).</summary>
+public sealed class TdUiGoldenTests
+{
+    private static readonly SKColor Backdrop = new(0x1b, 0x22, 0x30);
+
+    private sealed class Host : ITdUiHost
+    {
+        public bool Paused => false;
+        public void TogglePause() { }
+        public void OpenSettings() { }
+        public void RequestExit() { }
+        public void StartStage(int stageId) { }
+        public int StageCount => 6;
+        public bool StageUnlocked(int stageId) => stageId <= 2;
+        public int StageStars(int stageId) => stageId == 1 ? 3 : 0;
+        public int SealsAvailable => 2;
+        public bool NodePurchased(string nodeId) => nodeId == "infrastructure.credits";
+        public bool PurchaseNode(string nodeId) => true;
+    }
+
+    public enum UiScene { HudPrep, HudWave, Chooser, ChooserPoint, Inspector, Branches, Preview, Map, Seals, Victory, Menu }
+
+    public static TheoryData<UiScene, int> Cases()
+    {
+        var d = new TheoryData<UiScene, int>();
+        foreach (var s in Enum.GetValues<UiScene>())
+            foreach (int dpi in new[] { 96, 144 }) d.Add(s, dpi);
+        return d;
+    }
+
+    private static (TdUiController Ui, TdMatchState Match) Setup(UiScene scene)
+    {
+        var (match, _, _) = TdStripScenes.Build(TdStripScene.PrepRange);
+        typeof(TdMatchState).GetProperty("Credits")!.SetValue(match, scene is UiScene.Branches ? 900L : 240L);
+        var ui = new TdUiController(() => match, c => match.Apply(c), new Host(), () => 0);
+        ui.Sync();
+        var item = (TdUiAction a, int arg) => new TdUiItem(default, TdUiKind.Button, "", a, arg);
+        switch (scene)
+        {
+            case UiScene.HudWave:
+                match.Apply(new StartWave());
+                for (int i = 0; i < 90; i++) match.Step();
+                match.ClearEvents();
+                break;
+            case UiScene.ChooserPoint: ui.Activate(item(TdUiAction.BuildToggle, 0)); ui.PointerMoved(1100); break;
+            case UiScene.Chooser: ui.SceneLeftClick(700, 20, HitTarget.None); break;
+            case UiScene.Inspector: ui.SceneLeftClick(0, 0, HitTarget.TdTower(match.Towers[0].Id)); break;
+            case UiScene.Branches:
+                match.Apply(new UpgradeTower(match.Towers[2].Id));
+                match.Apply(new UpgradeTower(match.Towers[2].Id));
+                ui.SceneLeftClick(0, 0, HitTarget.TdTower(match.Towers[2].Id));
+                break;
+            case UiScene.Preview: ui.Activate(item(TdUiAction.Preview, 0)); break;
+            case UiScene.Menu: ui.Activate(item(TdUiAction.Menu, 0)); break;
+            case UiScene.Map: ui.Activate(item(TdUiAction.MapOpen, 0)); break;
+            case UiScene.Seals: ui.Activate(item(TdUiAction.MapOpen, 0)); ui.Activate(item(TdUiAction.MapTab, 1)); break;
+            case UiScene.Victory:
+                match.Apply(new StartWave());
+                for (int i = 0; i < 30 * 600 && match.Phase == MatchPhase.Onda; i++) match.Step();
+                ui.Sync();
+                break;
+        }
+        return (ui, match);
+    }
+
+    private static SKBitmap Render(UiScene scene, int dpi, bool text)
+    {
+        var (ui, _) = Setup(scene);
+        using var typo = new Typography();
+        using var r = new TdUiRenderer(typo, dpi) { TextEnabled = text };
+        bool hud = scene is UiScene.HudPrep or UiScene.HudWave;
+        if (hud)
+        {
+            var v = ui.BuildHud();
+            var (w, h) = r.PhysicalSize(v.Width, v.Height);
+            var bmp = new SKBitmap(new SKImageInfo(w, h, SKColorType.Bgra8888, SKAlphaType.Premul));
+            using var c = new SKCanvas(bmp);
+            c.Clear(Backdrop);
+            using var layer = new SKBitmap(new SKImageInfo(w, h, SKColorType.Bgra8888, SKAlphaType.Premul));
+            using (var lc = new SKCanvas(layer)) r.DrawHud(lc, v, 3);
+            GoldenImage.Blit(c, layer, 0, 0);
+            return bmp;
+        }
+        var p = ui.BuildPopover() ?? throw new InvalidOperationException(scene.ToString());
+        var (pw, ph) = r.PhysicalSize(p.Width, p.Height);
+        var pb = new SKBitmap(new SKImageInfo(pw, ph, SKColorType.Bgra8888, SKAlphaType.Premul));
+        using var pc = new SKCanvas(pb);
+        pc.Clear(Backdrop);
+        using var pl = new SKBitmap(new SKImageInfo(pw, ph, SKColorType.Bgra8888, SKAlphaType.Premul));
+        using (var plc = new SKCanvas(pl)) r.DrawPopover(plc, p, 1);
+        GoldenImage.Blit(pc, pl, 0, 0);
+        return pb;
+    }
+
+    [Theory]
+    [MemberData(nameof(Cases))]
+    public void Ui_MatchesGolden(UiScene scene, int dpi)
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "texto Skia difere entre SOs; golden com texto só no Linux (RF-17.3)");
+        using var bmp = Render(scene, dpi, text: true);
+        string? failure = GoldenImage.Verify($"td-ui-{scene.ToString().ToLowerInvariant()}-{dpi * 100 / 96}", bmp);
+        Assert.True(failure is null, failure);
+    }
+
+    [Theory]
+    [MemberData(nameof(Cases))]
+    public void Ui_IsDeterministic(UiScene scene, int dpi)
+    {
+        using var a = Render(scene, dpi, text: true);
+        using var b = Render(scene, dpi, text: true);
+        Assert.True(a.Bytes.AsSpan().SequenceEqual(b.Bytes));
+    }
+
+    [Fact]
+    public void Ghost_is_drawn_in_orange_when_invalid_and_mint_when_valid()
+    {
+        var (match, _, _) = TdStripScenes.Build(TdStripScene.PrepRange);
+        using var typo = new Typography();
+        using var r = new SideWar.Rendering.Scene.TdBandRenderer(typo);
+        var (w, h) = r.PhysicalSize(TdStripScenes.WidthDip);
+        using var none = new SKBitmap(new SKImageInfo(w, h, SKColorType.Bgra8888, SKAlphaType.Premul));
+        using var valid = new SKBitmap(new SKImageInfo(w, h, SKColorType.Bgra8888, SKAlphaType.Premul));
+        using var invalid = new SKBitmap(new SKImageInfo(w, h, SKColorType.Bgra8888, SKAlphaType.Premul));
+        using (var c = new SKCanvas(none)) r.Draw(c, match, 1, TdView.None);
+        using (var c = new SKCanvas(valid)) r.Draw(c, match, 1, new TdView(0, 0, false) { GhostX = 700, GhostValid = true, GhostDef = 0 });
+        using (var c = new SKCanvas(invalid)) r.Draw(c, match, 1, new TdView(0, 0, false) { GhostX = 700, GhostValid = false, GhostDef = 0 });
+        Assert.False(none.Bytes.AsSpan().SequenceEqual(valid.Bytes));
+        Assert.False(valid.Bytes.AsSpan().SequenceEqual(invalid.Bytes));
+    }
+}

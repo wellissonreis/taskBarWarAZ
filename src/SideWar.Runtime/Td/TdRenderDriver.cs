@@ -8,6 +8,14 @@ namespace SideWar.Runtime.Td;
 public readonly record struct TdView(int SelectedTowerId, int HoverTowerId, bool CrateHover)
 {
     public static TdView None => new(0, 0, false);
+
+    /// <summary>Fantasma do modo construção (TD.8): X lógico (-1 = sem fantasma), validade (laranja se inválido) e torre candidata (alcance; -1 = genérico).</summary>
+    public int GhostX { get; init; } = -1;
+    public bool GhostValid { get; init; }
+    public int GhostDef { get; init; } = -1;
+
+    /// <summary>Ponto já escolhido no modo construção (-1 = ainda escolhendo): fica marcado enquanto o popover de torres está aberto.</summary>
+    public int ChosenX { get; init; } = -1;
 }
 
 /// <summary>Destino dos frames da faixa TD (SceneFrameSink no App; fake nos testes). Só na T-Game.</summary>
@@ -48,6 +56,9 @@ public sealed class TdRenderDriver : ILoopParticipant
 
     /// <summary>Pedido de redesenho (DPI, monitor, layout, seleção, passar do mouse, Show).</summary>
     public void MarkDirty() => _dirty = true;
+
+    /// <summary>Substitui a visão inteira (UI TD.8: seleção, fantasma e alcance); redesenha só se mudou.</summary>
+    public void SetView(in TdView view) => Update(view);
 
     public void SetSelected(int towerId) => Update(_view with { SelectedTowerId = towerId });
 

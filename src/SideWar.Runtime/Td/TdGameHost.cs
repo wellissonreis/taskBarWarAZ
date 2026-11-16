@@ -49,6 +49,7 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
     private readonly Queue<IGameCommand> _pending = new();
     private readonly List<TdLogEntry> _log = [];
     private readonly Queue<(IGameCommand Command, CommandResult Result)> _results = new();
+    private SideWar.Core.Td.LayoutChanged? _lastLayout;
     private double _lastWake;
     private bool _started;
     private bool _endReported;
@@ -128,10 +129,11 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
         return true;
     }
 
-    /// <summary>Troca a partida (nova fase/revanche). O log recomeça.</summary>
+    /// <summary>Troca a partida (nova fase/revanche). O log recomeça; o último layout da barra é reaplicado na nova partida.</summary>
     public void Restart(TdMatchState next)
     {
         Match = next ?? throw new ArgumentNullException(nameof(next));
+        if (_lastLayout is not null) Match.Apply(_lastLayout);
         _pending.Clear();
         _log.Clear();
         _endReported = false;
@@ -199,6 +201,7 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
 
     private void Apply(IGameCommand applied)
     {
+        if (applied is SideWar.Core.Td.LayoutChanged layout) _lastLayout = layout;
         var result = Match.Apply(applied);
         _log.Add(new TdLogEntry(Match.Frame, applied));
         _results.Enqueue((applied, result));
