@@ -16,7 +16,13 @@ public static class TdWorld
     public const double PathLength = 1200.0;
 }
 
-/// <summary>Torre da partida (<c>Id</c> sequencial próprio, independente do dos inimigos, para os comandos do log serem previsíveis). <c>Invested</c> = compra + melhorias (base da venda, RF-28.4). <c>Branch</c>/<c>Capstone</c>: hooks da TD.3.</summary>
+/// <summary>Modos de mira (RF-28.6). Valor numérico entra no hash: não reordenar.</summary>
+public enum TdTargeting : byte { First = 0, Last, Strong, Weak, Close }
+
+/// <summary>
+/// Torre da partida (<c>Id</c> sequencial próprio, independente do dos inimigos, para os comandos do log serem previsíveis).
+/// <c>Invested</c> = compra + melhorias (base da venda, RF-28.4). <c>Branch</c>: 0 = sem ramo, 1 = A, 2 = B (nível 4+); nível 5 = capstone.
+/// </summary>
 public struct TdTower
 {
     public int Id { get; set; }
@@ -26,7 +32,43 @@ public struct TdTower
     public int CooldownTicks { get; set; }
     public long Invested { get; set; }
     public byte Branch { get; set; }
+    public byte Targeting { get; set; }
+    /// <summary>Ticks restantes desativada (drenagem do parasita / criptografia do Ransomware, RF-28.7/28.8).</summary>
+    public int DisabledTicks { get; set; }
+    public int FocusTargetId { get; set; }
+    public int FocusHits { get; set; }
+    public int ShotCount { get; set; }
+    /// <summary>Recarga da paralisia periódica (gelo, ramo A).</summary>
+    public int ParalyzeCdTicks { get; set; }
+    /// <summary>Recarga do próximo nó do balanceador.</summary>
+    public int NodeCdTicks { get; set; }
 }
+
+/// <summary>Nó bloqueador do balanceador (RF-28.5): retém até <c>Holds</c> inimigos de solo e causa <c>Dps</c>/s.</summary>
+public struct TdNode
+{
+    public int Id { get; set; }
+    public int TowerId { get; set; }
+    public double X { get; set; }
+    public double Hp { get; set; }
+    public int LifeTicks { get; set; }
+    public int Holds { get; set; }
+    public double Dps { get; set; }
+    /// <summary>Bit 1: explode ao fim (Failover); bit 2: renasce ao romper (Blue/green).</summary>
+    public byte Flags { get; set; }
+}
+
+/// <summary>Zona de queimadura (capstone Saturação do canhão): dano por tick a inimigos de solo no raio.</summary>
+public struct TdZone
+{
+    public double X { get; set; }
+    public double Radius { get; set; }
+    public int TicksLeft { get; set; }
+    public double DamagePerTick { get; set; }
+}
+
+/// <summary>Estado de uma habilidade (RF-28.9): recarga e efeito restantes em ticks de mundo; <c>UsesLeft</c> &lt; 0 = ilimitado.</summary>
+public readonly record struct TdAbilityStatus(string Id, bool Unlocked, int CooldownTicks, int ActiveTicks, int UsesLeft);
 
 /// <summary>Inimigo (ou chefe) em campo. <c>X</c> em unidades lógicas, marcha de <see cref="TdWorld.PathLength"/> até 0.</summary>
 public struct TdEnemy
@@ -43,6 +85,22 @@ public struct TdEnemy
     public long Gold { get; set; }
     public int CoreDamage { get; set; }
     public bool Flying { get; set; }
+    public double SlowMult { get; set; }
+    public int SlowTicks { get; set; }
+    public int ParalyzeTicks { get; set; }
+    /// <summary>Imunidade breve a nova paralisia após uma terminar (cap contra "stun lock").</summary>
+    public int ParalyzeGraceTicks { get; set; }
+    public int InvulnTicks { get; set; }
+    public double VulnBonus { get; set; }
+    public int VulnTicks { get; set; }
+    public double CorrodeAmount { get; set; }
+    public int CorrodeTicks { get; set; }
+    /// <summary>Ticks desde o último dano (regeneração).</summary>
+    public int SinceDamageTicks { get; set; }
+    /// <summary>Recarga da habilidade própria (drenagem do parasita, criptografia do Ransomware).</summary>
+    public int AbilityCdTicks { get; set; }
+    /// <summary>Gatilhos de chefe já disparados (bit0/1 divisões, bit2/3 invulnerabilidades).</summary>
+    public byte Triggers { get; set; }
 }
 
 /// <summary>Spawn agendado: <c>DueTick</c> relativo ao início da onda (ticks de mundo).</summary>
@@ -73,6 +131,8 @@ public enum TdEventType : byte
 {
     WaveStarted, WaveCompleted, EnemyKilled, EnemyLeaked, TowerBuilt, TowerSold, TowerUpgraded, WaveBonus,
     CallNextBonus, Victory, Defeat,
+    // TD.3 (anexados ao fim: valores anteriores não mudam).
+    TowerBranched, TowerTargeting, AbilityUsed, TowerDisabled, BossSplit, NodeSpawned, NodeEnded,
 }
 
 /// <summary>Evento observável (não entra no hash). <c>A</c>/<c>B</c>: valores do evento (onda, créditos, id etc.).</summary>

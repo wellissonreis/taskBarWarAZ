@@ -27,11 +27,14 @@ public sealed partial class TdMatchState
         h.AddInt64(CooldownReductionTicks);
         h.AddInt32(_nextTowerId);
         h.AddInt32(_nextEnemyId);
+        h.AddInt32(_nextNodeId);
         h.AddInt32(_towers.Count);
         foreach (var t in _towers)
         {
             h.AddInt32(t.Id); h.AddInt32(t.DefIndex); h.AddInt32(t.X); h.AddInt32(t.Level);
             h.AddInt32(t.CooldownTicks); h.AddInt64(t.Invested); h.AddByte(t.Branch);
+            h.AddByte(t.Targeting); h.AddInt32(t.DisabledTicks); h.AddInt32(t.FocusTargetId); h.AddInt32(t.FocusHits);
+            h.AddInt32(t.ShotCount); h.AddInt32(t.ParalyzeCdTicks); h.AddInt32(t.NodeCdTicks);
         }
         h.AddInt32(_enemies.Count);
         foreach (var e in _enemies)
@@ -39,6 +42,9 @@ public sealed partial class TdMatchState
             h.AddInt32(e.Id); h.AddInt32(e.Wave); h.AddInt32(e.DefIndex); h.AddBool(e.IsBoss);
             h.AddDouble(e.X); h.AddDouble(e.Speed); h.AddDouble(e.Hp); h.AddDouble(e.MaxHp); h.AddDouble(e.Armor);
             h.AddInt64(e.Gold); h.AddInt32(e.CoreDamage); h.AddBool(e.Flying);
+            h.AddDouble(e.SlowMult); h.AddInt32(e.SlowTicks); h.AddInt32(e.ParalyzeTicks); h.AddInt32(e.ParalyzeGraceTicks);
+            h.AddInt32(e.InvulnTicks); h.AddDouble(e.VulnBonus); h.AddInt32(e.VulnTicks); h.AddDouble(e.CorrodeAmount);
+            h.AddInt32(e.CorrodeTicks); h.AddInt32(e.SinceDamageTicks); h.AddInt32(e.AbilityCdTicks); h.AddByte(e.Triggers);
         }
         h.AddInt32(_active.Count);
         foreach (var w in _active)
@@ -47,6 +53,16 @@ public sealed partial class TdMatchState
             h.AddInt32(w.Spawns.Length);
             foreach (var s in w.Spawns) { h.AddInt64(s.DueTick); h.AddInt32(s.EnemyIndex); }
         }
+        h.AddInt32(_nodes.Count);
+        foreach (var n in _nodes)
+        {
+            h.AddInt32(n.Id); h.AddInt32(n.TowerId); h.AddDouble(n.X); h.AddDouble(n.Hp);
+            h.AddInt32(n.LifeTicks); h.AddInt32(n.Holds); h.AddDouble(n.Dps); h.AddByte(n.Flags);
+        }
+        h.AddInt32(_zones.Count);
+        foreach (var z in _zones) { h.AddDouble(z.X); h.AddDouble(z.Radius); h.AddInt32(z.TicksLeft); h.AddDouble(z.DamagePerTick); }
+        for (int i = 0; i < _abilityCd.Length; i++) { h.AddInt32(_abilityCd[i]); h.AddInt32(_abilityActive[i]); h.AddInt32(_abilityUses[i]); }
+        foreach (var m in _metaNodes.Order(StringComparer.Ordinal)) h.AddString(m);
         h.AddUInt64(_rng.State);
         h.AddUInt64(_rng.Inc);
         return h.Value;

@@ -16,13 +16,21 @@ public sealed partial class TdMatchState
     private readonly TdStageDef _stage;
     private readonly TdWaveDef[] _waves;
     private readonly TdEnemyStats[] _enemyStats;
+    private readonly HashSet<string> _metaNodes;
+    private readonly int[] _abilityCd;
+    private readonly int[] _abilityActive;
+    private readonly int[] _abilityUses;
     private readonly List<TdTower> _towers = [];
     private readonly List<TdEnemy> _enemies = [];
     private readonly List<TdActiveWave> _active = [];
+    private readonly List<TdNode> _nodes = [];
+    private readonly List<TdZone> _zones = [];
+    private readonly HashSet<int> _held = [];
     private readonly List<TdEvent> _events = [];
     private Rng _rng;
     private int _nextTowerId = 1;
     private int _nextEnemyId = 1;
+    private int _nextNodeId = 1;
     private bool _inTick;
     private int _countdownTicks;
     private bool _countdownActive;
@@ -30,13 +38,17 @@ public sealed partial class TdMatchState
     /// <summary>Teto de eventos retidos até <see cref="ClearEvents"/> (excedente é descartado).</summary>
     public const int MaxEvents = 4096;
 
-    private TdMatchState(TdContent content, TdStageDef stage, TdWaveDef[] waves, Rng rng)
+    private TdMatchState(TdContent content, TdStageDef stage, TdWaveDef[] waves, Rng rng, IEnumerable<string>? metaNodes)
     {
         _content = content;
         _stage = stage;
         _waves = waves;
         _rng = rng;
         _enemyStats = TdEnemyStats.Build(content);
+        _metaNodes = new HashSet<string>(metaNodes ?? [], StringComparer.Ordinal);
+        _abilityCd = new int[content.Abilities.Length];
+        _abilityActive = new int[content.Abilities.Length];
+        _abilityUses = new int[content.Abilities.Length];
         Integrity = content.Stages.Rules.CoreIntegrity;
         IntegrityMax = Integrity;
         Credits = stage.StartingCredits;
@@ -45,14 +57,17 @@ public sealed partial class TdMatchState
         RestartCountdown();
     }
 
-    /// <summary>Cria a partida da fase <paramref name="stageId"/> (1 a 6) em Preparo, com créditos e integridade iniciais.</summary>
-    public static TdMatchState Create(TdContent content, int stageId, Rng rng)
+    /// <summary>
+    /// Cria a partida da fase <paramref name="stageId"/> (1 a 6) em Preparo, com créditos e integridade iniciais.
+    /// <paramref name="unlockedMetaNodes"/>: ids de nós da árvore já comprados (hook da TD.5; hoje só libera habilidades por nó, ex.: <c>operation.snapshot</c>).
+    /// </summary>
+    public static TdMatchState Create(TdContent content, int stageId, Rng rng, IEnumerable<string>? unlockedMetaNodes = null)
     {
         ArgumentNullException.ThrowIfNull(content);
         var stage = content.Stages.Stages.FirstOrDefault(s => s.Id == stageId)
             ?? throw new ArgumentOutOfRangeException(nameof(stageId), stageId, "Fase inexistente no td-stages.json.");
         var waves = content.Waves.Stages.Single(s => s.Stage == stageId).Waves;
-        return new TdMatchState(content, stage, waves, rng);
+        return new TdMatchState(content, stage, waves, rng, unlockedMetaNodes);
     }
 
     public TdContent Content => _content;
@@ -73,7 +88,17 @@ public sealed partial class TdMatchState
     public int IntegrityMax { get; }
     public int IntegrityLost => IntegrityMax - Integrity;
     public long Credits { get; private set; }
-    public int MaxTowers => _stage.MaxTowers;
+    /// <summary>Limite de torres: o da fase + 1 por Scale Set com o capstone "Capacidade reservada" (RF-28.5). Hook da TD.5: bônus de meta.</summary>
+    public int MaxTowers
+    {
+        get
+        {
+            int n = _stage.MaxTowers;
+            foreach (var t in _towers)
+                if (t.Level >= 5 && Stat(t, _content.Towers[t.DefIndex], "maxTowersBonus", 0) > 0) n++;
+            return n;
+        }
+    }
 
     /// <summary>Estrelas ganhas (0 até a Vitória; 0 na Derrota). ★1 concluir, ★2 perder ≤ 6, ★3 perder ≤ 2 (DP-28.8).</summary>
     public int Stars { get; private set; }
@@ -90,6 +115,8 @@ public sealed partial class TdMatchState
     public IReadOnlyList<TdTower> Towers => _towers;
     public IReadOnlyList<TdEnemy> Enemies => _enemies;
     public IReadOnlyList<TdActiveWave> ActiveWaves => _active;
+    public IReadOnlyList<TdNode> Nodes => _nodes;
+    public IReadOnlyList<TdZone> Zones => _zones;
     public IReadOnlyList<TdEvent> Events => _events;
     public TdMatchResult Result => new(Phase, Stars, IntegrityLost);
     public ulong RngState => _rng.State;
@@ -162,6 +189,9 @@ public sealed partial class TdMatchState
             SellTower s => DoSell(s),
             UpgradeTower u => DoUpgrade(u),
             SetAutoStart a => DoSetAutoStart(a),
+            ChooseBranch c => DoChooseBranch(c),
+            SetTargeting g => DoSetTargeting(g),
+            UseAbility u => DoUseAbility(u),
             _ => Reject(CommandReason.UnknownCommand),
         };
     }
@@ -210,7 +240,10 @@ public sealed partial class TdMatchState
         long cap = CeilEps(rules.CallNext.BonusCapFactor * WaveBonusFor(w));
         if (bonus > cap) bonus = cap;
         if (bonus > 0) Credits = Sat.Add(Credits, bonus);
-        CooldownReductionTicks += (long)Math.Floor(eta * rules.CallNext.AbilityCooldownReduction * TdWorld.TicksPerSecond);
+        long reduction = (long)Math.Floor(eta * rules.CallNext.AbilityCooldownReduction * TdWorld.TicksPerSecond);
+        CooldownReductionTicks += reduction;
+        for (int i = 0; i < _abilityCd.Length; i++)
+            _abilityCd[i] = (int)Math.Max(0L, _abilityCd[i] - reduction); // RF-28.3: chamar cedo encurta as recargas
         Emit(TdEventType.CallNextBonus, w, bonus);
         BeginWave(w);
         return CommandResult.Ok;
@@ -238,10 +271,10 @@ public sealed partial class TdMatchState
         var def = _content.Towers[di];
         if (_stage.Id < def.UnlockStage) return Reject(CommandReason.TowerLocked);
         if (cmd.X < 0 || cmd.X > TdWorld.PathLength) return Reject(CommandReason.OutOfZone);
-        if (_towers.Count >= _stage.MaxTowers) return Reject(CommandReason.TowerLimit);
+        if (_towers.Count >= MaxTowers) return Reject(CommandReason.TowerLimit);
         if (Credits < def.Cost) return Reject(CommandReason.InsufficientCredits, def.Cost - Credits);
         Credits -= def.Cost;
-        var t = new TdTower { Id = _nextTowerId++, DefIndex = di, X = cmd.X, Level = 1, Invested = def.Cost };
+        var t = new TdTower { Id = _nextTowerId++, DefIndex = di, X = cmd.X, Level = 1, Invested = def.Cost, Targeting = (byte)ParseTargeting(def.DefaultTargeting) };
         _towers.Add(t);
         Emit(TdEventType.TowerBuilt, t.Id, def.Cost);
         return CommandResult.Ok;
@@ -255,6 +288,7 @@ public sealed partial class TdMatchState
         long refund = (long)Math.Floor(_towers[i].Invested * _content.Stages.Rules.SellRefund + 1e-9);
         Credits = Sat.Add(Credits, refund);
         Emit(TdEventType.TowerSold, _towers[i].Id, refund);
+        _nodes.RemoveAll(n => n.TowerId == _towers[i].Id);
         _towers.RemoveAt(i);
         return CommandResult.Ok;
     }
@@ -266,9 +300,11 @@ public sealed partial class TdMatchState
         if (i < 0) return Reject(CommandReason.TowerNotFound);
         var t = _towers[i];
         var def = _content.Towers[t.DefIndex];
-        // Níveis lineares 1..N (N = def.Levels.Length = 3); ramo (4) e capstone (5) são da TD.3 (ChooseBranch).
-        if (t.Level >= def.Levels.Length) return Reject(CommandReason.MaxLevel);
-        long cost = CeilEps(def.Cost * def.Levels[t.Level].CostFactor);
+        // Níveis lineares 1..N (N = def.Levels.Length = 3); o ramo (3 → 4) é ChooseBranch; aqui só o capstone (4 → 5).
+        long cost;
+        if (t.Level < def.Levels.Length) cost = CeilEps(def.Cost * def.Levels[t.Level].CostFactor);
+        else if (t.Level == def.Levels.Length + 1 && t.Branch > 0) cost = CeilEps(def.Cost * def.Branches[t.Branch - 1].Capstone.CostFactor);
+        else return Reject(CommandReason.MaxLevel);
         if (Credits < cost) return Reject(CommandReason.InsufficientCredits, cost - Credits);
         Credits -= cost;
         t.Level++;
@@ -277,6 +313,50 @@ public sealed partial class TdMatchState
         Emit(TdEventType.TowerUpgraded, t.Id, cost);
         return CommandResult.Ok;
     }
+
+    private CommandResult DoChooseBranch(ChooseBranch cmd)
+    {
+        if (!Running) return Reject(CommandReason.InvalidPhase);
+        int i = FindTower(cmd.TowerId);
+        if (i < 0) return Reject(CommandReason.TowerNotFound);
+        var t = _towers[i];
+        var def = _content.Towers[t.DefIndex];
+        if (t.Branch != 0) return Reject(CommandReason.AlreadyUsed);
+        if (t.Level != def.Levels.Length) return Reject(CommandReason.NotAvailable);
+        int bi = cmd.Branch is null ? -1 : Array.FindIndex(def.Branches, b => b.Id == cmd.Branch);
+        if (bi < 0) return Reject(CommandReason.NotAvailable);
+        long cost = CeilEps(def.Cost * def.Branches[bi].CostFactor);
+        if (Credits < cost) return Reject(CommandReason.InsufficientCredits, cost - Credits);
+        Credits -= cost;
+        t.Level = def.Levels.Length + 1;
+        t.Branch = (byte)(bi + 1);
+        t.Invested += cost;
+        _towers[i] = t;
+        Emit(TdEventType.TowerBranched, t.Id, bi + 1);
+        return CommandResult.Ok;
+    }
+
+    private CommandResult DoSetTargeting(SetTargeting cmd)
+    {
+        if (!Running) return Reject(CommandReason.InvalidPhase);
+        int i = FindTower(cmd.TowerId);
+        if (i < 0) return Reject(CommandReason.TowerNotFound);
+        var t = _towers[i];
+        if (_content.Towers[t.DefIndex].Kind != "attack" || !Enum.IsDefined(cmd.Mode)) return Reject(CommandReason.NotAvailable);
+        t.Targeting = (byte)cmd.Mode;
+        _towers[i] = t;
+        Emit(TdEventType.TowerTargeting, t.Id, (long)cmd.Mode);
+        return CommandResult.Ok;
+    }
+
+    private static TdTargeting ParseTargeting(string? id) => id switch
+    {
+        "last" => TdTargeting.Last,
+        "strong" => TdTargeting.Strong,
+        "weak" => TdTargeting.Weak,
+        "close" => TdTargeting.Close,
+        _ => TdTargeting.First,
+    };
 
     private void BeginWave(int w)
     {
@@ -323,17 +403,72 @@ public sealed partial class TdMatchState
     }
 }
 
-/// <summary>Atributos de um inimigo/chefe pré-calculados do conteúdo (índice igual em <c>TdSpawn.EnemyIndex</c>).</summary>
-internal readonly record struct TdEnemyStats(
-    string Id, bool IsBoss, double Hp, double Speed, double Armor, long Gold, int CoreDamage, bool Flying)
+/// <summary>Atributos de um inimigo/chefe pré-calculados do conteúdo (índice igual em <c>TdSpawn.EnemyIndex</c>), com as mecânicas lidas dos <c>params</c>.</summary>
+internal sealed class TdEnemyStats
 {
+    public required string Id { get; init; }
+    public bool IsBoss { get; init; }
+    public double Hp { get; init; }
+    public double Speed { get; init; }
+    public double Armor { get; init; }
+    public long Gold { get; init; }
+    public int CoreDamage { get; init; }
+    public bool Flying { get; init; }
+    public bool Armored { get; init; }
+    /// <summary>Lentidão máxima permitida (0 = imune; 1 = sem teto). Piso de velocidade = 1 − SlowCap.</summary>
+    public double SlowCap { get; init; } = 1.0;
+    public bool ParalysisImmune { get; init; }
+    public double RegenPct { get; init; }
+    public int RegenDelayTicks { get; init; }
+    /// <summary>Drenagem/criptografia: alcance, duração da desativação, recarga entre usos e recarga inicial.</summary>
+    public double ActRange { get; init; }
+    public int ActDisableTicks { get; init; }
+    public int ActCdTicks { get; init; }
+    public int ActInitialCdTicks { get; init; }
+    public double BlockedReduction { get; init; }
+    public double Split1 { get; init; }
+    public double Split2 { get; init; }
+    public int SplitCount { get; init; }
+    public int InvulnTicks { get; init; }
+    public double Inv1 { get; init; }
+    public double Inv2 { get; init; }
+
+    private static double P(Dictionary<string, double> d, string k, double f = 0) => d.TryGetValue(k, out var v) ? v : f;
+    private static int T(double s) => (int)Math.Round(s * TdWorld.TicksPerSecond, MidpointRounding.ToEven);
+
     public static TdEnemyStats[] Build(TdContent c)
     {
         var list = new List<TdEnemyStats>();
         foreach (var e in c.Enemies.Enemies)
-            list.Add(new(e.Id, false, e.Hp, e.Speed, e.Armor, e.Gold, e.CoreDamage, e.Traits.Contains("flying")));
+        {
+            var p = e.Params;
+            bool drain = p.ContainsKey("drainRangeUnits");
+            list.Add(new()
+            {
+                Id = e.Id, IsBoss = false, Hp = e.Hp, Speed = e.Speed, Armor = e.Armor, Gold = e.Gold, CoreDamage = e.CoreDamage,
+                Flying = e.Traits.Contains("flying"), Armored = e.Traits.Contains("armored"),
+                RegenPct = P(p, "regenPctPerSecond"), RegenDelayTicks = T(P(p, "regenDelaySeconds")),
+                ActRange = P(p, "drainRangeUnits"), ActDisableTicks = drain ? T(P(p, "disableSeconds")) : 0,
+                ActCdTicks = drain ? T(P(p, "disableSeconds")) : 0,
+            });
+        }
         foreach (var b in c.Enemies.Bosses)
-            list.Add(new(b.Id, true, b.Hp, b.Speed, b.Armor, b.Gold, b.CoreDamage, b.Traits.Contains("flying")));
+        {
+            var p = b.Params;
+            bool enc = p.ContainsKey("encryptIntervalSeconds");
+            list.Add(new()
+            {
+                Id = b.Id, IsBoss = true, Hp = b.Hp, Speed = b.Speed, Armor = b.Armor, Gold = b.Gold, CoreDamage = b.CoreDamage,
+                Flying = b.Traits.Contains("flying"), Armored = b.Traits.Contains("armored"),
+                SlowCap = b.SlowCap, ParalysisImmune = b.ParalysisImmune,
+                RegenPct = P(p, "regenPctPerSecond"), RegenDelayTicks = T(P(p, "regenDelaySeconds")),
+                ActRange = P(p, "encryptRangeUnits"), ActDisableTicks = enc ? T(P(p, "encryptSeconds")) : 0,
+                ActCdTicks = enc ? T(P(p, "encryptIntervalSeconds")) : 0, ActInitialCdTicks = enc ? T(P(p, "encryptIntervalSeconds")) : 0,
+                BlockedReduction = P(p, "blockedTowerDamageReduction"),
+                Split1 = P(p, "splitAtHpFraction1"), Split2 = P(p, "splitAtHpFraction2"), SplitCount = (int)P(p, "splitCount"),
+                InvulnTicks = T(P(p, "invulnerableSeconds")), Inv1 = P(p, "invulnerableAtPathFraction1"), Inv2 = P(p, "invulnerableAtPathFraction2"),
+            });
+        }
         return [.. list];
     }
 }

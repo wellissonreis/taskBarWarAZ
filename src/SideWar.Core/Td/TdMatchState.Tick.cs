@@ -22,8 +22,12 @@ public sealed partial class TdMatchState
         try
         {
             Tick++;
+            TickAbilities();
             SpawnDue();
+            TickEnemyStatus();
             FireTowers();
+            TickNodesAndZones();
+            ReapAndTriggers();
             MoveEnemies();
             if (Phase == MatchPhase.Onda) CompleteWaves();
         }
@@ -42,15 +46,7 @@ public sealed partial class TdMatchState
             {
                 if (_enemies.Count >= rules.MaxEnemiesOnField) return; // teto de 44 em campo (SDD-12): o spawn espera
                 var sp = w.Spawns[w.NextSpawn++];
-                var st = _enemyStats[sp.EnemyIndex];
-                double hp = st.Hp;
-                if (!st.IsBoss) hp = ScaledHp(st.Hp, w.Number);
-                _enemies.Add(new TdEnemy
-                {
-                    Id = _nextEnemyId++, Wave = w.Number, DefIndex = sp.EnemyIndex, IsBoss = st.IsBoss,
-                    X = TdWorld.PathLength, Speed = st.Speed, Hp = hp, MaxHp = hp, Armor = st.Armor,
-                    Gold = st.Gold, CoreDamage = st.CoreDamage, Flying = st.Flying,
-                });
+                _enemies.Add(MakeEnemy(sp.EnemyIndex, w.Number, TdWorld.PathLength));
                 w.Alive++;
             }
         }
@@ -65,70 +61,27 @@ public sealed partial class TdMatchState
         return hp * (1.0 + r.HpStageStep * (_stage.Id - 1));
     }
 
-    /// <summary>Gancho TD.3: ordem do dano de RF-28.5 (ramos, foco, vulnerável, habilidades, perfuração). Mínimo: dano × nível − armadura.</summary>
-    private static double ComputeDamage(in TdTower tower, TdTowerDef def, in TdEnemy target)
-    {
-        double raw = def.Damage * def.Levels[tower.Level - 1].DamageMultiplier;
-        return Math.Max(1.0, Math.Floor(raw - target.Armor));
-    }
-
-    /// <summary>Gancho TD.3: mira. Mínimo: First (mais perto do núcleo, menor X; empate: menor Id) dentro do alcance; voador só por alvo "both".</summary>
-    private int PickTarget(in TdTower tower, TdTowerDef def)
-    {
-        int best = -1;
-        for (int i = 0; i < _enemies.Count; i++)
-        {
-            var e = _enemies[i];
-            if (e.Flying && def.Targets != "both") continue;
-            if (Math.Abs(e.X - tower.X) > def.Range) continue;
-            if (best < 0 || e.X < _enemies[best].X) best = i;
-        }
-        return best;
-    }
-
-    private void FireTowers()
-    {
-        for (int ti = 0; ti < _towers.Count; ti++)
-        {
-            var t = _towers[ti];
-            var def = _content.Towers[t.DefIndex];
-            if (t.CooldownTicks > 0) t.CooldownTicks--;
-            // Só torres de ataque disparam aqui; balanceador (blocker) e scaleset (support) são da TD.3.
-            if (def.Kind == "attack" && t.CooldownTicks == 0)
-            {
-                int target = PickTarget(t, def);
-                if (target >= 0)
-                {
-                    var e = _enemies[target];
-                    e.Hp -= ComputeDamage(t, def, e);
-                    t.CooldownTicks = (int)Math.Ceiling(def.Interval * TdWorld.TicksPerSecond * (1.0 - 1e-12));
-                    if (e.Hp <= 0)
-                    {
-                        _enemies.RemoveAt(target);
-                        Credits = Simulation.Sat.Add(Credits, e.Gold);
-                        Emit(TdEventType.EnemyKilled, e.Id, e.Gold);
-                        WaveOf(e.Wave).Alive--;
-                    }
-                    else
-                    {
-                        _enemies[target] = e;
-                    }
-                }
-            }
-            _towers[ti] = t;
-        }
-    }
-
     private TdActiveWave WaveOf(int number) => _active.First(w => w.Number == number);
 
     private void MoveEnemies()
     {
+        double firewall = IsAbilityActive("firewall") ? FirewallSlow() : 0.0;
         for (int i = 0; i < _enemies.Count;)
         {
             var e = _enemies[i];
-            e.X -= e.Speed / TdWorld.TicksPerSecond;
+            var st = _enemyStats[e.DefIndex];
+            double mult = 1.0;
+            if (e.ParalyzeTicks > 0 || _held.Contains(e.Id)) mult = 0.0;
+            else
+            {
+                if (e.SlowTicks > 0) mult = Math.Min(mult, e.SlowMult);
+                if (firewall > 0) mult = Math.Min(mult, 1.0 - (st.IsBoss ? FirewallBossSlow() : firewall));
+                mult = Math.Max(mult, 1.0 - st.SlowCap); // teto de lentidão (chefes 20%, Zero-day 0%)
+            }
+            e.X -= e.Speed * mult / TdWorld.TicksPerSecond;
             if (e.X > 0)
             {
+                if (st.IsBoss && st.InvulnTicks > 0) e = BossPathTriggers(e, st);
                 _enemies[i++] = e;
                 continue;
             }
@@ -144,6 +97,15 @@ public sealed partial class TdMatchState
                 return;
             }
         }
+    }
+
+    /// <summary>Zero-day: invulnerável por <c>invulnerableSeconds</c> ao entrar em cada nova metade do caminho (frações percorridas 0,5 e 0,75).</summary>
+    private static TdEnemy BossPathTriggers(TdEnemy e, TdEnemyStats st)
+    {
+        double travelled = 1.0 - e.X / TdWorld.PathLength;
+        if ((e.Triggers & 4) == 0 && st.Inv1 > 0 && travelled >= st.Inv1) { e.Triggers |= 4; e.InvulnTicks = st.InvulnTicks; }
+        if ((e.Triggers & 8) == 0 && st.Inv2 > 0 && travelled >= st.Inv2) { e.Triggers |= 8; e.InvulnTicks = st.InvulnTicks; }
+        return e;
     }
 
     private void CompleteWaves()
