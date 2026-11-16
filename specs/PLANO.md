@@ -366,7 +366,7 @@ Em paralelo, pode começar a **E3** (SDD-12, SDD-11 e SDD-27 no Core), pois não
 | TD.2 ✅ | Core: máquina de partida (`Preparo/Onda/Derrota/Vitória`), `StartWave`, `CallNextWave`, auto-início, integridade, `SellTower`, créditos e bônus (concluída em 2026-11-16; tipos em `SideWar.Core.Td`, lado a lado com a simulação idle, sem ligação ao Runtime/App) | TD.1 | 🟢 |
 | TD.3 | Core: combate com traços (voador, blindado, regenera, drena), balanceador/nós, ramos/capstones, mira `Close`, habilidades, chefes; `StateHash` | TD.2 | 🟢 |
 | TD.4 | Core: mundo lógico 1.200 e pads (`LayoutChanged` → mapa lógico→físico), `maxTowers`, `SEM POSIÇÃO` | TD.2, SDD-21 | 🟢 |
-| TD.5 | Perfil v2 e persistência (selos, estrelas, árvore, desbloqueios, seed), migração do save do idle (DP-28.4) | TD.1, TD.2, SDD-14 | 🟢 |
+| TD.5 ✅ | Perfil v2 e persistência (selos, estrelas, árvore, desbloqueios, seed), migração do save do idle (DP-28.4) (concluída em 2026-11-16: `profile-td.json`, schema `sidewar.td-profile` v1, `TdProfileStore`/`IdleProfileMigrator`; **fórmula onda máxima → selos pendente de decisão**, injetada pelo chamador; sem ligação ao App/Runtime) | TD.1, TD.2, SDD-14 | 🟢 |
 | TD.6 | Runtime/host: remover presença/offline/eventos do `GameHost`, pausa por ocultação, auto-início, hotkeys, bandeja | TD.2 | 🟡 |
 | TD.7 | Render: cena só na barra (`SceneLayout` com altura da barra), trilho, torres, indicadores de traço, hotspots, 0 fps em Preparo; **gate: TA.1 aprovado** | TD.4, TD.6, TA.1, TA.5 | 🟡/🔴 |
 | TD.8 | UI: HUD compacto, popover (inspetor, construção, preview de onda, habilidades, Mapa, árvore), Configurações | TD.6, TD.7 | 🟡 |
