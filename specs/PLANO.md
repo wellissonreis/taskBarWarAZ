@@ -363,7 +363,7 @@ Em paralelo, pode começar a **E3** (SDD-12, SDD-11 e SDD-27 no Core), pois não
 |---|---|---|---|
 | TD.0 ✅ | Aprovar DPs da §11 de SDD-28, registrar ADR-035 e commitar a especificação (concluída em 2026-11-16) | — | 🟢 |
 | TD.1 ✅ | Conteúdo TD v2: `towers.json` (ramos), `enemies.json` (traços), `waves.json` autoral por fase, `stages.json` (6), `abilities.json`, `meta.json` (selos e árvore); `ContentValidator` com fraqueza declarada (concluída em 2026-11-16; arquivos `td-*.json`, namespace `SideWar.Core.Content.Td`, lado a lado com o conteúdo idle) | TD.0 | 🟢 |
-| TD.2 | Core: máquina de partida (`Preparo/Onda/Derrota/Vitória`), `StartWave`, `CallNextWave`, auto-início, integridade, `SellTower`, créditos e bônus | TD.1 | 🟢 |
+| TD.2 ✅ | Core: máquina de partida (`Preparo/Onda/Derrota/Vitória`), `StartWave`, `CallNextWave`, auto-início, integridade, `SellTower`, créditos e bônus (concluída em 2026-11-16; tipos em `SideWar.Core.Td`, lado a lado com a simulação idle, sem ligação ao Runtime/App) | TD.1 | 🟢 |
 | TD.3 | Core: combate com traços (voador, blindado, regenera, drena), balanceador/nós, ramos/capstones, mira `Close`, habilidades, chefes; `StateHash` | TD.2 | 🟢 |
 | TD.4 | Core: mundo lógico 1.200 e pads (`LayoutChanged` → mapa lógico→físico), `maxTowers`, `SEM POSIÇÃO` | TD.2, SDD-21 | 🟢 |
 | TD.5 | Perfil v2 e persistência (selos, estrelas, árvore, desbloqueios, seed), migração do save do idle (DP-28.4) | TD.1, TD.2, SDD-14 | 🟢 |
