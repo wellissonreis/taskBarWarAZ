@@ -161,7 +161,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         {
             // TD.7: a cena é a faixa de 32 DIP desenhada pelo TdBandRenderer (render por evento: 0 fps em Preparo/pausa, 30 fps em Onda).
             // O sink idle fica sem superfície (não desenha) e o idle está em NoRun.
-            tdRenderer = new TdBandRenderer(typography);
+            tdRenderer = new TdBandRenderer(typography, atlas);
             tdSink = new TdFrameSink(surface, tdRenderer);
             tdDriver = new TdRenderDriver(td.Host, runtime.App, clock, tdSink);
             tdWatcher = new SceneLayoutWatcher(td.Host, null, layout => new SideWar.Core.Td.LayoutChanged(layout));
@@ -276,7 +276,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         if (td is not null && tdDriver is not null)
         {
             // TD.8: HUD, popover, modo construção (ESC temporário) e Interativo ao passar o mouse sobre a faixa.
-            tdUi = new TdUiPresenter(game, runtime, td, tdDriver, typography!, clock, ui, () => hotkeys);
+            tdUi = new TdUiPresenter(game, runtime, td, tdDriver, typography!, clock, ui, () => hotkeys, atlas);
             game.Mode.EnableTdHover(1.5);
             tdUi.Setup();
             loop.AddAfter(new LoopParticipant(() => tdUi.NextDeadline, _ => tdUi.OnWake()));

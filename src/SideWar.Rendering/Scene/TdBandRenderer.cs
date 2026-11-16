@@ -1,5 +1,6 @@
 using SideWar.Core.Content.Td;
 using SideWar.Core.Td;
+using SideWar.Rendering.Sprites;
 using SideWar.Rendering.Text;
 using SideWar.Rendering.Theme;
 using SideWar.Runtime.Td;
@@ -10,11 +11,13 @@ namespace SideWar.Rendering.Scene;
 /// <summary>
 /// Faixa TD de 32 DIP (TD.7, SDD-28 RF-28.15 com o fallback Band de RF-28.18): trilho dos inimigos no topo (núcleo à esquerda, portal à
 /// direita), torres embaixo. Lê o <see cref="TdMatchState"/> (só leitura) e desenha num <see cref="SKCanvas"/> transparente.
-/// Legibilidade a 32 DIP: tipo de inimigo por <b>forma + cor de borda</b> (solo cinza/círculo, voador ciano/losango elevado, blindado
-/// âmbar/quadrado, regenera verde/triângulo, drena magenta/cruz, chefe vermelho/grande com barra), barra de vida só para chefe e elite
-/// danificado, torre com pontos de nível e ponto de cor do ramo, alcance como barra sobre o trilho, nós do balanceador, caixa-bomba com
-/// contagem e a torre em risco marcada, torres SEM POSIÇÃO como chips tracejados. Paints/paths pré-criados; sem alocação por frame em regime
-/// (os números da contagem vêm de uma tabela). Não thread-safe (T-Game).
+/// TD.9: usa as SPRITES do design (<see cref="TdArtMap"/>), pré-escaladas por DPI (<see cref="TdSpriteBaker"/>) e desenhadas em pixels
+/// inteiros (nítidas a 100/150%): torres de 28 DIP, núcleo/portal de 32 DIP de largura, inimigos de 11 a 28 DIP, caixa-bomba de 26 DIP.
+/// Tudo apoiado no chão (base da faixa); inimigos à frente das torres. Legibilidade por cima das sprites: tipo de inimigo por <b>tinta +
+/// pino de traço</b> (voador losango, blindado quadrado, regenera triângulo, drena cruz, chefe quadrado vermelho), barra de vida só para
+/// chefe e elite danificado, torre com pontos de nível e ponto de cor do ramo, alcance como barra no topo, nós do balanceador, caixa-bomba
+/// com contagem e destaque de perigo, torre em risco marcada, torres SEM POSIÇÃO como chips tracejados. Paints/paths/imagens pré-criados;
+/// sem alocação por frame em regime. Não thread-safe (T-Game).
 /// </summary>
 public sealed class TdBandRenderer : IDisposable
 {
@@ -31,6 +34,14 @@ public sealed class TdBandRenderer : IDisposable
     private readonly SKPath _cross = Poly(-1.5f, -4, 1.5f, -4, 1.5f, -1.5f, 4, -1.5f, 4, 1.5f, 1.5f, 1.5f, 1.5f, 4, -1.5f, 4, -1.5f, 1.5f, -4, 1.5f, -4, -1.5f, -1.5f, -1.5f);
     private readonly SKPath _bolt = Poly(1.5f, -5, -3, 0.5f, 0, 0.5f, -1.5f, 5, 3, -0.5f, 0, -0.5f);
     private readonly SKPath _riskMark = Poly(-3, -1, 3, -1, 0, 3);
+    private readonly SKPaint _img = new() { IsAntialias = false };
+    private readonly SpriteAtlas _atlas;
+    private readonly bool _ownsAtlas;
+    private SKImage?[] _towerImg = [], _chipImg = [], _enemyImg = [];
+    private SKImage? _coreImg, _portalImg, _crateImg;
+    private bool _baked;
+    private static readonly SKSamplingOptions Nearest = new(SKFilterMode.Nearest);
+    private const float Ground = 32f, EnemyFoot = 30.5f, FlyFoot = 24f, ChipSpriteDip = 11f;
     private readonly SKPathEffect _dash = SKPathEffect.CreateDash([2f, 2f], 0);
     private TdContent? _content;
     private byte[] _traits = [];
@@ -38,9 +49,13 @@ public sealed class TdBandRenderer : IDisposable
     private int _dpi = 96;
     private float _s = 1f;
 
-    public TdBandRenderer(Typography typography)
+    /// <param name="typography">Fontes.</param>
+    /// <param name="atlas">Atlas do design (compartilhado com a cena idle); nulo = carrega o embutido e o possui.</param>
+    public TdBandRenderer(Typography typography, SpriteAtlas? atlas = null)
     {
         _typography = typography ?? throw new ArgumentNullException(nameof(typography));
+        _atlas = atlas ?? SpriteAtlas.LoadEmbedded();
+        _ownsAtlas = atlas is null;
     }
 
     public int Dpi => _dpi;
@@ -52,6 +67,7 @@ public sealed class TdBandRenderer : IDisposable
         _dpi = dpi;
         _s = dpi / 96f;
         _typography.Clear();
+        ReleaseSprites();
     }
 
     /// <summary>Tamanho físico da janela para uma largura de faixa em DIP.</summary>
@@ -62,24 +78,25 @@ public sealed class TdBandRenderer : IDisposable
         ArgumentNullException.ThrowIfNull(canvas);
         ArgumentNullException.ThrowIfNull(match);
         EnsureContent(match.Content);
+        if (!_baked) BakeSprites();
         canvas.Clear(SKColors.Transparent);
         int w = TdBand.WidthDip(match);
         canvas.Save();
         canvas.Scale(_s);
 
         // Alfa 1/255 em toda a faixa: o Windows só entrega o mouse (modo Interativo, TD.8) a pixels com alfa > 0; invisível a olho nu.
-        _fill.Color = new SKColor(0, 0, 0, 1);
+        _fill.Color = Palette.Td.HitSurface;
         canvas.DrawRect(0, 0, w, TdBand.HeightDip, _fill);
 
         DrawRail(canvas, match, w);
         DrawSelectedRange(canvas, match, view, w);
         DrawZones(canvas, match, w);
+        DrawNodes(canvas, match, w);
         DrawCore(canvas, match);
         DrawPortal(canvas, w);
-        DrawNodes(canvas, match, w);
-        DrawEnemies(canvas, match, w);
         DrawTowers(canvas, match, view, w);
         DrawUnplaced(canvas, match, view);
+        DrawEnemies(canvas, match, w);
         DrawGhost(canvas, match, view, w);
         DrawFire(canvas, match, w);
         DrawCrate(canvas, match, view, now, w);
@@ -96,7 +113,64 @@ public sealed class TdBandRenderer : IDisposable
         _traits = new byte[_enemyDefs];
         for (int i = 0; i < normal.Length; i++) _traits[i] = TraitBits(normal[i].Traits);
         for (int i = 0; i < bosses.Length; i++) _traits[normal.Length + i] = TraitBits(bosses[i].Traits);
+        ReleaseSprites();
     }
+
+    // ------------------------------------------------------------------ sprites (TD.9)
+
+    private void BakeSprites()
+    {
+        ReleaseSprites();
+        var content = _content!;
+        float px = _s;
+        _towerImg = new SKImage?[content.Towers.Length];
+        _chipImg = new SKImage?[content.Towers.Length];
+        for (int i = 0; i < content.Towers.Length; i++)
+        {
+            var e = TdArtMap.TryTower(content.Towers[i].Id, out var found) ? found : TdArtMap.Towers[0];
+            _towerImg[i] = TdSpriteBaker.ByHeight(_atlas, e.Sprite, e.HeightDip * px, e.Tint, e.TintAlpha);
+            _chipImg[i] = TdSpriteBaker.ByHeight(_atlas, e.Sprite, ChipSpriteDip * px, e.Tint, e.TintAlpha);
+        }
+        var normal = content.Enemies.Enemies;
+        var bosses = content.Enemies.Bosses;
+        _enemyImg = new SKImage?[normal.Length + bosses.Length];
+        for (int i = 0; i < _enemyImg.Length; i++)
+        {
+            string id = i < normal.Length ? normal[i].Id : bosses[i - normal.Length].Id;
+            var e = TdArtMap.TryEnemy(id, out var found) ? found : (i < normal.Length ? TdArtMap.Enemies[0] : TdArtMap.Enemies[^3]);
+            _enemyImg[i] = TdSpriteBaker.ByHeight(_atlas, e.Sprite, e.HeightDip * px, e.Tint, e.TintAlpha);
+        }
+        _coreImg = TdSpriteBaker.ByWidth(_atlas, SpriteId.Core, TdArtMap.EdgeWidthDip * px);
+        _portalImg = TdSpriteBaker.ByWidth(_atlas, SpriteId.Portal, TdArtMap.EdgeWidthDip * px);
+        _crateImg = TdSpriteBaker.ByWidth(_atlas, SpriteId.SupplyCrate, TdArtMap.CrateWidthDip * px);
+        _baked = true;
+    }
+
+    private void ReleaseSprites()
+    {
+        foreach (var i in _towerImg) i?.Dispose();
+        foreach (var i in _chipImg) i?.Dispose();
+        foreach (var i in _enemyImg) i?.Dispose();
+        _coreImg?.Dispose(); _portalImg?.Dispose(); _crateImg?.Dispose();
+        _towerImg = []; _chipImg = []; _enemyImg = [];
+        _coreImg = _portalImg = _crateImg = null;
+        _baked = false;
+    }
+
+    /// <summary>Desenha a imagem pré-escalada com o centro X e a base em DIP, alinhada a pixels inteiros (sem reamostrar).</summary>
+    private void Blit(SKCanvas c, SKImage? img, float cxDip, float bottomDip, byte alpha = 255)
+    {
+        if (img is null) return;
+        c.Save();
+        c.ResetMatrix();
+        _img.Color = Palette.TxtBranco.WithAlpha(alpha);
+        c.DrawImage(img, MathF.Round(cxDip * _s - img.Width / 2f), MathF.Round(bottomDip * _s - img.Height), Nearest, _img);
+        c.Restore();
+    }
+
+    private float WidthDip(SKImage? img) => img is null ? 0f : img.Width / _s;
+
+    private float HeightDip(SKImage? img) => img is null ? 0f : img.Height / _s;
 
     private static byte TraitBits(string[] traits)
     {
@@ -115,12 +189,12 @@ public sealed class TdBandRenderer : IDisposable
 
     private void DrawRail(SKCanvas c, TdMatchState m, int w)
     {
+        // chão onde marcham os inimigos (base da faixa); em Onda a linha de topo fica sólida
         _fill.Color = Palette.Td.RailFill;
-        c.DrawRect(0, TdBand.RailTop, w, TdBand.RailHeight, _fill);
+        c.DrawRect(0, Ground - 5f, w, 5f, _fill);
         _stroke.Color = m.Phase == MatchPhase.Onda ? Palette.BordaForte : Palette.BordaPainel;
         _stroke.PathEffect = m.Phase == MatchPhase.Onda ? null : _dash;
-        c.DrawLine(0, TdBand.RailTop + 0.5f, w, TdBand.RailTop + 0.5f, _stroke);
-        c.DrawLine(0, TdBand.RailTop + TdBand.RailHeight - 0.5f, w, TdBand.RailTop + TdBand.RailHeight - 0.5f, _stroke);
+        c.DrawLine(0, Ground - 4.5f, w, Ground - 4.5f, _stroke);
         _stroke.PathEffect = null;
         if (m.Phase is MatchPhase.Vitoria or MatchPhase.Derrota)
         {
@@ -131,27 +205,18 @@ public sealed class TdBandRenderer : IDisposable
 
     private void DrawCore(SKCanvas c, TdMatchState m)
     {
-        _fill.Color = Palette.BgPainel;
-        c.DrawRoundRect(1, 1, 20, 28, 3, 3, _fill);
-        _stroke.Color = Palette.Placeholder.Core;
-        _stroke.StrokeWidth = 1.5f;
-        c.DrawRoundRect(1.75f, 1.75f, 18.5f, 26.5f, 3, 3, _stroke);
-        _stroke.StrokeWidth = 1f;
+        float cx = TdArtMap.EdgeWidthDip / 2f;
+        Blit(c, _coreImg, cx, Ground);
+        // integridade legível por cima da sprite: barra acima do núcleo
         float frac = m.IntegrityMax > 0 ? Math.Clamp(m.Integrity / (float)m.IntegrityMax, 0f, 1f) : 0f;
+        float top = Ground - HeightDip(_coreImg) - 3.5f;
+        _fill.Color = Palette.Placeholder.Edge;
+        c.DrawRect(1, top - 0.5f, 30, 3.5f, _fill);
         _fill.Color = frac > 0.5f ? Palette.Menta : frac > 0.25f ? Palette.Ambar : Palette.Perigo;
-        float h = 22f * frac;
-        if (h > 0) c.DrawRect(5, 4 + (22f - h), 12, h, _fill);
+        c.DrawRect(1.5f, top, 29f * frac, 2.5f, _fill);
     }
 
-    private void DrawPortal(SKCanvas c, int w)
-    {
-        _fill.Color = Palette.Td.PortalGlow;
-        c.DrawOval(w - 11f, 7f, 9f, 13f, _fill);
-        _stroke.Color = Palette.Placeholder.Portal;
-        _stroke.StrokeWidth = 1.5f;
-        c.DrawOval(w - 11f, 7f, 8f, 12f, _stroke);
-        _stroke.StrokeWidth = 1f;
-    }
+    private void DrawPortal(SKCanvas c, int w) => Blit(c, _portalImg, w - TdArtMap.EdgeWidthDip / 2f, Ground);
 
     // ------------------------------------------------------------------ alcance, zonas, nós
 
@@ -166,8 +231,8 @@ public sealed class TdBandRenderer : IDisposable
             float r = TdBand.ToDip(_content!.Towers[t.DefIndex].Range, w);
             float x0 = MathF.Max(0, cx - r), x1 = MathF.Min(w, cx + r);
             var color = TowerColor(t.DefIndex);
-            _fill.Color = color.WithAlpha(48);
-            c.DrawRect(x0, TdBand.RailTop, x1 - x0, TdBand.RailHeight, _fill);
+            _fill.Color = color.WithAlpha(40);
+            c.DrawRect(x0, 2, x1 - x0, Ground - 2, _fill);
             _fill.Color = color.WithAlpha(210);
             c.DrawRect(x0, 0, x1 - x0, 2, _fill);
         }
@@ -181,7 +246,7 @@ public sealed class TdBandRenderer : IDisposable
             var z = zones[i];
             float x = TdBand.ToDip(z.X, w), r = TdBand.ToDip(z.Radius, w);
             _fill.Color = Palette.Perigo.WithAlpha(70);
-            c.DrawRect(x - r, TdBand.RailTop, 2 * r, TdBand.RailHeight, _fill);
+            c.DrawRect(x - r, 2, 2 * r, Ground - 2, _fill);
         }
     }
 
@@ -192,9 +257,9 @@ public sealed class TdBandRenderer : IDisposable
         {
             float x = TdBand.ToDip(nodes[i].X, w);
             _fill.Color = Palette.Menta;
-            c.DrawRoundRect(x - 2.5f, TdBand.RailTop + 1.5f, 5, 7, 1, 1, _fill);
+            c.DrawRoundRect(x - 2.5f, Ground - 9f, 5, 7, 1, 1, _fill);
             _fill.Color = Palette.BgAbismo;
-            c.DrawRect(x - 0.5f, TdBand.RailTop + 3f, 1, 4, _fill);
+            c.DrawRect(x - 0.5f, Ground - 7.5f, 1, 4, _fill);
         }
     }
 
@@ -208,60 +273,61 @@ public sealed class TdBandRenderer : IDisposable
             var e = enemies[i];
             float x = TdBand.ToDip(e.X, w);
             byte bits = e.DefIndex >= 0 && e.DefIndex < _enemyDefs ? _traits[e.DefIndex] : (byte)0;
-            float cy = TdBand.RailTop + TdBand.RailHeight / 2f;
             bool flying = e.Flying || (bits & FlyingBit) != 0;
-            if (flying) cy -= 2.5f;
+            var img = e.DefIndex >= 0 && e.DefIndex < _enemyImg.Length ? _enemyImg[e.DefIndex] : null;
+            float foot = e.IsBoss ? Ground - 0.5f : flying ? FlyFoot : EnemyFoot;
+            float sw = WidthDip(img), sh = HeightDip(img);
             SKColor border = e.IsBoss ? Palette.Perigo : flying ? Palette.Gelo : (bits & ArmoredBit) != 0 ? Palette.Ambar
                 : (bits & RegenBit) != 0 ? Palette.Menta : (bits & DrainBit) != 0 ? Palette.Td.EnemyDrain : Palette.Td.EnemySolo;
+            Blit(c, img, x, foot);
 
-            _fill.Color = Palette.BgAbismo;
-            _stroke.Color = border;
-            _stroke.StrokeWidth = e.IsBoss ? 2f : 1.5f;
+            // pino de traço no canto superior direito (forma redundante com a tinta: não depende só de cor)
+            float px = x + sw / 2f - 1f, py = foot - sh + 1.5f;
             if (e.IsBoss)
             {
-                c.DrawRoundRect(x - 6, cy - 6, 12, 12, 3, 3, _fill);
-                c.DrawRoundRect(x - 6, cy - 6, 12, 12, 3, 3, _stroke);
+                _fill.Color = Palette.BgAbismo;
+                c.DrawRect(px - 3.5f, py - 3.5f, 7, 7, _fill);
                 _fill.Color = border;
-                c.DrawCircle(x, cy, 2f, _fill);
+                c.DrawRect(px - 2.5f, py - 2.5f, 5, 5, _fill);
             }
-            else if (flying)
-            {
-                Shape(c, _diamond, x, cy, true, true);
-            }
+            else if (flying) Pip(c, _diamond, px, py, border);
             else if ((bits & ArmoredBit) != 0)
             {
-                c.DrawRect(x - 3.5f, cy - 3.5f, 7, 7, _fill);
-                c.DrawRect(x - 3.5f, cy - 3.5f, 7, 7, _stroke);
+                _fill.Color = Palette.BgAbismo;
+                c.DrawRect(px - 3, py - 3, 6, 6, _fill);
+                _fill.Color = border;
+                c.DrawRect(px - 2, py - 2, 4, 4, _fill);
             }
-            else if ((bits & RegenBit) != 0)
-            {
-                Shape(c, _triangle, x, cy, true, true);
-            }
-            else if ((bits & DrainBit) != 0)
-            {
-                Shape(c, _cross, x, cy, true, true);
-            }
-            else
-            {
-                c.DrawCircle(x, cy, 3.5f, _fill);
-                c.DrawCircle(x, cy, 3.5f, _stroke);
-            }
-            _stroke.StrokeWidth = 1f;
+            else if ((bits & RegenBit) != 0) Pip(c, _triangle, px, py, border);
+            else if ((bits & DrainBit) != 0) Pip(c, _cross, px, py, border);
 
             if (e.ParalyzeTicks > 0)
             {
                 _stroke.Color = Palette.TxtBranco;
-                c.DrawCircle(x, cy, e.IsBoss ? 7.5f : 5f, _stroke);
+                c.DrawRoundRect(x - sw / 2f - 1f, foot - sh - 1f, sw + 2f, sh + 2f, 2, 2, _stroke);
             }
             else if (e.SlowTicks > 0 && e.SlowMult < 1.0)
             {
                 _fill.Color = Palette.Gelo;
-                c.DrawRect(x - 3, TdBand.RailTop + TdBand.RailHeight - 1.5f, 6, 1.5f, _fill);
+                c.DrawRect(x - MathF.Max(3f, sw / 2f), Ground - 1.5f, MathF.Max(6f, sw), 1.5f, _fill);
             }
 
             if (e.IsBoss || (e.Hp < e.MaxHp && e.MaxHp >= 90))
-                DrawLifeBar(c, x, e.IsBoss ? 0f : cy - 7f, e.IsBoss ? 14f : 8f, (float)(e.Hp / e.MaxHp), e.IsBoss);
+                DrawLifeBar(c, x, e.IsBoss ? 0f : foot - sh - 3.5f, e.IsBoss ? 24f : 10f, (float)(e.Hp / e.MaxHp), e.IsBoss);
         }
+    }
+
+    // Marcador de traço sobre fundo escuro (forma unitária de ±4 DIP reduzida a 75%).
+    private void Pip(SKCanvas c, SKPath shape, float x, float y, SKColor color)
+    {
+        c.Save();
+        c.Translate(x, y);
+        c.Scale(0.75f);
+        _fill.Color = Palette.BgAbismo;
+        c.DrawCircle(0, 0, 5f, _fill);
+        _fill.Color = color;
+        c.DrawPath(shape, _fill);
+        c.Restore();
     }
 
     private void DrawLifeBar(SKCanvas c, float cx, float top, float width, float frac, bool boss)
@@ -297,7 +363,7 @@ public sealed class TdBandRenderer : IDisposable
             var t = m.Towers[i];
             if (!t.Placed) continue;
             float cx = TdBand.TowerCenterDip(m, t, w);
-            DrawTowerPlate(c, cx, TdBand.TowerTop, t, view.SelectedTowerId == t.Id, view.HoverTowerId == t.Id, risk == t.Id, false);
+            DrawTower(c, cx, t, view.SelectedTowerId == t.Id, view.HoverTowerId == t.Id, risk == t.Id);
         }
     }
 
@@ -312,12 +378,23 @@ public sealed class TdBandRenderer : IDisposable
         if (range > 0)
         {
             float x0 = MathF.Max(0, cx - range), x1 = MathF.Min(w, cx + range);
-            _fill.Color = color.WithAlpha(48);
-            c.DrawRect(x0, TdBand.RailTop, x1 - x0, TdBand.RailHeight, _fill);
+            _fill.Color = color.WithAlpha(40);
+            c.DrawRect(x0, 2, x1 - x0, Ground - 2, _fill);
             _fill.Color = color.WithAlpha(210);
             c.DrawRect(x0, 0, x1 - x0, 2, _fill);
         }
+        var gimg = def >= 0 && def < _towerImg.Length ? _towerImg[def] : null;
         float x = cx - TdBand.TowerWidth / 2f;
+        if (gimg is not null)
+        {
+            Blit(c, gimg, cx, Ground, (byte)(view.GhostValid ? (view.ChosenX >= 0 ? 170 : 120) : 80));
+            float gw = WidthDip(gimg), gh = HeightDip(gimg);
+            _stroke.Color = color;
+            _stroke.PathEffect = _dash;
+            c.DrawRoundRect(cx - gw / 2f - 0.5f, Ground - gh - 0.5f, gw + 1, gh + 1, 2, 2, _stroke);
+            _stroke.PathEffect = null;
+            return;
+        }
         _fill.Color = color.WithAlpha((byte)(view.ChosenX >= 0 ? 110 : 70));
         c.DrawRoundRect(x, TdBand.TowerTop, TdBand.TowerWidth, TdBand.TowerHeight, 3, 3, _fill);
         _stroke.Color = color;
@@ -326,73 +403,52 @@ public sealed class TdBandRenderer : IDisposable
         _stroke.PathEffect = null;
     }
 
-    private void DrawTowerPlate(SKCanvas c, float cx, float top, in TdTower t, bool selected, bool hover, bool atRisk, bool unplaced)
+    private void DrawTower(SKCanvas c, float cx, in TdTower t, bool selected, bool hover, bool atRisk)
     {
-        var color = TowerColor(t.DefIndex);
-        float x = cx - TdBand.TowerWidth / 2f;
+        var img = t.DefIndex >= 0 && t.DefIndex < _towerImg.Length ? _towerImg[t.DefIndex] : null;
         bool disabled = t.DisabledTicks > 0;
-        _fill.Color = disabled ? Palette.Td.Plate.WithAlpha(150) : Palette.Td.Plate;
-        c.DrawRoundRect(x, top, TdBand.TowerWidth, TdBand.TowerHeight, 3, 3, _fill);
-        _stroke.Color = selected ? Palette.TxtBranco : hover ? Palette.AmbarHover : t.Level >= 5 ? Palette.Ambar : color.WithAlpha(190);
-        _stroke.StrokeWidth = selected ? 1.5f : 1f;
-        c.DrawRoundRect(x + 0.5f, top + 0.5f, TdBand.TowerWidth - 1, TdBand.TowerHeight - 1, 3, 3, _stroke);
-        _stroke.StrokeWidth = 1f;
-        DrawTowerGlyph(c, cx, top + 7f, _content!.Towers[t.DefIndex].Id, disabled ? color.WithAlpha(90) : color);
+        float sw = MathF.Max(WidthDip(img), 12f), sh = MathF.Max(HeightDip(img), 12f);
+        float left = cx - sw / 2f, top = Ground - sh;
+        Blit(c, img, cx, Ground, disabled ? (byte)110 : (byte)255);
 
-        // pontos de nível (1 a 5) na base
+        if (selected || hover)
+        {
+            _stroke.Color = selected ? Palette.TxtBranco : Palette.AmbarHover;
+            _stroke.StrokeWidth = selected ? 1.5f : 1f;
+            c.DrawRoundRect(left - 0.5f, top - 0.5f, sw + 1, sh + 1, 2, 2, _stroke);
+            _stroke.StrokeWidth = 1f;
+        }
+
+        // pontos de nível (1 a 5) na base, sobre um fundo escuro para não se perderem na sprite
         int level = Math.Clamp(t.Level, 1, 5);
+        float pw = level * 3f + 1f;
+        _fill.Color = Palette.BgAbismo.WithAlpha(215);
+        c.DrawRoundRect(cx - pw / 2f - 0.5f, Ground - 5f, pw + 1f, 4.5f, 1.5f, 1.5f, _fill);
         float px = cx - (level * 3f - 1f) / 2f;
-        _fill.Color = Palette.TxtPrincipal;
-        for (int i = 0; i < level; i++) c.DrawRect(px + i * 3f, top + TdBand.TowerHeight - 3.5f, 2f, 2f, _fill);
+        _fill.Color = t.Level >= 5 ? Palette.Ambar : Palette.TxtPrincipal;
+        for (int i = 0; i < level; i++) c.DrawRect(px + i * 3f, Ground - 3.75f, 2f, 2f, _fill);
 
         // ponto de cor do ramo (A âmbar, B violeta)
         if (t.Branch != 0)
         {
+            _fill.Color = Palette.BgAbismo;
+            c.DrawCircle(left + sw - 2f, top + 3.5f, 3.5f, _fill);
             _fill.Color = t.Branch == 1 ? Palette.Ambar : Palette.Prestigio;
-            c.DrawCircle(x + TdBand.TowerWidth - 3.5f, top + 3.5f, 2f, _fill);
+            c.DrawCircle(left + sw - 2f, top + 3.5f, 2.2f, _fill);
         }
         if (disabled)
         {
             _stroke.Color = Palette.Perigo;
-            c.DrawLine(x + 3, top + 3, x + TdBand.TowerWidth - 3, top + TdBand.TowerHeight - 3, _stroke);
+            c.DrawLine(left + 2, top + 2, left + sw - 2, Ground - 2, _stroke);
         }
         if (atRisk)
         {
             _stroke.Color = Palette.Perigo;
             _stroke.StrokeWidth = 2f;
-            c.DrawRoundRect(x - 1, top - 1, TdBand.TowerWidth + 2, TdBand.TowerHeight + 2, 4, 4, _stroke);
+            c.DrawRoundRect(left - 1f, top - 1f, sw + 2, sh + 2, 3, 3, _stroke);
             _stroke.StrokeWidth = 1f;
-        }
-    }
-
-    private void DrawTowerGlyph(SKCanvas c, float cx, float cy, string id, SKColor color)
-    {
-        _fill.Color = color;
-        _stroke.Color = color;
-        switch (id)
-        {
-            case "bolt":
-                Shape(c, _bolt, cx, cy, true, false);
-                break;
-            case "frost":
-                c.DrawLine(cx - 4.5f, cy, cx + 4.5f, cy, _stroke);
-                c.DrawLine(cx - 2.5f, cy - 4, cx + 2.5f, cy + 4, _stroke);
-                c.DrawLine(cx - 2.5f, cy + 4, cx + 2.5f, cy - 4, _stroke);
-                break;
-            case "cannon":
-                c.DrawCircle(cx - 1, cy + 1.5f, 3.5f, _fill);
-                c.DrawRect(cx, cy - 3.5f, 5, 2.5f, _fill);
-                break;
-            case "scaleset":
-                c.DrawRect(cx - 4.5f, cy - 4, 9, 2, _fill);
-                c.DrawRect(cx - 3.5f, cy - 0.5f, 7, 2, _fill);
-                c.DrawRect(cx - 2.5f, cy + 3f, 5, 2, _fill);
-                break;
-            default: // balancer: dois nós ligados
-                c.DrawCircle(cx - 3.5f, cy, 2f, _fill);
-                c.DrawCircle(cx + 3.5f, cy, 2f, _fill);
-                c.DrawLine(cx - 2, cy, cx + 2, cy, _stroke);
-                break;
+            _fill.Color = Palette.Perigo;
+            Shape(c, _riskMark, cx, MathF.Max(2.5f, top - 3f), true, false);
         }
     }
 
@@ -411,7 +467,8 @@ public sealed class TdBandRenderer : IDisposable
             _stroke.PathEffect = _dash;
             c.DrawRoundRect(x + 0.5f, TdBand.UnplacedChipTop + 0.5f, TdBand.UnplacedChipWidth - 1, TdBand.UnplacedChipHeight - 1, 2, 2, _stroke);
             _stroke.PathEffect = null;
-            DrawTowerGlyph(c, x + TdBand.UnplacedChipWidth / 2f, TdBand.UnplacedChipTop + TdBand.UnplacedChipHeight / 2f, _content!.Towers[t.DefIndex].Id, color.WithAlpha(150));
+            var chip = t.DefIndex >= 0 && t.DefIndex < _chipImg.Length ? _chipImg[t.DefIndex] : null;
+            Blit(c, chip, x + TdBand.UnplacedChipWidth / 2f, TdBand.UnplacedChipTop + TdBand.UnplacedChipHeight - 1.5f, 200);
         }
     }
 
@@ -451,9 +508,9 @@ public sealed class TdBandRenderer : IDisposable
             if (best < 0) continue;
             var target = m.Enemies[best];
             float tx = TdBand.ToDip(target.X, w);
-            float ty = TdBand.RailTop + TdBand.RailHeight / 2f - (target.Flying ? 2.5f : 0f);
+            float ty = target.Flying ? FlyFoot - 7f : EnemyFoot - 7f;
             _stroke.Color = TowerColor(t.DefIndex).WithAlpha(220);
-            c.DrawLine(cx, TdBand.TowerTop + 1, tx, ty, _stroke);
+            c.DrawLine(cx, Ground - 22f, tx, ty, _stroke);
             _fill.Color = Palette.TxtBranco;
             c.DrawCircle(tx, ty, 1.5f, _fill);
         }
@@ -468,37 +525,28 @@ public sealed class TdBandRenderer : IDisposable
         double left = m.CrateSecondsLeft;
         bool urgent = left <= 3.0;
         bool blink = urgent && ((int)(now * 4) & 1) == 0;
-        float x = cx - TdBand.CrateSize / 2f;
-
-        // laço até a torre em risco (a mais próxima, calculada pelo Core)
-        int risk = m.CrateTargetTowerId;
-        if (risk != 0)
-        {
-            for (int i = 0; i < m.Towers.Count; i++)
-            {
-                var t = m.Towers[i];
-                if (t.Id != risk) continue;
-                float tx = TdBand.TowerCenterDip(m, t, w);
-                _fill.Color = Palette.Perigo;
-                Shape(c, _riskMark, tx, TdBand.TowerTop, true, false);
-                break;
-            }
-        }
-
-        _fill.Color = blink ? Palette.Perigo : Palette.Placeholder.SupplyCrate;
-        c.DrawRoundRect(x, TdBand.CrateTop, TdBand.CrateSize, TdBand.CrateSize, 3, 3, _fill);
+        // a torre em risco é marcada em DrawTower (CrateTargetTowerId)
+        float ch = HeightDip(_crateImg), cw = WidthDip(_crateImg);
+        float bottom = TdBand.CrateTop + ch + 1f;
+        // destaque de perigo: halo vermelho (pisca nos últimos 3 s) atrás da caixa
+        _fill.Color = (urgent ? Palette.Perigo : Palette.Ambar).WithAlpha(blink ? (byte)150 : (byte)70);
+        c.DrawRoundRect(cx - cw / 2f - 2f, bottom - ch - 2f, cw + 4f, ch + 4f, 3, 3, _fill);
+        Blit(c, _crateImg, cx, bottom);
         _stroke.Color = view.CrateHover ? Palette.TxtBranco : urgent ? Palette.Perigo : Palette.Ambar;
         _stroke.StrokeWidth = 1.5f;
-        c.DrawRoundRect(x + 0.75f, TdBand.CrateTop + 0.75f, TdBand.CrateSize - 1.5f, TdBand.CrateSize - 1.5f, 3, 3, _stroke);
+        c.DrawRoundRect(cx - cw / 2f - 0.75f, bottom - ch - 0.75f, cw + 1.5f, ch + 1.5f, 2.5f, 2.5f, _stroke);
         _stroke.StrokeWidth = 1f;
 
-        // contagem regressiva em texto (física: fora da escala do canvas)
+        // contagem regressiva num selo escuro ao lado da caixa (física: fora da escala do canvas)
+        float bx = cx + cw / 2f + 2f, by = bottom - ch;
+        _fill.Color = Palette.BgAbismo.WithAlpha(235);
+        c.DrawRoundRect(bx, by, 13f, 9f, 2, 2, _fill);
         int sec = Math.Clamp((int)Math.Ceiling(left), 0, Digits.Length - 1);
         c.Save();
         c.ResetMatrix();
         var font = _typography.GetFont(FontRole.SilkscreenBold, 8, _dpi);
-        _text.Color = Palette.Placeholder.Edge;
-        c.DrawText(Digits[sec], cx * _s, (TdBand.CrateTop + TdBand.CrateSize / 2f) * _s + font.Size * 0.35f, SKTextAlign.Center, font, _text);
+        _text.Color = urgent ? Palette.Perigo : Palette.Ambar;
+        c.DrawText(Digits[sec], (bx + 6.5f) * _s, (by + 4.5f) * _s + font.Size * 0.35f, SKTextAlign.Center, font, _text);
         c.Restore();
     }
 
@@ -530,6 +578,9 @@ public sealed class TdBandRenderer : IDisposable
 
     public void Dispose()
     {
+        ReleaseSprites();
+        if (_ownsAtlas) _atlas.Dispose();
+        _img.Dispose();
         _fill.Dispose();
         _stroke.Dispose();
         _text.Dispose();

@@ -420,14 +420,14 @@ public sealed class TdUiController
         }
     }
 
-    private static TdPopoverView Finish(string title, Stack s, float anchorX)
+    private static TdPopoverView Finish(string title, Stack s, float anchorX, string? iconTower = null)
     {
         var items = new List<TdUiItem>(s.Items.Count + 1)
         {
             new(new DipRect(s.Width - HeaderH - 2, 2, HeaderH, HeaderH - 4), TdUiKind.Button, "X", TdUiAction.Close),
         };
         items.AddRange(s.Items);
-        return new TdPopoverView(title, [.. items], s.Width, s.Y + Pad, anchorX);
+        return new TdPopoverView(title, [.. items], s.Width, s.Y + Pad, anchorX, iconTower);
     }
 
     private static string TraitText(string[] traits)
@@ -523,7 +523,7 @@ public sealed class TdUiController
         }
         long refund = (long)Math.Floor(t.Invested * m.Content.Stages.Rules.SellRefund + 1e-9);
         s.Add(TdUiKind.Button, $"Vender ({Math.Round(m.Content.Stages.Rules.SellRefund * 100):0}%)", RowH, TdUiAction.Sell, arg: t.Id, right: $"+${refund}", tone: TdTone.Bad);
-        return Finish(title, s, t.Placed ? m.TowerDip(t) : _anchorX);
+        return Finish(title, s, t.Placed ? m.TowerDip(t) : _anchorX, d.Id);
     }
 
     private static TdPopoverView BuildPreview(TdMatchState m)

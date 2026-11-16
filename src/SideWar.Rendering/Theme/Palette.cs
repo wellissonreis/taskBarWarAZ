@@ -189,6 +189,18 @@ public static class Palette
         public static readonly SKColor Plate = new(0x0b, 0x1a, 0x2e, 0xe6);
         public static readonly SKColor RailFill = new(0x07, 0x13, 0x23, 0xd0);
         public static readonly SKColor PortalGlow = new(0x8a, 0x5c, 0xff, 90);
+
+        /// <summary>Alfa 1/255 sobre toda a faixa: invisível, mas o Windows só entrega o mouse a pixels com alfa &gt; 0.</summary>
+        public static readonly SKColor HitSurface = new(0, 0, 0, 1);
+
+        // Tintas das sprites TD reaproveitadas (TD.9, TdArtMap): cozidas na sprite, uma por traço/chefe.
+        public static readonly SKColor TintCyan = new(0x4c, 0xc2, 0xff);
+        public static readonly SKColor TintAmber = new(0xff, 0xb4, 0x40);
+        public static readonly SKColor TintGreen = new(0x3d, 0xe0, 0x9a);
+        public static readonly SKColor TintMagenta = new(0xff, 0x4d, 0xd2);
+        public static readonly SKColor TintOrange = new(0xff, 0x8a, 0x3d);
+        public static readonly SKColor TintRed = new(0xff, 0x3b, 0x3b);
+        public static readonly SKColor TintViolet = new(0x9a, 0x6c, 0xff);
     }
 
     /// <summary>Hover: canal x 1,08, arredondado, teto 255 (RF-20.1).</summary>

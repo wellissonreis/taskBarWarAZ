@@ -196,5 +196,122 @@
       "role": "Torre Scale Set",
       "note": "D-13: sem sprite próprio no design; o card do Arsenal usa o blob do slot vazio (268ba6a35d360775ffe7c94341033a1d) como substituto. Sem PNG: PlaceholderAtlas cobre (SDD-09 RF-09.6)."
     }
-  ]
+  ],
+  "tdMapping": {
+    "note": "TD.9: sprites do design usadas pela faixa TD (src/SideWar.Rendering/Scene/TdArtMap.cs). provisional=true: sem arte própria no design, reaproveita a sprite mais próxima com tinta/escala distintas.",
+    "towers": [
+      {
+        "id": "bolt",
+        "sprite": "tower-bolt.png",
+        "provisional": false
+      },
+      {
+        "id": "frost",
+        "sprite": "tower-frost.png",
+        "provisional": false
+      },
+      {
+        "id": "cannon",
+        "sprite": "tower-cannon.png",
+        "provisional": false
+      },
+      {
+        "id": "balancer",
+        "sprite": "tower-frost.png",
+        "variant": "tinta verde (menta)",
+        "provisional": true
+      },
+      {
+        "id": "scaleset",
+        "sprite": "tower-bolt.png",
+        "variant": "tinta violeta",
+        "provisional": true
+      }
+    ],
+    "enemies": [
+      {
+        "id": "grunt",
+        "sprite": "enemy-scout.png",
+        "variant": "16 DIP, sem tinta",
+        "provisional": false
+      },
+      {
+        "id": "runner",
+        "sprite": "enemy-scout.png",
+        "variant": "13 DIP, tinta laranja",
+        "provisional": true
+      },
+      {
+        "id": "swarm",
+        "sprite": "enemy-crawler.png",
+        "variant": "11 DIP, sem tinta",
+        "provisional": false
+      },
+      {
+        "id": "armored",
+        "sprite": "enemy-shield.png",
+        "variant": "19 DIP, tinta âmbar",
+        "provisional": false
+      },
+      {
+        "id": "tank",
+        "sprite": "enemy-brute.png",
+        "variant": "22 DIP, sem tinta",
+        "provisional": false
+      },
+      {
+        "id": "flyer",
+        "sprite": "enemy-drone.png",
+        "variant": "14 DIP, tinta ciano, elevado",
+        "provisional": false
+      },
+      {
+        "id": "regen",
+        "sprite": "enemy-crawler.png",
+        "variant": "15 DIP, tinta verde",
+        "provisional": true
+      },
+      {
+        "id": "leech",
+        "sprite": "enemy-scout.png",
+        "variant": "19 DIP, tinta magenta",
+        "provisional": true
+      },
+      {
+        "id": "ransomware",
+        "sprite": "enemy-boss.png",
+        "variant": "28 DIP, tinta vermelha",
+        "provisional": true
+      },
+      {
+        "id": "botnet",
+        "sprite": "enemy-boss.png",
+        "variant": "28 DIP, tinta ciano",
+        "provisional": true
+      },
+      {
+        "id": "zeroday",
+        "sprite": "enemy-boss.png",
+        "variant": "28 DIP, tinta verde",
+        "provisional": true
+      }
+    ],
+    "fixed": [
+      {
+        "id": "core",
+        "sprite": "core.png",
+        "variant": "32 DIP de largura"
+      },
+      {
+        "id": "portal",
+        "sprite": "portal.png",
+        "variant": "32 DIP de largura"
+      },
+      {
+        "id": "bomb-crate",
+        "sprite": "supply-crate.png",
+        "variant": "26 DIP de largura, halo de perigo e contagem"
+      }
+    ]
+  }
 }

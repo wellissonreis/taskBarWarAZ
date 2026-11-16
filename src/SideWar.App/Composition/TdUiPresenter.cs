@@ -34,6 +34,7 @@ internal sealed class TdUiPresenter : ITdUiHost, IDisposable
     private readonly SkiaFrameCanvas hudCanvas = new(), popCanvas = new();
     private readonly TdUiController controller;
     private TdUiWindow? hudWindow, popWindow;
+    private readonly SideWar.Rendering.Sprites.SpriteAtlas? atlas;
     private TdUiRenderer? renderer;
     private int dpi;
     private TdHudView? hud;
@@ -45,8 +46,9 @@ internal sealed class TdUiPresenter : ITdUiHost, IDisposable
     private long? deadline;
 
     public TdUiPresenter(GameThread game, GameRuntime runtime, TdComposition td, TdRenderDriver driver, Typography typography,
-        IClock clock, Action<UiRequest> ui, Func<HotkeyService?> hotkeys)
+        IClock clock, Action<UiRequest> ui, Func<HotkeyService?> hotkeys, SideWar.Rendering.Sprites.SpriteAtlas? atlas = null)
     {
+        this.atlas = atlas;
         this.game = game; this.runtime = runtime; this.td = td; this.driver = driver; this.typography = typography;
         this.clock = clock; this.ui = ui; this.hotkeys = hotkeys;
         controller = new TdUiController(() => td.Host.Match, Send, this, () => clock.NowTicks / (double)clock.TicksPerSecond);
@@ -117,7 +119,7 @@ internal sealed class TdUiPresenter : ITdUiHost, IDisposable
         if (renderer is null || newDpi != dpi)
         {
             renderer?.Dispose();
-            renderer = new TdUiRenderer(typography, newDpi);
+            renderer = new TdUiRenderer(typography, newDpi, atlas);
             dpi = newDpi;
         }
         float s = Scale;

@@ -30,7 +30,7 @@ public readonly record struct TdUiItem(
 }
 
 /// <summary>Popover (acima da faixa): título, itens (o item 0, quando botão de fechar, fica no canto) e âncora em X (DIP da faixa).</summary>
-public sealed record TdPopoverView(string Title, TdUiItem[] Items, float Width, float Height, float AnchorX)
+public sealed record TdPopoverView(string Title, TdUiItem[] Items, float Width, float Height, float AnchorX, string? IconTower = null)
 {
     public int HitTest(float x, float y)
     {
@@ -46,7 +46,7 @@ public sealed record TdPopoverView(string Title, TdUiItem[] Items, float Width, 
     public long Signature()
     {
         var h = new HashCode();
-        h.Add(Title);
+        h.Add(Title); h.Add(IconTower);
         foreach (var it in Items)
         {
             h.Add(it.Text); h.Add(it.Right); h.Add(it.Sub); h.Add(it.Enabled); h.Add(it.Selected); h.Add((int)it.Tone); h.Add((int)(it.Fill * 100));

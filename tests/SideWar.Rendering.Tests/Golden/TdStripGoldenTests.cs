@@ -1,3 +1,4 @@
+using SideWar.Core.Content.Td;
 using SideWar.Core.Td;
 using SideWar.Runtime.Td;
 using SkiaSharp;
@@ -62,13 +63,36 @@ public sealed class TdStripGoldenTests
         using var bmp = new SKBitmap(new SKImageInfo(1200, 32, SKColorType.Bgra8888, SKAlphaType.Premul));
         using var canvas = new SKCanvas(bmp);
         r.Draw(canvas, match, now, view);
-        Assert.Equal(1, bmp.GetPixel(600, 31).Alpha); // espaço livre: alfa 1/255 (invisível, mas recebe o mouse no modo Interativo; passivo = WS_EX_TRANSPARENT)
-        Assert.NotEqual(0, bmp.GetPixel(600, 7).Alpha); // trilho
-        Assert.NotEqual(0, bmp.GetPixel(10, 15).Alpha); // núcleo
-        Assert.NotEqual(0, bmp.GetPixel(1195, 13).Alpha); // portal
+        Assert.Equal(1, bmp.GetPixel(600, 10).Alpha); // espaço livre: alfa 1/255 (invisível, mas recebe o mouse no modo Interativo; passivo = WS_EX_TRANSPARENT)
+        Assert.NotEqual(0, bmp.GetPixel(600, 30).Alpha); // chão
+        Assert.True(HasOpaque(bmp, 0, 12, 32, 32), "núcleo (sprite core)");
+        Assert.True(HasOpaque(bmp, 1168, 12, 1200, 32), "portal (sprite portal)");
+        Assert.True(HasOpaque(bmp, 318, 6, 342, 31), "torre selecionada (sprite tower-bolt)");
         // o alcance selecionado pinta a barra fina do topo sobre a torre selecionada (x = 330)
         Assert.NotEqual(0, bmp.GetPixel(330, 0).Alpha);
         Assert.Equal(1, bmp.GetPixel(700, 0).Alpha);
+    }
+
+    private static bool HasOpaque(SKBitmap bmp, int x0, int y0, int x1, int y1)
+    {
+        for (int y = y0; y < y1; y++)
+            for (int x = x0; x < x1; x++)
+                if (bmp.GetPixel(x, y).Alpha == 255) return true;
+        return false;
+    }
+
+    [Fact]
+    public void ArtMap_CoversEveryTdContentId_AndMarksReusedArtAsProvisional()
+    {
+        var content = TdContentLoader.LoadEmbedded();
+        foreach (var t in content.Towers) Assert.True(SideWar.Rendering.Scene.TdArtMap.TryTower(t.Id, out _), t.Id);
+        foreach (var e in content.Enemies.Enemies) Assert.True(SideWar.Rendering.Scene.TdArtMap.TryEnemy(e.Id, out _), e.Id);
+        foreach (var b in content.Enemies.Bosses) Assert.True(SideWar.Rendering.Scene.TdArtMap.TryEnemy(b.Id, out _), b.Id);
+        Assert.True(SideWar.Rendering.Scene.TdArtMap.TryTower("balancer", out var bal) && bal.Provisional);
+        Assert.True(SideWar.Rendering.Scene.TdArtMap.TryTower("scaleset", out var sc) && sc.Provisional);
+        // sem dois inimigos idênticos (sprite + tinta + altura): cada um é distinguível
+        var all = SideWar.Rendering.Scene.TdArtMap.Enemies.Select(e => (e.Sprite, e.Tint, e.HeightDip)).ToArray();
+        Assert.Equal(all.Length, all.Distinct().Count());
     }
 
     [Fact]
