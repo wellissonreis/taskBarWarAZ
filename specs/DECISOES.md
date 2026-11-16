@@ -103,6 +103,8 @@ Para alterar uma decisão aceita, é preciso registrar uma nova ADR com justific
 
 ### ADR-016: Regras de construção durante a onda
 
+> **Status (2026-11-16): Refinada por ADR-035:** construir e melhorar durante a onda volta no TD de partida (SDD-28 RF-28.4).
+
 > **Status: Substituída por ADR-019.** Não há fase Build nem comando de onda manual: as ondas são automáticas e construir/melhorar vale a qualquer momento (SDD-27 RF-27.5). D-07 obsoleto.
 
 - Construir, melhorar e vender são permitidos nas fases **Build** e **Wave**, desde que o jogo não esteja pausado. Na referência, isso só valia em algumas missões.
@@ -120,12 +122,16 @@ Para alterar uma decisão aceita, é preciso registrar uma nova ADR com justific
 
 ### ADR-018: Design oficial (jogo idle na barra de tarefas) e tokens em SDD-20
 
+> **Status (2026-11-16): Refinada por ADR-035:** os tokens visuais (SDD-20) seguem; o gênero idle deixa de valer (ver ADR-019).
+
 - **Contexto:** o usuário aprovou um novo design: um jogo idle que vive sobre a barra de tarefas do Windows 11.
 - **Decisão:** o design aprovado é o **oficial**. Tokens de cor, tipografia, ícones e animações ficam em SDD-20 (sistema visual "Azure Defense"); os layouts em SDD-22 (faixa), SDD-23 (widget) e SDD-24 (painel e cards).
 - **Justificativa:** uma única fonte de verdade para o visual evita divergência entre fichas.
 - **Substitui:** os valores visuais soltos nas fichas antigas (SDD-08, SDD-09, SDD-15) onde conflitarem. Onde SDD-20 e uma ficha antiga divergirem, SDD-20 vence.
 
 ### ADR-019: Gênero idle (ondas automáticas, níveis ilimitados, presença/ausência/offline)
+
+> **Status (2026-11-16): Substituída por ADR-035** (partida por ondas com início manual; sem presença, offline, Reservas e Migrar). Histórico preservado abaixo.
 
 - **Contexto:** o design aprovado é idle, não um tower defense de ondas manuais.
 - **Decisão:** as ondas começam sozinhas (SDD-27 RF-27.7); a progressão é ilimitada em níveis, fases e Reservas (prestígio "Migrar"); o jogo tem três estados de presença: Presente, Ausente e Offline (SDD-25). Os modos **Clássico** e **ondas manuais** são removidos, assim como a fase Build e o comando `StartWave`.
@@ -153,6 +159,8 @@ Para alterar uma decisão aceita, é preciso registrar uma nova ADR com justific
 
 ### ADR-022: Offline analítico (oculto, fechado ou em sono = zero simulação; cálculo no retorno; teto de 12 h)
 
+> **Status (2026-11-16): Substituída por ADR-035** (offline cortado; ocultar apenas pausa a simulação, SDD-28 DP-28.12). Histórico preservado abaixo.
+
 - **Contexto:** o jogo idle deve "render" enquanto o usuário está fora, sem custar CPU.
 - **Decisão:** com o overlay oculto, o app fechado ou o computador em sono, **nada é simulado**. No retorno, o `OfflineCalculator` (puro, determinístico) calcula os ganhos a partir do snapshot, com **teto de 12 h** (SDD-25).
 - **Justificativa:** consumo zero oculto (SDD-16, SDD-07 RNF-07.1) e resultado reprodutível.
@@ -165,6 +173,8 @@ Para alterar uma decisão aceita, é preciso registrar uma nova ADR com justific
 - **Estende:** ADR-002 (acrescenta uma thread).
 
 ### ADR-024: Perguntas Azure e picos de demanda são núcleo (D-01 resolvido)
+
+> **Status (2026-11-16): Substituída por ADR-035** (banco de perguntas arquivado; Azure só como flavor nos tooltips; picos e chefes viram chefes autorais, SDD-28 RF-28.8). Histórico preservado abaixo.
 
 - **Decisão:** as perguntas Azure (chefes) e os picos de demanda fazem parte do jogo base (SDD-26). SDD-19 é **substituída**, exceto o **banco de perguntas** (RF-19.10) e o **ledger** (RF-19.7), que são reaproveitados.
 - **Substitui:** a recomendação de D-01 (módulo opcional pós-MVP).
@@ -203,6 +213,8 @@ Para alterar uma decisão aceita, é preciso registrar uma nova ADR com justific
 - **Justificativa:** evita bloquear a implementação por detalhes; qualquer padrão pode ser revisto por nova ADR.
 
 ### ADR-031: Consolidação das fichas idle
+
+> **Status (2026-11-16): Refinada por ADR-035:** a parte de economia idle e presença deixa de valer; remoção do 2×, acerto instantâneo e configurações editáveis seguem.
 
 - **Decisão (Tech Lead):** passada final de consistência nas fichas SDD-20 a SDD-27, com os itens abaixo.
   1. **Acerto instantâneo (ADR-027):** SDD-27 não tem projétil teleguiado nem velocidade de projétil (SDD-27 RF-27.4, DP-27.6).
@@ -249,6 +261,8 @@ Para alterar uma decisão aceita, é preciso registrar uma nova ADR com justific
 
 ### ADR-034: Torres dentro da barra de tarefas, com posição livre em X (substitui ADR-020)
 
+> **Status (2026-11-16): Refinada por ADR-035:** torres na barra com X livre e snap seguem; a faixa de cena acima da barra sai (cena só na barra, trilho de ~14 DIP no topo da barra); `Band` mínima só como fallback se TA.1 reprovar (DP-28.11).
+
 - **Status:** decisão do usuário (2026-11-13), registrada pelo Tech Lead a partir da ficha SPEC-ADR033. **Numeração:** a ficha pedia "ADR-033", mas esse número já pertence a `IOverlaySurface` (ficha T1.6); esta decisão recebe o próximo número livre, **ADR-034**. As decisões pendentes que ela abre mantêm o rótulo pedido pela ficha, **DP-33.x**.
 - **Contexto:** o canvas de design atualizado (artboards Main, Strip, Presence e Offline; composição de 1920×152 DIP: cena em `y` 0–102 acima da barra, barra de tarefas em `y` 104–152) coloca as torres **dentro** da barra de tarefas, nos espaços livres ao lado dos ícones, e não mais sobre os botões de aplicativos. Construir passa a ser arrastar uma torre do Arsenal para um espaço livre.
 - **Decisão (já tomada pelo usuário; não reabrir):**
@@ -261,6 +275,24 @@ Para alterar uma decisão aceita, é preciso registrar uma nova ADR com justific
 - **Decididas (Aceita (Tech Lead, 2026-11-13); aceitas como propostas no texto de SDD-21 seção 11):** DP-33.1 (zona livre que encolhe), DP-33.2 (referência de ancoragem do X), DP-33.3 (largura de colisão, espaçamento e limite de torres), DP-33.4 (z-order e clique da janela sobre a barra), DP-33.5 (ocultação automática, barra vertical e vários monitores), DP-33.6 (fallback sem UIA), DP-33.7 (migração de saves com `slotIndex`), DP-33.8 (ESC sem foco), DP-33.9 (diferenças visuais do canvas além das decisões 1–4). Também aceitas: caixa de suprimentos entre o núcleo e o portal (SDD-26 RF-26.11), fantasma inválido em laranja, clique no painel cancela o modo construção e banner de pico/chefe oculto durante o modo. Todas estão em SDD-21 seção 11, com proposta e justificativa; as fichas de implementação estão em PLANO.md, seção "Revisão ADR-033: fichas propostas" (seção 8).
 - **Substitui:** ADR-020 inteira; ADR-032 item 8; e, nas fichas, SDD-21 RF-21.5/21.7/21.8 (slots), SDD-22 RF-22.1 a RF-22.5 (geometria da cena), SDD-23 RF-23.2/23.3 (widget), SDD-24 RF-24.2/24.5 (posição do painel e Arsenal), SDD-15 RF-15.3 (construção), SDD-04 RF-04.6 (alvos), SDD-11 RF-11.2/11.3/11.9/11.10 (torre por slot), SDD-14 (`towers[].slotIndex`) e SDD-05 RNF-05.3 (a cena passa a cobrir a barra).
 - **Refina:** ADR-026 (layout com zonas livres e posição das torres), ADR-032 itens 1 e 3, ADR-023 (o UIA alimenta as zonas, não slots), D-12, D-15, D-16 e D-17.
+
+
+### ADR-035: Redesenho do gameplay como tower defense de partida (SDD-28)
+
+- **Status:** decisão do usuário (2026-11-16), registrada pela ficha TD.0 a partir da proposta da ficha TD-DESIGN (SDD-28). Vale sujeita ao gate **TA.1** (z-order sobre `Shell_TrayWnd`).
+- **Contexto:** o design idle (ADR-018/019) deixou o jogo pouco engajante e com caráter de jogo de ensino. O usuário quer um TD de mercado: partida por ondas, início manual, construção e melhoria durante a onda, chefes, habilidades, estrelas e progressão entre fases, jogado só dentro da barra de tarefas.
+- **Decisão:**
+  1. **DP-28.1:** os inimigos andam num trilho de ~14 DIP no topo da própria barra, sobre os ícones; sem faixa acima.
+  2. **DP-28.4:** cortar presença, offline, Reservas, Migrar e missões; o save antigo é convertido em selos iniciais pela onda máxima.
+  3. **DP-28.5:** banco de perguntas Azure arquivado; Azure só como flavor curto nos tooltips.
+  4. **DP-28.8:** três estrelas com até 2 de integridade perdida.
+  5. **DP-28.9:** MVP enxuto (6 fases, estrelas, desafios, árvore de selos); modo infinito e desafio do dia pós-MVP.
+  6. **DP-28.11:** se TA.1 reprovar, aceitar `Band` mínima de 28 a 32 DIP.
+  7. **DP-28.2, 28.3, 28.6, 28.7, 28.10, 28.12 a 28.15:** aceitas como propostas no texto de SDD-28 (mundo lógico de 1.200 unidades, X livre com snap de 44 DIP, bônus de chamada antecipada, venda 70% sem juros, 6 fases de 8 a 15 min, pausa ao ocultar, hotkeys, HUD, mira).
+- **Substitui:** ADR-019, ADR-022 e ADR-024; SDD-27, SDD-25 e SDD-26 (SDD-13 passa a substituída), com as exceções de SDD-28 §12.3.
+- **Refina:** ADR-016, ADR-018, ADR-031 e ADR-034 (ver as notas de status em cada uma); mantém ADR-026 (layout como estado) e ADR-027.
+- **Obsoletas por esta ADR (histórico preservado):** D-08, D-10, D-11, D-14 e D-18 (dependiam do idle, de presença/offline, de missões ou da economia de SDD-27).
+- **Revisões em SDDs (fichas TD.1 a TD.12, não editadas aqui):** SDD-07, 10, 11, 12, 14, 15, 16, 17, 22, 23, 24 (lista em SDD-28 §12.3). Série de execução em PLANO.md, seção 9.
 
 ---
 
@@ -275,14 +307,14 @@ Para alterar uma decisão aceita, é preciso registrar uma nova ADR com justific
 | D-05 | Máquina de referência para as metas de desempenho | O usuário informa CPU, GPU, RAM, build do Windows 11, monitores e DPI | Aprovação das metas medidas (SDD-16) |
 | D-06 | Áudio no desktop | Pós-MVP, desligado por padrão, com buffers PCM sintetizados | Seção de áudio de SDD-15 |
 | D-07 | ~~Construir durante a onda~~ **Obsoleto:** não há fases de construção (ADR-019) | n/a | n/a |
-| D-08 | Duração das fases. **Substituído** pelas fases idle de SDD-27 (RF-27.9); o modo Clássico foi removido | Manter os parâmetros de SDD-27 e rever após playtest (D-10) | SDD-27 |
+| D-08 | **Obsoleta por ADR-035 (2026-11-16).** Duração das fases. **Substituído** pelas fases idle de SDD-27 (RF-27.9); o modo Clássico foi removido | Manter os parâmetros de SDD-27 e rever após playtest (D-10) | SDD-27 |
 | D-09 | Nome do produto, executável e pasta de dados | "SideWar Desktop", `SideWar.exe`, `%LOCALAPPDATA%\SideWar` | SDD-18 |
-| D-10 | Calibração da economia idle (custos, ganhos, multiplicadores) | Valores iniciais de SDD-27, ajustados por JSON após playtest | Balanceamento final (SDD-27, SDD-12) |
-| D-11 | O card "Bem-vindo de volta" aparecer sozinho (janela não ativável) ao retornar | Aparecer sozinho, sem ativar a janela (ADR-015 refinada) | SDD-25 RF-25.9 e SDD-24 |
+| D-10 | **Obsoleta por ADR-035 (2026-11-16).** Calibração da economia idle (custos, ganhos, multiplicadores) | Valores iniciais de SDD-27, ajustados por JSON após playtest | Balanceamento final (SDD-27, SDD-12) |
+| D-11 | **Obsoleta por ADR-035 (2026-11-16).** O card "Bem-vindo de volta" aparecer sozinho (janela não ativável) ao retornar | Aparecer sozinho, sem ativar a janela (ADR-015 refinada) | SDD-25 RF-25.9 e SDD-24 |
 | D-12 | Comportamento com a barra não inferior ou com ocultação automática | Fallback virtual já especificado (SDD-21 RF-21.7, SDD-22 RF-22.1). **Atualizado por ADR-034:** proposta de "faixa de torres" no topo da cena (DP-33.5, DP-33.6), aceito pelo Tech Lead em 2026-11-13 | SDD-21 e SDD-22 (aceite em barra não inferior) |
 | D-13 | Sprite próprio do Scale Set (hoje placeholder) | Criar o sprite no design; enquanto isso, placeholder registrado no MANIFEST | SDD-22 RF-22.9 (assets) |
-| D-14 | Títulos das fases 08 a 10 (provisórios) | Aceitar os provisórios de SDD-27 (DP-27.10) até o usuário definir | SDD-27 (conteúdo) |
+| D-14 | **Obsoleta por ADR-035 (2026-11-16).** Títulos das fases 08 a 10 (provisórios) | Aceitar os provisórios de SDD-27 (DP-27.10) até o usuário definir | SDD-27 (conteúdo) |
 | D-15 | ~~Barra com Widgets/Copilot ocupando a zona esquerda~~ **Obsoleto (ADR-034):** o widget HUD fica à direita, acima da barra; o widget do Windows passa a ser zona bloqueada (SDD-21 RF-21.5) | n/a | n/a |
 | D-16 | ~~Selo de presença do widget não cabe em 420 DIP~~ **Resolvido por ADR-034 (decisão 3 do usuário):** o widget tem largura natural (SDD-23 RF-23.3) e o chip mostra o texto completo do canvas | n/a | n/a |
 | D-17 | ~~Fundo próprio do widget~~ **Resolvido por ADR-034:** o canvas novo define o fundo (`#071323` alfa 235, borda 1 `#1f3350`, sem raio; SDD-23 RF-23.3) | n/a | n/a |
-| D-18 | Recompensa das missões em renda relativa vs valor fixo do design (+12K) | Renda relativa | SDD-27 (DP-24.7), SDD-24 | E6 (missões) |
+| D-18 | **Obsoleta por ADR-035 (2026-11-16).** Recompensa das missões em renda relativa vs valor fixo do design (+12K) | Renda relativa | SDD-27 (DP-24.7), SDD-24 | E6 (missões) |

@@ -161,7 +161,7 @@ T3.4 a T3.8 compartilham contratos de `SimState`: **não paralelizar entre si** 
 | T5.8 🟡 | Menus nativos (`TrackPopupMenuEx`) e bandeja completa | SDD-15 RF-15.7, RF-15.8 | Sonnet | Windows | CA-15.5, CA-15.6 (CA-15.5 foco real e CA-15.6 explorer real pendentes) |
 | T5.9 🟡 | `SettingsWindow` (configurações editáveis, ADR-031) e `AboutWindow`, abertas só por ação do usuário | SDD-15 RF-15.9, SDD-14 RF-14.4 | Sonnet | Windows | ADR-015, CA-14.2 (Settings) (CA Windows interativos pendentes) |
 | T5.10 ✅ | `publish.ps1` mínimo para o ZIP interno | SDD-18 | Haiku | Windows | CA-18.1 (parcial) |
-| T5.11 | Playtest, ajustes só em `content/*.json`, MTC-22/23/24 e `specs/evidencias/E5.md` | SDD-22, 23, 24, 27 | Haiku | Windows | CA-22.3, CA-23.2, CA-24.2 |
+| T5.11 | Playtest, ajustes só em `content/*.json`, MTC-22/23/24 e `specs/evidencias/E5.md` **Nota (ADR-035, 2026-11-16):** substituída pela série TD (seção 9) quando o escopo idle sair. | SDD-22, 23, 24, 27 | Haiku | Windows | CA-22.3, CA-23.2, CA-24.2 |
 
 **Aprovação:** CA-23.1 a CA-23.11, CA-24.1 a CA-24.16, CA-15.4 a CA-15.6. **Evidência obrigatória:** `specs/evidencias/E5.md` com a partida idle jogada só com o mouse (VS Code em foco o tempo todo, sem mudar o foco), registro dos ajustes de JSON e resultado do playtest (D-10).
 
@@ -174,15 +174,15 @@ T3.4 a T3.8 compartilham contratos de `SimState`: **não paralelizar entre si** 
 | T6.1 ✅ | `PresenceTracker` e `PresenceMultiplier` (5 min, ×1,5/×2,0/×2,5/×0,25) | SDD-25 RF-25.1, RF-25.3 | Sonnet | WSL | CA-25.1, CA-25.2 |
 | T6.2 ✅ | Modo Ausente (simulação real a 8 fps) e `AutoScaler` | RF-25.4, RF-25.5 | Sonnet | WSL | CA-25.3, CA-25.4, CA-25.8 |
 | T6.3 ✅ | `OfflineCalculator` e `OfflineReport` (analítico, teto de 12 h) | RF-25.6 a RF-25.8 | Sonnet | WSL | CA-25.5, CA-25.6 |
-| T6.4 🟡 | Card "Bem-vindo de volta" (lógica, COLETAR ×2, recolhimento em 60 s) e aplicação do resultado (D-11) | RF-25.9, RF-25.10, SDD-24 | Sonnet | Windows | CA-25.7, CA-24.11 |
+| T6.4 🟡 | Card "Bem-vindo de volta" (lógica, COLETAR ×2, recolhimento em 60 s) e aplicação do resultado (D-11) **Nota (ADR-035, 2026-11-16):** substituída pela série TD (seção 9) quando o escopo idle sair. | RF-25.9, RF-25.10, SDD-24 | Sonnet | Windows | CA-25.7, CA-24.11 |
 | T6.5 ✅ | `EventScheduler`, pico de demanda e caixas de suprimentos | SDD-26 RF-26.2, RF-26.3, RF-26.11, RF-26.12 | Sonnet | WSL | CA-26.1, CA-26.5, CA-26.6 |
 | T6.6 ✅ | Chefe com pergunta Azure, `QuestionLedger`, banco `questions.json` e validador | RF-26.4 a RF-26.10 | Sonnet | WSL | CA-26.2 a CA-26.4, CA-26.7, CA-26.8 |
 | T6.7 ✅ | `PrestigeService` ("Migrar", regiões) e `MissionService` | SDD-27 RF-27.10, RF-27.11, RF-27.13 | Sonnet | WSL | CA-27.8, CA-27.9 |
 | T6.8 ✅ | `ProfileStore` e `SessionStore` (`OfflineSnapshot`) com schemas versionados e migrações | SDD-14 RF-14.5, RF-14.6, RF-14.10, RF-25.11 | Sonnet | WSL | CA-14.1, CA-14.4, CA-14.6, CA-25.9 |
-| T6.9 🟡 parte A (T6.9a) | Gatilhos de save, limite de gravações e integração de sessão/suspensão/logoff com o offline | SDD-14 RF-14.7, RF-14.8, SDD-07 | Sonnet | Windows | CA-14.5, CA-07.2, CA-07.5 |
+| T6.9 🟡 parte A (T6.9a) | Gatilhos de save, limite de gravações e integração de sessão/suspensão/logoff com o offline **Nota (ADR-035, 2026-11-16):** substituída pela série TD (seção 9) quando o escopo idle sair. | SDD-14 RF-14.7, RF-14.8, SDD-07 | Sonnet | Windows | CA-14.5, CA-07.2, CA-07.5 |
 | T6.10 ✅ | Teste de kill do processo em loop | SDD-14 | Sonnet | Windows | CA-14.2 |
-| T6.11 🟡 (coleta de missão no CommandLog via GrantMissionReward, T6.11c; ligado na raiz (T6.11b); verificação visual pendente) | Ligar as abas Missões e Migrar, banners, caixas e card de pergunta aos serviços reais | SDD-24, SDD-26 | Sonnet | Windows | CA-26.9, CA-24.7, CA-24.8 |
-| T6.12 🟡 (parte WSL: cobertura ok; MTC-07 e TRX Windows pendentes) | Fechamento de CA-07.2, CA-07.3 e CA-07.5, MTC-07, cobertura (Runtime e Persistence) e `specs/evidencias/E6.md` | SDD-07, 14, 17 | Haiku | Windows | CA-07.3, CA-17.3 |
+| T6.11 🟡 (coleta de missão no CommandLog via GrantMissionReward, T6.11c; ligado na raiz (T6.11b); verificação visual pendente) | Ligar as abas Missões e Migrar, banners, caixas e card de pergunta aos serviços reais **Nota (ADR-035, 2026-11-16):** substituída pela série TD (seção 9) quando o escopo idle sair. | SDD-24, SDD-26 | Sonnet | Windows | CA-26.9, CA-24.7, CA-24.8 |
+| T6.12 🟡 (parte WSL: cobertura ok; MTC-07 e TRX Windows pendentes) | Fechamento de CA-07.2, CA-07.3 e CA-07.5, MTC-07, cobertura (Runtime e Persistence) e `specs/evidencias/E6.md` **Nota (ADR-035, 2026-11-16):** substituída pela série TD (seção 9) quando o escopo idle sair. | SDD-07, 14, 17 | Haiku | Windows | CA-07.3, CA-17.3 |
 
 **Aprovação:** CA-25.1 a CA-25.9, CA-26.1 a CA-26.9, CA-27.8, CA-27.9, CA-14.1 a CA-14.6, CA-07.2, CA-07.3, CA-07.5, CA-24.11, CA-17.3. **Evidência obrigatória:** `specs/evidencias/E6.md` com TRX Linux e Windows, MTC-07.1..3 completos e a medição de P-19 (retorno de 12 h).
 
@@ -354,3 +354,25 @@ Em paralelo, pode começar a **E3** (SDD-12, SDD-11 e SDD-27 no Core), pois não
 | T5.5, T5.9 (em integração) | Entram na main antes de TA.11; a aba Arsenal/Campanha já está coberta acima. T5.5 (Missões/Migrar/pergunta) e T5.9 (Settings/About) sem mudança por ADR-034, só o painel à direita (TA.11) e o interruptor `towersInBar` em Settings (SDD-15 RF-15.9) | TA.11 |
 | T5.6 (pendente) | Re-escopar antes de começar: goldens do widget compacto e do painel à direita | TA.10, TA.11 |
 | T1.15, T4.10, T4.11, T5.11, T6.11 (pendentes; re-escopar antes de começar) | Checklists e cenários de bench passam a incluir a faixa sobre a barra e o modo construção (MTC-21.13, MTC-22.11 a 22.13) | TA.13 |
+
+## 9. Redesenho TD (SDD-28, ADR-035): série TD.0 a TD.12
+
+> **Origem:** SDD-28 e ADR-035 (decisões do usuário em 2026-11-16). Nada acima é apagado: as fichas idle pendentes (T5.11, T6.4, T6.9, T6.11, T6.12 e afins de presença, offline, eventos e missões) ficam **substituídas pela série TD quando for o caso** (a nota está na própria linha). Legenda: 🟢 WSL puro, 🟡 WSL + Windows, 🔴 só Windows. **TA.1** continua gate de TD.7 (DP-28.11).
+
+| Ficha | Descrição | Depende de | Ambiente |
+|---|---|---|---|
+| TD.0 ✅ | Aprovar DPs da §11 de SDD-28, registrar ADR-035 e commitar a especificação (concluída em 2026-11-16) | — | 🟢 |
+| TD.1 | Conteúdo TD v2: `towers.json` (ramos), `enemies.json` (traços), `waves.json` autoral por fase, `stages.json` (6), `abilities.json`, `meta.json` (selos e árvore); `ContentValidator` com fraqueza declarada | TD.0 | 🟢 |
+| TD.2 | Core: máquina de partida (`Preparo/Onda/Derrota/Vitória`), `StartWave`, `CallNextWave`, auto-início, integridade, `SellTower`, créditos e bônus | TD.1 | 🟢 |
+| TD.3 | Core: combate com traços (voador, blindado, regenera, drena), balanceador/nós, ramos/capstones, mira `Close`, habilidades, chefes; `StateHash` | TD.2 | 🟢 |
+| TD.4 | Core: mundo lógico 1.200 e pads (`LayoutChanged` → mapa lógico→físico), `maxTowers`, `SEM POSIÇÃO` | TD.2, SDD-21 | 🟢 |
+| TD.5 | Perfil v2 e persistência (selos, estrelas, árvore, desbloqueios, seed), migração do save do idle (DP-28.4) | TD.1, TD.2, SDD-14 | 🟢 |
+| TD.6 | Runtime/host: remover presença/offline/eventos do `GameHost`, pausa por ocultação, auto-início, hotkeys, bandeja | TD.2 | 🟡 |
+| TD.7 | Render: cena só na barra (`SceneLayout` com altura da barra), trilho, torres, indicadores de traço, hotspots, 0 fps em Preparo; **gate: TA.1 aprovado** | TD.4, TD.6, TA.1, TA.5 | 🟡/🔴 |
+| TD.8 | UI: HUD compacto, popover (inspetor, construção, preview de onda, habilidades, Mapa, árvore), Configurações | TD.6, TD.7 | 🟡 |
+| TD.9 | Arte e visual: ícones de 8 inimigos, 3 chefes, 5 torres + ramos, código de cor (SDD-20/09 revistos) | TD.7 | 🟡 |
+| TD.10 | `SanityBot` novo e curva de balanceamento das 6 fases; evidência E-TD | TD.3 | 🟢 |
+| TD.11 | Pós-MVP: modo infinito, desafio do dia, políticas (DP-28.9) | TD.8, TD.10 | 🟡 |
+| TD.12 | Limpeza e documentação: arquivar SDD-25/26/27, marcar substituições, `PLANO.md`, `README.md`, MTC-28 | todas | 🟢 |
+
+**Ordem:** TD.0 → (TD.1 → TD.2 → TD.3 ‖ TD.4 ‖ TD.10) → TD.5 e TD.6 → TD.7 (gate TA.1) → TD.8 → TD.9 → TD.12; TD.11 por último.

@@ -90,10 +90,11 @@ Dados extraídos dos cabeçalhos reais de cada ficha (Status, Etapa, Depende de 
 | SDD-25 | [SDD-25-presenca-e-offline.md](SDD-25-presenca-e-offline.md) | Presença (Presente, Ausente, Offline), auto-escala e retorno offline analítico | E6 | SDD-07, SDD-27, SDD-24 | SDD-26 | Rascunho para revisão |
 | SDD-26 | [SDD-26-eventos-ao-vivo.md](SDD-26-eventos-ao-vivo.md) | Eventos ao vivo: pico de demanda, chefe com pergunta Azure e caixas de suprimentos | E6 | SDD-22, SDD-24, SDD-25, SDD-27 | nada (o estado persistido entra em SDD-14) | Rascunho para revisão |
 | SDD-27 | [SDD-27-economia-idle.md](SDD-27-economia-idle.md) | Economia idle: créditos, torres, ondas automáticas, fases, missões e prestígio | E3 (núcleo da economia e do combate idle) e E6 (missões, regiões e prestígio) | SDD-11, SDD-12 | SDD-25, SDD-26 | Rascunho para revisão |
+| SDD-28 | [SDD-28-gameplay-td.md](SDD-28-gameplay-td.md) | Redesenho do gameplay: tower defense de partida na barra de tarefas (ADR-035) | Série TD (PLANO §9) | SDD-10, 11, 21, 22, 26 | substitui SDD-25, 26, 27 e 13 (e revisa outras, §12.3) | Aprovada em 2026-11-16 (gate TA.1) |
 
 Observações sobre a tabela:
 
-- As fichas SDD-20 a SDD-27 são as do design idle (ADR-018 a ADR-030). SDD-03, 04, 05, 08, 09, 10, 11, 12, 14, 15, 16 e 17 foram revisadas por elas; SDD-13 é parcialmente substituída por SDD-27 e SDD-19 é histórica (aproveitam-se o banco de perguntas e o ledger via SDD-26).
+- **SDD-28 (ADR-035, 2026-11-16)** redesenha o gameplay como TD de partida e substitui SDD-25, 26, 27 e 13; os textos dessas fichas ficam como histórico até a TD.12. As fichas SDD-20 a SDD-27 são as do design idle (ADR-018 a ADR-030). SDD-03, 04, 05, 08, 09, 10, 11, 12, 14, 15, 16 e 17 foram revisadas por elas; SDD-13 é parcialmente substituída por SDD-27 e SDD-19 é histórica (aproveitam-se o banco de perguntas e o ledger via SDD-26).
 - Os cabeçalhos declaram **dependências mútuas** (por exemplo SDD-05 ⇄ SDD-21, SDD-08 ⇄ SDD-22, SDD-07 ⇄ SDD-25). Elas são arestas tracejadas no grafo e são resolvidas pelo **corte por etapa** do [PLANO.md](PLANO.md) (cada ficha entra por partes).
 
 ## 4. Grafo de dependências
