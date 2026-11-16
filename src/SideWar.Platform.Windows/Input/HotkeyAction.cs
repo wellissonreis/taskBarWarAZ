@@ -8,6 +8,8 @@ public enum HotkeyAction
     ToggleInteractive,
     ToggleVisibility,
     TogglePause,
+    /// <summary>Iniciar onda / chamar a próxima (modo TD); só é registrada quando o host informa o atalho.</summary>
+    StartWave,
 }
 
 /// <summary>Posted to the game command sink when a registered hotkey fires. The effect belongs to the host.</summary>

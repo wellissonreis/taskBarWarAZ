@@ -79,9 +79,11 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     private long? reenumerateAt;
     private float barHeightDip = SceneGeometry.DefaultBarHeight;
     private MenuSnapshot menu = MenuSnapshot.Initial;
+    private readonly TdComposition? td;
 
     public GameComposition(GameRuntime runtime, CompositeLoopHost loop, SceneFrameSink sink, SessionPersistence persistence,
-        AppSettings settings, Action<string> log, Action<Exception> report, Action<UiRequest> ui)
+        AppSettings settings, Action<string> log, Action<Exception> report, Action<UiRequest> ui,
+        string? tdDataDirectory = null, string version = "0.1.0")
     {
         this.runtime = runtime;
         this.loop = loop;
@@ -93,6 +95,14 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         this.ui = ui;
         runtime.Effects = this;
         loop.Intercept = Intercept;
+        if (tdDataDirectory is not null)
+        {
+            // gameMode = td (experimental, TD.6): o host TD usa a mesma AppStateMachine (ocultar/fullscreen/sessão pausam) e o idle
+            // fica sem partida (NoRun) até o render TD (TD.7) trocar o jogo padrão.
+            runtime.Host.RunState = Runtime.Hosting.RunState.NoRun;
+            td = TdComposition.Create(tdDataDirectory, version, runtime.App, clock, settings, log);
+            loop.AddBefore(td.Host);
+        }
         loop.AddBefore(runtime); // ReleaseCaches 60 s após o Hide
         loop.AddBefore(new LoopParticipant(() => taskbar?.NextDeadline, _ => OnTaskbarWake()));
         loop.AddBefore(new LoopParticipant(() => fullscreen?.NextDeadline, _ => fullscreen?.OnWake()));
@@ -223,7 +233,9 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             [HotkeyAction.ToggleInteractive] = settings.Hotkeys.ToggleInteractive,
             [HotkeyAction.ToggleVisibility] = settings.Hotkeys.ToggleVisibility,
             [HotkeyAction.TogglePause] = settings.Hotkeys.TogglePause,
-        });
+            // Só no modo TD (no idle a tecla não é registrada).
+            [HotkeyAction.StartWave] = settings.Hotkeys.StartWave,
+        }.Where(kv => td is not null || kv.Key != HotkeyAction.StartWave).ToDictionary());
         hotkeys.Conflict += (_, message) => log(message);
         hotkeys.Register();
         res.Started("hotkeys", hotkeys.Dispose); // UnregisterHotKey
@@ -271,6 +283,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     public void ApplySettings(AppSettings value)
     {
         settings = value;
+        td?.ApplySettings(value);
         runtime.ApplySettings(value.Performance.PresentFps, value.Performance.AbsentFps, value.Accessibility.ReducedMotion, value.AutoScale);
         game.Mode.SetPeekEnabled(value.Behavior.PeekOnHover);
         ApplyOpacityLevels(value.Opacity);
@@ -349,11 +362,15 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
                 {
                     HotkeyAction.ToggleInteractive => AppCommandKind.ToggleInteractive,
                     HotkeyAction.ToggleVisibility => AppCommandKind.ToggleVisibility,
+                    HotkeyAction.StartWave => AppCommandKind.StartWave,
                     _ => AppCommandKind.TogglePause,
                 });
                 return true;
             case AppCommand app:
                 Execute(app.Kind, app.MonitorIndex);
+                return true;
+            case IGameCommand tdCommand when td is not null && tdCommand.GetType().Namespace == "SideWar.Core.Td":
+                td.Host.OnCommand(tdCommand);
                 return true;
             default:
                 return false;
@@ -367,6 +384,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             case AppCommandKind.ToggleInteractive: game.Mode.ToggleInteractive(); break;
             case AppCommandKind.ToggleVisibility: runtime.ToggleVisibilityByUser(); break;
             case AppCommandKind.TogglePause: runtime.TogglePause(); break;
+            case AppCommandKind.StartWave: td?.Host.RequestWave(); break;
             case AppCommandKind.SelectMonitor: SelectMonitor(monitorIndex); break;
             case AppCommandKind.ShowAndInteract:
                 runtime.ShowByUser();
@@ -544,7 +562,8 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             : 0;
         var app = runtime.App;
         Volatile.Write(ref menu, new MenuSnapshot(game.Mode.Mode == OverlayMode.Interactive,
-            (app.PauseReasons & Runtime.Timing.PauseReason.User) != 0, !app.IsVisible, labels, selected));
+            (app.PauseReasons & Runtime.Timing.PauseReason.User) != 0, !app.IsVisible, labels, selected,
+            td is not null, td is null ? null : settings.Hotkeys.StartWave));
         if (!app.SimulationRunning && app.IsVisible) ScheduleWidget(now: true); // pausa/retomada atualiza o widget uma vez
         else if (app.IsVisible && widgetAt is null) ScheduleWidget(now: true);
     }

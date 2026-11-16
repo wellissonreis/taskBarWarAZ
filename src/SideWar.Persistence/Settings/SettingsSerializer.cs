@@ -46,6 +46,7 @@ public static class SettingsSerializer
         w.WriteString("ToggleInteractive", s.Hotkeys.ToggleInteractive);
         w.WriteString("ToggleVisibility", s.Hotkeys.ToggleVisibility);
         w.WriteString("TogglePause", s.Hotkeys.TogglePause);
+        w.WriteString("StartTdWave", s.Hotkeys.StartWave);
         w.WriteEndObject();
         w.WriteStartObject("audio");
         w.WriteBoolean("enabled", s.Audio.Enabled);
@@ -58,6 +59,11 @@ public static class SettingsSerializer
         w.WriteStartObject("taskbar");
         w.WriteBoolean("useUia", s.Taskbar.UseUia);
         w.WriteBoolean("towersInBar", s.Taskbar.TowersInBar);
+        w.WriteEndObject();
+        w.WriteString("gameMode", s.GameMode.ToString());
+        w.WriteStartObject("td");
+        w.WriteBoolean("autoStartEnabled", s.Td.AutoStartEnabled);
+        w.WriteNumber("autoStartSeconds", s.Td.AutoStartSeconds);
         w.WriteEndObject();
         w.WriteEndObject();
     }
@@ -75,6 +81,7 @@ public static class SettingsSerializer
         var audio = Obj(p, "audio");
         var diag = Obj(p, "diagnostics");
         var taskbar = Obj(p, "taskbar");
+        var td = Obj(p, "td");
         return new AppSettings
         {
             Dock = new DockSettings
@@ -110,6 +117,7 @@ public static class SettingsSerializer
                 ToggleInteractive = Hotkey(hot, "ToggleInteractive", d.Hotkeys.ToggleInteractive),
                 ToggleVisibility = Hotkey(hot, "ToggleVisibility", d.Hotkeys.ToggleVisibility),
                 TogglePause = Hotkey(hot, "TogglePause", d.Hotkeys.TogglePause),
+                StartWave = Hotkey(hot, "StartTdWave", d.Hotkeys.StartWave),
             },
             Audio = new AudioSettings
             {
@@ -122,6 +130,12 @@ public static class SettingsSerializer
                 LogLevel = EnumVal(diag, "logLevel", d.Diagnostics.LogLevel),
             },
             Taskbar = new TaskbarSettings { UseUia = Bool(taskbar, "useUia", d.Taskbar.UseUia), TowersInBar = Bool(taskbar, "towersInBar", d.Taskbar.TowersInBar) },
+            GameMode = EnumVal(p, "gameMode", d.GameMode),
+            Td = new TdSettings
+            {
+                AutoStartEnabled = Bool(td, "autoStartEnabled", d.Td.AutoStartEnabled),
+                AutoStartSeconds = IntRange(td, "autoStartSeconds", TdSettings.MinAutoStartSeconds, TdSettings.MaxAutoStartSeconds, d.Td.AutoStartSeconds),
+            },
         };
     }
 

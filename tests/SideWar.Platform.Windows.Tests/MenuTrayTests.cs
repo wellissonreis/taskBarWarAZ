@@ -148,4 +148,18 @@ public sealed class NativeMenuTests
         Assert.Equal([16, 20, 24, 32, 48], TrayIconResource.EmbeddedSizes());
         Assert.True(OnSta(() => { using var tray = new TrayIcon("SideWar"); return tray.UsesEmbeddedIcon && tray.IsAdded; }));
     }
+
+    [Fact]
+    public void Td_mode_adds_start_wave_item_first_and_idle_mode_does_not()
+    {
+        var idle = MenuModel.Build(new MenuState());
+        Assert.DoesNotContain(idle, e => e.Command?.Kind == MenuCommandKind.StartWave);
+
+        var td = MenuModel.Build(new MenuState(TdMode: true, StartWaveHotkey: "Ctrl+Alt+W"));
+        Assert.Equal(MenuCommandKind.StartWave, td[0].Command?.Kind);
+        Assert.Contains("Iniciar onda", td[0].Text);
+        Assert.Contains("Ctrl+Alt+W", td[0].Text);
+        Assert.False(td[0].Grayed);
+        Assert.True(MenuModel.Build(new MenuState(TdMode: true, OverlayHidden: true))[0].Grayed);
+    }
 }

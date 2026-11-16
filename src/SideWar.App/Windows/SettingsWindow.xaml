@@ -17,6 +17,9 @@
           <ComboBox x:Name="HideCombo" Width="220" HorizontalAlignment="Left" Margin="0,2,0,8" />
           <CheckBox Content="Usar UI Automation para a barra de tarefas" IsChecked="{Binding UseUia}" Margin="0,0,0,8" />
           <CheckBox Content="Auto-escala" IsChecked="{Binding AutoScale}" Margin="0,0,0,8" />
+          <CheckBox Content="Iniciar as ondas automaticamente (Tower Defense)" IsChecked="{Binding TdAutoStart}" Margin="0,0,0,4" />
+          <TextBlock Text="Segundos de contagem do auto-início (5–60)" />
+          <TextBox Text="{Binding TdAutoStartSeconds, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding TdAutoStart}" Width="80" HorizontalAlignment="Left" Margin="0,2,0,8" />
           <TextBlock x:Name="PresenceText" TextWrapping="Wrap" Foreground="Gray" />
         </StackPanel>
       </TabItem>
@@ -55,6 +58,9 @@
           <TextBlock Text="Pausa" />
           <TextBox x:Name="HkPause" Margin="0,2,0,2" />
           <TextBlock x:Name="HkPauseErr" Foreground="Firebrick" Margin="0,0,0,8" />
+          <TextBlock Text="Iniciar onda (Tower Defense)" />
+          <TextBox x:Name="HkStartWave" Margin="0,2,0,2" />
+          <TextBlock x:Name="HkStartWaveErr" Foreground="Firebrick" Margin="0,0,0,8" />
           <TextBlock x:Name="HkConflictText" Foreground="Firebrick" />
           <Button Content="Restaurar padrão" HorizontalAlignment="Left" Click="OnRestoreHotkeys" Margin="0,8,0,0" />
         </StackPanel>

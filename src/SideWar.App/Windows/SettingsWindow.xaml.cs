@@ -36,6 +36,8 @@ public partial class SettingsWindow : Window
         HkInteractive.Text = viewModel.ToggleInteractive;
         HkVisibility.Text = viewModel.ToggleVisibility;
         HkPause.Text = viewModel.TogglePause;
+        HkStartWave.Text = viewModel.StartWave;
+        HkStartWave.TextChanged += (_, _) => viewModel.StartWave = HkStartWave.Text;
         HkInteractive.TextChanged += (_, _) => viewModel.ToggleInteractive = HkInteractive.Text;
         HkVisibility.TextChanged += (_, _) => viewModel.ToggleVisibility = HkVisibility.Text;
         HkPause.TextChanged += (_, _) => viewModel.TogglePause = HkPause.Text;
@@ -50,12 +52,14 @@ public partial class SettingsWindow : Window
         HkInteractiveErr.Text = ViewModel.GetError(nameof(SettingsViewModel.ToggleInteractive)) ?? "";
         HkVisibilityErr.Text = ViewModel.GetError(nameof(SettingsViewModel.ToggleVisibility)) ?? "";
         HkPauseErr.Text = ViewModel.GetError(nameof(SettingsViewModel.TogglePause)) ?? "";
+        HkStartWaveErr.Text = ViewModel.GetError(nameof(SettingsViewModel.StartWave)) ?? "";
         HkConflictText.Text = ViewModel.HotkeyConflict ?? "";
         SaveErrorText.Text = ViewModel.SaveError ?? "";
         SaveButton.IsEnabled = ViewModel.IsValid;
         if (HkInteractive.Text != ViewModel.ToggleInteractive) HkInteractive.Text = ViewModel.ToggleInteractive;
         if (HkVisibility.Text != ViewModel.ToggleVisibility) HkVisibility.Text = ViewModel.ToggleVisibility;
         if (HkPause.Text != ViewModel.TogglePause) HkPause.Text = ViewModel.TogglePause;
+        if (HkStartWave.Text != ViewModel.StartWave) HkStartWave.Text = ViewModel.StartWave;
     }
 
     private void OnRestoreHotkeys(object sender, RoutedEventArgs e) => ViewModel.RestoreDefaultHotkeys();

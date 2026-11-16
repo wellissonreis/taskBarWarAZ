@@ -7,6 +7,8 @@ internal enum AppCommandKind
     ToggleInteractive,
     ToggleVisibility,
     TogglePause,
+    /// <summary>"Iniciar onda" (modo TD): StartWave em Preparo, CallNextWave em Onda.</summary>
+    StartWave,
     SelectMonitor,
     /// <summary>Segunda instância (SDD-07 RF-07.8): remove <c>HiddenReason.User</c> e entra no modo Interativo.</summary>
     ShowAndInteract,
@@ -19,7 +21,8 @@ internal sealed record AppCommand(AppCommandKind Kind, int MonitorIndex = -1) : 
 internal enum UiRequest { OpenSettings, OpenAbout, Exit }
 
 /// <summary>Estado do menu (bandeja/widget) publicado pela T-Game como snapshot imutável (SDD-01 RF-01.4 regra 3).</summary>
-internal sealed record MenuSnapshot(bool Interactive, bool Paused, bool Hidden, IReadOnlyList<string> Monitors, int SelectedMonitor)
+internal sealed record MenuSnapshot(bool Interactive, bool Paused, bool Hidden, IReadOnlyList<string> Monitors, int SelectedMonitor,
+    bool TdMode = false, string? StartWaveHotkey = null)
 {
     public static MenuSnapshot Initial { get; } = new(false, false, true, [], 0);
 }

@@ -4,6 +4,9 @@ public enum HideOnFullscreenMode { SameMonitor, AnyMonitor, Never }
 
 public enum LogLevelSetting { Debug, Info, Warning, Error }
 
+/// <summary>Jogo hospedado pelo App. <c>Idle</c> é o padrão; <c>Td</c> é experimental/oculto até o render TD (TD.7).</summary>
+public enum GameMode { Idle, Td }
+
 /// <summary>
 /// Payload de settings.json (SDD-14 RF-14.4 ajustado por ADR-020/028/031). Valores padrão = padrões do campo.
 /// Não inclui o que não é editável (limiares de presença, teto offline, multiplicadores) nem StartWave/2x.
@@ -23,6 +26,11 @@ public sealed record AppSettings
     public AudioSettings Audio { get; init; } = new();
     public DiagnosticsSettings Diagnostics { get; init; } = new();
     public TaskbarSettings Taskbar { get; init; } = new();
+
+    /// <summary>Setting oculto/experimental (sem UI): seleciona o host TD no lugar do idle. Padrão Idle.</summary>
+    public GameMode GameMode { get; init; } = GameMode.Idle;
+
+    public TdSettings Td { get; init; } = new();
 
     public static AppSettings Default { get; } = new();
 }
@@ -69,6 +77,8 @@ public sealed record HotkeySettings
     public string ToggleInteractive { get; init; } = "Ctrl+Alt+G";
     public string ToggleVisibility { get; init; } = "Ctrl+Alt+H";
     public string TogglePause { get; init; } = "Ctrl+Alt+P";
+    /// <summary>Iniciar onda / chamar a próxima (só registrado no modo TD).</summary>
+    public string StartWave { get; init; } = "Ctrl+Alt+Space";
 }
 
 public sealed record AudioSettings
@@ -89,4 +99,14 @@ public sealed record TaskbarSettings
 
     /// <summary>Towers inside the bar (ADR-034); off by default until the TA.1 spike validates z-order over the taskbar.</summary>
     public bool TowersInBar { get; init; }
+}
+
+/// <summary>Opções da partida TD (SDD-28 RF-28.3). Auto-início desligado por padrão; contagem de 5 a 60 s.</summary>
+public sealed record TdSettings
+{
+    public const int MinAutoStartSeconds = 5;
+    public const int MaxAutoStartSeconds = 60;
+
+    public bool AutoStartEnabled { get; init; }
+    public int AutoStartSeconds { get; init; } = 15;
 }

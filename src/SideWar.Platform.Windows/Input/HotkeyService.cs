@@ -19,15 +19,17 @@ public sealed class HotkeyService : IDisposable
 {
     private const int FirstId = 0x5701;
     internal static int IdFor(HotkeyAction action) => FirstId + (int)action;
-    private static readonly HotkeyAction[] Actions = [HotkeyAction.ToggleInteractive, HotkeyAction.ToggleVisibility, HotkeyAction.TogglePause];
+    private static readonly HotkeyAction[] BaseActions = [HotkeyAction.ToggleInteractive, HotkeyAction.ToggleVisibility, HotkeyAction.TogglePause];
+    private const int ActionCount = 4;
 
     private readonly GameThread owner;
     private readonly SceneWindow scene;
     private readonly IGameCommandSink sink;
     private readonly Action<string> log;
-    private readonly HotkeyStatus[] status = new HotkeyStatus[Actions.Length];
-    private readonly string[] text = new string[Actions.Length];
-    private readonly bool[] notified = new bool[Actions.Length];
+    private readonly HotkeyStatus[] status = new HotkeyStatus[ActionCount];
+    private readonly string[] text = new string[ActionCount];
+    private readonly bool[] notified = new bool[ActionCount];
+    private readonly HotkeyAction[] Actions;
     private bool disposed;
 
     public HotkeyService(GameThread owner, SceneWindow scene, IGameCommandSink sink, Action<string>? log = null,
@@ -41,6 +43,8 @@ public sealed class HotkeyService : IDisposable
         this.sink = sink;
         this.log = log ?? (m => Trace.WriteLine(m));
         owner.VerifyAccess();
+        // StartWave (modo TD) só é registrada se o host passou o atalho; no idle ele não rouba a tecla.
+        Actions = bindings is not null && bindings.ContainsKey(HotkeyAction.StartWave) ? [.. BaseActions, HotkeyAction.StartWave] : BaseActions;
         foreach (var a in Actions)
             text[(int)a] = bindings is not null && bindings.TryGetValue(a, out var t) ? t : Describe(a);
     }
@@ -54,6 +58,7 @@ public sealed class HotkeyService : IDisposable
         HotkeyAction.ToggleInteractive => "Ctrl+Alt+G",
         HotkeyAction.ToggleVisibility => "Ctrl+Alt+H",
         HotkeyAction.TogglePause => "Ctrl+Alt+P",
+        HotkeyAction.StartWave => "Ctrl+Alt+Space",
         _ => throw new ArgumentOutOfRangeException(nameof(action)),
     };
 
@@ -114,8 +119,8 @@ public sealed class HotkeyService : IDisposable
     private void OnHotkey(int id)
     {
         int i = id - FirstId;
-        if (i < 0 || i >= Actions.Length || status[i] != HotkeyStatus.Registered) return;
-        sink.Post(new HotkeyCommand(Actions[i]));
+        if (i < 0 || i >= ActionCount || Array.IndexOf(Actions, (HotkeyAction)i) < 0 || status[i] != HotkeyStatus.Registered) return;
+        sink.Post(new HotkeyCommand((HotkeyAction)i));
     }
 
     public void Dispose()
@@ -125,10 +130,10 @@ public sealed class HotkeyService : IDisposable
         disposed = true;
         scene.HotkeyHandler = null;
         var hwnd = new HWND(scene.Handle);
-        for (int i = 0; i < Actions.Length; i++)
+        for (int i = 0; i < ActionCount; i++)
         {
             if (status[i] != HotkeyStatus.Registered) continue;
-            if (!PInvoke.UnregisterHotKey(hwnd, FirstId + i)) log($"UnregisterHotKey failed for {Actions[i]}");
+            if (!PInvoke.UnregisterHotKey(hwnd, FirstId + i)) log($"UnregisterHotKey failed for {(HotkeyAction)i}");
             status[i] = HotkeyStatus.NotRegistered;
         }
     }

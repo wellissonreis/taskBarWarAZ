@@ -3,6 +3,8 @@ namespace SideWar.Platform.Windows.Menus;
 public enum MenuCommandKind
 {
     ToggleInteractive,
+    /// <summary>"Iniciar onda" (modo TD): StartWave em Preparo ou CallNextWave em Onda.</summary>
+    StartWave,
     TogglePause,
     ToggleVisibility,
     SelectMonitor,
@@ -24,7 +26,9 @@ public sealed record MenuState(
     bool Paused = false,
     bool OverlayHidden = false,
     IReadOnlyList<string>? MonitorLabels = null,
-    int SelectedMonitor = 0);
+    int SelectedMonitor = 0,
+    bool TdMode = false,
+    string? StartWaveHotkey = null);
 
 /// <summary>One entry of the menu as plain data (testable without a window).</summary>
 public sealed record MenuEntry(string Text, MenuCommand? Command = null, bool Checked = false, bool Grayed = false,
@@ -39,7 +43,9 @@ public static class MenuModel
         var children = new List<MenuEntry>();
         for (int i = 0; i < monitors.Count; i++)
             children.Add(new MenuEntry(monitors[i], new MenuCommand(MenuCommandKind.SelectMonitor, i), Checked: i == state.SelectedMonitor));
-        return
+        var items = new List<MenuEntry>();
+        if (state.TdMode) items.Add(new($"Iniciar onda\t{state.StartWaveHotkey ?? "Ctrl+Alt+Space"}", new(MenuCommandKind.StartWave), Grayed: state.OverlayHidden));
+        items.AddRange(
         [
             new("Modo interativo", new(MenuCommandKind.ToggleInteractive), Checked: state.InteractiveActive, Grayed: state.OverlayHidden),
             new(state.Paused ? "Retomar" : "Pausar", new(MenuCommandKind.TogglePause), Grayed: state.OverlayHidden),
@@ -50,6 +56,7 @@ public static class MenuModel
             new("Configurações…", new(MenuCommandKind.OpenSettings)),
             new("Sobre o SideWar…", new(MenuCommandKind.OpenAbout)),
             new("Sair (fechar o SideWar)", new(MenuCommandKind.Exit)),
-        ];
+        ]);
+        return items;
     }
 }

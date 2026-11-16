@@ -76,7 +76,8 @@ internal sealed class AppComposition : IDisposable
             FrameSink = sink,
         });
         loop = new CompositeLoopHost(runtime.Host, ReportGameError);
-        gameSide = new GameComposition(runtime, loop, sink, persistence, settings, log, ReportGameError, PostUi);
+        gameSide = new GameComposition(runtime, loop, sink, persistence, settings, log, ReportGameError, PostUi,
+            settings.GameMode == GameMode.Td ? dataDirectory : null, version);
 
         game = new GameThread(loop, ReportGameError, log);
         await game.StartAsync();
@@ -163,7 +164,7 @@ internal sealed class AppComposition : IDisposable
     private MenuState TrayMenuState()
     {
         var m = gameSide.Menu;
-        return new MenuState(m.Interactive, m.Paused, m.Hidden, m.Monitors, m.SelectedMonitor);
+        return new MenuState(m.Interactive, m.Paused, m.Hidden, m.Monitors, m.SelectedMonitor, m.TdMode, m.StartWaveHotkey);
     }
 
     private void OnTrayCommand(MenuCommand command, nint previousForeground)
@@ -171,6 +172,7 @@ internal sealed class AppComposition : IDisposable
         switch (command.Kind)
         {
             case MenuCommandKind.ToggleInteractive: PostGame(new AppCommand(AppCommandKind.ToggleInteractive)); break;
+            case MenuCommandKind.StartWave: PostGame(new AppCommand(AppCommandKind.StartWave)); break;
             case MenuCommandKind.TogglePause: PostGame(new AppCommand(AppCommandKind.TogglePause)); break;
             case MenuCommandKind.ToggleVisibility: PostGame(new AppCommand(AppCommandKind.ToggleVisibility)); break;
             case MenuCommandKind.SelectMonitor: PostGame(new AppCommand(AppCommandKind.SelectMonitor, command.MonitorIndex)); break;

@@ -25,7 +25,9 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     private HideOnFullscreenMode hideOnFullscreen;
     private int presentFps, absentFps, peekOpacity, absentOpacity, autoPassiveSeconds, volumePercent;
     private LogLevelSetting logLevel;
-    private string toggleInteractive = "", toggleVisibility = "", togglePause = "";
+    private string toggleInteractive = "", toggleVisibility = "", togglePause = "", startWave = "";
+    private bool tdAutoStart;
+    private int tdAutoStartSeconds;
     private string? saveError;
 
     public SettingsViewModel(AppSettings current, Func<AppSettings, bool> save)
@@ -57,6 +59,10 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     public LogLevelSetting LogLevel { get => logLevel; set => Set(ref logLevel, value); }
     public string ToggleInteractive { get => toggleInteractive; set { if (Set(ref toggleInteractive, value)) Check(nameof(ToggleInteractive), ValidateHotkey(value)); } }
     public string ToggleVisibility { get => toggleVisibility; set { if (Set(ref toggleVisibility, value)) Check(nameof(ToggleVisibility), ValidateHotkey(value)); } }
+    public string StartWave { get => startWave; set { if (Set(ref startWave, value)) Check(nameof(StartWave), ValidateHotkey(value)); } }
+    /// <summary>Auto-início das ondas TD (padrão desligado).</summary>
+    public bool TdAutoStart { get => tdAutoStart; set => Set(ref tdAutoStart, value); }
+    public int TdAutoStartSeconds { get => tdAutoStartSeconds; set { if (Set(ref tdAutoStartSeconds, value)) Check(nameof(TdAutoStartSeconds), value is >= TdSettings.MinAutoStartSeconds and <= TdSettings.MaxAutoStartSeconds ? null : "Entre 5 e 60 segundos."); } }
     public string TogglePause { get => togglePause; set { if (Set(ref togglePause, value)) Check(nameof(TogglePause), ValidateHotkey(value)); } }
 
     /// <summary>Erro de gravação da última tentativa de Salvar (null se ok).</summary>
@@ -70,7 +76,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     {
         get
         {
-            string?[] vals = [Canon(toggleInteractive), Canon(toggleVisibility), Canon(togglePause)];
+            string?[] vals = [Canon(toggleInteractive), Canon(toggleVisibility), Canon(togglePause), Canon(startWave)];
             var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var v in vals) if (v is not null && !set.Add(v)) return "Dois atalhos usam a mesma combinação.";
             return null;
@@ -88,6 +94,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         ToggleInteractive = d.ToggleInteractive;
         ToggleVisibility = d.ToggleVisibility;
         TogglePause = d.TogglePause;
+        StartWave = d.StartWave;
     }
 
     /// <summary>Valida tudo e devolve os settings editados (preservando o que a janela não edita).</summary>
@@ -110,10 +117,12 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
             ToggleInteractive = Canon(toggleInteractive) ?? toggleInteractive,
             ToggleVisibility = Canon(toggleVisibility) ?? toggleVisibility,
             TogglePause = Canon(togglePause) ?? togglePause,
+            StartWave = Canon(startWave) ?? startWave,
         },
         Audio = new AudioSettings { Enabled = audioEnabled, Volume = volumePercent / 100.0 },
         Diagnostics = new DiagnosticsSettings { RecordCommands = recordCommands, LogLevel = logLevel },
         Taskbar = original.Taskbar with { UseUia = useUia },
+        Td = new TdSettings { AutoStartEnabled = tdAutoStart, AutoStartSeconds = tdAutoStartSeconds },
     };
 
     /// <summary>Salvar: só grava se válido. Devolve true se gravou (a janela fecha); em falha de gravação mantém aberta com <see cref="SaveError"/>.</summary>
@@ -157,6 +166,9 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         toggleInteractive = s.Hotkeys.ToggleInteractive;
         toggleVisibility = s.Hotkeys.ToggleVisibility;
         togglePause = s.Hotkeys.TogglePause;
+        startWave = s.Hotkeys.StartWave;
+        tdAutoStart = s.Td.AutoStartEnabled;
+        tdAutoStartSeconds = s.Td.AutoStartSeconds;
     }
 
     private void Check(string property, string? error)
