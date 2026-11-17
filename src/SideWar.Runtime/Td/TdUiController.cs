@@ -186,6 +186,8 @@ public sealed class TdUiController
                 Changed?.Invoke();
                 break;
             case TdUiAction.Menu: Toggle(TdUiMode.Menu); break;
+            case TdUiAction.HudMinimize: Close(); _host.SetHudMinimized(true); Changed?.Invoke(); break;
+            case TdUiAction.HudRestore: _host.SetHudMinimized(false); Changed?.Invoke(); break;
             case TdUiAction.Upgrade: _send(new UpgradeTower(item.Arg)); Changed?.Invoke(); break;
             case TdUiAction.Branch when item.SArg is not null: _send(new ChooseBranch(item.Arg, item.SArg)); Changed?.Invoke(); break;
             case TdUiAction.Targeting when Enum.TryParse<TdTargeting>(item.SArg, out var mode):
@@ -327,41 +329,70 @@ public sealed class TdUiController
     public TdHudView BuildHud()
     {
         var m = _match();
-        var items = new List<TdUiItem>(10);
-        float w = TdHudView.DefaultWidth;
+        var items = new List<TdUiItem>(14);
         int integ = m.Integrity, max = m.IntegrityMax;
         var integTone = integ * 2 > max ? TdTone.Good : integ * 4 > max ? TdTone.Warn : TdTone.Bad;
-        items.Add(new TdUiItem(new DipRect(2, 2, 76, 14), TdUiKind.Label, $"INT {integ}/{max}", Tone: integTone));
-        items.Add(new TdUiItem(new DipRect(80, 2, 78, 14), TdUiKind.Label, $"$ {m.Credits}", Tone: TdTone.Accent));
         int shown = m.Phase == MatchPhase.Onda || m.NextWaveNumber == 0 ? m.WaveNumber : m.NextWaveNumber;
-        items.Add(new TdUiItem(new DipRect(2, 18, 66, 18), TdUiKind.Label, $"ONDA {Math.Clamp(shown, 1, Math.Max(1, m.TotalWaves))}/{m.TotalWaves}"));
+        shown = Math.Clamp(shown, 1, Math.Max(1, m.TotalWaves));
+        string coreTip = "Integridade do núcleo: se chegar a 0 você perde a fase. Inimigos que chegam ao núcleo tiram integridade.";
 
-        var (startText, startRight, startEnabled, startTone) = StartButton(m);
-        items.Add(new TdUiItem(new DipRect(70, 18, 88, 18), TdUiKind.Button, startText, TdUiAction.StartWave, Right: startRight, Enabled: startEnabled, Tone: startTone));
+        if (_host.HudMinimized)
+        {
+            items.Add(new TdUiItem(new DipRect(0, 0, TdHudView.ChipWidth, TdHudView.ChipHeight), TdUiKind.Button,
+                $"{integ}/{max}   Onda {shown}/{m.TotalWaves}", TdUiAction.HudRestore, Icon: TdIcon.Heart, Tone: integTone,
+                Tip: $"HUD recolhido. Núcleo {integ}/{max}, onda {shown} de {m.TotalWaves}. Clique para mostrar o HUD completo."));
+            return new TdHudView([.. items], TdHudView.ChipWidth, TdHudView.ChipHeight, Minimized: true);
+        }
+
+        items.Add(new TdUiItem(new DipRect(4, 3, 104, 26), TdUiKind.Label, $"Núcleo {integ}/{max}", Icon: TdIcon.Heart, Tone: integTone, Tip: coreTip));
+        items.Add(new TdUiItem(new DipRect(112, 3, 92, 26), TdUiKind.Label, $"Créditos {m.Credits}", Icon: TdIcon.Coin, Tone: TdTone.Accent,
+            Tip: "Créditos: moeda da partida. Use para construir e melhorar torres; vender devolve parte. Cada onda concluída rende bônus."));
+        items.Add(new TdUiItem(new DipRect(208, 3, 100, 26), TdUiKind.Label, $"Onda {shown} de {m.TotalWaves}", Icon: TdIcon.Wave,
+            Tip: $"Onda atual: {shown} de {m.TotalWaves}. Sobreviva a todas as ondas da fase para vencer."));
+        items.Add(new TdUiItem(new DipRect(432, 3, 24, 26), TdUiKind.Button, "", TdUiAction.HudMinimize, Icon: TdIcon.Minus,
+            Tip: "Recolher o HUD: vira um chip pequeno com núcleo e onda. Clique no chip (ou em Mostrar HUD na bandeja) para voltar."));
+
+        var (startText, startRight, startEnabled, startTone, startTip) = StartButton(m);
+        items.Add(new TdUiItem(new DipRect(4, 33, 138, 28), TdUiKind.Button, startText, TdUiAction.StartWave, Right: startRight, Enabled: startEnabled,
+            Tone: startTone, Icon: m.Phase == MatchPhase.Onda ? TdIcon.FastForward : TdIcon.Play, RightCoin: startRight is not null, Tip: startTip));
 
         var abilities = m.AbilityStatuses;
         for (int i = 0; i < 3; i++)
         {
-            var rect = new DipRect(2 + i * 30, 40, 28, 20);
-            if (i >= abilities.Count) { items.Add(new TdUiItem(rect, TdUiKind.Button, "--", Enabled: false, Tone: TdTone.Dim)); continue; }
+            var rect = new DipRect(146 + i * 68, 33, 64, 28);
+            if (i >= abilities.Count) { items.Add(new TdUiItem(rect, TdUiKind.Button, "--", Enabled: false, Tone: TdTone.Dim, Icon: TdIcon.Lock)); continue; }
             var st = abilities[i];
             var def = m.Content.Abilities[i];
             string label = AbilityShort(st.Id);
-            string text = !st.Unlocked ? "--" : st.ActiveTicks > 0 ? "ON" : st.CooldownTicks > 0 ? Math.Ceiling(st.CooldownTicks / 30.0).ToString("0", System.Globalization.CultureInfo.InvariantCulture) : label;
+            var icon = st.Unlocked ? AbilityIcon(st.Id) : TdIcon.Lock;
+            string text = !st.Unlocked ? label : st.ActiveTicks > 0 ? "ATIVA" : st.CooldownTicks > 0 ? Math.Ceiling(st.CooldownTicks / 30.0).ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " s" : label;
             bool ready = st.Unlocked && st.CooldownTicks == 0 && st.UsesLeft != 0 && m.Phase == MatchPhase.Onda;
             float fill = def.CooldownSeconds > 0 && st.CooldownTicks > 0 ? Math.Clamp(st.CooldownTicks / (float)(def.CooldownSeconds * 30.0), 0f, 1f) : 0f;
+            string unlock = def.UnlockStage is int us ? $"desbloqueia na fase {us}" : "desbloqueia na árvore de selos (Mapa e selos)";
+            string tip = !st.Unlocked ? $"{def.Name}: bloqueada, {unlock}. {def.Effect}"
+                : $"{def.Name}: {def.Effect} Recarga {def.CooldownSeconds:0} s." + (st.CooldownTicks > 0 ? " Recarregando." : st.UsesLeft == 0 ? " Sem usos nesta fase." : m.Phase != MatchPhase.Onda ? " Só durante a onda." : " Pronta: clique para usar.");
             items.Add(new TdUiItem(rect, TdUiKind.Button, text, TdUiAction.Ability, SArg: st.Id, Enabled: ready,
-                Tone: !st.Unlocked ? TdTone.Dim : st.ActiveTicks > 0 ? TdTone.Good : TdTone.Normal, Fill: fill, Sub: label));
+                Tone: !st.Unlocked ? TdTone.Dim : st.ActiveTicks > 0 ? TdTone.Good : TdTone.Normal, Fill: fill, Sub: label, Icon: icon, Tip: tip));
         }
-        items.Add(new TdUiItem(new DipRect(94, 40, 38, 20), TdUiKind.Button, "TORRE", TdUiAction.BuildToggle,
-            Selected: BuildActive, Enabled: m.Phase is MatchPhase.Preparo or MatchPhase.Onda));
-        items.Add(new TdUiItem(new DipRect(134, 40, 24, 20), TdUiKind.Button, "...", TdUiAction.Menu, Selected: Mode == TdUiMode.Menu));
-        return new TdHudView([.. items], w, TdHudView.DefaultHeight);
+        items.Add(new TdUiItem(new DipRect(350, 33, 74, 28), TdUiKind.Button, "Construir", TdUiAction.BuildToggle, Icon: TdIcon.Build,
+            Selected: BuildActive, Enabled: m.Phase is MatchPhase.Preparo or MatchPhase.Onda,
+            Tip: "Construir torre: clique num ponto livre da faixa e escolha a torre. ESC ou botão direito cancela."));
+        items.Add(new TdUiItem(new DipRect(428, 33, 28, 28), TdUiKind.Button, "", TdUiAction.Menu, Icon: TdIcon.Menu, Selected: Mode == TdUiMode.Menu,
+            Tip: "Menu: próxima onda, mapa de fases e selos, pausar, configurações e sair."));
+        return new TdHudView([.. items], TdHudView.DefaultWidth, TdHudView.DefaultHeight);
     }
 
-    private static string AbilityShort(string id) => id switch { "scale" => "ESC", "firewall" => "FW", "snapshot" => "SNP", _ => id.Length > 3 ? id[..3].ToUpperInvariant() : id.ToUpperInvariant() };
+    /// <summary>Dica do item do HUD sob o ponto (null = sem dica). A janela do tooltip posiciona acima do item.</summary>
+    public static TdTooltipView? TooltipFor(TdHudView hud, int index) =>
+        index >= 0 && index < hud.Items.Length && hud.Items[index].Tip is { } tip
+            ? new TdTooltipView(tip, hud.Items[index].Rect.X + hud.Items[index].Rect.W / 2f, hud.Items[index].Rect.Y)
+            : null;
 
-    private static (string Text, string? Right, bool Enabled, TdTone Tone) StartButton(TdMatchState m)
+    private static string AbilityShort(string id) => id switch { "scale" => "Escalar", "firewall" => "Firewall", "snapshot" => "Snapshot", _ => id };
+
+    private static TdIcon AbilityIcon(string id) => id switch { "scale" => TdIcon.Scale, "firewall" => TdIcon.Firewall, "snapshot" => TdIcon.Snapshot, _ => TdIcon.Scale };
+
+    private static (string Text, string? Right, bool Enabled, TdTone Tone, string Tip) StartButton(TdMatchState m)
     {
         var rules = m.Content.Stages.Rules;
         switch (m.Phase)
@@ -371,20 +402,22 @@ public sealed class TdUiController
                 long bonus = 0;
                 if (m.CountdownRemainingSeconds > 0)
                     bonus = (long)Math.Ceiling(m.CountdownRemainingSeconds * (rules.CallNext.BonusBase + rules.CallNext.BonusPerWave * m.NextWaveNumber) * (1 - 1e-12));
-                return ("> INICIAR", bonus > 0 ? $"+{bonus}" : null, true, TdTone.Good);
+                return ("Iniciar onda", bonus > 0 ? $"+{bonus}" : null, true, TdTone.Good,
+                    "Iniciar onda: começa a próxima onda de inimigos (atalho Ctrl+Alt+Espaço)." + (bonus > 0 ? $" Iniciar antes da contagem rende +{bonus} créditos." : ""));
             }
             case MatchPhase.Onda when m.NextWaveNumber > 0:
             {
-                foreach (var a in m.ActiveWaves) if (!a.SpawnsDone) return ("ONDA...", null, false, TdTone.Dim);
+                foreach (var a in m.ActiveWaves) if (!a.SpawnsDone) return ("Onda chegando", null, false, TdTone.Dim, "A onda ainda está surgindo; só dá para chamar a próxima depois que todos os inimigos aparecerem.");
                 int w = m.NextWaveNumber;
                 double eta = m.EtaSeconds();
                 long bonus = (long)Math.Ceiling(eta * (rules.CallNext.BonusBase + rules.CallNext.BonusPerWave * w) * (1 - 1e-12));
                 long cap = (long)Math.Ceiling(rules.CallNext.BonusCapFactor * m.WaveBonusFor(w) * (1 - 1e-12));
                 if (bonus > cap) bonus = cap;
-                return ("CHAMAR", bonus > 0 ? $"+{bonus}" : null, true, TdTone.Accent);
+                return ("Chamar próxima", bonus > 0 ? $"+{bonus}" : null, true, TdTone.Accent,
+                    $"Chamar próxima onda agora, antes do tempo: rende +{bonus} créditos de bônus, mas os inimigos chegam juntos.");
             }
-            case MatchPhase.Onda: return ("ULTIMA", null, false, TdTone.Dim);
-            default: return ("FIM", null, false, TdTone.Dim);
+            case MatchPhase.Onda: return ("Última onda", null, false, TdTone.Dim, "Esta é a última onda: derrote todos os inimigos para vencer.");
+            default: return ("Fim da fase", null, false, TdTone.Dim, "A partida terminou.");
         }
     }
 

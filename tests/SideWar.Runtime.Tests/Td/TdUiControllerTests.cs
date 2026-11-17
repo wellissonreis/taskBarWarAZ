@@ -26,6 +26,8 @@ public sealed class TdUiControllerTests
         public void TogglePause() => Calls.Add("pause");
         public void OpenSettings() => Calls.Add("settings");
         public void RequestExit() => Calls.Add("exit");
+        public bool HudMinimized { get; set; }
+        public void SetHudMinimized(bool minimized) { HudMinimized = minimized; Calls.Add("hud:" + minimized); }
         public void StartStage(int stageId) => Calls.Add($"stage{stageId}");
         public int StageCount => 6;
         public bool StageUnlocked(int stageId) => stageId <= 2;
@@ -181,7 +183,7 @@ public sealed class TdUiControllerTests
         var hud = r.Ui.BuildHud();
         var start = hud.Items.First(i => i.Action == TdUiAction.StartWave);
         Assert.True(start.Enabled);
-        Assert.Contains("INICIAR", start.Text);
+        Assert.Equal("Iniciar onda", start.Text);
         var ability = hud.Items.First(i => i.Action == TdUiAction.Ability);
         Assert.False(ability.Enabled); // Preparo
         r.Ui.Activate(start);
@@ -189,9 +191,64 @@ public sealed class TdUiControllerTests
         Assert.Equal(MatchPhase.Onda, r.Match.Phase);
         hud = r.Ui.BuildHud();
         Assert.True(hud.Items.First(i => i.Action == TdUiAction.Ability && i.SArg == "scale").Enabled);
-        Assert.Contains(hud.Items, i => i.Text.StartsWith("ONDA 1/", StringComparison.Ordinal));
+        Assert.Contains(hud.Items, i => i.Text.StartsWith("Onda 1 de ", StringComparison.Ordinal));
         r.Ui.Activate(hud.Items.First(i => i.SArg == "scale"));
         Assert.IsType<UseAbility>(r.Sent[^1]);
+    }
+
+    [Fact]
+    public void Hud_is_readable_every_item_has_a_tooltip_and_abilities_show_name_icon_and_lock()
+    {
+        var r = new Rig();
+        var hud = r.Ui.BuildHud();
+        Assert.Contains(hud.Items, i => i.Text == "Núcleo 20/20" && i.Icon == TdIcon.Heart && i.Tip!.Contains("se chegar a 0 você perde"));
+        Assert.Contains(hud.Items, i => i.Text.StartsWith("Créditos ", StringComparison.Ordinal) && i.Icon == TdIcon.Coin);
+        Assert.Contains(hud.Items, i => i.Text.StartsWith("Onda 1 de ", StringComparison.Ordinal));
+        Assert.Contains(hud.Items, i => i.Text == "Construir" && i.Action == TdUiAction.BuildToggle);
+        Assert.Contains(hud.Items, i => i.Action == TdUiAction.Menu && i.Tip is not null);
+        var abilities = hud.Items.Where(i => i.Action == TdUiAction.Ability || i.Icon == TdIcon.Lock).ToArray();
+        Assert.Contains(abilities, i => i.Text == "Escalar" && i.Icon == TdIcon.Scale);
+        var firewall = hud.Items.First(i => i.Sub == "Firewall");
+        Assert.Equal(TdIcon.Lock, firewall.Icon); // fase 1: bloqueada
+        Assert.Contains("fase 3", firewall.Tip, StringComparison.Ordinal);
+        var snapshot = hud.Items.First(i => i.Sub == "Snapshot");
+        Assert.Contains("árvore de selos", snapshot.Tip, StringComparison.Ordinal);
+        foreach (var it in hud.Items.Where(i => i.Kind != TdUiKind.Separator))
+            Assert.False(string.IsNullOrEmpty(it.Tip), it.Text + "/" + it.Icon);
+        int core = Array.FindIndex(hud.Items, i => i.Icon == TdIcon.Heart);
+        Assert.NotNull(TdUiController.TooltipFor(hud, core));
+        Assert.Null(TdUiController.TooltipFor(hud, -1));
+    }
+
+    [Fact]
+    public void Start_button_becomes_call_next_with_the_bonus_during_the_wave()
+    {
+        var r = new Rig();
+        r.Ui.Activate(r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.StartWave));
+        for (int i = 0; i < 30 * 60 && r.Match.ActiveWaves.Any(a => !a.SpawnsDone); i++) r.Match.Step();
+        var start = r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.StartWave);
+        Assert.Equal("Chamar próxima", start.Text);
+        Assert.Equal(TdIcon.FastForward, start.Icon);
+        Assert.True(start.RightCoin || start.Right is null);
+    }
+
+    [Fact]
+    public void Minimize_collapses_the_hud_to_a_chip_with_core_and_wave_and_the_chip_restores()
+    {
+        var r = new Rig();
+        var full = r.Ui.BuildHud();
+        Assert.False(full.Minimized);
+        r.Ui.Activate(full.Items.First(i => i.Action == TdUiAction.HudMinimize));
+        Assert.True(r.Host.HudMinimized);
+        var chip = r.Ui.BuildHud();
+        Assert.True(chip.Minimized);
+        Assert.True(chip.Width < full.Width / 2);
+        var item = Assert.Single(chip.Items);
+        Assert.Contains("20/20", item.Text, StringComparison.Ordinal);
+        Assert.Contains("Onda 1/", item.Text, StringComparison.Ordinal);
+        r.Ui.Activate(item);
+        Assert.False(r.Host.HudMinimized);
+        Assert.False(r.Ui.BuildHud().Minimized);
     }
 
     [Fact]

@@ -30,6 +30,26 @@ public sealed class TdStripGoldenTests
         Assert.True(failure is null, failure);
     }
 
+    /// <summary>TD.14: faixa a 40 (Pequeno), 64 (Médio, padrão) e 88 (Grande) DIP a 100%: arte, trilho e indicadores escalam juntos.</summary>
+    public static TheoryData<TdStripScene, int> BandCases()
+    {
+        var d = new TheoryData<TdStripScene, int>();
+        foreach (var scene in new[] { TdStripScene.Wave, TdStripScene.PrepRange, TdStripScene.Unpositioned })
+            foreach (int h in new[] { 40, 64, 88 }) d.Add(scene, h);
+        return d;
+    }
+
+    [Theory]
+    [MemberData(nameof(BandCases))]
+    public void TdBand_MatchesGoldenAtConfiguredHeights(TdStripScene scene, int bandHeightDip)
+    {
+        using var bmp = TdStripScenes.Render(scene, 96, bandHeightDip);
+        Assert.Equal((int)Math.Round(TdStripScenes.WidthDip * bandHeightDip / 32.0), bmp.Width);
+        Assert.Equal(bandHeightDip + TdStripScenes.BarDip, bmp.Height);
+        string? failure = GoldenImage.Verify(TdStripScenes.BandGoldenName(scene, bandHeightDip), bmp);
+        Assert.True(failure is null, failure);
+    }
+
     [Theory]
     [MemberData(nameof(Cases))]
     public void TdStrip_RenderIsDeterministic(TdStripScene scene, int dpi)

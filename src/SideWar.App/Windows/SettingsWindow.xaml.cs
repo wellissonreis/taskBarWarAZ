@@ -75,6 +75,10 @@ public partial class SettingsWindow : Window
         else Refresh();
     }
 
+    private void OnBandSmall(object sender, RoutedEventArgs e) => ViewModel.TdBandHeight = TdSettings.SmallBandHeightDip;
+    private void OnBandMedium(object sender, RoutedEventArgs e) => ViewModel.TdBandHeight = TdSettings.DefaultBandHeightDip;
+    private void OnBandLarge(object sender, RoutedEventArgs e) => ViewModel.TdBandHeight = TdSettings.LargeBandHeightDip;
+
     private void OnCancel(object sender, RoutedEventArgs e) => Close();
 
     protected override void OnClosed(EventArgs e)

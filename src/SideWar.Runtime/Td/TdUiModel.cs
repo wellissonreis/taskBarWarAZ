@@ -16,7 +16,13 @@ public enum TdTone : byte { Normal, Good, Warn, Bad, Accent, Dim }
 public enum TdUiAction : byte
 {
     None, Close, BuildToggle, ChooseTower, StartWave, Ability, Menu, Upgrade, Branch, Targeting, Sell, Reposition,
-    Preview, MapOpen, MapTab, SelectStage, BuyNode, Pause, Settings, Exit, Restart, NextStage,
+    Preview, MapOpen, MapTab, SelectStage, BuyNode, Pause, Settings, Exit, Restart, NextStage, HudMinimize, HudRestore,
+}
+
+/// <summary>Ícone do HUD desenhado por código (TD.14); o renderer mapeia para caminhos vetoriais.</summary>
+public enum TdIcon : byte
+{
+    None, Heart, Coin, Wave, Play, FastForward, Build, Menu, Minus, Restore, Lock, Scale, Firewall, Snapshot,
 }
 
 /// <summary>
@@ -25,7 +31,8 @@ public enum TdUiAction : byte
 /// </summary>
 public readonly record struct TdUiItem(
     DipRect Rect, TdUiKind Kind, string Text, TdUiAction Action = TdUiAction.None, int Arg = 0, string? SArg = null,
-    string? Right = null, string? Sub = null, bool Enabled = true, bool Selected = false, TdTone Tone = TdTone.Normal, float Fill = 0f)
+    string? Right = null, string? Sub = null, bool Enabled = true, bool Selected = false, TdTone Tone = TdTone.Normal, float Fill = 0f,
+    TdIcon Icon = TdIcon.None, string? Tip = null, bool RightCoin = false)
 {
     public bool Clickable => Kind == TdUiKind.Button && Enabled && Action != TdUiAction.None;
 }
@@ -56,10 +63,25 @@ public sealed record TdPopoverView(string Title, TdUiItem[] Items, float Width, 
     }
 }
 
-/// <summary>HUD compacto (RF-28.14) na área de 160 DIP à direita da faixa.</summary>
-public sealed record TdHudView(TdUiItem[] Items, float Width, float Height)
+/// <summary>
+/// HUD (RF-28.14, TD.14) na área à direita da faixa. Projetado para uma faixa de 64 DIP (<see cref="TdBand.HudBaseWidthDip"/>): a janela
+/// escala por <see cref="TdBand.HudScale"/>. <see cref="Minimized"/> = chip pequeno (núcleo e onda) no canto.
+/// </summary>
+public sealed record TdHudView(TdUiItem[] Items, float Width, float Height, bool Minimized = false)
 {
-    public const float DefaultWidth = TdBand.HudAreaDip, DefaultHeight = 62f;
+    public const float DefaultWidth = TdBand.HudBaseWidthDip, DefaultHeight = TdBand.HudBaseHeightDip;
+    public const float ChipWidth = 190f, ChipHeight = 28f;
+
+    /// <summary>Índice do item sob o ponto (qualquer item com texto/dica, inclusive não clicável) ou -1: base do tooltip.</summary>
+    public int TipAt(float x, float y)
+    {
+        for (int i = Items.Length - 1; i >= 0; i--)
+        {
+            var r = Items[i].Rect;
+            if (Items[i].Tip is not null && x >= r.X && x < r.X + r.W && y >= r.Y && y < r.Y + r.H) return i;
+        }
+        return -1;
+    }
 
     public int HitTest(float x, float y)
     {
@@ -76,11 +98,15 @@ public sealed record TdHudView(TdUiItem[] Items, float Width, float Height)
         var h = new HashCode();
         foreach (var it in Items)
         {
-            h.Add(it.Text); h.Add(it.Right); h.Add(it.Enabled); h.Add(it.Selected); h.Add((int)it.Tone); h.Add((int)(it.Fill * 100));
+            h.Add(it.Text); h.Add(it.Right); h.Add(it.Enabled); h.Add(it.Selected); h.Add((int)it.Tone); h.Add((int)(it.Fill * 100)); h.Add((int)it.Icon);
         }
+        h.Add(Minimized);
         return h.ToHashCode();
     }
 }
+
+/// <summary>Dica (tooltip) do item sob o mouse: texto completo e âncora (centro X e topo, em DIP do HUD) para a janela posicionar acima.</summary>
+public sealed record TdTooltipView(string Text, float AnchorX, float AnchorTop);
 
 /// <summary>Visão do perfil/meta para o Mapa e a árvore (implementada no App sobre o perfil TD; o Runtime não conhece a Persistência).</summary>
 public interface ITdUiHost
@@ -89,6 +115,10 @@ public interface ITdUiHost
     void TogglePause();
     void OpenSettings();
     void RequestExit();
+
+    /// <summary>HUD recolhido (lembrado em settings, TD.14).</summary>
+    bool HudMinimized { get; }
+    void SetHudMinimized(bool minimized);
 
     /// <summary>Inicia (ou reinicia) a partida na fase; o App cria a nova partida e reenvia o layout.</summary>
     void StartStage(int stageId);

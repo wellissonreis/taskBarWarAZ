@@ -9,11 +9,28 @@ namespace SideWar.Runtime.Td;
 /// </summary>
 public static class TdBand
 {
-    /// <summary>Altura da janela de cena em modo TD.</summary>
+    /// <summary>
+    /// Altura do ESPAÇO DE DESENHO da faixa (TD.14): toda a geometria abaixo (trilho, torres, chips, caixa, zonas, Core) é projetada para
+    /// 32 DIP. A altura real da janela é <c>bandHeightDip</c> (32 a 96, padrão 64) e tudo escala por <see cref="Scale"/> (k = altura / 32):
+    /// o Core enxerga a faixa com largura <c>W_dip / k</c> e as bordas (render, hit-test, janelas) convertem.
+    /// </summary>
     public const int HeightDip = 32;
 
-    /// <summary>Largura à direita da faixa reservada ao HUD compacto (TD.8): a cena TD é a largura da barra menos esta área.</summary>
-    public const int HudAreaDip = 160;
+    public const int MinHeightDip = 32, MaxHeightDip = 96, DefaultHeightDip = 64;
+
+    /// <summary>Fator de escala do desenho da faixa: <c>altura real / 32</c> (limitada a 32..96).</summary>
+    public static float Scale(int bandHeightDip) => Math.Clamp(bandHeightDip, MinHeightDip, MaxHeightDip) / (float)HeightDip;
+
+    /// <summary>HUD é projetado para uma faixa de 64 DIP; abaixo disso encolhe até 0,75 (legibilidade), acima cresce até 1,5.</summary>
+    public const float HudBaseWidthDip = 460f, HudBaseHeightDip = 64f;
+
+    public static float HudScale(int bandHeightDip) => Math.Clamp(Math.Clamp(bandHeightDip, MinHeightDip, MaxHeightDip) / 64f, 0.75f, 1.5f);
+
+    /// <summary>Largura real (DIP) da área à direita da faixa reservada ao HUD (TD.8/TD.14).</summary>
+    public static int HudAreaDip(int bandHeightDip) => (int)MathF.Round(HudBaseWidthDip * HudScale(bandHeightDip));
+
+    /// <summary>Altura real (DIP) da janela do HUD.</summary>
+    public static int HudHeightDip(int bandHeightDip) => (int)MathF.Round(HudBaseHeightDip * HudScale(bandHeightDip));
 
     public const float RailTop = 2f, RailHeight = 10f;
     public const float TowerTop = 14f, TowerWidth = 20f, TowerHeight = 18f;

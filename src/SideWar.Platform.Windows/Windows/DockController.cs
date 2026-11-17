@@ -3,6 +3,7 @@ using SideWar.Platform.Windows.Rendering;
 using SideWar.Platform.Windows.Threading;
 using SideWar.Runtime.Geometry;
 using SideWar.Runtime.Taskbar;
+using SideWar.Runtime.Td;
 using SideWar.Runtime.Timing;
 using Windows.Win32;
 
@@ -35,6 +36,9 @@ public sealed class DockController
 
     /// <summary>TD mode (TD.7): the scene is the 32-DIP band above the bar (<see cref="SceneLayout.ComputeTdBand"/>) and the idle widget is not placed.</summary>
     public bool TdMode { get; set; }
+
+    /// <summary>TD.14: altura real da faixa TD em DIP (32 a 96).</summary>
+    public int TdBandHeightDip { get; set; } = TdBand.DefaultHeightDip;
 
     /// <summary>Raised after a relayout changed anything, so the host can redraw and drop scaled caches (RF-05.6).</summary>
     public event Action<DockLayoutResult>? LayoutApplied;
@@ -91,7 +95,7 @@ public sealed class DockController
         // A taskbar that lives on another monitor says nothing about this one: no autohide margin, the bar is ignored.
         TaskbarLayout? bar = taskbar is { } t && (string.IsNullOrEmpty(t.MonitorDevice) || t.MonitorDevice == monitor.DeviceName)
             ? t : null;
-        var sceneBounds = TdMode ? SceneLayout.ComputeTdBand(monitor, bar ?? default) : SceneLayout.Compute(monitor, bar ?? default, TowerHost.Band);
+        var sceneBounds = TdMode ? SceneLayout.ComputeTdBand(monitor, bar ?? default, TdBandHeightDip) : SceneLayout.Compute(monitor, bar ?? default, TowerHost.Band);
         var scene = owner.Scene;
         var previous = Current;
         if (previous is null || previous.Scene != sceneBounds) scene.SetBounds(sceneBounds);

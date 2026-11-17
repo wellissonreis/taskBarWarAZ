@@ -34,18 +34,18 @@ public static class SceneLayout
     }
 
     /// <summary>
-    /// Faixa TD (TD.7): <see cref="Td.TdBand.HeightDip"/> DIP logo acima da área de trabalho (acima da barra), da esquerda da área de
+    /// Faixa TD (TD.7): <paramref name="bandHeightDip"/> DIP (32 a 96, padrão 64) logo acima da área de trabalho (acima da barra), da esquerda da área de
     /// trabalho até <see cref="Td.TdBand.HudAreaDip"/> DIP antes da borda direita (área do HUD, TD.8). Elevada 2 px com a barra em
     /// ocultação automática, como o Band padrão.
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException">DPI inválido ou área de trabalho pequena demais.</exception>
-    public static PixelRect ComputeTdBand(MonitorInfo m, TaskbarLayout t)
+    public static PixelRect ComputeTdBand(MonitorInfo m, TaskbarLayout t, int bandHeightDip = Td.TdBand.DefaultHeightDip)
     {
         if (m.Dpi == 0 || m.Dpi > int.MaxValue / 2)
             throw new ArgumentOutOfRangeException(nameof(m), "DPI must be positive and fit physical pixel coordinates.");
         var scale = m.Dpi / 96.0;
-        var heightPx = (int)Math.Round(Td.TdBand.HeightDip * scale, MidpointRounding.AwayFromZero);
-        var hudPx = (int)Math.Round(Td.TdBand.HudAreaDip * scale, MidpointRounding.AwayFromZero);
+        var heightPx = (int)Math.Round(Math.Clamp(bandHeightDip, Td.TdBand.MinHeightDip, Td.TdBand.MaxHeightDip) * scale, MidpointRounding.AwayFromZero);
+        var hudPx = (int)Math.Round(Td.TdBand.HudAreaDip(bandHeightDip) * scale, MidpointRounding.AwayFromZero);
         var marginPx = t.AutoHide ? 2 : 0;
         var work = m.WorkArea;
         if ((long)work.Right - work.Left <= hudPx + (long)Math.Round(135 * scale) ||

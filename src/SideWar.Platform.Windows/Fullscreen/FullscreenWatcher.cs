@@ -59,6 +59,12 @@ public sealed class FullscreenWatcher : IDisposable
         remove => controller.Transition -= value;
     }
 
+    /// <summary>
+    /// TD.14: o foreground mudou. O argumento é verdadeiro quando a janela ativada pertence a OUTRO processo (não ao SideWar).
+    /// Raised on T-Game, junto com a avaliação de tela cheia.
+    /// </summary>
+    public event Action<bool>? ForegroundChanged;
+
     public bool Hidden => controller.Hidden;
     public IReadOnlySet<string> FullscreenMonitors => controller.FullscreenMonitors;
     public long? NextDeadline => disposed ? null : controller.NextDeadline;
@@ -115,7 +121,16 @@ public sealed class FullscreenWatcher : IDisposable
     }
 
     private void OnForeground(HWINEVENTHOOK hook, uint @event, HWND hwnd, int idObject, int idChild, uint thread, uint time) =>
-        Guard(() => { RehookLocation(hwnd); controller.Signal(); });
+        Guard(() =>
+        {
+            RehookLocation(hwnd);
+            controller.Signal();
+            if (!hwnd.IsNull)
+            {
+                PInvoke.GetWindowThreadProcessId(hwnd, out uint pid);
+                if (pid != 0) ForegroundChanged?.Invoke(pid != (uint)Environment.ProcessId);
+            }
+        });
 
     private void OnMinimize(HWINEVENTHOOK hook, uint @event, HWND hwnd, int idObject, int idChild, uint thread, uint time) =>
         Guard(controller.Signal);

@@ -46,6 +46,42 @@ public class SettingsTdTests
         Assert.Equal("Ctrl+Alt+W", r.Hotkeys.StartWave);
     }
 
+    [Fact]
+    public void Defaults_for_band_size_hud_and_focus_fade()
+    {
+        var td = AppSettings.Default.Td;
+        Assert.Equal(64, td.BandHeightDip);
+        Assert.False(td.HudMinimized);
+        Assert.True(td.FadeWhenUnfocused);
+        Assert.Equal(50, td.FadeOpacityPercent);
+        var old = ReadPayload("{\"td\":{\"autoStartEnabled\":true}}").Td; // JSON antigo: campos ausentes = padrão
+        Assert.Equal(64, old.BandHeightDip);
+        Assert.True(old.FadeWhenUnfocused);
+    }
+
+    [Fact]
+    public void RoundTrip_keeps_band_height_hud_state_and_fade()
+    {
+        var fs = new FakeFileSystem();
+        var st = new SettingsStore(fs, "/data", utcNow: () => Now);
+        Assert.True(st.Save(new AppSettings { Td = new TdSettings { BandHeightDip = 88, HudMinimized = true, FadeWhenUnfocused = false, FadeOpacityPercent = 35 } }));
+        var td = st.Load().Settings.Td;
+        Assert.Equal(88, td.BandHeightDip);
+        Assert.True(td.HudMinimized);
+        Assert.False(td.FadeWhenUnfocused);
+        Assert.Equal(35, td.FadeOpacityPercent);
+    }
+
+    [Theory]
+    [InlineData(31)]
+    [InlineData(97)]
+    public void Invalid_band_height_and_fade_fall_back_to_default(int value)
+    {
+        var td = ReadPayload("{\"td\":{\"bandHeightDip\":" + value + ",\"fadeOpacityPercent\":" + (value + 100) + "}}").Td;
+        Assert.Equal(64, td.BandHeightDip);
+        Assert.Equal(50, td.FadeOpacityPercent);
+    }
+
     [Theory]
     [InlineData(4)]
     [InlineData(61)]

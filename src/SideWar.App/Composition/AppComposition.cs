@@ -164,7 +164,7 @@ internal sealed class AppComposition : IDisposable
     private MenuState TrayMenuState()
     {
         var m = gameSide.Menu;
-        return new MenuState(m.Interactive, m.Paused, m.Hidden, m.Monitors, m.SelectedMonitor, m.TdMode, m.StartWaveHotkey);
+        return new MenuState(m.Interactive, m.Paused, m.Hidden, m.Monitors, m.SelectedMonitor, m.TdMode, m.StartWaveHotkey, m.HudMinimized);
     }
 
     private void OnTrayCommand(MenuCommand command, nint previousForeground)
@@ -173,6 +173,7 @@ internal sealed class AppComposition : IDisposable
         {
             case MenuCommandKind.ToggleInteractive: PostGame(new AppCommand(AppCommandKind.ToggleInteractive)); break;
             case MenuCommandKind.StartWave: PostGame(new AppCommand(AppCommandKind.StartWave)); break;
+            case MenuCommandKind.ToggleHud: PostGame(new AppCommand(AppCommandKind.ToggleHud)); break;
             case MenuCommandKind.TogglePause: PostGame(new AppCommand(AppCommandKind.TogglePause)); break;
             case MenuCommandKind.ToggleVisibility: PostGame(new AppCommand(AppCommandKind.ToggleVisibility)); break;
             case MenuCommandKind.SelectMonitor: PostGame(new AppCommand(AppCommandKind.SelectMonitor, command.MonitorIndex)); break;
@@ -191,6 +192,7 @@ internal sealed class AppComposition : IDisposable
             case UiRequest.OpenSettings: OpenSettings(previous); break;
             case UiRequest.OpenAbout: OpenAbout(previous); break;
             case UiRequest.Exit: RequestExit(); break;
+            case UiRequest.SaveHudState: SaveHudState(); break;
         }
     });
 
@@ -218,6 +220,15 @@ internal sealed class AppComposition : IDisposable
             ForegroundRestorer.Restore(previousForeground);
         });
         aboutWindow.Show();
+    }
+
+    /// <summary>TD.14: lembra o HUD recolhido/expandido (alterado na T-Game) nas configurações, sem reaplicar o resto.</summary>
+    private void SaveHudState()
+    {
+        bool minimized = gameSide.HudMinimized;
+        if (settings.Td.HudMinimized == minimized) return;
+        var value = settings with { Td = settings.Td with { HudMinimized = minimized } };
+        if (settingsStore.Save(value)) settings = value;
     }
 
     private bool SaveSettings(AppSettings value)

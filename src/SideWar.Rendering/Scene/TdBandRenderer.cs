@@ -47,7 +47,8 @@ public sealed class TdBandRenderer : IDisposable
     private byte[] _traits = [];
     private int _enemyDefs;
     private int _dpi = 96;
-    private float _s = 1f;
+    private float _s = 1f;   // escala efetiva do desenho: dpi/96 × k (k = altura da faixa / 32, TD.14)
+    private float _k = 1f;
 
     /// <param name="typography">Fontes.</param>
     /// <param name="atlas">Atlas do design (compartilhado com a cena idle); nulo = carrega o embutido e o possui.</param>
@@ -65,10 +66,23 @@ public sealed class TdBandRenderer : IDisposable
     {
         ArgumentOutOfRangeException.ThrowIfNegativeOrZero(dpi);
         _dpi = dpi;
-        _s = dpi / 96f;
+        _s = dpi / 96f * _k;
         _typography.Clear();
         ReleaseSprites();
     }
+
+    /// <summary>Altura real da faixa em DIP (TD.14: 32 a 96): toda a arte do espaço de desenho de 32 DIP escala por <c>altura / 32</c>.</summary>
+    public void SetBandHeight(int heightDip)
+    {
+        float k = TdBand.Scale(heightDip);
+        if (k == _k) return;
+        _k = k;
+        _s = _dpi / 96f * _k;
+        _typography.Clear();
+        ReleaseSprites();
+    }
+
+    public float BandScale => _k;
 
     /// <summary>Tamanho físico da janela para uma largura de faixa em DIP.</summary>
     public (int Width, int Height) PhysicalSize(int widthDip) => ((int)MathF.Round(widthDip * _s), (int)MathF.Round(TdBand.HeightDip * _s));
@@ -544,7 +558,7 @@ public sealed class TdBandRenderer : IDisposable
         int sec = Math.Clamp((int)Math.Ceiling(left), 0, Digits.Length - 1);
         c.Save();
         c.ResetMatrix();
-        var font = _typography.GetFont(FontRole.SilkscreenBold, 8, _dpi);
+        var font = _typography.GetFont(FontRole.SilkscreenBold, 8, (int)MathF.Round(_dpi * _k));
         _text.Color = urgent ? Palette.Perigo : Palette.Ambar;
         c.DrawText(Digits[sec], (bx + 6.5f) * _s, (by + 4.5f) * _s + font.Size * 0.35f, SKTextAlign.Center, font, _text);
         c.Restore();

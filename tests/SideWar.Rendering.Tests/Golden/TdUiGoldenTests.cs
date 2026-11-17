@@ -19,6 +19,8 @@ public sealed class TdUiGoldenTests
         public void TogglePause() { }
         public void OpenSettings() { }
         public void RequestExit() { }
+        public bool HudMinimized { get; private set; }
+        public void SetHudMinimized(bool minimized) => HudMinimized = minimized;
         public void StartStage(int stageId) { }
         public int StageCount => 6;
         public bool StageUnlocked(int stageId) => stageId <= 2;
@@ -33,7 +35,7 @@ public sealed class TdUiGoldenTests
         public bool PurchaseNode(string nodeId) => true;
     }
 
-    public enum UiScene { HudPrep, HudWave, Chooser, ChooserPoint, Inspector, Branches, Preview, Map, Seals, Victory, Menu }
+    public enum UiScene { HudPrep, HudWave, HudMin, HudTip, Chooser, ChooserPoint, Inspector, Branches, Preview, Map, Seals, Victory, Menu }
 
     public static TheoryData<UiScene, int> Cases()
     {
@@ -52,6 +54,7 @@ public sealed class TdUiGoldenTests
         var item = (TdUiAction a, int arg) => new TdUiItem(default, TdUiKind.Button, "", a, arg);
         switch (scene)
         {
+            case UiScene.HudMin: ui.Activate(item(TdUiAction.HudMinimize, 0)); break;
             case UiScene.HudWave:
                 match.Apply(new StartWave());
                 for (int i = 0; i < 90; i++) match.Step();
@@ -83,7 +86,20 @@ public sealed class TdUiGoldenTests
         var (ui, _) = Setup(scene);
         using var typo = new Typography();
         using var r = new TdUiRenderer(typo, dpi) { TextEnabled = text };
-        bool hud = scene is UiScene.HudPrep or UiScene.HudWave;
+        if (scene == UiScene.HudTip)
+        {
+            var tipHud = ui.BuildHud();
+            var tip = TdUiController.TooltipFor(tipHud, Array.FindIndex(tipHud.Items, i => i.Icon == SideWar.Runtime.Td.TdIcon.Heart))!;
+            var (tw, th) = r.PhysicalSize(TdUiRenderer.TooltipWidthDip, r.TooltipHeightDip(tip.Text));
+            var tb = new SKBitmap(new SKImageInfo(tw, th, SKColorType.Bgra8888, SKAlphaType.Premul));
+            using var tc = new SKCanvas(tb);
+            tc.Clear(Backdrop);
+            using var tl = new SKBitmap(new SKImageInfo(tw, th, SKColorType.Bgra8888, SKAlphaType.Premul));
+            using (var tlc = new SKCanvas(tl)) r.DrawTooltip(tlc, tip.Text);
+            GoldenImage.Blit(tc, tl, 0, 0);
+            return tb;
+        }
+        bool hud = scene is UiScene.HudPrep or UiScene.HudWave or UiScene.HudMin;
         if (hud)
         {
             var v = ui.BuildHud();
@@ -124,6 +140,19 @@ public sealed class TdUiGoldenTests
         using var a = Render(scene, dpi, text: true);
         using var b = Render(scene, dpi, text: true);
         Assert.True(a.Bytes.AsSpan().SequenceEqual(b.Bytes));
+    }
+
+    /// <summary>TD.14: o HUD escala com a faixa (dpi efetivo = dpi × HudScale): faixa de 40 (piso 0,75) e de 88 (1,375).</summary>
+    [Theory]
+    [InlineData(40)]
+    [InlineData(88)]
+    public void Hud_MatchesGoldenAtBandHeight(int bandHeightDip)
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "texto Skia difere entre SOs; golden com texto só no Linux (RF-17.3)");
+        int effDpi = (int)MathF.Round(96 * TdBand.HudScale(bandHeightDip));
+        using var bmp = Render(UiScene.HudPrep, effDpi, text: true);
+        string? failure = GoldenImage.Verify($"td-ui-hud-band{bandHeightDip}", bmp);
+        Assert.True(failure is null, failure);
     }
 
     [Fact]

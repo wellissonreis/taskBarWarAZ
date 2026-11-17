@@ -5,6 +5,8 @@ public enum MenuCommandKind
     ToggleInteractive,
     /// <summary>"Iniciar onda" (modo TD): StartWave em Preparo ou CallNextWave em Onda.</summary>
     StartWave,
+    /// <summary>"Mostrar HUD" / "Recolher HUD" (modo TD, TD.14).</summary>
+    ToggleHud,
     TogglePause,
     ToggleVisibility,
     SelectMonitor,
@@ -28,7 +30,8 @@ public sealed record MenuState(
     IReadOnlyList<string>? MonitorLabels = null,
     int SelectedMonitor = 0,
     bool TdMode = false,
-    string? StartWaveHotkey = null);
+    string? StartWaveHotkey = null,
+    bool HudMinimized = false);
 
 /// <summary>One entry of the menu as plain data (testable without a window).</summary>
 public sealed record MenuEntry(string Text, MenuCommand? Command = null, bool Checked = false, bool Grayed = false,
@@ -45,6 +48,7 @@ public static class MenuModel
             children.Add(new MenuEntry(monitors[i], new MenuCommand(MenuCommandKind.SelectMonitor, i), Checked: i == state.SelectedMonitor));
         var items = new List<MenuEntry>();
         if (state.TdMode) items.Add(new($"Iniciar onda\t{state.StartWaveHotkey ?? "Ctrl+Alt+Space"}", new(MenuCommandKind.StartWave), Grayed: state.OverlayHidden));
+        if (state.TdMode) items.Add(new(state.HudMinimized ? "Mostrar HUD" : "Recolher HUD", new(MenuCommandKind.ToggleHud), Grayed: state.OverlayHidden));
         items.AddRange(
         [
             new("Modo interativo", new(MenuCommandKind.ToggleInteractive), Checked: state.InteractiveActive, Grayed: state.OverlayHidden),

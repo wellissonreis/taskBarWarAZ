@@ -64,6 +64,10 @@ public static class SettingsSerializer
         w.WriteStartObject("td");
         w.WriteBoolean("autoStartEnabled", s.Td.AutoStartEnabled);
         w.WriteNumber("autoStartSeconds", s.Td.AutoStartSeconds);
+        w.WriteNumber("bandHeightDip", s.Td.BandHeightDip);
+        w.WriteBoolean("hudMinimized", s.Td.HudMinimized);
+        w.WriteBoolean("fadeWhenUnfocused", s.Td.FadeWhenUnfocused);
+        w.WriteNumber("fadeOpacityPercent", s.Td.FadeOpacityPercent);
         w.WriteEndObject();
         w.WriteEndObject();
     }
@@ -135,6 +139,10 @@ public static class SettingsSerializer
             {
                 AutoStartEnabled = Bool(td, "autoStartEnabled", d.Td.AutoStartEnabled),
                 AutoStartSeconds = IntRange(td, "autoStartSeconds", TdSettings.MinAutoStartSeconds, TdSettings.MaxAutoStartSeconds, d.Td.AutoStartSeconds),
+                BandHeightDip = IntRange(td, "bandHeightDip", TdSettings.MinBandHeightDip, TdSettings.MaxBandHeightDip, d.Td.BandHeightDip),
+                HudMinimized = Bool(td, "hudMinimized", d.Td.HudMinimized),
+                FadeWhenUnfocused = Bool(td, "fadeWhenUnfocused", d.Td.FadeWhenUnfocused),
+                FadeOpacityPercent = IntRange(td, "fadeOpacityPercent", TdSettings.MinFadePercent, TdSettings.MaxFadePercent, d.Td.FadeOpacityPercent),
             },
         };
     }

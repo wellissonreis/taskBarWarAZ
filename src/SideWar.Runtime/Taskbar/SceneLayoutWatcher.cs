@@ -1,6 +1,7 @@
 using SideWar.Core;
 using SideWar.Core.Simulation;
 using SideWar.Runtime.Geometry;
+using SideWar.Runtime.Td;
 
 namespace SideWar.Runtime.Taskbar;
 
@@ -25,8 +26,10 @@ public sealed class SceneLayoutWatcher(IGameCommandSink sink, StripLayout? initi
     public SceneLayoutUpdate? Observe(MonitorInfo monitor, TaskbarLayout bar, BuildZoneOptions options)
     {
         // TD (TD.7): a janela é a faixa de 32 DIP (largura da área de trabalho menos a área do HUD) e a faixa lógica tem a largura dela.
-        var tdScene = options.TdBand ? SceneLayout.ComputeTdBand(monitor, bar) : (PixelRect?)null;
+        var tdScene = options.TdBand ? SceneLayout.ComputeTdBand(monitor, bar, options.TdBandHeightDip) : (PixelRect?)null;
         var widthDip = StripLayoutFactory.WidthDip(tdScene?.Width ?? monitor.WorkArea.Width, monitor.Dpi);
+        // TD.14: o Core vê a faixa no espaço de desenho de 32 DIP (largura / k).
+        if (options.TdBand) widthDip = (int)Math.Round(widthDip / Td.TdBand.Scale(options.TdBandHeightDip), MidpointRounding.AwayFromZero);
         var zones = BuildZoneMap.From(bar, widthDip, options);
         var layout = StripLayoutFactory.Create(zones, widthDip);
         var scene = tdScene ?? SceneLayout.Compute(monitor, bar, zones.Host);

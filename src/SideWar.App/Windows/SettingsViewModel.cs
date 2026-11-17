@@ -28,7 +28,8 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     private string toggleInteractive = "", toggleVisibility = "", togglePause = "", startWave = "";
     private GameMode gameMode;
     private bool tdAutoStart;
-    private int tdAutoStartSeconds;
+    private int tdAutoStartSeconds, tdBandHeight, tdFadePercent;
+    private bool tdFadeWhenUnfocused;
     private string? saveError;
 
     public SettingsViewModel(AppSettings current, Func<AppSettings, bool> save)
@@ -65,6 +66,11 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     public GameMode GameMode { get => gameMode; set => Set(ref gameMode, value); }
     public bool TdAutoStart { get => tdAutoStart; set => Set(ref tdAutoStart, value); }
     public int TdAutoStartSeconds { get => tdAutoStartSeconds; set { if (Set(ref tdAutoStartSeconds, value)) Check(nameof(TdAutoStartSeconds), value is >= TdSettings.MinAutoStartSeconds and <= TdSettings.MaxAutoStartSeconds ? null : "Entre 5 e 60 segundos."); } }
+    /// <summary>Altura da faixa TD em DIP (32 a 96); presets Pequeno 40 / Médio 64 / Grande 88. Vale ao reiniciar o SideWar.</summary>
+    public int TdBandHeight { get => tdBandHeight; set { if (Set(ref tdBandHeight, value)) Check(nameof(TdBandHeight), value is >= TdSettings.MinBandHeightDip and <= TdSettings.MaxBandHeightDip ? null : "Altura entre 32 e 96 DIP."); } }
+    /// <summary>Esmaecer faixa e HUD ao ativar outro app (TD.14).</summary>
+    public bool TdFadeWhenUnfocused { get => tdFadeWhenUnfocused; set => Set(ref tdFadeWhenUnfocused, value); }
+    public int TdFadePercent { get => tdFadePercent; set { if (Set(ref tdFadePercent, value)) Check(nameof(TdFadePercent), value is >= TdSettings.MinFadePercent and <= TdSettings.MaxFadePercent ? null : "Opacidade entre 10 e 90%."); } }
     public string TogglePause { get => togglePause; set { if (Set(ref togglePause, value)) Check(nameof(TogglePause), ValidateHotkey(value)); } }
 
     /// <summary>Erro de gravação da última tentativa de Salvar (null se ok).</summary>
@@ -125,7 +131,11 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         Audio = new AudioSettings { Enabled = audioEnabled, Volume = volumePercent / 100.0 },
         Diagnostics = new DiagnosticsSettings { RecordCommands = recordCommands, LogLevel = logLevel },
         Taskbar = original.Taskbar with { UseUia = useUia },
-        Td = new TdSettings { AutoStartEnabled = tdAutoStart, AutoStartSeconds = tdAutoStartSeconds },
+        Td = original.Td with
+        {
+            AutoStartEnabled = tdAutoStart, AutoStartSeconds = tdAutoStartSeconds, BandHeightDip = tdBandHeight,
+            FadeWhenUnfocused = tdFadeWhenUnfocused, FadeOpacityPercent = tdFadePercent,
+        },
     };
 
     /// <summary>Salvar: só grava se válido. Devolve true se gravou (a janela fecha); em falha de gravação mantém aberta com <see cref="SaveError"/>.</summary>
@@ -173,6 +183,9 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         gameMode = s.GameMode;
         tdAutoStart = s.Td.AutoStartEnabled;
         tdAutoStartSeconds = s.Td.AutoStartSeconds;
+        tdBandHeight = s.Td.BandHeightDip;
+        tdFadeWhenUnfocused = s.Td.FadeWhenUnfocused;
+        tdFadePercent = s.Td.FadeOpacityPercent;
     }
 
     private void Check(string property, string? error)

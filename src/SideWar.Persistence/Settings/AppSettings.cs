@@ -109,4 +109,24 @@ public sealed record TdSettings
 
     public bool AutoStartEnabled { get; init; }
     public int AutoStartSeconds { get; init; } = 15;
+
+    public const int MinBandHeightDip = 32;
+    public const int MaxBandHeightDip = 96;
+    public const int DefaultBandHeightDip = 64;
+    public const int SmallBandHeightDip = 40;
+    public const int LargeBandHeightDip = 88;
+    public const int MinFadePercent = 10;
+    public const int MaxFadePercent = 90;
+
+    /// <summary>Altura da faixa TD em DIP (32 a 96; presets Pequeno 40, Médio 64, Grande 88). Aplica ao reiniciar o SideWar.</summary>
+    public int BandHeightDip { get; init; } = DefaultBandHeightDip;
+
+    /// <summary>HUD recolhido a um chip no canto da faixa (lembrado entre sessões).</summary>
+    public bool HudMinimized { get; init; }
+
+    /// <summary>Esmaecer faixa e HUD quando o usuário ativa outro app (ausente: 8 fps e caixa-bomba sem presença).</summary>
+    public bool FadeWhenUnfocused { get; init; } = true;
+
+    /// <summary>Opacidade (10 a 90 %) da faixa e do HUD enquanto esmaecidos.</summary>
+    public int FadeOpacityPercent { get; init; } = 50;
 }

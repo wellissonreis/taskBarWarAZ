@@ -42,6 +42,8 @@ public static class TdStripScenes
         _ => "td-strip-unpositioned",
     };
 
+    public static string BandGoldenName(TdStripScene scene, int bandHeightDip) => $"td-band-{Name(scene)["td-strip-".Length..]}-h{bandHeightDip}-100";
+
     public static string GoldenName(TdStripScene scene, int dpi) => $"{Name(scene)}-{dpi * 100 / 96}";
 
     /// <summary>Cenas com texto (contagem da caixa): golden só no SO de referência (RF-17.3).</summary>
@@ -140,12 +142,13 @@ public static class TdStripScenes
     }
 
     /// <summary>Renderiza a cena (<paramref name="dpi"/> 96 = 100%, 144 = 150%) como bitmap opaco: faixa de 32 DIP + barra sintética.</summary>
-    public static SKBitmap Render(TdStripScene scene, int dpi)
+    public static SKBitmap Render(TdStripScene scene, int dpi, int bandHeightDip = TdBand.HeightDip)
     {
         var (match, view, now) = Build(scene);
         using var typo = new Typography();
         using var renderer = new TdBandRenderer(typo);
         renderer.SetDpi(dpi);
+        renderer.SetBandHeight(bandHeightDip); // TD.14: arte do espaço de 32 DIP escalada por altura / 32
         var (bw, bh) = renderer.PhysicalSize(WidthDip);
         using var band = new SKBitmap(new SKImageInfo(bw, bh, SKColorType.Bgra8888, SKAlphaType.Premul));
         using (var bc = new SKCanvas(band)) renderer.Draw(bc, match, now, view);

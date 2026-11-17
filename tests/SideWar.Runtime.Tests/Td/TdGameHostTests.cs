@@ -29,7 +29,7 @@ public sealed class TdGameHostTests
         public TdMatchState Match = TdMatchState.Create(Content, 1, Rng.Seed(42, 54));
         public readonly TdGameHost Host;
 
-        public Rig(bool visible = true, ITdInputSource? input = null, TdMatchState? match = null)
+        public Rig(bool visible = true, ITdPresence? input = null, TdMatchState? match = null)
         {
             if (match is not null) Match = match;
             Host = new TdGameHost(Clock, App, Match, Obs, input);
@@ -243,16 +243,16 @@ public sealed class TdGameHostTests
         Assert.Equal(r.Match.ComputeStateHash(), replay.StateHash);
     }
 
-    private sealed class FakeInput : ITdInputSource
+    private sealed class FakeInput : ITdPresence
     {
-        public double Seconds = 100;
-        public double SecondsSinceLastInput() => Seconds;
+        public bool Present = true;
+        public bool IsPresent => Present;
     }
 
     [Fact]
     public void Presence_is_sent_to_the_log_only_on_change_and_only_in_wave()
     {
-        var input = new FakeInput { Seconds = 1 };
+        var input = new FakeInput { Present = true };
         var r = new Rig(input: input);
         r.Run(1);
         Assert.DoesNotContain(r.Host.CommandLog, e => e.Command is SetPresence); // Preparo: não observa
@@ -260,14 +260,14 @@ public sealed class TdGameHostTests
         r.Run(2);
         Assert.Single(r.Host.CommandLog, e => e.Command is SetPresence { Present: true }); // presente, enviado uma vez
         Assert.True(r.Match.Present);
-        input.Seconds = 2; r.Run(2);                                                       // continua presente: nada novo
+        input.Present = true; r.Run(2);                                                       // continua presente: nada novo
         Assert.Single(r.Host.CommandLog, e => e.Command is SetPresence);
-        input.Seconds = 6; r.Run(1);                                                       // > 5 s sem entrada: ausente
+        input.Present = false; r.Run(1);                                                   // outro app ativado: ausente
         Assert.False(r.Match.Present);
         Assert.Equal(2, r.Host.CommandLog.Count(e => e.Command is SetPresence));
         r.Run(2);
         Assert.Equal(2, r.Host.CommandLog.Count(e => e.Command is SetPresence));
-        input.Seconds = 0; r.Run(1);
+        input.Present = true; r.Run(1);
         Assert.True(r.Match.Present);
         Assert.Equal(3, r.Host.CommandLog.Count(e => e.Command is SetPresence));
     }
@@ -288,7 +288,7 @@ public sealed class TdGameHostTests
         var stages = Content.Stages.Stages.Select(s => s with { StartingCredits = 1_000_000, MaxTowers = 12 }).ToArray();
         var content = Content with { Stages = Content.Stages with { Rules = Content.Stages.Rules with { BombCrate = bc, CoreIntegrity = 100_000 }, Stages = stages } };
         var match = TdMatchState.Create(content, 2, Rng.Seed(42, 54));
-        var input = new FakeInput { Seconds = 0 };
+        var input = new FakeInput { Present = true };
         var r = new Rig(input: input, match: match);
         Assert.False(r.Host.RequestCollectCrate()); // sem caixa: nada enfileirado
         r.Host.OnCommand(new BuildTower("bolt", 300));

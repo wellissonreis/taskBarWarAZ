@@ -40,6 +40,7 @@ public sealed class TdRenderDriver : ILoopParticipant
     private long _lastFrame = -1;
     private long _lastSignature;
     private TdView _view = TdView.None;
+    private double _lastDrawAt = double.NegativeInfinity;
 
     public TdRenderDriver(TdGameHost host, AppStateMachine app, IClock clock, ITdFrameSink sink)
     {
@@ -53,6 +54,12 @@ public sealed class TdRenderDriver : ILoopParticipant
     public long Presents { get; private set; }
 
     public TdView View => _view;
+
+    /// <summary>
+    /// Jogador ausente (TD.14: outro app ativo): a animação cai de 30 para <see cref="TdFocusState.AbsentFps"/> fps. Pedidos explícitos
+    /// (mouse, seleção, layout) continuam desenhando na hora; a partida segue rodando a 30 Hz.
+    /// </summary>
+    public bool Absent { get; set; }
 
     /// <summary>Pedido de redesenho (DPI, monitor, layout, seleção, passar do mouse, Show).</summary>
     public void MarkDirty() => _dirty = true;
@@ -74,6 +81,7 @@ public sealed class TdRenderDriver : ILoopParticipant
         if (!_app.IsVisible || _host.IsShutdown) return;
         var match = _host.Match;
         bool animate = match.Phase == MatchPhase.Onda && _app.SimulationRunning && match.Frame != _lastFrame;
+        if (animate && !_dirty && Absent && clock.NowTicks / (double)clock.TicksPerSecond - _lastDrawAt < 1.0 / TdFocusState.AbsentFps) return;
         if (!animate && !_dirty)
         {
             long signature = Signature(match);
@@ -93,6 +101,7 @@ public sealed class TdRenderDriver : ILoopParticipant
     {
         var match = _host.Match;
         _sink.Present(match, _clock.NowTicks / _clock.TicksPerSecond, _view);
+        _lastDrawAt = _clock.NowTicks / (double)_clock.TicksPerSecond;
         _lastFrame = match.Frame;
         _lastSignature = Signature(match);
         _dirty = false;

@@ -22,13 +22,21 @@
           <CheckBox Content="Iniciar as ondas automaticamente (Tower Defense)" IsChecked="{Binding TdAutoStart}" Margin="0,0,0,4" />
           <TextBlock Text="Segundos de contagem do auto-início (5–60)" />
           <TextBox Text="{Binding TdAutoStartSeconds, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding TdAutoStart}" Width="80" HorizontalAlignment="Left" Margin="0,2,0,8" />
+          <TextBlock Text="Tamanho da faixa Tower Defense (DIP, 32–96; vale ao reiniciar o SideWar)" />
+          <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
+            <Button Content="Pequeno (40)" Width="100" Margin="0,0,6,0" Click="OnBandSmall" />
+            <Button Content="Médio (64)" Width="100" Margin="0,0,6,0" Click="OnBandMedium" />
+            <Button Content="Grande (88)" Width="100" Click="OnBandLarge" />
+          </StackPanel>
+          <Slider Minimum="32" Maximum="96" Value="{Binding TdBandHeight}" IsSnapToTickEnabled="True" TickFrequency="1" Margin="0,2,0,0" />
+          <TextBlock Text="{Binding TdBandHeight}" Margin="0,0,0,8" />
           <TextBlock x:Name="PresenceText" TextWrapping="Wrap" Foreground="Gray" />
         </StackPanel>
       </TabItem>
       <TabItem Header="Aparência">
         <StackPanel Margin="12">
           <TextBlock TextWrapping="Wrap" Foreground="Gray" Margin="0,0,0,8"
-                     Text="Por padrão a faixa nunca esmaece sozinha (opacidade 100%). Ligue as opções abaixo para permitir." />
+                     Text="No modo Tower Defense a faixa esmaece ao ativar outro app (opção abaixo, padrão 50%) e volta a 100% ao passar o mouse. As demais opções ficam desligadas por padrão." />
           <CheckBox Content="Esmaecer ao passar o mouse sobre a faixa" IsChecked="{Binding PeekOnHover}" Margin="0,0,0,4" />
           <TextBlock Text="Opacidade ao passar o mouse (0–255)" />
           <Slider Minimum="0" Maximum="255" Value="{Binding PeekOpacity}" IsEnabled="{Binding PeekOnHover}" Margin="0,2,0,0" />
@@ -36,7 +44,11 @@
           <CheckBox Content="Esmaecer quando eu estiver ausente" IsChecked="{Binding FadeWhenAbsent}" Margin="0,0,0,4" />
           <TextBlock Text="Opacidade quando ausente (0–255)" />
           <Slider Minimum="0" Maximum="255" Value="{Binding AbsentOpacity}" IsEnabled="{Binding FadeWhenAbsent}" Margin="0,2,0,0" />
-          <TextBlock Text="{Binding AbsentOpacity}" />
+          <TextBlock Text="{Binding AbsentOpacity}" Margin="0,0,0,12" />
+          <CheckBox Content="Esmaecer a faixa e o HUD ao usar outro app (Tower Defense)" IsChecked="{Binding TdFadeWhenUnfocused}" Margin="0,0,0,4" />
+          <TextBlock Text="Opacidade ao usar outro app (10–90%)" />
+          <Slider Minimum="10" Maximum="90" Value="{Binding TdFadePercent}" IsEnabled="{Binding TdFadeWhenUnfocused}" IsSnapToTickEnabled="True" TickFrequency="1" Margin="0,2,0,0" />
+          <TextBlock Text="{Binding TdFadePercent}" />
         </StackPanel>
       </TabItem>
       <TabItem Header="Desempenho">

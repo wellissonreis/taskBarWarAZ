@@ -85,6 +85,8 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     private TdFrameSink? tdSink;
     private TdRenderDriver? tdDriver;
     private TdUiPresenter? tdUi;
+    private TdFocusState? tdFocus;
+    private int tdBandHeight = TdBand.DefaultHeightDip; // TD.14: lido das configurações ao iniciar (mudar vale ao reiniciar o SideWar)
     private SceneLayoutWatcher? tdWatcher;
     private int crateSeen;
 
@@ -107,7 +109,10 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             // gameMode = td (experimental, TD.6): o host TD usa a mesma AppStateMachine (ocultar/fullscreen/sessão pausam) e o idle
             // fica sem partida (NoRun) até o render TD (TD.7) trocar o jogo padrão.
             runtime.Host.RunState = Runtime.Hosting.RunState.NoRun;
-            td = TdComposition.Create(tdDataDirectory, version, runtime.App, clock, settings, log);
+            tdBandHeight = Math.Clamp(settings.Td.BandHeightDip, TdBand.MinHeightDip, TdBand.MaxHeightDip);
+            tdFocus = new TdFocusState();
+            tdFocus.Configure(settings.Td.FadeWhenUnfocused, settings.Td.FadeOpacityPercent);
+            td = TdComposition.Create(tdDataDirectory, version, runtime.App, clock, settings, log, presence: tdFocus);
             loop.AddBefore(td.Host);
         }
         loop.AddBefore(runtime); // ReleaseCaches 60 s após o Hide
@@ -119,6 +124,9 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
 
     /// <summary>Estado do menu da bandeja (lido na T-UI; publicado pela T-Game).</summary>
     public MenuSnapshot Menu => Volatile.Read(ref menu);
+
+    /// <summary>HUD TD recolhido (lido pela T-UI ao gravar as configurações).</summary>
+    public bool HudMinimized => tdUi?.HudMinimized ?? settings.Td.HudMinimized;
 
     /// <summary>Barra usada pela cena (altura em DIP); a cena padrão (Band) usa 48.</summary>
     public float BarHeightDip => barHeightDip;
@@ -162,6 +170,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             // TD.7: a cena é a faixa de 32 DIP desenhada pelo TdBandRenderer (render por evento: 0 fps em Preparo/pausa, 30 fps em Onda).
             // O sink idle fica sem superfície (não desenha) e o idle está em NoRun.
             tdRenderer = new TdBandRenderer(typography, atlas);
+            tdRenderer.SetBandHeight(tdBandHeight);
             tdSink = new TdFrameSink(surface, tdRenderer);
             tdDriver = new TdRenderDriver(td.Host, runtime.App, clock, tdSink);
             tdWatcher = new SceneLayoutWatcher(td.Host, null, layout => new SideWar.Core.Td.LayoutChanged(layout));
@@ -226,6 +235,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         // 3. Dock (SDD-05): monitor salvo, geometria da cena e do widget.
         var dock = game.Dock;
         dock.SceneSurface = surface;
+        dock.TdBandHeightDip = tdBandHeight;
         dock.TdMode = td is not null; // TD.7: Band de 32 DIP, sem o widget idle
         dock.LayoutApplied += OnLayoutApplied;
         res.Started("dock", () => dock.LayoutApplied -= OnLayoutApplied);
@@ -247,7 +257,11 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
 
         // 5. Modo Passivo/Interativo e peek (SDD-04).
         game.Mode.Surface = surface;
-        if (td is not null) game.Mode.TdHitTest = (x, y) => TdHitTester.Test(td.Host.Match, x, y);
+        if (td is not null) {
+            // TD.14: a janela está em DIP reais; o hit-test e o Core trabalham no espaço de desenho de 32 DIP (÷ k).
+            float k = TdBand.Scale(tdBandHeight);
+            game.Mode.TdHitTest = (x, y) => TdHitTester.Test(td.Host.Match, x / k, y / k);
+        }
         game.Mode.TargetClicked += OnTargetClicked;
         game.Mode.ModeChanged += OnModeChanged;
         game.Mode.SetPeekEnabled(settings.Behavior.PeekOnHover);
@@ -276,7 +290,8 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         if (td is not null && tdDriver is not null)
         {
             // TD.8: HUD, popover, modo construção (ESC temporário) e Interativo ao passar o mouse sobre a faixa.
-            tdUi = new TdUiPresenter(game, runtime, td, tdDriver, typography!, clock, ui, () => hotkeys, atlas);
+            tdUi = new TdUiPresenter(game, runtime, td, tdDriver, typography!, clock, ui, () => hotkeys, tdFocus!, tdBandHeight,
+                settings.Td.HudMinimized, PublishMenu, atlas);
             game.Mode.EnableTdHover(1.5);
             tdUi.Setup();
             loop.AddAfter(new LoopParticipant(() => tdUi.NextDeadline, _ => tdUi.OnWake()));
@@ -294,6 +309,9 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         // 8. Fullscreen (SDD-06).
         fullscreen = new FullscreenWatcher(clock, ToFullscreenMode(settings.Behavior.HideOnFullscreen), first.Monitor.DeviceName, report);
         fullscreen.Transition += OnFullscreen;
+        // TD.14: ativar OUTRO app = ausente (esmaece, 8 fps, caixa-bomba sem presença); janela do SideWar ativada = presente.
+        if (tdFocus is not null)
+            fullscreen.ForegroundChanged += foreign => { if (foreign) tdFocus.OnForeignActivated(); else tdFocus.OnInteraction(); };
         res.Started("fullscreen", fullscreen.Dispose);
 
         // 9. Primeiro frame pronto → remove Starting (RestoreContext + Show, RF-07.6).
@@ -327,6 +345,9 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     {
         settings = value;
         td?.ApplySettings(value);
+        tdFocus?.Configure(value.Td.FadeWhenUnfocused, value.Td.FadeOpacityPercent);
+        if (td is not null && Math.Clamp(value.Td.BandHeightDip, TdBand.MinHeightDip, TdBand.MaxHeightDip) != tdBandHeight)
+            log($"td.bandHeightDip {value.Td.BandHeightDip} salvo; vale ao reiniciar o SideWar (atual {tdBandHeight}).");
         runtime.ApplySettings(value.Performance.PresentFps, value.Performance.AbsentFps, value.Accessibility.ReducedMotion, value.AutoScale);
         game.Mode.SetPeekEnabled(value.Behavior.PeekOnHover);
         ApplyOpacityLevels(value.Opacity);
@@ -433,6 +454,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             case AppCommandKind.ToggleVisibility: runtime.ToggleVisibilityByUser(); break;
             case AppCommandKind.TogglePause: runtime.TogglePause(); break;
             case AppCommandKind.StartWave: td?.Host.RequestWave(); break;
+            case AppCommandKind.ToggleHud: tdUi?.ToggleHud(); break;
             case AppCommandKind.CancelBuild: tdUi?.Controller.Cancel(); break;
             case AppCommandKind.SelectMonitor: SelectMonitor(monitorIndex); break;
             case AppCommandKind.ShowAndInteract:
@@ -551,7 +573,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             ? t : default;
         // TA.5-Windows (cena sobre a barra) depende do spike TA.1: o dock segue com o hospedeiro Band e a
         // simulação recebe o layout do mesmo hospedeiro enquanto towersInBar for falso (padrão, DP-33.4).
-        var options = new BuildZoneOptions { UseUia = settings.Taskbar.UseUia, TowersInBar = settings.Taskbar.TowersInBar };
+        var options = new BuildZoneOptions { UseUia = settings.Taskbar.UseUia, TowersInBar = settings.Taskbar.TowersInBar, TdBandHeightDip = tdBandHeight };
         if (tdWatcher is not null)
         {
             // TD.7 (RF-28.18 após TA.1): faixa de 32 DIP, LayoutChanged ao TdMatchState pelo TdGameHost, ao iniciar e a cada mudança de barra/DPI/monitor.
@@ -638,7 +660,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         var app = runtime.App;
         Volatile.Write(ref menu, new MenuSnapshot(game.Mode.Mode == OverlayMode.Interactive,
             (app.PauseReasons & Runtime.Timing.PauseReason.User) != 0, !app.IsVisible, labels, selected,
-            td is not null, td is null ? null : settings.Hotkeys.StartWave));
+            td is not null, td is null ? null : settings.Hotkeys.StartWave, HudMinimized));
         if (!app.SimulationRunning && app.IsVisible) ScheduleWidget(now: true); // pausa/retomada atualiza o widget uma vez
         else if (app.IsVisible && widgetAt is null) ScheduleWidget(now: true);
     }

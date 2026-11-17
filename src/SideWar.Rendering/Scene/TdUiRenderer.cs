@@ -32,7 +32,79 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     {
         c.Clear(SKColors.Transparent);
         _p.Box(c, new DipRect(0, 0, hud.Width, hud.Height), Palette.BordaForte, Palette.Td.Plate);
-        for (int i = 0; i < hud.Items.Length; i++) DrawItem(c, hud.Items[i], i == hover, hud.Width, small: true);
+        for (int i = 0; i < hud.Items.Length; i++) DrawHudItem(c, hud.Items[i], i == hover);
+    }
+
+    /// <summary>Largura (DIP) da janela do tooltip; o texto quebra em linhas dentro dela.</summary>
+    public const float TooltipWidthDip = 230f;
+    private const float TipFont = 9f, TipLine = 12f;
+
+    private List<string> TipLines(string text)
+    {
+        var lines = new List<string>(4);
+        if (!_p.TextEnabled) { lines.Add(text.Length > 40 ? text[..40] : text); return lines; }
+        var font = _p.Font(PanelFont.JetBrainsMono, TipFont);
+        float max = _p.Px(TooltipWidthDip - 12f);
+        string line = "";
+        foreach (var w in text.Split(' '))
+        {
+            var test = line.Length == 0 ? w : line + " " + w;
+            if (line.Length > 0 && font.MeasureText(test) > max) { lines.Add(line); line = w; } else line = test;
+        }
+        if (line.Length > 0) lines.Add(line);
+        return lines;
+    }
+
+    /// <summary>Altura (DIP) da janela do tooltip para o texto.</summary>
+    public float TooltipHeightDip(string text) => TipLines(text).Count * TipLine + 10f;
+
+    public void DrawTooltip(SKCanvas c, string text)
+    {
+        c.Clear(SKColors.Transparent);
+        var lines = TipLines(text);
+        _p.Box(c, new DipRect(0, 0, TooltipWidthDip, lines.Count * TipLine + 10f), Palette.AzulClaro, Palette.BgPainel);
+        for (int i = 0; i < lines.Count; i++)
+            _p.Text(c, lines[i], PanelFont.JetBrainsMono, TipFont, new DipRect(6, 5 + i * TipLine, TooltipWidthDip - 12f, TipLine), Palette.TxtPrincipal);
+    }
+
+    private void DrawIcon(SKCanvas c, TdIcon icon, float xDip, float yDip, float sizeDip, SKColor color) =>
+        TdIconPainter.Draw(c, icon, _p.Px(xDip), _p.Px(yDip), _p.Px(sizeDip), color, Palette.Ambar);
+
+    /// <summary>Item do HUD (TD.14): rótulo/botão com ícone à esquerda, texto legível (JetBrains Mono), bônus com moeda e recarga em barra.</summary>
+    private void DrawHudItem(SKCanvas c, in TdUiItem it, bool hover)
+    {
+        var r = it.Rect;
+        var color = ToneColor(it.Tone);
+        float fs = it.Kind == TdUiKind.Button && r.W <= 80f ? 8.5f : 9f;
+        bool isButton = it.Kind == TdUiKind.Button;
+        bool enabled = it.Enabled && it.Action != TdUiAction.None;
+        if (isButton)
+        {
+            var border = it.Selected ? Palette.Ambar : enabled ? (hover ? Palette.AzulClaro : Palette.BordaForte) : Palette.BordaPainel;
+            var fill = it.Selected || (hover && enabled) ? Palette.BgCard : Palette.BgItem;
+            _p.Box(c, r, border, fill);
+            if (it.Fill > 0f) _p.Fill(c, new DipRect(r.X + 1, r.Y + r.H - 3, (r.W - 2) * it.Fill, 2), Palette.Azul);
+            if (!enabled && it.Tone != TdTone.Dim) color = Palette.TxtRotulo;
+        }
+        float iconSize = Math.Min(15f, r.H - 8f);
+        float x = r.X + 5f;
+        bool iconOnly = it.Text.Length == 0;
+        if (it.Icon != TdIcon.None)
+        {
+            float ix = iconOnly ? r.X + (r.W - iconSize) / 2f : x;
+            DrawIcon(c, it.Icon, ix, r.Y + (r.H - iconSize) / 2f, iconSize, color);
+            x += iconSize + 4f;
+        }
+        if (iconOnly) return;
+        float rightW = 0f;
+        if (it.Right is not null)
+        {
+            rightW = (_p.TextEnabled ? _p.Font(PanelFont.JetBrainsMono, fs).MeasureText(it.Right) / (_p.Dpi / 96f) : 18f) + (it.RightCoin ? 12f : 0f) + 3f;
+            float rx = r.X + r.W - rightW - 3f;
+            _p.Text(c, it.Right, PanelFont.JetBrainsMono, fs, new DipRect(rx, r.Y + (r.H - 12f) / 2f, rightW - (it.RightCoin ? 12f : 0f), 12f), enabled ? Palette.Ambar : Palette.TxtRotulo);
+            if (it.RightCoin) DrawIcon(c, TdIcon.Coin, r.X + r.W - 15f, r.Y + (r.H - 10f) / 2f, 10f, Palette.Ambar);
+        }
+        _p.Text(c, it.Text, PanelFont.JetBrainsMono, fs, new DipRect(x, r.Y + (r.H - 12f) / 2f, r.W - (x - r.X) - rightW - 2f, 12f), color);
     }
 
     public void DrawPopover(SKCanvas c, TdPopoverView v, int hover)

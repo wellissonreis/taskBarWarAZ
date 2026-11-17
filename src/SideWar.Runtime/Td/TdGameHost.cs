@@ -17,12 +17,6 @@ public interface ITdMatchObserver
     void OnMatchEnded(TdMatchState match, TdMatchResult result);
 }
 
-/// <summary>Fonte do sinal "presente agora" (RF-28.19): segundos desde a última entrada de mouse/teclado do usuário no sistema.</summary>
-public interface ITdInputSource
-{
-    double SecondsSinceLastInput();
-}
-
 /// <summary>
 /// Pedido "Iniciar onda" (hotkey/bandeja): vira <see cref="StartWave"/> em Preparo ou <see cref="CallNextWave"/> em Onda,
 /// decidido no momento da aplicação (entre ticks). Só o comando traduzido entra no <see cref="TdGameHost.CommandLog"/>.
@@ -44,7 +38,7 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
     private readonly IClock _clock;
     private readonly AppStateMachine _app;
     private readonly ITdMatchObserver? _observer;
-    private readonly ITdInputSource? _input;
+    private readonly ITdPresence? _presence;
     private readonly FixedStepper _stepper = new();
     private readonly Queue<IGameCommand> _pending = new();
     private readonly List<TdLogEntry> _log = [];
@@ -54,9 +48,9 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
     private bool _started;
     private bool _endReported;
 
-    public TdGameHost(IClock clock, AppStateMachine app, TdMatchState match, ITdMatchObserver? observer = null, ITdInputSource? input = null)
+    public TdGameHost(IClock clock, AppStateMachine app, TdMatchState match, ITdMatchObserver? observer = null, ITdPresence? presence = null)
     {
-        _input = input;
+        _presence = presence;
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
         _app = app ?? throw new ArgumentNullException(nameof(app));
         Match = match ?? throw new ArgumentNullException(nameof(match));
@@ -177,14 +171,14 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
     }
 
     /// <summary>
-    /// Sinal "presente agora" (RF-28.19): só em Onda e com a simulação rodando, compara a última entrada do usuário com a janela
-    /// (<c>rules.bombCrate.presenceWindowSeconds</c>) e envia <see cref="SetPresence"/> ao log apenas quando o estado muda.
+    /// Sinal "presente agora" (RF-28.19, TD.14): só em Onda e com a simulação rodando, lê <see cref="ITdPresence"/> (ausente após ativar
+    /// outro app; presente ao interagir com o SideWar) e envia <see cref="SetPresence"/> ao log apenas quando o estado muda.
     /// O Core usa só o último estado registrado (determinismo).
     /// </summary>
     private void UpdatePresence()
     {
-        if (_input is null || !_app.SimulationRunning || Match.Phase != MatchPhase.Onda) return;
-        bool present = _input.SecondsSinceLastInput() <= Match.Content.Stages.Rules.BombCrate.PresenceWindowSeconds;
+        if (_presence is null || !_app.SimulationRunning || Match.Phase != MatchPhase.Onda) return;
+        bool present = _presence.IsPresent;
         if (present != Match.Present) Apply(new SetPresence(present));
     }
 

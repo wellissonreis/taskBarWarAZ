@@ -35,14 +35,46 @@ public sealed class TdBandTests
     }
 
     [Theory]
-    [InlineData(1920, 96, 32, 1920 - 160)]
-    [InlineData(1920, 144, 48, 1920 - 240)]
-    [InlineData(2560, 192, 64, 2560 - 320)]
-    public void ComputeTdBand_is_32_dip_above_the_bar_and_leaves_the_hud_area(int width, uint dpi, int heightPx, int rightPx)
+    [InlineData(1920, 96, 64)]
+    [InlineData(1920, 144, 40)]
+    [InlineData(2560, 192, 88)]
+    [InlineData(1920, 96, 32)]
+    [InlineData(1920, 96, 96)]
+    public void ComputeTdBand_is_the_configured_height_above_the_bar_and_leaves_the_proportional_hud_area(int width, uint dpi, int bandDip)
     {
         var m = Monitor(width, 1032, dpi);
-        var r = SceneLayout.ComputeTdBand(m, Bar());
-        Assert.Equal(new PixelRect(0, 1032 - heightPx, rightPx, 1032), r);
+        var r = SceneLayout.ComputeTdBand(m, Bar(), bandDip);
+        double scale = dpi / 96.0;
+        int heightPx = (int)Math.Round(bandDip * scale, MidpointRounding.AwayFromZero);
+        int hudPx = (int)Math.Round(TdBand.HudAreaDip(bandDip) * scale, MidpointRounding.AwayFromZero);
+        Assert.Equal(new PixelRect(0, 1032 - heightPx, width - hudPx, 1032), r);
+    }
+
+    [Fact]
+    public void Default_band_is_64_dip_and_the_hud_scales_with_the_band()
+    {
+        Assert.Equal(64, TdBand.DefaultHeightDip);
+        Assert.Equal(64, SceneLayout.ComputeTdBand(Monitor(), Bar()).Height);
+        Assert.Equal(1f, TdBand.HudScale(64));
+        Assert.True(TdBand.HudScale(88) > TdBand.HudScale(64));
+        Assert.Equal(0.75f, TdBand.HudScale(32)); // piso de legibilidade
+        Assert.Equal(1.5f, TdBand.HudScale(96));
+        Assert.Equal(2f, TdBand.Scale(64));
+        Assert.Equal(1.25f, TdBand.Scale(40));
+    }
+
+    [Theory]
+    [InlineData(40)]
+    [InlineData(64)]
+    [InlineData(88)]
+    public void Watcher_gives_the_core_the_band_in_32_dip_design_space(int bandDip)
+    {
+        var sink = new FakeClockSink();
+        var w = new SceneLayoutWatcher(sink, null, l => new LayoutChangedTd(l));
+        var u = w.Observe(Monitor(), Bar(), new BuildZoneOptions { TdBand = true, TdBandHeightDip = bandDip })!.Value;
+        Assert.Equal(bandDip, u.Scene.Height);
+        int realWidth = u.Scene.Width;
+        Assert.Equal((int)Math.Round(realWidth / TdBand.Scale(bandDip), MidpointRounding.AwayFromZero), u.Layout.Width);
     }
 
     [Fact]
@@ -73,8 +105,8 @@ public sealed class TdBandTests
         var first = w.Observe(Monitor(), Bar(), Td);
         Assert.NotNull(first);
         Assert.True(first!.Value.LayoutPosted);
-        Assert.Equal(1920 - 160, first.Value.Layout.Width);
-        Assert.Equal(TdBand.HeightDip, first.Value.Scene.Height);
+        Assert.Equal((1920 - TdBand.HudAreaDip(64)) / 2, first.Value.Layout.Width); // 64 DIP reais = 2 × espaço de desenho
+        Assert.Equal(TdBand.DefaultHeightDip, first.Value.Scene.Height);
         Assert.IsType<LayoutChangedTd>(Assert.Single(sink.Posted));
 
         Assert.Null(w.Observe(Monitor(), Bar(), Td)); // nada mudou
@@ -98,7 +130,7 @@ public sealed class TdBandTests
         Assert.Null(match.Layout);
         host.OnWake(clock);
         Assert.NotNull(match.Layout);
-        Assert.Equal(1760, match.Layout!.Width);
+        Assert.Equal((1920 - TdBand.HudAreaDip(64)) / 2, match.Layout!.Width);
         Assert.Contains(host.CommandLog, e => e.Command is LayoutChangedTd);
     }
 
@@ -147,6 +179,35 @@ public sealed class TdBandTests
     {
         public int Frames;
         public void Present(TdMatchState match, double nowSeconds, in TdView view) => Frames++;
+    }
+
+    [Fact]
+    public void Render_driver_drops_to_8_fps_while_the_player_is_absent_and_keeps_explicit_redraws()
+    {
+        var (match, host, clock, app) = Rig();
+        var sink = new CountingSink();
+        var driver = new TdRenderDriver(host, app, clock, sink);
+        long step = (long)(clock.TicksPerSecond / 30);
+        void Tick(int n)
+        {
+            for (int i = 0; i < n; i++) { clock.AdvanceTicks(step); host.OnWake(clock); driver.OnWake(clock); }
+        }
+        driver.OnWake(clock);
+        host.OnCommand(new StartWave());
+        Tick(31);
+        int normal = sink.Frames;
+        driver.Absent = true;
+        Tick(60); // 2 s ausente
+        Assert.InRange(sink.Frames - normal, 14, 18); // ~8 fps
+        Assert.True(match.Frame > 0);
+        int before = sink.Frames;
+        driver.MarkDirty(); // mouse/seleção: desenha na hora
+        Tick(1);
+        Assert.True(sink.Frames > before);
+        driver.Absent = false;
+        before = sink.Frames;
+        Tick(30);
+        Assert.InRange(sink.Frames - before, 29, 31);
     }
 
     [Fact]

@@ -68,6 +68,20 @@ public sealed class SceneModeController
     public event Action<float, float, HitTarget>? TdLeftClicked;
     public event Action? TdRightClicked;
 
+    /// <summary>TD.14: o poll de 10 Hz viu o cursor sobre a faixa (mesmo Passivo): o jogador está presente.</summary>
+    public event Action? TdHoverDetected;
+
+    private byte tdFadeAlpha = 255;
+
+    /// <summary>TD.14: opacidade máxima da faixa enquanto o jogador está ausente (255 = sem esmaecer); combina com o menor dos outros níveis.</summary>
+    public void SetTdFade(byte alpha)
+    {
+        owner.VerifyAccess();
+        if (tdFadeAlpha == alpha) return;
+        tdFadeAlpha = alpha;
+        ApplyOpacity();
+    }
+
     /// <summary>The mode left Interactive with a drag in progress; the game must abort it (RF-04.2).</summary>
     public event Action? DragCancelled;
 
@@ -143,7 +157,11 @@ public sealed class SceneModeController
         if (tdHover && now >= hoverNext)
         {
             hoverNext = now + Stopwatch.Frequency / 10;
-            if (owner.Scene.IsVisible && mode.Mode == OverlayMode.Passive && !mode.BuildActive && CursorInStrip()) SetMode(OverlayMode.Interactive);
+            if (owner.Scene.IsVisible && mode.Mode == OverlayMode.Passive && !mode.BuildActive && CursorInStrip())
+            {
+                TdHoverDetected?.Invoke();
+                SetMode(OverlayMode.Interactive);
+            }
         }
         if (peek.PollDue(now) && peek.OnSample(now, CursorInStrip())) ApplyOpacity();
     }
@@ -235,6 +253,7 @@ public sealed class SceneModeController
     {
         var alpha = mode.Effects.Alpha;
         if (peek.Peeking) alpha = Math.Min(alpha, peekAlpha);
+        if (tdFadeAlpha < 255) alpha = Math.Min(alpha, tdFadeAlpha);
         ActiveSurface?.SetOpacity(alpha);
     }
 

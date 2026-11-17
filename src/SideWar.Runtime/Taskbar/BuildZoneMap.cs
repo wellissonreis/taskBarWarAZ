@@ -17,6 +17,9 @@ public readonly record struct BuildZoneOptions
     /// <summary>Modo TD (TD.7): faixa Band mínima de 32 DIP acima da barra; ignora UIA e <c>TowersInBar</c> (TA.1 reprovou torres na barra).</summary>
     public bool TdBand { get; init; }
 
+    /// <summary>Altura real da faixa TD em DIP (TD.14: 32 a 96, padrão 64); a largura lógica do Core é <c>W_dip / (altura / 32)</c>.</summary>
+    public int TdBandHeightDip { get; init; } = Td.TdBand.DefaultHeightDip;
+
     public BuildZoneOptions() { }
 }
 

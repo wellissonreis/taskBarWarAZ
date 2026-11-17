@@ -9,6 +9,8 @@ internal enum AppCommandKind
     TogglePause,
     /// <summary>"Iniciar onda" (modo TD): StartWave em Preparo, CallNextWave em Onda.</summary>
     StartWave,
+    /// <summary>"Mostrar HUD" / "Recolher HUD" do menu da bandeja (TD.14).</summary>
+    ToggleHud,
     SelectMonitor,
     /// <summary>Segunda instância (SDD-07 RF-07.8): remove <c>HiddenReason.User</c> e entra no modo Interativo.</summary>
     ShowAndInteract,
@@ -20,11 +22,11 @@ internal enum AppCommandKind
 internal sealed record AppCommand(AppCommandKind Kind, int MonitorIndex = -1) : IGameCommand;
 
 /// <summary>Pedido da T-Game para a T-UI (janelas WPF e encerramento).</summary>
-internal enum UiRequest { OpenSettings, OpenAbout, Exit }
+internal enum UiRequest { OpenSettings, OpenAbout, Exit, SaveHudState }
 
 /// <summary>Estado do menu (bandeja/widget) publicado pela T-Game como snapshot imutável (SDD-01 RF-01.4 regra 3).</summary>
 internal sealed record MenuSnapshot(bool Interactive, bool Paused, bool Hidden, IReadOnlyList<string> Monitors, int SelectedMonitor,
-    bool TdMode = false, string? StartWaveHotkey = null)
+    bool TdMode = false, string? StartWaveHotkey = null, bool HudMinimized = false)
 {
     public static MenuSnapshot Initial { get; } = new(false, false, true, [], 0);
 }
