@@ -71,6 +71,16 @@ public sealed class SceneModeController
     /// <summary>TD.14: o poll de 10 Hz viu o cursor sobre a faixa (mesmo Passivo): o jogador está presente.</summary>
     public event Action? TdHoverDetected;
 
+    /// <summary>
+    /// TD.16: clique de mouse com o cursor FORA de qualquer janela do SideWar, ou tecla digitada com o foreground em outro app (poll de
+    /// 10 Hz). Janelas da faixa/HUD são no-activate, então voltar ao Chrome não gera mudança de foreground: o clique externo é a prova de
+    /// que o jogador saiu. Poll de GetAsyncKeyState (bit alto = pressionado agora, bit baixo = pressionado desde a última leitura) em vez de
+    /// hook de mouse global: sem DLL injetada/callback em cada movimento, custo desprezível a 10 Hz e sem exigir loop de mensagens dedicado.
+    /// </summary>
+    public event Action? TdExternalInput;
+
+    private bool prevMouseDown;
+
     private byte tdFadeAlpha = 255;
 
     /// <summary>TD.14: opacidade máxima da faixa enquanto o jogador está ausente (255 = sem esmaecer); combina com o menor dos outros níveis.</summary>
@@ -163,6 +173,7 @@ public sealed class SceneModeController
                 SetMode(OverlayMode.Interactive);
             }
         }
+        if (tdHover && TdExternalInput is not null && owner.Scene.IsVisible && ExternalInputSeen()) TdExternalInput();
         if (peek.PollDue(now) && peek.OnSample(now, CursorInStrip())) ApplyOpacity();
     }
 
@@ -267,6 +278,37 @@ public sealed class SceneModeController
             SET_WINDOW_POS_FLAGS.SWP_FRAMECHANGED | SET_WINDOW_POS_FLAGS.SWP_NOMOVE | SET_WINDOW_POS_FLAGS.SWP_NOSIZE |
             SET_WINDOW_POS_FLAGS.SWP_NOZORDER | SET_WINDOW_POS_FLAGS.SWP_NOACTIVATE | SET_WINDOW_POS_FLAGS.SWP_NOOWNERZORDER))
             throw Win32Error.LastError("SetWindowPos(frame)");
+    }
+
+    private static bool KeyHit(int vk) => (PInvoke.GetAsyncKeyState(vk) & 0x8001) != 0;
+
+    private static bool OwnWindowAt(System.Drawing.Point p)
+    {
+        var h = PInvoke.WindowFromPoint(p);
+        if (h.IsNull) return false;
+        uint pid;
+        unsafe { _ = PInvoke.GetWindowThreadProcessId(h, &pid); }
+        return pid == (uint)Environment.ProcessId;
+    }
+
+    /// <summary>TD.16: clique (borda de descida) fora das janelas do SideWar, ou teclado com o foreground em outro app.</summary>
+    private bool ExternalInputSeen()
+    {
+        bool down = KeyHit(0x01) || KeyHit(0x02) || KeyHit(0x04);
+        bool edge = down && !prevMouseDown;
+        prevMouseDown = down;
+        if (edge && PInvoke.GetCursorPos(out var p) && !CursorInStrip() && !OwnWindowAt(p)) return true;
+        var fg = PInvoke.GetForegroundWindow();
+        if (fg.IsNull) return false;
+        uint fpid;
+        unsafe { _ = PInvoke.GetWindowThreadProcessId(fg, &fpid); }
+        if (fpid == (uint)Environment.ProcessId) return false;
+        for (int vk = 0x08; vk <= 0xFE; vk++)
+        {
+            if (vk is 0x10 or 0x11 or 0x12) continue; // modificadores sozinhos não contam
+            if ((PInvoke.GetAsyncKeyState(vk) & 0x8000) != 0) return true;
+        }
+        return false;
     }
 
     // Cursor inside the strip and not over the always-clickable widget (RF-04.5).

@@ -214,8 +214,9 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     private PixelRect HudBounds(DockLayoutResult c, TdHudView model)
     {
         int w = (int)MathF.Round(model.Width * UiScale), h = (int)MathF.Round(model.Height * UiScale);
-        // HUD (ou chip recolhido): logo à direita da faixa, base alinhada à base dela (área reservada pela TD.7/TD.14).
-        return new PixelRect(c.Scene.Right, c.Scene.Bottom - h, c.Scene.Right + w, c.Scene.Bottom);
+        // TD.16: HUD (ou chip recolhido) flutua logo ACIMA da faixa, alinhado à direita, sem cobri-la.
+        int bottom = Math.Max(c.Monitor.WorkArea.Top + h, c.Scene.Top - (int)MathF.Round(2 * Scale));
+        return new PixelRect(c.Scene.Right - w, bottom - h, c.Scene.Right, bottom);
     }
 
     public void Kick() => deadline = clock.NowTicks + (long)(KickSeconds * clock.TicksPerSecond);
@@ -261,6 +262,8 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
                 // AnchorX está no espaço de desenho da faixa (32 DIP de altura): × k para DIP reais.
                 left = c.Scene.Left + (int)MathF.Round(pop.AnchorX * k * ds) - w / 2;
                 bottom = c.Scene.Top - (int)MathF.Round(2 * ds);
+                // TD.16: o HUD fica acima da faixa; se o popover cair sob ele, sobe acima do HUD.
+                if (left < hudBounds.Right && left + w > hudBounds.Left) bottom = hudBounds.Top - (int)MathF.Round(2 * ds);
             }
             else if (pop.TargetHudX >= 0)
             {

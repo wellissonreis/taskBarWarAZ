@@ -45,4 +45,23 @@ public class TdFocusStateTests
         f.Configure(true, 30);
         Assert.Equal(76, f.Alpha);
     }
+
+    [Fact]
+    public void External_click_or_typing_makes_absent_even_without_a_foreground_change_and_hover_returns_present_TD16()
+    {
+        var f = new TdFocusState();
+        int changes = 0;
+        f.Changed += () => changes++;
+        f.OnInteraction();           // interagiu com o SideWar (já presente: sem evento)
+        Assert.Equal(0, changes);
+        f.OnExternalInput();         // clique fora das janelas do SideWar (janelas no-activate: sem ForegroundChanged)
+        Assert.False(f.IsPresent);
+        Assert.True(f.FadeActive);
+        f.OnExternalInput();         // repetido: idempotente
+        Assert.Equal(1, changes);
+        f.OnInteraction();           // hover/clique no SideWar
+        Assert.True(f.IsPresent);
+        Assert.Equal(255, f.Alpha);
+        Assert.Equal(2, changes);
+    }
 }

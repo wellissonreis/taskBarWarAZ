@@ -315,6 +315,8 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         fullscreen.Transition += OnFullscreen;
         // TD.14: ativar OUTRO app = ausente (esmaece, 8 fps, caixa-bomba sem presença); janela do SideWar ativada = presente.
         if (tdFocus is not null)
+            game.Mode.TdExternalInput += tdFocus.OnExternalInput; // TD.16: clique fora das janelas do SideWar = ausente
+        if (tdFocus is not null)
             fullscreen.ForegroundChanged += foreign => { if (foreign) tdFocus.OnForeignActivated(); else tdFocus.OnInteraction(); };
         res.Started("fullscreen", fullscreen.Dispose);
 

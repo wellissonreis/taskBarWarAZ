@@ -165,3 +165,5 @@ CreateIconFromResourceEx
 GetSystemMetrics
 SYSTEM_METRICS_INDEX
 IMAGE_FLAGS
+GetAsyncKeyState
+WindowFromPoint

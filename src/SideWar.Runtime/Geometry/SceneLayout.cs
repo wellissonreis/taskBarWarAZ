@@ -34,8 +34,8 @@ public static class SceneLayout
     }
 
     /// <summary>
-    /// Faixa TD (TD.7): <paramref name="bandHeightDip"/> DIP (32 a 96, padrão 64) logo acima da área de trabalho (acima da barra), da esquerda da área de
-    /// trabalho até <see cref="Td.TdBand.HudAreaDip"/> DIP antes da borda direita (área do HUD, TD.8). Elevada 2 px com a barra em
+    /// Faixa TD (TD.7): <paramref name="bandHeightDip"/> DIP (32 a 96, padrão 64) logo acima da área de trabalho (acima da barra), em TODA a largura da área
+    /// de trabalho (TD.16: o HUD flutua acima da faixa, então trilho, torres e portal ocupam a faixa inteira). Elevada 2 px com a barra em
     /// ocultação automática, como o Band padrão.
     /// </summary>
     /// <exception cref="ArgumentOutOfRangeException">DPI inválido ou área de trabalho pequena demais.</exception>
@@ -45,13 +45,13 @@ public static class SceneLayout
             throw new ArgumentOutOfRangeException(nameof(m), "DPI must be positive and fit physical pixel coordinates.");
         var scale = m.Dpi / 96.0;
         var heightPx = (int)Math.Round(Math.Clamp(bandHeightDip, Td.TdBand.MinHeightDip, Td.TdBand.MaxHeightDip) * scale, MidpointRounding.AwayFromZero);
-        var hudPx = (int)Math.Round(Td.TdBand.HudAreaDip(bandHeightDip) * scale, MidpointRounding.AwayFromZero);
+        var hudPx = (int)Math.Round(Td.TdBand.HudAreaDip(bandHeightDip) * scale, MidpointRounding.AwayFromZero); // só valida largura mínima
         var marginPx = t.AutoHide ? 2 : 0;
         var work = m.WorkArea;
         if ((long)work.Right - work.Left <= hudPx + (long)Math.Round(135 * scale) ||
             (long)work.Bottom - work.Top < (long)heightPx + marginPx)
             throw new ArgumentOutOfRangeException(nameof(m), "WorkArea must fit the TD band and the HUD area.");
         var bottom = checked(work.Bottom - marginPx);
-        return new PixelRect(work.Left, checked(bottom - heightPx), work.Right - hudPx, bottom);
+        return new PixelRect(work.Left, checked(bottom - heightPx), work.Right, bottom);
     }
 }

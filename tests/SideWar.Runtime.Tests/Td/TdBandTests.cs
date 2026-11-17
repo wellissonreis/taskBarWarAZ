@@ -40,14 +40,13 @@ public sealed class TdBandTests
     [InlineData(2560, 192, 88)]
     [InlineData(1920, 96, 32)]
     [InlineData(1920, 96, 96)]
-    public void ComputeTdBand_is_the_configured_height_above_the_bar_and_leaves_the_proportional_hud_area(int width, uint dpi, int bandDip)
+    public void ComputeTdBand_is_the_configured_height_above_the_bar_and_spans_the_full_work_area_TD16(int width, uint dpi, int bandDip)
     {
         var m = Monitor(width, 1032, dpi);
         var r = SceneLayout.ComputeTdBand(m, Bar(), bandDip);
         double scale = dpi / 96.0;
         int heightPx = (int)Math.Round(bandDip * scale, MidpointRounding.AwayFromZero);
-        int hudPx = (int)Math.Round(TdBand.HudAreaDip(bandDip) * scale, MidpointRounding.AwayFromZero);
-        Assert.Equal(new PixelRect(0, 1032 - heightPx, width - hudPx, 1032), r);
+        Assert.Equal(new PixelRect(0, 1032 - heightPx, width, 1032), r);
     }
 
     [Fact]
@@ -105,7 +104,7 @@ public sealed class TdBandTests
         var first = w.Observe(Monitor(), Bar(), Td);
         Assert.NotNull(first);
         Assert.True(first!.Value.LayoutPosted);
-        Assert.Equal((1920 - TdBand.HudAreaDip(64)) / 2, first.Value.Layout.Width); // 64 DIP reais = 2 × espaço de desenho
+        Assert.Equal(1920 / 2, first.Value.Layout.Width); // 64 DIP reais = 2 × espaço de desenho
         Assert.Equal(TdBand.DefaultHeightDip, first.Value.Scene.Height);
         Assert.IsType<LayoutChangedTd>(Assert.Single(sink.Posted));
 
@@ -130,7 +129,7 @@ public sealed class TdBandTests
         Assert.Null(match.Layout);
         host.OnWake(clock);
         Assert.NotNull(match.Layout);
-        Assert.Equal((1920 - TdBand.HudAreaDip(64)) / 2, match.Layout!.Width);
+        Assert.Equal(1920 / 2, match.Layout!.Width);
         Assert.Contains(host.CommandLog, e => e.Command is LayoutChangedTd);
     }
 

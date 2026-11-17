@@ -47,6 +47,9 @@ public sealed class TdFocusState : ITdPresence
     /// <summary>O foreground passou para uma janela que não é do SideWar (RF-28.19).</summary>
     public void OnForeignActivated() => Set(true);
 
+    /// <summary>TD.16: clique fora das janelas do SideWar ou tecla digitada com foreground em outro app: ausente.</summary>
+    public void OnExternalInput() => Set(true);
+
     /// <summary>Mouse sobre a faixa/HUD/popover, clique ou janela do SideWar ativada.</summary>
     public void OnInteraction() => Set(false);
 
