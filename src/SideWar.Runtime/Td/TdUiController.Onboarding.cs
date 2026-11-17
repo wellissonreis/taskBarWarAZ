@@ -39,6 +39,10 @@ public enum TdTutorialStep : byte
     Ability,
     /// <summary>"Clique em Coletar caixa" (na 1ª caixa): botão do HUD ou atalho, com a regra de ausência (TD.16b).</summary>
     Crate,
+    /// <summary>TD.29b: Pausar e velocidade 1x/2x/3x (informativo, OK).</summary>
+    Controls,
+    /// <summary>TD.29b: fragmentos despertam runas na aba Runas (informativo, OK).</summary>
+    Runes,
 }
 
 /// <summary>
@@ -71,7 +75,7 @@ public sealed partial class TdUiController
     public const float CalloutWidth = 250f;
 
     [Flags]
-    private enum Ack : byte { None = 0, Core = 1, Credits = 2, Portal = 4, Range = 8, Call = 16, Sell = 32 }
+    private enum Ack : byte { None = 0, Core = 1, Credits = 2, Portal = 4, Range = 8, Call = 16, Sell = 32, Controls = 64, Runes = 128 }
 
     private Ack _ack;
     private bool _abilityDone, _crateDone, _crateSeen;
@@ -95,13 +99,13 @@ public sealed partial class TdUiController
     public TdTutorialStep Step => ComputeStep(_match());
 
     private bool TutorialOn(TdMatchState m) =>
-        _onb is { TutorialDone: false } && m.StageId == 1 && m.Phase is MatchPhase.Preparo or MatchPhase.Onda;
+        _onb is { TutorialDone: false } && m.Phase is MatchPhase.Preparo or MatchPhase.Onda;
 
     /// <summary>Fase 1 sem nenhuma torre: a onda 1 não começa (Iniciar onda desabilitado com a dica "Coloque 1 torre primeiro").</summary>
     public bool StartBlocked => StartBlockedFor(_match());
 
     private bool StartBlockedFor(TdMatchState m) =>
-        _onb is { TutorialDone: false } && m.StageId == 1 && m.Phase == MatchPhase.Preparo && m.WaveNumber == 0 && m.Towers.Count == 0;
+        _onb is { TutorialDone: false } && m.Phase == MatchPhase.Preparo && m.WaveNumber == 0 && m.Towers.Count == 0;
 
     private static int PlacedTowers(TdMatchState m)
     {
@@ -130,13 +134,15 @@ public sealed partial class TdUiController
             if (m.Towers.Count == 0)
                 return BuildActive ? TdTutorialStep.Point : Mode == TdUiMode.Build ? TdTutorialStep.Tower : TdTutorialStep.Build;
             if ((_ack & Ack.Range) == 0) return TdTutorialStep.Range;
+            if ((_ack & Ack.Controls) == 0) return TdTutorialStep.Controls;
             return TdTutorialStep.Wave;
         }
         if (_now() < _hurtUntil) return TdTutorialStep.Hurt;
         if (m.CrateActive && !_crateDone) return TdTutorialStep.Crate;
-        if (m.Phase == MatchPhase.Onda && (_ack & Ack.Call) == 0 && CallReady(m)) return TdTutorialStep.CallNext;
+        if (m.Phase == MatchPhase.Onda && !m.Options.ContinuousWaves && (_ack & Ack.Call) == 0 && CallReady(m)) return TdTutorialStep.CallNext;
         if (m.Phase == MatchPhase.Preparo && _quizQ is not null) return TdTutorialStep.Quiz;
-        if (m.Phase == MatchPhase.Preparo && (_ack & Ack.Sell) == 0 && PlacedTowers(m) > 0 && m.WaveNumber >= 1) return TdTutorialStep.Sell;
+        if ((m.Phase == MatchPhase.Preparo || m.Options.ContinuousWaves) && (_ack & Ack.Sell) == 0 && PlacedTowers(m) > 0 && m.WaveNumber >= 1) return TdTutorialStep.Sell;
+        if ((_ack & Ack.Runes) == 0 && m.Fragments > 0 && m.WaveNumber >= 1) return TdTutorialStep.Runes;
         if (!_abilityDone && ReadyAbility(m) >= 0) return TdTutorialStep.Ability;
         return TdTutorialStep.None;
     }
@@ -198,6 +204,8 @@ public sealed partial class TdUiController
             case TdTutorialStep.Range: _ack |= Ack.Range; break;
             case TdTutorialStep.CallNext: _ack |= Ack.Call; break;
             case TdTutorialStep.Sell: _ack |= Ack.Sell; break;
+            case TdTutorialStep.Controls: _ack |= Ack.Controls; break;
+            case TdTutorialStep.Runes: _ack |= Ack.Runes; break;
         }
         Changed?.Invoke();
     }
@@ -246,7 +254,7 @@ public sealed partial class TdUiController
         ScanTips(m);
         UpdateTip(m);
         SyncHurt(m);
-        if (_onb.TutorialDone || m.StageId != 1) return;
+        if (_onb.TutorialDone) return;
         bool min = !ModalOpen;
         if (_hudPhase == 0 && !min) _hudPhase = 1;
         if (_hudPhase == 1 && min) _hudPhase = 3;
@@ -256,7 +264,7 @@ public sealed partial class TdUiController
         bool started = m.WaveNumber > 0 || m.Phase == MatchPhase.Onda;
         bool ended = m.Phase is MatchPhase.Vitoria or MatchPhase.Derrota;
         bool quizDone = _quizExampleDone || !QuizEnabled;
-        if (started && (ended || (_abilityDone && _crateDone && quizDone && (_ack & Ack.Sell) != 0 && (_ack & Ack.Call) != 0))) FinishTutorial();
+        if (started && (ended || (_abilityDone && _crateDone && quizDone && (_ack & Ack.Sell) != 0 && ((_ack & Ack.Call) != 0 || m.Options.ContinuousWaves)))) FinishTutorial();
     }
 
     /// <summary>Reforço ao tomar dano (1ª partida): dica curta do que fazer, apontando o alvo; no máximo uma a cada <see cref="HurtMinGapSeconds"/>.</summary>
@@ -379,6 +387,7 @@ public sealed partial class TdUiController
     private static bool HudStep(TdTutorialStep s) =>
         s is TdTutorialStep.Core or TdTutorialStep.Credits or TdTutorialStep.Build or TdTutorialStep.Wave or TdTutorialStep.CallNext
             or TdTutorialStep.Ability or TdTutorialStep.HudCollapse or TdTutorialStep.HudOpen or TdTutorialStep.Sell or TdTutorialStep.Crate
+            or TdTutorialStep.Controls or TdTutorialStep.Runes or TdTutorialStep.Tower
             || s == TdTutorialStep.Hurt;
 
     private TdUiItem[] HighlightHud(List<TdUiItem> items)
@@ -403,13 +412,15 @@ public sealed partial class TdUiController
                 case TdTutorialStep.HudCollapse when it.Action == TdUiAction.HudMinimize: return i;
                 case TdTutorialStep.Core when it.Icon == TdIcon.Heart && it.Kind == TdUiKind.Label: return i;
                 case TdTutorialStep.Credits when it.Icon == TdIcon.Coin && it.Kind == TdUiKind.Label: return i;
-                case TdTutorialStep.Build when it.Action == TdUiAction.BuildToggle: return i;
+                case TdTutorialStep.Build when it.Action == TdUiAction.QuickTowers: return i;
+                case TdTutorialStep.Controls when it.Action == TdUiAction.PauseToggle: return i;
+                case TdTutorialStep.Runes when it.Action == TdUiAction.HudRestore: return i;
                 case TdTutorialStep.Wave or TdTutorialStep.CallNext when it.Action == TdUiAction.StartWave: return i;
-                case TdTutorialStep.Sell when it.Action == TdUiAction.Menu: return i;
+                case TdTutorialStep.Sell when it.Action == TdUiAction.HudRestore: return i;
                 case TdTutorialStep.Crate when it.Action == TdUiAction.CollectCrate: return i;
                 case TdTutorialStep.Ability when it.Action == TdUiAction.Ability && it.Enabled: return i;
                 case TdTutorialStep.Hurt when _hurtKind == 1 && it.Action == TdUiAction.Ability && it.Enabled: return i;
-                case TdTutorialStep.Hurt when _hurtKind == 2 && it.Action == TdUiAction.BuildToggle: return i;
+                case TdTutorialStep.Hurt when _hurtKind == 2 && it.Action == TdUiAction.QuickTowers: return i;
             }
         }
         return -1;
@@ -418,18 +429,20 @@ public sealed partial class TdUiController
     private (TdIcon Icon, string Text, string? Sub, bool Ok) StepLines(TdTutorialStep step, TdMatchState m) => step switch
     {
         TdTutorialStep.HudOpen => (TdIcon.Expand, "Toque no chip para abrir", null, false),
-        TdTutorialStep.HudCollapse => (TdIcon.Collapse, "Feche a modal com Esc", null, false),
+        TdTutorialStep.HudCollapse => (TdIcon.Collapse, "Feche a modal: o jogo começa", "Esc ou ✕. Ela abre pelo chip.", false),
         TdTutorialStep.Core => (TdIcon.Heart, "Proteja o núcleo!", "Chegar a 0 = derrota.", true),
         TdTutorialStep.Credits => (TdIcon.Coin, "Créditos compram torres.", "Cada onda rende mais.", true),
         TdTutorialStep.Portal => (TdIcon.Portal, "Inimigos saem do portal.", "Eles correm até o núcleo.", true),
-        TdTutorialStep.Build => (TdIcon.Build, "Clique em Construir", null, false),
+        TdTutorialStep.Build => (TdIcon.Castle, "Clique no castelo: Torres", null, false),
         TdTutorialStep.Point => (TdIcon.Build, "Clique num ponto da faixa", null, false),
         TdTutorialStep.Tower => (TdIcon.Build, "Escolha uma torre", null, false),
+        TdTutorialStep.Controls => (TdIcon.Pause, "Pausar e velocidade 1x a 3x", "A caixa âmbar coleta a caixa.", true),
+        TdTutorialStep.Runes => (TdIcon.Question, "Fragmentos despertam runas", "Chip, aba Runas, Despertar.", true),
         TdTutorialStep.Range => (TdIcon.Target, "O círculo é o alcance.", "Ela só atira dentro dele.", true),
         TdTutorialStep.Wave => (TdIcon.Play, "Clique em Iniciar onda", null, false),
         TdTutorialStep.Hurt => (TdIcon.Alert, "Inimigo passou!", _hurtKind switch { 0 => "Construa perto do portal.", 1 => "Use uma habilidade.", _ => "Construa mais torres." }, false),
         TdTutorialStep.CallNext => (TdIcon.FastForward, "Chame a próxima: ganhe bônus", null, true),
-        TdTutorialStep.Sell => (TdIcon.Coin, "Venda: Menu, depois Torres", $"Devolve {Math.Round(m.Content.Stages.Rules.SellRefund * 100):0}%.", true),
+        TdTutorialStep.Sell => (TdIcon.Coin, "Venda: chip, aba Torres", $"Devolve {Math.Round(m.Content.Stages.Rules.SellRefund * 100):0}%.", true),
         TdTutorialStep.Ability => (TdIcon.Scale, "Use uma habilidade", null, false),
         TdTutorialStep.Crate => (TdIcon.Box, "Clique em Coletar caixa!", "Ou use o atalho. Longe do PC? Ela some.", false),
         _ => (TdIcon.None, "", null, false),
@@ -443,7 +456,7 @@ public sealed partial class TdUiController
         if (view is null) return Mode == TdUiMode.None ? BuildCallout(m, step) : null;
         bool decorate = (Mode == TdUiMode.Build && step is TdTutorialStep.Point or TdTutorialStep.Tower)
             || (Mode is TdUiMode.Menu or TdUiMode.Towers && step == TdTutorialStep.Sell);
-        return decorate ? AppendTutorial(view, step, m) : view;
+        return decorate ? MarkTutorialTargets(view, step) : view;
     }
 
     private TdPopoverView BuildCallout(TdMatchState m, TdTutorialStep step)
@@ -477,9 +490,10 @@ public sealed partial class TdUiController
             arrow ? s.Width / 2f : -1f, target);
     }
 
-    private TdPopoverView AppendTutorial(TdPopoverView view, TdTutorialStep step, TdMatchState m)
+    /// <summary>Destaca o alvo do passo dentro da modal (o texto do passo vai na faixa inferior da modal: <see cref="AddModalTutorial"/>).</summary>
+    private TdPopoverView MarkTutorialTargets(TdPopoverView view, TdTutorialStep step)
     {
-        var items = new List<TdUiItem>(view.Items.Length + 2);
+        var items = new List<TdUiItem>(view.Items.Length);
         bool marked = false;
         foreach (var it in view.Items)
         {
@@ -488,13 +502,22 @@ public sealed partial class TdUiController
             if (target) marked = true;
             items.Add(target ? it with { Highlight = true } : it);
         }
-        var (icon, text, _, _) = StepLines(step, m);
-        float y = view.Height - Pad + 2f;
-        items.Add(new TdUiItem(new DipRect(Pad, y, view.Width - 2 * Pad, 14f), TdUiKind.Label, text, Tone: TdTone.Accent, Icon: icon));
-        y += 16f;
-        items.Add(new TdUiItem(new DipRect(view.Width - Pad - 96f, y, 96f, 16f), TdUiKind.Button, "Pular", TdUiAction.TutorialSkip, Tone: TdTone.Dim, Icon: TdIcon.Cross));
-        y += 18f;
-        return view with { Items = [.. items], Height = y + Pad };
+        return view with { Items = [.. items] };
+    }
+
+    /// <summary>
+    /// Faixa do tutorial no pé da modal (sem roubar foco: é só desenho): ícone + texto do passo e "Pular". Aparece quando um passo está ativo
+    /// (ex.: "Feche a modal: o jogo começa" na abertura da 1ª execução).
+    /// </summary>
+    private void AddModalTutorial(List<TdUiItem> items)
+    {
+        if (_onb is null) return;
+        var m = _match();
+        var step = ComputeStep(m);
+        if (step == TdTutorialStep.None) return;
+        var (icon, text, sub, _) = StepLines(step, m);
+        items.Add(new(new DipRect(16, 456, 560, 18), TdUiKind.Label, text, Icon: icon, Tone: TdTone.Accent, SArg: "tut"));
+        items.Add(new(new DipRect(604, 454, 100, 22), TdUiKind.Button, "Pular", TdUiAction.TutorialSkip, Tone: TdTone.Dim, Icon: TdIcon.Cross, SArg: "tutskip"));
     }
 
     // ================================================================ Como jogar
@@ -506,7 +529,7 @@ public sealed partial class TdUiController
         Card(TdIcon.Heart, "Proteja o núcleo: 0 = derrota.");
         Card(TdIcon.Coin, "Créditos compram torres.");
         Card(TdIcon.Portal, "Inimigos saem do portal.");
-        Card(TdIcon.Build, "Escolha torre; toque na faixa.");
+        Card(TdIcon.Build, "Escolha a torre; toque na faixa.");
         Card(TdIcon.Coin, "Cada torre igual custa +25%.");
         Card(TdIcon.Target, "O círculo mostra o alcance.");
         if (m.Options.ContinuousWaves)
@@ -520,7 +543,7 @@ public sealed partial class TdUiController
             Card(TdIcon.FastForward, "Chame a próxima: ganhe bônus.");
         }
         Card(TdIcon.Coin, $"Venda na aba Torres: devolve {Math.Round(m.Content.Stages.Rules.SellRefund * 100):0}%.");
-        Card(TdIcon.Scale, "Use habilidades: recarregam sozinhas.");
+        Card(TdIcon.Scale, "Habilidades recarregam sozinhas.");
         Card(TdIcon.Box, "Colete a caixa: botão ou atalho.");
         Card(TdIcon.Question, "Responda V ou F: ganhe bônus.");
         Card(TdIcon.Crown, "Vença sem perder núcleo: coroa.");

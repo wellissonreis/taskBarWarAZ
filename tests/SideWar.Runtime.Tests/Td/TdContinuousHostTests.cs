@@ -112,13 +112,13 @@ public sealed class TdContinuousHostTests
     {
         var r = new Rig();
         Assert.Contains(r.Ui.BuildHud().Items, i => i.Action == TdUiAction.StartWave);
-        Assert.Contains("Fase 1", r.Ui.BuildHud().Items[0].Text);
+        Assert.Contains("Fase 1", r.Ui.BuildHud().Items.Single(i => i.Action == TdUiAction.HudRestore).Tip);
         r.Start();
         Assert.DoesNotContain(r.Ui.BuildHud().Items, i => i.Action == TdUiAction.StartWave);
         r.RunUntil(() => r.Match.WaveNumber == 2);
         Assert.Equal(MatchPhase.Onda, r.Match.Phase); // nunca voltou ao Preparo
         Assert.DoesNotContain(r.Ui.BuildHud().Items, i => i.Action == TdUiAction.StartWave);
-        Assert.Contains("Onda 2/2", r.Ui.BuildHud().Items[0].Text);
+        Assert.Contains(" 2/2 ", r.Ui.BuildHud().Items.Single(i => i.Action == TdUiAction.HudRestore).Text);
     }
 
     [Fact]
@@ -128,7 +128,7 @@ public sealed class TdContinuousHostTests
         r.Start();
         r.RunUntil(() => r.Match.Phase == MatchPhase.Preparo);
         Assert.Contains(r.Ui.BuildHud().Items, i => i.Action == TdUiAction.StartWave);
-        Assert.DoesNotContain("Fase", r.Ui.BuildHud().Items[0].Text);
+        Assert.DoesNotContain("Fase", r.Ui.BuildHud().Items.Single(i => i.Action == TdUiAction.HudRestore).Text);
     }
 
     [Fact]
@@ -146,7 +146,7 @@ public sealed class TdContinuousHostTests
         Assert.Contains(pop.Items, i => i.Kind == TdUiKind.Label && i.Text.StartsWith("Fase 1", StringComparison.Ordinal) && i.Icon == TdIcon.Check);
         Assert.True(pop.Height < 90f);
         Assert.Empty(r.Sent.OfType<Pause>());
-        Assert.Contains("Fase 2", r.Ui.BuildHud().Items[0].Text);
+        Assert.Contains("Fase 2", r.Ui.BuildHud().Items.Single(i => i.Action == TdUiAction.HudRestore).Tip);
         r.Now += TdUiController.StageNoticeSeconds + 0.1;
         r.Ui.Sync();
         Assert.False(r.Ui.NoticeOpen);
@@ -343,7 +343,7 @@ public sealed class TdContinuousHostTests
     public void Chip_tooltip_and_help_show_the_boss_hotkey()
     {
         var r = new Rig();
-        Assert.Contains("Ctrl+Alt+H", r.Ui.BuildHud().Items[0].Tip);
+        Assert.Contains("Ctrl+Alt+H", r.Ui.BuildHud().Items.Single(i => i.Action == TdUiAction.HudRestore).Tip);
         r.Ui.OpenHowTo();
         Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Text.Contains("Ctrl+Alt+H"));
     }

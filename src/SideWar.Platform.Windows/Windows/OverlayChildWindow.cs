@@ -127,6 +127,9 @@ public abstract unsafe class OverlayChildWindow : IDisposable
     /// <summary>True when the window must report HTTRANSPARENT to hit-testing (click-through seal).</summary>
     private protected virtual bool HitTransparent => false;
 
+    /// <summary>TD.29b: transparência por ponto (pixels do cliente): o HUD só recebe clique nos botões; o resto do chip deixa o clique passar.</summary>
+    private protected virtual bool HitTransparentAt(int clientX, int clientY) => HitTransparent;
+
     private unsafe void Create(bool clickThrough)
     {
         fixed (char* name = className)
@@ -219,7 +222,12 @@ public abstract unsafe class OverlayChildWindow : IDisposable
                     window?.OnKeyDown((int)wParam.Value);
                     return new LRESULT(0);
                 case PInvoke.WM_NCHITTEST:
-                    return new LRESULT(window?.HitTransparent == true ? PInvoke.HTTRANSPARENT : (nint)PInvoke.HTCLIENT);
+                {
+                    if (window is null) return new LRESULT((nint)PInvoke.HTCLIENT);
+                    var pt = new global::System.Drawing.Point((short)(lParam.Value & 0xFFFF), (short)((lParam.Value >> 16) & 0xFFFF));
+                    PInvoke.ScreenToClient(hwnd, ref pt);
+                    return new LRESULT(window.HitTransparentAt(pt.X, pt.Y) ? (nint)PInvoke.HTTRANSPARENT : (nint)PInvoke.HTCLIENT);
+                }
                 case PInvoke.WM_SETCURSOR:
                     PInvoke.SetCursor(PInvoke.LoadCursor(default, window?.UsesHandCursor == true ? PInvoke.IDC_HAND : PInvoke.IDC_ARROW));
                     return new LRESULT(1);

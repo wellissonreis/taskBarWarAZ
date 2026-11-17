@@ -156,10 +156,11 @@ public sealed class TdOnboardingTests
     }
 
     [Fact]
-    public void Tutorial_is_off_when_done_or_outside_stage_1_or_without_store()
+    public void Tutorial_is_off_when_done_or_without_store_and_runs_on_any_start_stage()
     {
         Assert.Equal(TdTutorialStep.None, new Rig(tutorialDone: true).Ui.Step);
-        Assert.Equal(TdTutorialStep.None, new Rig(stage: 2).Ui.Step);
+        // TD.29b: a corrida contínua pode começar em qualquer fase (fase sugerida); o tutorial não depende mais da fase 1.
+        Assert.NotEqual(TdTutorialStep.None, new Rig(stage: 2).Ui.Step);
         var m = Create(1);
         var ui = new TdUiController(() => m, _ => { }, new Host(), () => 0);
         ui.Sync();
@@ -233,7 +234,7 @@ public sealed class TdOnboardingTests
         int pauses = r.Sent.OfType<Pause>().Count();
         r.Click(TdUiAction.ModalTab, arg: (int)TdUiMode.Runes);
         Assert.Equal(pauses, r.Sent.OfType<Pause>().Count());
-        Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Text == "Em breve");
+        Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Action == TdUiAction.AwakenRune && !i.Enabled && i.Text == "Sem fragmentos");
         r.Ui.Cancel(); r.Ui.Sync();
         Assert.False(r.Match.Paused);
         Assert.Single(r.Sent.OfType<Resume>());

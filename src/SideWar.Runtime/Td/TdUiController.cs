@@ -63,6 +63,12 @@ public sealed partial class TdUiController
     public int ModalCount => _modalCount;
     public bool ModalOpen => !QuickTowersOpen && !BuildActive && Mode != TdUiMode.None && !EndCardOpen;
     private bool _mapSeals;
+    /// <summary>TD.29b: pausa pedida pelo botão Pausar do HUD (Pause/Resume reais do Core); zera a cada partida nova.</summary>
+    private bool _userPaused;
+    private string? _selectedRune;
+    private string? _lastRune;
+    private int _runeCount;
+    private readonly HashSet<string> _runeKnown = [];
     private int _towerPage;
     private double _lastActionAt;
     private float _anchorX;
@@ -230,6 +236,20 @@ public sealed partial class TdUiController
                 Changed?.Invoke();
                 break;
             case TdUiAction.TowersOpen: SetMode(TdUiMode.Towers); break;
+            case TdUiAction.PauseToggle when !ModalOpen:
+                if (_match().Phase is MatchPhase.Preparo or MatchPhase.Onda)
+                {
+                    _userPaused = !_userPaused;
+                    _send(_userPaused ? new Pause() : new Resume());
+                }
+                Changed?.Invoke(); break;
+            case TdUiAction.SetSpeed when !ModalOpen:
+                _host.SetGameOptions(_host.GameOptions with { GameSpeed = Math.Clamp(item.Arg, 1, 3) });
+                Changed?.Invoke(); break;
+            case TdUiAction.SelectRune when item.SArg is not null: _selectedRune = item.SArg; Changed?.Invoke(); break;
+            case TdUiAction.AwakenRune:
+                if (_match().Fragments > 0 && _match().Frontier.Count > 0) _send(new AwakenRune());
+                Changed?.Invoke(); break;
             case TdUiAction.GameOption:
             {
                 var o = _host.GameOptions;
@@ -243,7 +263,6 @@ public sealed partial class TdUiController
                     5 => o with { Fade = !o.Fade },
                     6 => o with { Continuous = !o.Continuous },
                     7 => o with { PanelPinned = !o.PanelPinned },
-                    8 => o with { GameSpeed = o.GameSpeed % 3 + 1 },
                     _ => o,
                 };
                 _host.SetGameOptions(next);
@@ -285,6 +304,11 @@ public sealed partial class TdUiController
             _lastMatch = m;
             _seenStages = m.StageResults.Count;
             _noticeText = null;
+            _userPaused = false;
+            _selectedRune = _lastRune = null;
+            _runeCount = m.AwakenedCount;
+            _runeKnown.Clear();
+            foreach (var rn in m.RuneWeb) if (m.IsAwakened(rn.Id)) _runeKnown.Add(rn.Id);
             if (first) goto Checked;
             _modalCount = 0;
             _endShown = false;
@@ -295,6 +319,7 @@ public sealed partial class TdUiController
         }
     Checked:
         TrackPhase(m);
+        SyncRunes(m);
         SyncNotice(m);
         SyncOnboarding(m);
         SyncQuiz(m);
@@ -329,6 +354,22 @@ public sealed partial class TdUiController
             if (!QuickTowersOpen && _now() - _lastActionAt > BuildTimeoutSeconds) Close();
         }
         else if (Mode == TdUiMode.Inspector && FindTower(m, _selectedTowerId) < 0) SetMode(TdUiMode.Towers);
+    }
+
+    /// <summary>TD.29b: acompanha a runa recém-despertada (destaque na teia e detalhe selecionado, como no design).</summary>
+    private void SyncRunes(TdMatchState m)
+    {
+        int count = m.AwakenedCount;
+        if (count == _runeCount) return;
+        if (count > _runeCount)
+        {
+            foreach (var n in m.RuneWeb)
+                if (m.IsAwakened(n.Id) && !_runeKnown.Contains(n.Id)) { _lastRune = n.Id; _selectedRune = n.Id; }
+        }
+        _runeCount = count;
+        _runeKnown.Clear();
+        foreach (var n in m.RuneWeb) if (m.IsAwakened(n.Id)) _runeKnown.Add(n.Id);
+        Changed?.Invoke();
     }
 
     // ================================================================ estado
@@ -451,8 +492,15 @@ public sealed partial class TdUiController
         if (_modalCount == count) return;
         bool wasOpen = _modalCount > 0;
         _modalCount = count;
-        if (wasOpen != (count > 0)) _send(count > 0 ? new Pause() : new Resume());
+        // A pausa do usuário (botão Pausar) sobrevive à modal: ela já está pausada, então abrir não repete Pause e fechar não faz Resume.
+        if (wasOpen != (count > 0) && !_userPaused) _send(count > 0 ? new Pause() : new Resume());
     }
+
+    /// <summary>
+    /// TD.29b: ao abrir o app a modal central abre na aba Jogo com o jogo PAUSADO (decisão do usuário); fechar a modal retoma (Resume).
+    /// Chamado uma vez pelo App depois de criar o controlador.
+    /// </summary>
+    public void OpenStartupModal() => SetMode(TdUiMode.Menu);
 
     private void Toggle(TdUiMode mode) => SetMode(Mode == mode ? TdUiMode.None : mode);
 
@@ -503,28 +551,49 @@ public sealed partial class TdUiController
             + (run ? " Fase N conta a corrida inteira; depois da última fase o ciclo recomeça mais forte (C2, C3…)." : "")
             + $" Esconder tudo: {_host.BossHotkey}.";
 
+        // TD.29b (feedback do usuário: a barra longa atrapalhava o navegador): chip COMPACTO colado ao canto direito. Grupo fixo à direita
+        // (chip, Torres, Pausar, velocidade); Iniciar (só no Preparo inicial) e Coletar caixa (só com caixa) crescem para a ESQUERDA.
         bool needed = _onb is not null && (HudNeeded(m) || ComputeStep(m) == TdTutorialStep.HudOpen);
-        items.Add(new TdUiItem(new DipRect(0, 0, 300, 28), TdUiKind.Button,
-            $"{integ}/{max}  {stageText}Onda {shown}/{m.TotalWaves}  ¢{m.Credits}{(ModalOpen ? " ⏸" : "")}",
-            TdUiAction.HudRestore, Icon: TdIcon.Heart, Tone: integTone, Tip: coreTip, RightIcon: TdIcon.Expand, Highlight: (needed || m.CrateActive) && PulseOn));
-        items.Add(new TdUiItem(new DipRect(304, 0, 26, 28), TdUiKind.Button, "", TdUiAction.QuickTowers,
-            Enabled: !ModalOpen, Icon: TdIcon.Menu, Tip: PanelPinned ? "Painel de torres fixo (Jogo ou Configurações)" : "Torres", Selected: QuickTowersOpen));
-        // TD.28c: velocidade do jogo (1x/2x/3x): um clique alterna; não muda com a pausa da modal.
-        int speed = Math.Clamp(_host.GameOptions.GameSpeed, 1, 3);
-        items.Add(new TdUiItem(new DipRect(334, 0, 30, 28), TdUiKind.Button, $"{speed}x", TdUiAction.GameOption, 8,
-            Enabled: !ModalOpen, Tone: speed > 1 ? TdTone.Accent : TdTone.Normal, Tip: $"Velocidade do jogo: {speed}x (clique para alternar 1x/2x/3x)."));
-        float crateX = 368;
-        // TD.28b: com ondas contínuas o botão Iniciar onda só existe no Preparo inicial; depois as ondas seguem sozinhas.
-        if (!m.Options.ContinuousWaves || m.Phase == MatchPhase.Preparo)
+        bool live = m.Phase is MatchPhase.Preparo or MatchPhase.Onda;
+        bool showStart = live && (!m.Options.ContinuousWaves || m.Phase == MatchPhase.Preparo);
+        bool showCrate = m.CrateActive;
+        float extras = (showStart ? TdHudView.StartWidth + TdHudView.Gap : 0f) + (showCrate ? TdHudView.CrateWidth + TdHudView.Gap : 0f);
+        float x = 0f;
+        if (showStart)
         {
             var (text, right, enabled, tone, tip) = StartButton(m);
-            items.Add(new TdUiItem(new DipRect(368, 0, 126, 28), TdUiKind.Button, text, TdUiAction.StartWave,
-                Right: right, Enabled: enabled && !StartBlockedFor(m) && !ModalOpen, Tone: tone, Tip: StartBlockedFor(m) ? "Coloque 1 torre primeiro" : tip, Icon: m.Phase == MatchPhase.Onda ? TdIcon.FastForward : TdIcon.Play, RightCoin: right is not null));
-            crateX = 498;
+            string label = m.Phase == MatchPhase.Onda ? "Próxima" : "Iniciar";
+            items.Add(new TdUiItem(new DipRect(x, 0, TdHudView.StartWidth, 28), TdUiKind.Button, label, TdUiAction.StartWave,
+                Enabled: enabled && !StartBlockedFor(m) && !ModalOpen, Tone: tone, Tip: StartBlockedFor(m) ? "Coloque 1 torre primeiro" : tip,
+                Icon: m.Phase == MatchPhase.Onda ? TdIcon.FastForward : TdIcon.Play));
+            x += TdHudView.StartWidth + TdHudView.Gap;
         }
-        items.Add(new TdUiItem(new DipRect(crateX, 0, 116, 28), TdUiKind.Button, "Coletar caixa", TdUiAction.CollectCrate,
-            Enabled: m.CrateActive && !ModalOpen, Icon: TdIcon.Box, Highlight: m.CrateActive && PulseOn, Tip: "Coletar caixa: Ctrl+Alt+C"));
-        return new TdHudView(HighlightHud(items), crateX + 116, 28, Minimized: true, Wave: shown, TotalWaves: m.TotalWaves);
+        if (showCrate)
+        {
+            // Coletar caixa: só existe quando há caixa (ícone compacto âmbar).
+            items.Add(new TdUiItem(new DipRect(x, 0, TdHudView.CrateWidth, 28), TdUiKind.Button, "", TdUiAction.CollectCrate,
+                Enabled: !ModalOpen, Icon: TdIcon.Box, Highlight: PulseOn, Tip: "Coletar caixa: Ctrl+Alt+C"));
+            x += TdHudView.CrateWidth + TdHudView.Gap;
+        }
+        items.Add(new TdUiItem(new DipRect(x, 0, TdHudView.ChipWidth, 28), TdUiKind.Button,
+            $"{integ}/{max} {shown}/{m.TotalWaves} ¢{m.Credits}{(ModalOpen ? " ⏸" : "")}",
+            TdUiAction.HudRestore, Icon: TdIcon.Heart, Tone: integTone, Tip: coreTip + $" {stageText.Trim()} Onda {shown}/{m.TotalWaves}. Créditos ¢{m.Credits}. Clique para abrir o menu.",
+            Highlight: (needed || m.CrateActive) && PulseOn));
+        x += TdHudView.ChipWidth + TdHudView.Gap;
+        items.Add(new TdUiItem(new DipRect(x, 0, 28, 28), TdUiKind.Button, "", TdUiAction.QuickTowers,
+            Enabled: !ModalOpen, Icon: TdIcon.Castle, Tip: PanelPinned ? "Torres (painel fixo: Jogo ou Configurações)" : "Torres: escolha e posicione sem pausar", Selected: QuickTowersOpen));
+        x += 28 + TdHudView.Gap;
+        bool paused = _userPaused && live;
+        items.Add(new TdUiItem(new DipRect(x, 0, 28, 28), TdUiKind.Button, "", TdUiAction.PauseToggle,
+            Enabled: !ModalOpen && live, Icon: paused ? TdIcon.Play : TdIcon.Pause,
+            Tone: paused ? TdTone.Accent : TdTone.Normal, Selected: paused, Tip: paused ? "Retomar o jogo" : "Pausar o jogo"));
+        x += 28 + TdHudView.Gap;
+        // Velocidade: um botão pequeno que mostra 1x/2x/3x e alterna (o seletor completo fica na aba Jogo).
+        int speed = Math.Clamp(_host.GameOptions.GameSpeed, 1, 3);
+        items.Add(new TdUiItem(new DipRect(x, 0, TdHudView.SpeedWidth, 28), TdUiKind.Button, $"{speed}x", TdUiAction.SetSpeed, speed % 3 + 1,
+            Enabled: !ModalOpen, Tone: speed > 1 ? TdTone.Accent : TdTone.Normal, Selected: speed > 1, Tip: $"Velocidade {speed}x: clique para {speed % 3 + 1}x (todas na aba Jogo)"));
+        x += TdHudView.SpeedWidth;
+        return new TdHudView(HighlightHud(items), x, 28, Minimized: true, Wave: shown, TotalWaves: m.TotalWaves);
     }
 
     /// <summary>Dica do item do HUD sob o ponto (null = sem dica). A janela do tooltip posiciona acima do item.</summary>
@@ -562,7 +631,7 @@ public sealed partial class TdUiController
                     $"Chamar próxima onda agora, antes do tempo: rende +{bonus} créditos de bônus, mas os inimigos chegam juntos.");
             }
             case MatchPhase.Onda: return ("Última onda", null, false, TdTone.Dim, "Esta é a última onda: derrote todos os inimigos para vencer.");
-            default: return ("Fim da fase", null, false, TdTone.Dim, "A partida terminou.");
+            default: return ("", null, false, TdTone.Dim, "A partida terminou.");
         }
     }
 
@@ -587,33 +656,110 @@ public sealed partial class TdUiController
             TdUiMode.Map => BuildMap(m),
             TdUiMode.End => BuildEnd(m),
             TdUiMode.Help => BuildHelp(m),
-            TdUiMode.Runes => Finish("Runas", Placeholder(), 0),
+            TdUiMode.Runes => Finish("Teia de runas", Placeholder(), 0),
             _ => null,
         };
         return view is null ? null : EndCardOpen ? DecoratePopover(m, view) : Modalize(DecoratePopover(m, view));
     }
 
+    /// <summary>Descrição curta (design Partida.dc.html; demais torres com texto equivalente do conteúdo) mostrada no painel rápido.</summary>
+    public static string TowerBlurb(TdTowerDef d) => d.Id switch
+    {
+        "bolt" => "Longo alcance (150). Fraco contra enxames e blindados.",
+        "frost" => "Controla e desacelera. Quase não causa dano.",
+        "cannon" => "Alcance 110. Não acerta voadores nem rápidos.",
+        "balancer" => "Segura inimigos de solo. Não segura voadores.",
+        "scaleset" => "Reforça torres vizinhas. Não ataca.",
+        _ => d.Role,
+    };
+
+    public const float QuickWidth = 340f, QuickHeader = 28f, QuickCardH = 52f;
+
+    /// <summary>Painel rápido (Partida.dc.html): cartão por torre com sprite, nome, descrição curta e preço âmbar; clicar escolhe sem pausar.</summary>
     private TdPopoverView BuildQuickTowers(TdMatchState m)
     {
         var items = new List<TdUiItem>();
+        float w = QuickWidth;
+        bool tut = _onb is not null && ComputeStep(m) == TdTutorialStep.Tower;
+        bool marked = false;
         for (int i = 0; i < m.Content.Towers.Length; i++)
         {
             var d = m.Content.Towers[i];
             long price = m.NextTowerCost(i);
-            items.Add(new TdUiItem(new DipRect(8 + i * 80, 38, 76, 88), TdUiKind.Button, d.Name,
-                TdUiAction.ChooseTower, SArg: d.Id, Right: $"${price}", Enabled: m.StageId >= d.UnlockStage && m.Credits >= price,
-                Selected: _placementType == d.Id));
+            bool locked = m.StageId < d.UnlockStage;
+            bool enabled = !locked && m.Credits >= price;
+            bool hl = tut && !marked && enabled;
+            if (hl) marked = true;
+            items.Add(new TdUiItem(new DipRect(8, QuickHeader + i * (QuickCardH + 4), w - 16, QuickCardH), TdUiKind.Button, d.Name,
+                TdUiAction.ChooseTower, SArg: d.Id, Right: locked ? $"fase {d.UnlockStage}" : $"${price}", Sub: TowerBlurb(d), Enabled: enabled,
+                Selected: _placementType == d.Id, Highlight: hl));
         }
-        return new TdPopoverView(BuildActive ? "TORRES   Toque na faixa" : "TORRES   Escolha uma torre", [.. items], 416, 136, 0);
+        float h = QuickHeader + m.Content.Towers.Length * (QuickCardH + 4) + 4;
+        return new TdPopoverView(BuildActive ? "TORRES   Toque na faixa" : "TORRES   Escolha uma torre", [.. items], w, h, 0, Quick: true);
     }
 
     private static Stack Placeholder()
     {
         var s = new Stack(PopoverWidth);
-        s.Add(TdUiKind.Label, "Runas chegam em breve", RowH);
-        s.Add(TdUiKind.Label, "Esta aba ainda não está disponível. Volte em uma próxima atualização.", TwoLineH);
-        s.Add(TdUiKind.Label, "Em breve", RowH, tone: TdTone.Accent);
+        s.Add(TdUiKind.Label, "Teia de runas", RowH);
         return s;
+    }
+
+    // ================================================================ teia de runas (Main.dc.html, aba Runas)
+
+    /// <summary>Estado de um nó da teia no item (campo <c>Fill</c>): 1 despertada, 0,5 disponível, 0 bloqueada.</summary>
+    public const float RuneOn = 1f, RuneAvailable = 0.5f, RuneLocked = 0f;
+
+    /// <summary>Codifica tipo (índice em <c>Runes.Types</c>), anel e setor no <c>Arg</c> do item de nó (o renderer decodifica).</summary>
+    public static int PackRune(int typeIndex, int ring, int sector) => (typeIndex << 8) | (ring << 4) | sector;
+    public static (int Type, int Ring, int Sector) UnpackRune(int arg) => (arg >> 8, (arg >> 4) & 15, arg & 15);
+
+    /// <summary>
+    /// Teia do design: círculo de 350 DIP (anéis × setores, nós "pebble" despertados âmbar, disponíveis tracejados, bloqueados em ponto) à
+    /// esquerda; à direita FRAGMENTOS + botão "Despertar runa", detalhe do nó selecionado e a lista RAMOS × contagem.
+    /// Lê só o <see cref="TdMatchState"/> (Fragments, RuneWeb, IsAwakened, Frontier); o despertar envia <see cref="AwakenRune"/>.
+    /// </summary>
+    private void AddRuneWeb(List<TdUiItem> items, TdMatchState m)
+    {
+        var types = m.Content.Runes.Types;
+        var nodes = m.RuneWeb;
+        var frontier = new HashSet<string>(m.Frontier);
+        const float ox = 16, oy = 102, size = 350;
+        items.Add(new(new DipRect(ox, oy, size, size), TdUiKind.Label, "", SArg: "webbg"));
+        int[] counts = new int[types.Length];
+        int total = 0;
+        string detailId = _selectedRune ?? _lastRune ?? nodes[0].Id;
+        foreach (var n in nodes)
+        {
+            int ti = Array.FindIndex(types, t => t.Id == n.Type);
+            bool on = m.IsAwakened(n.Id), av = !on && frontier.Contains(n.Id);
+            if (on) { total++; counts[ti]++; }
+            float sz = on ? 28 : av ? 24 : 14;
+            float cx = ox + (float)n.X * size, cy = oy + (float)n.Y * size;
+            string state = on ? "DESPERTADA" : av ? "DISPONÍVEL" : "BLOQUEADA";
+            items.Add(new(new DipRect(cx - sz / 2, cy - sz / 2, sz, sz), TdUiKind.Button, $"{types[ti].Name}, {state.ToLowerInvariant()}",
+                TdUiAction.SelectRune, PackRune(ti, n.Ring, n.Sector), SArg: n.Id, Right: n.Id == _lastRune ? "last" : null,
+                Fill: on ? RuneOn : av ? RuneAvailable : RuneLocked, Selected: n.Id == detailId));
+        }
+        long frag = m.Fragments;
+        bool done = frontier.Count == 0;
+        bool can = !done && frag >= 1;
+        const float px = 380, pw = 324;
+        items.Add(new(new DipRect(px, 102, pw, 60), TdUiKind.Label, frag.ToString(System.Globalization.CultureInfo.InvariantCulture), SArg: "fragcard"));
+        items.Add(new(new DipRect(px + pw - 12 - 156, 112, 156, 40), TdUiKind.Button, done ? "Teia completa" : frag < 1 ? "Sem fragmentos" : "Despertar runa",
+            TdUiAction.AwakenRune, Enabled: can, SArg: "awaken"));
+        items.Add(new(new DipRect(px, 168, pw, 14), TdUiKind.Label, "Cada despertar abre, ao acaso, uma runa ligada à teia.", SArg: "c11l"));
+        var dn = nodes.First(n => n.Id == detailId);
+        int dt = Array.FindIndex(types, t => t.Id == dn.Type);
+        bool dOn = m.IsAwakened(dn.Id), dAv = !dOn && frontier.Contains(dn.Id);
+        items.Add(new(new DipRect(px, 190, pw, 78), TdUiKind.Label, types[dt].Name, SArg: "detail", Arg: PackRune(dt, dn.Ring, dn.Sector),
+            Right: dOn ? "DESPERTADA" : dAv ? "DISPONÍVEL" : "BLOQUEADA",
+            Sub: dOn || dAv ? types[dt].Text : "Desperte uma runa vizinha na teia primeiro.", Fill: dOn ? RuneOn : dAv ? RuneAvailable : RuneLocked));
+        items.Add(new(new DipRect(px, 282, 160, 14), TdUiKind.Label, "TEIA DE RUNAS", SArg: "sec"));
+        items.Add(new(new DipRect(px, 282, pw, 14), TdUiKind.Label, $"{total}/{nodes.Count} runas", SArg: "secR"));
+        for (int i = 0; i < types.Length; i++)
+            items.Add(new(new DipRect(px + (i % 2) * 166, 304 + (i / 2) * 28, 158, 24), TdUiKind.Label, types[i].Name, SArg: "branch",
+                Arg: PackRune(i, 0, 0), Right: $"×{counts[i]}", Fill: counts[i] > 0 ? 1f : 0f));
     }
 
     /// <summary>Composição do Main.dc.html para Runas, Torres, Jogo e Como jogar (modal 720×480, conteúdo a partir de y=100).</summary>
@@ -625,9 +771,7 @@ public sealed partial class TdUiController
         switch (Mode)
         {
             case TdUiMode.Runes:
-                items.Add(new(new DipRect(160, 262, 400, 26), TdUiKind.Label, "Runas chegam em breve", Icon: TdIcon.Lock, SArg: "c18"));
-                items.Add(new(new DipRect(160, 296, 400, 20), TdUiKind.Label, "Esta aba ainda não está disponível. Volte em uma próxima atualização.", SArg: "c13"));
-                items.Add(new(new DipRect(300, 328, 120, 24), TdUiKind.Label, "Em breve", SArg: "badge"));
+                AddRuneWeb(items, _match());
                 break;
             case TdUiMode.Help:
             {
@@ -684,13 +828,15 @@ public sealed partial class TdUiController
                         case TdUiAction.Restart: items.Add(Put(it, lx, 376, 165, 40)); break;
                         case TdUiAction.None when it.Text == "Reiniciar?": items.Add(Put(it, lx, 358, w, 14) with { SArg = "sec", Tone = TdTone.Warn }); break;
                         case TdUiAction.RestartCancel: items.Add(Put(it, lx + 171, 376, 165, 40)); break;
-                        case TdUiAction.GameOption: items.Add(Put(it, rx, 122 + opt++ * 34, w, 32)); break;
-                        case TdUiAction.Exit: items.Add(Put(it, rx, 402, w, 40)); break;
+                        case TdUiAction.GameOption: items.Add(Put(it, rx, 122 + opt++ * 31, w, 31)); break;
+                        case TdUiAction.SetSpeed: items.Add(Put(it, rx + w - 12 - 3 * 36 + (it.Arg - 1) * 36, 122 + 8 * 31 + 4, 32, 23)); break;
+                        case TdUiAction.Exit: items.Add(Put(it, rx, 408, w, 40)); break;
                     }
                 }
                 items.Add(new(new DipRect(lx, 178, w, 14), TdUiKind.Label, "HABILIDADES", SArg: "sec"));
                 items.Add(new(new DipRect(lx, 264, w, 14), TdUiKind.Label, "AÇÕES", SArg: "sec"));
                 items.Add(new(new DipRect(rx, 104, w, 14), TdUiKind.Label, "CONFIGURAÇÕES", SArg: "sec"));
+                items.Add(new(new DipRect(rx + 12, 122 + 8 * 31 + 8, 150, 16), TdUiKind.Label, "Velocidade", SArg: "optname"));
                 break;
             }
         }
@@ -710,6 +856,7 @@ public sealed partial class TdUiController
         if (Mode is TdUiMode.Menu or TdUiMode.Towers or TdUiMode.Help or TdUiMode.Runes)
         {
             RelayoutTab(view, items);
+            AddModalTutorial(items);
             return new TdPopoverView($"{view.Title}   ¢{_match().Credits}", [.. items], 720, 480, 0);
         }
         foreach (var item in view.Items)
@@ -723,6 +870,7 @@ public sealed partial class TdUiController
             if (Mode == TdUiMode.Build && item.Kind == TdUiKind.Label && towerRow == 0)
             {
                 items.Add(item with { Rect = new DipRect(16, 103, 688, 18) });
+                items.Add(new(new DipRect(504, 103, 200, 18), TdUiKind.Label, "+25% por torre igual", Tone: TdTone.Dim, SArg: "hdrR"));
                 continue;
             }
             if (item.Action == TdUiAction.ChooseTower)
@@ -732,6 +880,7 @@ public sealed partial class TdUiController
             }
             items.Add(item with { Rect = new DipRect(r.X * 2.2f + 20, 96 + r.Y * factor * .92f, r.W * 2.2f, r.H * factor * .92f) });
         }
+        AddModalTutorial(items);
         return new TdPopoverView($"{view.Title}   ¢{_match().Credits}", [.. items], 720, 480, 0);
     }
 
@@ -930,21 +1079,22 @@ public sealed partial class TdUiController
         }
         else s.Add(TdUiKind.Button, m.Options.PersistentRun ? "Reiniciar corrida" : "Reiniciar fase", RowH, TdUiAction.RestartPrompt);
         s.Add(TdUiKind.Button, "Como jogar", RowH, TdUiAction.HowTo, tone: TdTone.Accent);
-        s.Add(TdUiKind.Button, "Torres (vender)", RowH, TdUiAction.TowersOpen);
-        s.Add(TdUiKind.Button, "Proxima onda", RowH, TdUiAction.Preview);
-        s.Add(TdUiKind.Button, "Mapa de fases e selos", RowH, TdUiAction.MapOpen);
+        s.Add(TdUiKind.Button, "Vender torres", RowH, TdUiAction.TowersOpen);
+        s.Add(TdUiKind.Button, "Próxima onda", RowH, TdUiAction.Preview);
+        s.Add(TdUiKind.Button, "Fases e selos", RowH, TdUiAction.MapOpen);
 
         var options = _host.GameOptions;
         s.Add(TdUiKind.Button, $"Faixa: {options.BandHeight} DIP", RowH, TdUiAction.GameOption, 0);
-        s.Add(TdUiKind.Button, $"Velocidade: {Math.Clamp(options.GameSpeed, 1, 3)}x", RowH, TdUiAction.GameOption, 8);
         s.Add(TdUiKind.Button, options.AutoStart ? "Auto-início: ligado" : "Auto-início: desligado", RowH, TdUiAction.GameOption, 1);
         s.Add(TdUiKind.Button, options.Sound ? "Som: ligado" : "Som: desligado", RowH, TdUiAction.GameOption, 2);
         s.Add(TdUiKind.Button, $"Volume: {options.Volume}%", RowH, TdUiAction.GameOption, 3);
-        s.Add(TdUiKind.Button, options.Questions ? "Perguntas: ligadas" : "Perguntas: desligadas", RowH, TdUiAction.GameOption, 4);
+        s.Add(TdUiKind.Button, options.Questions ? "Perguntas V/F: ligado" : "Perguntas V/F: desligado", RowH, TdUiAction.GameOption, 4);
         s.Add(TdUiKind.Button, options.Fade ? "Esmaecer: ligado" : "Esmaecer: desligado", RowH, TdUiAction.GameOption, 5);
         s.Add(TdUiKind.Button, options.Continuous ? "Ondas contínuas: ligado" : "Ondas contínuas: desligado", RowH, TdUiAction.GameOption, 6, right: "Próxima corrida");
         s.Add(TdUiKind.Button, options.PanelPinned ? "Painel de torres fixo: ligado" : "Painel de torres fixo: desligado", RowH, TdUiAction.GameOption, 7);
-        s.Add(TdUiKind.Button, "Sair", RowH, TdUiAction.Exit, tone: TdTone.Bad);
+        for (int v = 1; v <= 3; v++)
+            s.Add(TdUiKind.Button, $"{v}x", RowH, TdUiAction.SetSpeed, v, selected: Math.Clamp(options.GameSpeed, 1, 3) == v);
+        s.Add(TdUiKind.Button, "Sair da partida", RowH, TdUiAction.Exit, tone: TdTone.Bad);
         return Finish("Jogo", s, 0);
     }
 

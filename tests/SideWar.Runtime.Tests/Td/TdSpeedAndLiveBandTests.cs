@@ -96,19 +96,28 @@ public sealed class TdSpeedAndLiveBandTests
     }
 
     [Fact]
-    public void Speed_button_in_the_chip_cycles_1_2_3_and_the_game_tab_has_the_control()
+    public void Speed_selector_in_the_hud_sets_1_2_3_and_marks_the_current_one()
     {
         var host = new SpeedHost();
         var match = TdMatchState.Create(Content, 1, Rng.Seed(1, 54));
         var ui = new TdUiController(() => match, _ => { }, host, () => 0.0, null);
         var chip = ui.BuildHud();
-        var btn = chip.Items.Single(i => i.Action == TdUiAction.GameOption && i.Arg == 8);
+        // chip: UM botão pequeno que mostra a velocidade atual e alterna 1x -> 2x -> 3x -> 1x
+        var btn = chip.Items.Single(i => i.Action == TdUiAction.SetSpeed);
         Assert.Equal("1x", btn.Text);
         ui.Activate(btn);
         Assert.Equal(2, host.GameOptions.GameSpeed);
-        Assert.Equal("2x", ui.BuildHud().Items.Single(i => i.Action == TdUiAction.GameOption && i.Arg == 8).Text);
-        ui.Activate(btn); ui.Activate(btn);
+        btn = ui.BuildHud().Items.Single(i => i.Action == TdUiAction.SetSpeed);
+        Assert.Equal("2x", btn.Text);
+        ui.Activate(btn);
+        Assert.Equal(3, host.GameOptions.GameSpeed);
+        ui.Activate(ui.BuildHud().Items.Single(i => i.Action == TdUiAction.SetSpeed));
         Assert.Equal(1, host.GameOptions.GameSpeed);
+        // aba Jogo: seletor segmentado completo
+        ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
+        var seg = ui.BuildPopover()!.Items.Where(i => i.Action == TdUiAction.SetSpeed).ToArray();
+        Assert.Equal(["1x", "2x", "3x"], seg.Select(i => i.Text));
+        Assert.True(seg[0].Selected);
     }
 
     private sealed class SpeedHost : ITdUiHost

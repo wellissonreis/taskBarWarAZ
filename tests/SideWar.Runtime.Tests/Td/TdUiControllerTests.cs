@@ -114,10 +114,10 @@ public sealed class TdUiControllerTests
     {
         var r = new Rig();
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
-        Assert.Equal(9, r.Ui.BuildPopover()!.Items.Count(i => i.Action == TdUiAction.GameOption));
-        for (int i = 0; i < 9; i++)
+        Assert.Equal(8, r.Ui.BuildPopover()!.Items.Count(i => i.Action == TdUiAction.GameOption));
+        for (int i = 0; i < 8; i++)
             r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.GameOption, i));
-        Assert.Equal(new TdGameOptions(88, true, true, 80, false, false, false, true, 2), r.Host.GameOptions);
+        Assert.Equal(new TdGameOptions(88, true, true, 80, false, false, false, true, 1), r.Host.GameOptions);
         Assert.Single(r.Sent.OfType<Pause>());
         Assert.Empty(r.Sent.OfType<Resume>());
         Assert.True(r.Match.Paused);
@@ -275,7 +275,7 @@ public sealed class TdUiControllerTests
         Assert.True(hud.Minimized);
         Assert.Contains(hud.Items, i => i.Icon == TdIcon.Heart && i.Text.Contains("20/20") && i.Text.Contains('¢'));
         Assert.DoesNotContain(hud.Items, i => i.Action == TdUiAction.Ability);
-        Assert.All(hud.Items, i => Assert.False(string.IsNullOrEmpty(i.Tip)));
+        Assert.All(hud.Items.Where(i => i.Kind != TdUiKind.Separator && i.SArg != "seg"), i => Assert.False(string.IsNullOrEmpty(i.Tip)));
         r.Ui.Activate(hud.Items.First(i => i.Action == TdUiAction.HudRestore));
         Assert.True(r.Ui.ModalOpen);
         Assert.Equal(5, r.Ui.BuildPopover()!.Items.Count(i => i.Action == TdUiAction.ModalTab));
@@ -288,7 +288,7 @@ public sealed class TdUiControllerTests
         r.Ui.Activate(r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.StartWave));
         for (int i = 0; i < 30 * 60 && r.Match.ActiveWaves.Any(a => !a.SpawnsDone); i++) r.Match.Step();
         var start = r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.StartWave);
-        Assert.Equal("Chamar próxima", start.Text);
+        Assert.Equal("Próxima", start.Text);
         Assert.Equal(TdIcon.FastForward, start.Icon);
         Assert.True(start.RightCoin || start.Right is null);
     }
@@ -495,10 +495,8 @@ public sealed class TdUiControllerTests
     public void Crate_button_in_the_hud_is_disabled_without_crate_and_collects_through_the_host_when_there_is_one()
     {
         var r = new Rig();
-        var idle = r.Ui.BuildHud().Items.Single(i => i.Action == TdUiAction.CollectCrate);
-        Assert.False(idle.Enabled);
-        Assert.False(idle.Highlight);
-        r.Ui.Activate(idle);
+        Assert.DoesNotContain(r.Ui.BuildHud().Items, i => i.Action == TdUiAction.CollectCrate); // só aparece com caixa
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.CollectCrate));
         Assert.Empty(r.Sent);
         typeof(TdMatchState).GetProperty("CrateActive")!.SetValue(r.Match, true);
         typeof(TdMatchState).GetProperty("CrateId")!.SetValue(r.Match, 7);
@@ -506,7 +504,7 @@ public sealed class TdUiControllerTests
         var live = r.Ui.BuildHud().Items.Single(i => i.Action == TdUiAction.CollectCrate);
         Assert.True(live.Enabled);
         Assert.True(live.Highlight);
-        Assert.Equal("Coletar caixa", live.Text);
+        Assert.Contains("Coletar caixa", live.Tip);
         r.Ui.Activate(live);
         var cmd = Assert.IsType<CollectCrate>(r.Sent.Single());
         Assert.Equal(7, cmd.CrateId);

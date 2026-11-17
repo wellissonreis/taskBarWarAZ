@@ -35,6 +35,10 @@ public sealed class TdUiWindow : OverlayChildWindow
         previousFocus = 0;
     }
 
+    /// <summary>TD.29b: quando definido, só os pixels em que devolve true recebem clique (botões); o resto é HTTRANSPARENT. Roda na T-Game.</summary>
+    public Func<int, int, bool>? ClickableAt { get; set; }
+    private protected override bool HitTransparentAt(int clientX, int clientY) => ClickableAt is { } f && !f(clientX, clientY);
+
     public event Action<int, int>? Moved;
     public event Action? Left;
     public event Action<int, int>? LeftUp;

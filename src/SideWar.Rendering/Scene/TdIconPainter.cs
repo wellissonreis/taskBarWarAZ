@@ -119,6 +119,21 @@ internal static class TdIconPainter
                 c.DrawLine(P(3, 13), P(13, 3), line); c.DrawLine(P(6, 3), P(13, 3), line); c.DrawLine(P(13, 3), P(13, 10), line); break;
             case TdIcon.Collapse: // chevron para baixo: recolher
                 c.DrawLine(P(3, 5.5f), P(8, 11), line); c.DrawLine(P(8, 11), P(13, 5.5f), line); break;
+            case TdIcon.Castle: // M6 21V10h12v11 | ameias | base (design HUD.dc.html)
+            {
+                using var b = new SKPathBuilder();
+                b.MoveTo(P(2, 14)); b.LineTo(P(14, 14)); // base
+                b.MoveTo(P(4, 14)); b.LineTo(P(4, 7)); b.LineTo(P(12, 7)); b.LineTo(P(12, 14));
+                b.MoveTo(P(4, 7)); b.LineTo(P(4, 2.5f)); b.LineTo(P(6, 2.5f)); b.LineTo(P(6, 4.5f)); b.LineTo(P(7.3f, 4.5f)); b.LineTo(P(7.3f, 2.5f));
+                b.LineTo(P(8.7f, 2.5f)); b.LineTo(P(8.7f, 4.5f)); b.LineTo(P(10, 4.5f)); b.LineTo(P(10, 2.5f)); b.LineTo(P(12, 2.5f)); b.LineTo(P(12, 7));
+                using var path = b.Detach();
+                c.DrawPath(path, line);
+                break;
+            }
+            case TdIcon.Pause:
+                c.DrawRect(SKRect.Create(P(4, 2.5f).X, P(4, 2.5f).Y, 3 * u, 11 * u), fill);
+                c.DrawRect(SKRect.Create(P(9, 2.5f).X, P(9, 2.5f).Y, 3 * u, 11 * u), fill);
+                break;
             case TdIcon.Snapshot: // seta circular (restaurar)
             {
                 var oval = SKRect.Create(P(2, 2).X, P(2, 2).Y, 12 * u, 12 * u);

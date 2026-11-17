@@ -23,6 +23,8 @@ public enum TdUiAction : byte
     TutorialNext, QuizTrue, QuizFalse, QuizClose,
     /// <summary>TD.16b: coletar a caixa-bomba pelo HUD, abrir a lista de torres (vender/reposicionar) e abrir uma torre da lista.</summary>
     CollectCrate, TowersOpen, OpenTower, ModalTab, TowerPage, AutoStartToggle, GameOption, ResumeAbility, RestartPrompt, RestartCancel, QuickTowers,
+    /// <summary>TD.29b: pausa real (Pause/Resume do Core), velocidade 1x/2x/3x (Arg), seleção de um nó da teia (SArg = id) e despertar runa.</summary>
+    PauseToggle, SetSpeed, SelectRune, AwakenRune,
 }
 
 /// <summary>Ícone do HUD desenhado por código (TD.14); o renderer mapeia para caminhos vetoriais.</summary>
@@ -31,6 +33,8 @@ public enum TdIcon : byte
     None, Heart, Coin, Wave, Play, FastForward, Build, Menu, Minus, Restore, Lock, Scale, Firewall, Snapshot,
     /// <summary>TD.17: ícones de balão e cartões (alerta, pergunta, certo, errado, alcance, tempo, caixa, portal, coroa, medalha) e chip/recolher do HUD.</summary>
     Alert, Question, Check, Cross, Target, Clock, Box, Portal, Crown, Medal, Expand, Collapse, Bolt, Frost,
+    /// <summary>TD.29b: castelo (botão Torres do HUD) e pausa.</summary>
+    Castle, Pause,
 }
 
 /// <summary>
@@ -47,7 +51,7 @@ public readonly record struct TdUiItem(
 
 /// <summary>Popover (acima da faixa): título, itens (o item 0, quando botão de fechar, fica no canto) e âncora em X (DIP da faixa).</summary>
 public sealed record TdPopoverView(string Title, TdUiItem[] Items, float Width, float Height, float AnchorX, string? IconTower = null,
-    float ArrowX = -1f, float TargetHudX = -1f)
+    float ArrowX = -1f, float TargetHudX = -1f, bool Quick = false)
 {
     /// <summary>Altura (DIP) da seta do balão do tutorial (TD.15), somada ao fim da janela quando <see cref="ArrowX"/> &gt;= 0.</summary>
     public const float ArrowH = 7f;
@@ -68,7 +72,7 @@ public sealed record TdPopoverView(string Title, TdUiItem[] Items, float Width, 
     public long Signature()
     {
         var h = new HashCode();
-        h.Add(Title); h.Add(IconTower); h.Add((int)(ArrowX * 10)); h.Add((int)(TargetHudX * 10));
+        h.Add(Title); h.Add(IconTower); h.Add(Quick); h.Add((int)(ArrowX * 10)); h.Add((int)(TargetHudX * 10));
         foreach (var it in Items)
         {
             h.Add(it.Text); h.Add(it.Right); h.Add(it.Sub); h.Add(it.Arg); h.Add((int)it.Icon); h.Add(it.Highlight); h.Add(it.Enabled); h.Add(it.Selected); h.Add((int)it.Tone); h.Add((int)(it.Fill * 100));
@@ -86,8 +90,10 @@ public sealed record TdHudView(TdUiItem[] Items, float Width, float Height, bool
     public const float DefaultWidth = TdBand.HudBaseWidthDip, DefaultHeight = TdBand.HudBaseHeightDip;
 
     /// <summary>TD.28b: largura do HUD com o botão Iniciar onda (chip + painel + iniciar + caixa); a janela ancora a borda esquerda nesta largura.</summary>
-    public const float FullWidth = 614f;
-    public const float ChipWidth = 190f, ChipHeight = 28f;
+    /// <summary>TD.29b: chip compacto (alvo ≤ ~220 DIP em repouso); Iniciar e a caixa crescem para a esquerda do grupo fixo.</summary>
+    public const float ChipWidth = 118f, ChipHeight = 28f, Gap = 4f, SpeedWidth = 30f, StartWidth = 66f, CrateWidth = 28f;
+    public const float RestWidth = ChipWidth + Gap + 28f + Gap + 28f + Gap + SpeedWidth;
+    public const float FullWidth = RestWidth + Gap + StartWidth + Gap + CrateWidth;
 
     /// <summary>Índice do item sob o ponto (qualquer item com texto/dica, inclusive não clicável) ou -1: base do tooltip.</summary>
     public int TipAt(float x, float y)
@@ -108,6 +114,20 @@ public sealed record TdHudView(TdUiItem[] Items, float Width, float Height, bool
             if (Items[i].Clickable && x >= r.X && x < r.X + r.W && y >= r.Y && y < r.Y + r.H) return i;
         }
         return -1;
+    }
+
+    /// <summary>
+    /// TD.29b: o ponto está sobre um BOTÃO (habilitado ou não)? Só botões recebem clique; fundo, texto e vãos do HUD são transparentes ao
+    /// mouse (o clique passa para o app de baixo, como na faixa).
+    /// </summary>
+    public bool OverButton(float x, float y)
+    {
+        foreach (var it in Items)
+        {
+            var r = it.Rect;
+            if (it.Kind == TdUiKind.Button && x >= r.X && x < r.X + r.W && y >= r.Y && y < r.Y + r.H) return true;
+        }
+        return false;
     }
 
     public long Signature()

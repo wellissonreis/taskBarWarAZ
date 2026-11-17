@@ -247,7 +247,10 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
             controller.SceneLeftClick(x / k, y / k - TdBand.EdgeHeadroomDip, target);
             Kick();
         };
+        // TD.29b: ao abrir o app a modal central abre na aba Jogo com o jogo PAUSADO; fechar a modal retoma (Resume).
+        controller.OpenStartupModal();
         Relayout();
+        hudWindow.ClickableAt = (x, y) => hud?.OverButton(x / UiScale, y / UiScale) ?? false; // só os botões recebem clique
         hudWindow.Show();
         ApplyFade();
         Refresh(true);
@@ -342,11 +345,10 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         int w = (int)MathF.Round(model.Width * UiScale), h = (int)MathF.Round(model.Height * UiScale);
         // TD.16: HUD (ou chip recolhido) flutua logo ACIMA da faixa, alinhado à direita, sem cobri-la.
         // TD.28b: a borda esquerda é fixa (largura cheia do HUD); sem o botão Iniciar onda a janela só encolhe pela direita e o chip não pula.
-        int full = (int)MathF.Round(TdHudView.FullWidth * UiScale);
         // TD.28c: a janela da cena tem folga acima da faixa (portal/núcleo); o HUD fica logo acima da FAIXA, não da folga.
         int bandTop = c.Scene.Top + (int)MathF.Round(TdBand.HeadroomRealDip(bandHeight) * Scale);
         int bottom = Math.Max(c.Monitor.WorkArea.Top + h, bandTop - (int)MathF.Round(2 * Scale));
-        int left = c.Scene.Right - full;
+        int left = c.Scene.Right - w; // TD.29b: colado ao canto direito; Iniciar/caixa crescem para a esquerda
         return new PixelRect(left, bottom - h, left + w, bottom);
     }
 

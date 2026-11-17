@@ -186,6 +186,10 @@ public static class Palette
     {
         public static readonly SKColor Background = new(0x0b, 0x16, 0x26);
         public static readonly SKColor Surface = new(0x0e, 0x1a, 0x2c);
+        /// <summary>#13233A: botões do HUD e do painel rápido (um passo acima da superfície).</summary>
+        public static readonly SKColor Button = new(0x13, 0x23, 0x3a);
+        /// <summary>#111F33: cartões da modal e do painel de torres.</summary>
+        public static readonly SKColor Card = new(0x11, 0x1f, 0x33);
         public static readonly SKColor Border = new(0x1c, 0x2e, 0x47);
         public static readonly SKColor BorderStrong = new(0x22, 0x38, 0x5a);
         public static readonly SKColor Text = new(0xe6, 0xed, 0xf7);
