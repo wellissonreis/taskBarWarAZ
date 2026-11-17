@@ -119,6 +119,18 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             DrawIcon(c, it.Icon, r.X + (r.W - 12) / 2f, r.Y + (r.H - 12) / 2f, 12f, it.Selected ? Palette.Td.Amber : Palette.Td.Text);
             return;
         }
+        if (it.Action == TdUiAction.RuneWindow)
+        {
+            // TD.30c: botão Runas (estrela). Discreto: sem animação; ponto âmbar pequeno só quando há fragmento e nó a despertar.
+            RoundBox(c, r, it.Selected ? Palette.Td.Amber : Palette.Td.BorderStrong, hover && it.Enabled ? Palette.Td.BorderStrong : Palette.Td.Button, 6);
+            DrawIcon(c, TdIcon.Star, r.X + (r.W - 14) / 2f, r.Y + (r.H - 14) / 2f, 14f, it.Selected ? Palette.Td.Amber : it.Enabled ? Palette.Td.Text : Palette.Td.Dim);
+            if (it.Fill > 0f)
+            {
+                using var dot = new SKPaint { IsAntialias = true, Color = Palette.Td.Amber };
+                c.DrawCircle(_p.Px(r.X + r.W - 6f), _p.Px(r.Y + 6f), Math.Max(1.5f, _p.Px(2.5f)), dot);
+            }
+            return;
+        }
         if (it.Action == TdUiAction.QuickTowers)
         {
             RoundBox(c, r, it.Selected ? Palette.Td.Amber : Palette.Td.BorderStrong, hover && it.Enabled ? Palette.Td.BorderStrong : Palette.Td.Button, 6);
@@ -138,14 +150,16 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             if (it.Fill > 0f) _p.Fill(c, new DipRect(r.X + 1, r.Y + r.H - 3, (r.W - 2) * it.Fill, 2), Palette.Azul);
             if (!enabled && it.Tone != TdTone.Dim) color = Palette.TxtRotulo;
         }
-        float iconSize = Math.Min(15f, r.H - 8f);
-        float x = r.X + 5f;
+        bool chip = it.Action == TdUiAction.HudRestore;
+        if (chip) fs = 8.5f;
+        float iconSize = chip ? 12f : Math.Min(15f, r.H - 8f);
+        float x = r.X + (chip ? 4f : 5f);
         bool iconOnly = it.Text.Length == 0;
         if (it.Icon != TdIcon.None)
         {
             float ix = iconOnly ? r.X + (r.W - iconSize) / 2f : x;
             DrawIcon(c, it.Icon, ix, r.Y + (r.H - iconSize) / 2f, iconSize, color);
-            x += iconSize + 4f;
+            x += iconSize + (chip ? 3f : 4f);
         }
         if (iconOnly) return;
         float rightW = 0f;
@@ -223,7 +237,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             _p.Text(c, it.Right ?? "", PanelFont.JetBrainsMono, 9, new DipRect(r.X + 2, r.Y + 40, r.W - 4, 12), it.Enabled ? Palette.Td.Amber : Palette.Td.Muted, TextAlign.Center);
             return;
         }
-        if (it.Action == TdUiAction.SelectRune) { DrawRuneNode(c, it); return; }
+        if (it.Action == TdUiAction.SelectRune) { DrawRuneNode(c, it, hover); return; }
         if (it.Action == TdUiAction.SetSpeed)
         {
             // Seletor segmentado completo (aba Jogo): selecionado âmbar com texto escuro.
@@ -328,25 +342,19 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
                 _p.Text(c, it.Text, PanelFont.JetBrainsMono, 16, r, Palette.Td.Text, TextAlign.Center);
                 return;
             case "c13": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 11, r, Palette.Td.Muted, TextAlign.Center); return;
-            case "webbg": DrawRuneBackground(c, r); return;
+            case "webbg": return; // desenhada antes dos itens (DrawRuneWeb)
             case "optname": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 12, r, Palette.Td.Text); return;
             case "c11l": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 9, r, Palette.Td.Muted); return;
             case "secR": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 10, r, Palette.Td.Amber, TextAlign.Right); return;
-            case "fragcard":
-                RoundBox(c, r, Palette.Td.BorderStrong, Palette.Td.Card, 8);
-                _p.Text(c, "FRAGMENTOS", PanelFont.JetBrainsMono, 10, new DipRect(r.X + 12, r.Y + 10, 140, 12), Palette.Td.Muted);
-                _p.Text(c, it.Text, PanelFont.JetBrainsMono, 20, new DipRect(r.X + 12, r.Y + 26, 140, 26), Palette.Td.Text);
+            case "rfrag":
+                _p.Text(c, "FRAGMENTOS", PanelFont.JetBrainsMono, 11, new DipRect(r.X, r.Y, 140, 14), Palette.Td.Muted);
+                _p.Text(c, it.Text, PanelFont.JetBrainsMono, 18, new DipRect(r.X + 108, r.Y - 3, 90, 22), Palette.Td.Amber);
                 return;
-            case "detail": DrawRuneDetail(c, it); return;
-            case "branch":
-            {
-                bool got = it.Fill > 0f;
-                var bc = got ? Palette.Td.Amber : Palette.Td.Dim;
-                DrawRuneGlyph(c, UnpackType(it.Arg), r.X + 1, r.Y + 5, 14f, bc, 2f);
-                _p.Text(c, it.Text, PanelFont.JetBrainsMono, 11, new DipRect(r.X + 24, r.Y + 5, r.W - 60, 14), got ? Palette.Td.Text : Palette.Td.Muted);
-                _p.Text(c, it.Right ?? "", PanelFont.JetBrainsMono, 10, new DipRect(r.X + r.W - 36, r.Y + 5, 36, 14), bc, TextAlign.Right);
+            case "rtot":
+                _p.Text(c, "TEIA DE RUNAS", PanelFont.JetBrainsMono, 11, new DipRect(r.X, r.Y, r.W, 14), Palette.Td.Muted, TextAlign.Right);
+                _p.Text(c, it.Text, PanelFont.JetBrainsMono, 13, new DipRect(r.X, r.Y + 17, r.W, 17), Palette.Td.Text, TextAlign.Right);
                 return;
-            }
+            case "rhint": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 11, r, Palette.Td.Dim); return;
             case "tut":
                 if (it.Icon != TdIcon.None) DrawIcon(c, it.Icon, r.X, r.Y + 2, 14f, Palette.Td.Amber);
                 _p.Text(c, it.Text, PanelFont.JetBrainsMono, 10, new DipRect(r.X + 22, r.Y + 3, r.W - 22, 14), Palette.Td.Amber);
@@ -387,29 +395,28 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         c.Restore();
     }
 
-    private void DrawRuneBackground(SKCanvas c, DipRect r)
+    private static readonly SKPath StarPath = SKPath.ParseSvgPathData("M12 2.5l2.7 6 6.5.7-4.9 4.4 1.4 6.4L12 16.8 6.3 20l1.4-6.4-4.9-4.4 6.5-.7z")!;
+    private static readonly SKPath QuestionPath = SKPath.ParseSvgPathData("M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14M12 17.5h.01")!;
+
+    private void DrawStar(SKCanvas c, float cxDip, float cyDip, float sizeDip, float strokeUnits)
     {
-        float cx = _p.Px(r.X + r.W / 2f), cy = _p.Px(r.Y + r.H / 2f), rad = _p.Px(r.W / 2f);
-        using var fill = new SKPaint { IsAntialias = true, Color = Palette.Td.Surface };
-        using var line = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, Color = Palette.Td.Border, StrokeWidth = Math.Max(1, _p.Px(1)) };
-        c.DrawCircle(cx, cy, rad, fill);
-        c.DrawCircle(cx, cy, rad, line);
-        // centro: estrela âmbar (origem da teia)
-        RoundBox(c, new DipRect(r.X + r.W / 2f - 28, r.Y + r.H / 2f - 28, 56, 56), Palette.Td.Amber, Palette.Td.Button, 28);
-        using var star = SKPath.ParseSvgPathData("M12 2.5l2.7 6 6.5.7-4.9 4.4 1.4 6.4L12 16.8 6.3 20l1.4-6.4-4.9-4.4 6.5-.7z")!;
         c.Save();
-        c.Translate(cx - _p.Px(14f), cy - _p.Px(14f));
-        float k = _p.Px(28f) / 24f;
+        c.Translate(_p.Px(cxDip) - _p.Px(sizeDip) / 2f, _p.Px(cyDip) - _p.Px(sizeDip) / 2f);
+        float k = _p.Px(sizeDip) / 24f;
         c.Scale(k, k);
         using var sf = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Fill, Color = Palette.Td.Amber.WithAlpha(46) };
-        using var ss = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, Color = Palette.Td.Amber, StrokeWidth = 1.6f, StrokeJoin = SKStrokeJoin.Round };
-        c.DrawPath(star, sf);
-        c.DrawPath(star, ss);
+        using var ss = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, Color = Palette.Td.Amber, StrokeWidth = strokeUnits, StrokeJoin = SKStrokeJoin.Round };
+        c.DrawPath(StarPath, sf);
+        c.DrawPath(StarPath, ss);
         c.Restore();
     }
 
-    /// <summary>Segmentos da teia: ao longo do anel (setor ± 1) e do nó ao anel interno (ou ao centro); âmbar quando as duas pontas estão despertadas.</summary>
-    private void DrawRuneLines(SKCanvas c, TdUiItem[] items)
+    /// <summary>
+    /// Fundo e fios da teia (TD.30c): painel escuro com brilho central (modal), arcos curvos entre setores do mesmo anel (controle puxado ao
+    /// centro, como o design), raios do anel interno ao externo, estrela no centro. Aceso (âmbar, com brilho) quando as duas pontas estão
+    /// despertadas; apagado caso contrário. Os nós são desenhados depois, por cima.
+    /// </summary>
+    private void DrawRuneWeb(SKCanvas c, TdUiItem[] items, bool big)
     {
         TdUiItem? bg = null;
         var nodes = new Dictionary<(int Ring, int Sector), TdUiItem>();
@@ -418,45 +425,96 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             if (it.SArg == "webbg" && it.Kind == TdUiKind.Label) bg = it;
             else if (it.Action == TdUiAction.SelectRune) { var (_, ring, sector) = TdUiController.UnpackRune(it.Arg); nodes[(ring, sector)] = it; }
         }
-        if (bg is not { } b || nodes.Count == 0) return;
-        float cx = b.Rect.X + b.Rect.W / 2f, cy = b.Rect.Y + b.Rect.H / 2f;
-        (float X, float Y) Mid(TdUiItem n) => (n.Rect.X + n.Rect.W / 2f, n.Rect.Y + n.Rect.H / 2f);
-        void Seg((float X, float Y) a, (float X, float Y) z, bool on)
+        if (bg is not { } b) return;
+        var area = b.Rect;
+        RoundBox(c, area, Palette.Td.Border, Palette.Td.Background, big ? 12 : 8);
+        float cx = area.X + area.W / 2f, cy = area.Y + area.H / 2f;
+        if (big)
         {
-            using var paint = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeWidth = Math.Max(1, _p.Px(on ? 2f : 1f)), Color = on ? Palette.Td.Amber.WithAlpha(190) : Palette.Td.Border };
-            c.DrawLine(_p.Px(a.X), _p.Px(a.Y), _p.Px(z.X), _p.Px(z.Y), paint);
+            using var glow = new SKPaint { IsAntialias = true, Shader = SKShader.CreateRadialGradient(new SKPoint(_p.Px(cx), _p.Px(cy)), _p.Px(150f), [Palette.Td.Amber.WithAlpha(26), Palette.Td.Amber.WithAlpha(0)], [0f, 1f], SKShaderTileMode.Clamp) };
+            c.DrawCircle(_p.Px(cx), _p.Px(cy), _p.Px(150f), glow);
         }
-        foreach (var ((ring, sector), n) in nodes)
+        if (nodes.Count > 0)
         {
-            bool on = n.Fill >= TdUiController.RuneOn;
-            if (nodes.TryGetValue((ring, (sector + 1) % 8), out var side)) Seg(Mid(n), Mid(side), on && side.Fill >= TdUiController.RuneOn);
-            if (ring == 0) Seg((cx, cy), Mid(n), on);
-            else if (nodes.TryGetValue((ring - 1, sector), out var inner)) Seg(Mid(inner), Mid(n), on && inner.Fill >= TdUiController.RuneOn);
+            float pull = big ? 0.9f : 0.88f;
+            using var dim = new SKPathBuilder();
+            using var lit = new SKPathBuilder();
+            (float X, float Y) Mid(TdUiItem n) => (n.Rect.X + n.Rect.W / 2f, n.Rect.Y + n.Rect.H / 2f);
+            void Line(SKPathBuilder pb, (float X, float Y) a, (float X, float Y) z) { pb.MoveTo(_p.Px(a.X), _p.Px(a.Y)); pb.LineTo(_p.Px(z.X), _p.Px(z.Y)); }
+            foreach (var ((ring, sector), n) in nodes)
+            {
+                bool on = n.Fill >= TdUiController.RuneOn;
+                var a = Mid(n);
+                if (nodes.TryGetValue((ring, (sector + 1) % 8), out var side))
+                {
+                    var z = Mid(side);
+                    float qx = cx + ((a.X + z.X) / 2f - cx) * pull, qy = cy + ((a.Y + z.Y) / 2f - cy) * pull;
+                    var pb = on && side.Fill >= TdUiController.RuneOn ? lit : dim;
+                    pb.MoveTo(_p.Px(a.X), _p.Px(a.Y));
+                    pb.QuadTo(_p.Px(qx), _p.Px(qy), _p.Px(z.X), _p.Px(z.Y));
+                }
+                if (ring == 0) Line(on ? lit : dim, (cx, cy), a);
+                else if (nodes.TryGetValue((ring - 1, sector), out var inner)) Line(on && inner.Fill >= TdUiController.RuneOn ? lit : dim, Mid(inner), a);
+                if (ring == 3) Line(dim, a, (cx + (a.X - cx) * 1.05f, cy + (a.Y - cy) * 1.05f));
+            }
+            using var dimPath = dim.Detach();
+            using var litPath = lit.Detach();
+            using var paint = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeCap = SKStrokeCap.Round };
+            paint.Color = Palette.Td.BorderStrong; paint.StrokeWidth = Math.Max(1f, _p.Px(1f));
+            c.DrawPath(dimPath, paint);
+            paint.Color = Palette.Td.Amber.WithAlpha(46); paint.StrokeWidth = Math.Max(2f, _p.Px(big ? 6f : 5f));
+            c.DrawPath(litPath, paint);
+            paint.Color = Palette.Td.Amber.WithAlpha(217); paint.StrokeWidth = Math.Max(1f, _p.Px(big ? 1.6f : 1.4f));
+            c.DrawPath(litPath, paint);
         }
+        float core = big ? 52f : 28f;
+        using (var halo = new SKPaint { IsAntialias = true, Color = Palette.Td.Amber.WithAlpha((byte)(big ? 20 : 30)) })
+            c.DrawCircle(_p.Px(cx), _p.Px(cy), _p.Px(core / 2f + (big ? 6f : 3f)), halo);
+        RoundBox(c, new DipRect(cx - core / 2f, cy - core / 2f, core, core), Palette.Td.Amber, Palette.Td.Button, core / 2f);
+        DrawStar(c, cx, cy, core / 2f, big ? 1.6f : 2f);
     }
 
-    private void DrawRuneNode(SKCanvas c, in TdUiItem it)
+    private void DrawRuneNode(SKCanvas c, in TdUiItem it, bool hovered)
     {
         var r = it.Rect;
         bool on = it.Fill >= TdUiController.RuneOn, av = !on && it.Fill > 0f;
         float cx = r.X + r.W / 2f, cy = r.Y + r.H / 2f;
-        int type = UnpackType(it.Arg);
-        if (it.Right == "last") DrawPebble(c, cx, cy, r.W + 10f, Palette.Td.Amber.WithAlpha(64), default, true);
-        if (it.Selected) DrawPebble(c, cx, cy, r.W + 4f, Palette.Td.Text, default, false);
-        if (on) DrawPebble(c, cx, cy, r.W, Palette.Td.Amber.WithAlpha(166), Palette.Td.Card, false);
-        else if (av) DrawPebble(c, cx, cy, r.W, Palette.Td.Amber, Palette.Td.Background, false, dashed: true);
+        float vis = it.FontSize > 0f ? it.FontSize : r.W;
+        if (hovered) vis *= 1.2f; // hover: o nó cresce 20%
+        if (on)
+        {
+            bool last = it.Right == "last";
+            DrawPebble(c, cx, cy, vis + (last ? 12f : 8f), Palette.Td.Amber.WithAlpha((byte)(last ? 52 : 26)), default, true);
+            if (last) DrawPebble(c, cx, cy, vis + 5f, Palette.Td.Amber.WithAlpha(120), default, false);
+            DrawPebble(c, cx, cy, vis + 3f, Palette.Td.Amber.WithAlpha(40), default, true);
+            DrawPebble(c, cx, cy, vis, Palette.Td.Amber.WithAlpha(190), Palette.Td.Button, false);
+            DrawRuneGlyph(c, UnpackType(it.Arg), cx - vis * 0.26f, cy - vis * 0.26f, vis * 0.52f, Palette.Td.Amber, 2.2f);
+        }
+        else if (av)
+        {
+            if (hovered) DrawPebble(c, cx, cy, vis + 6f, Palette.Td.Amber.WithAlpha(34), default, true);
+            DrawPebble(c, cx, cy, vis, Palette.Td.Amber, hovered ? Palette.Td.Button : Palette.Td.Background, false, dashed: true);
+            DrawQuestion(c, cx - vis * 0.26f, cy - vis * 0.26f, vis * 0.52f, Palette.Td.Amber.WithAlpha(200));
+        }
         else
         {
-            using var f = new SKPaint { IsAntialias = true, Color = Palette.Td.Button };
-            using var l = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, Color = Palette.Td.BorderStrong, StrokeWidth = Math.Max(1, _p.Px(1)) };
-            c.DrawCircle(_p.Px(cx), _p.Px(cy), _p.Px(r.W / 2f), f);
-            c.DrawCircle(_p.Px(cx), _p.Px(cy), _p.Px(r.W / 2f), l);
+            if (hovered) DrawPebble(c, cx, cy, vis + 8f, Palette.Td.Amber.WithAlpha(34), default, true);
+            using var f = new SKPaint { IsAntialias = true, Color = Palette.Td.Border };
+            using var l = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, Color = hovered ? Palette.Td.Dim : Palette.Td.BorderStrong, StrokeWidth = Math.Max(1, _p.Px(1)) };
+            c.DrawCircle(_p.Px(cx), _p.Px(cy), _p.Px(vis / 2f), f);
+            c.DrawCircle(_p.Px(cx), _p.Px(cy), _p.Px(vis / 2f), l);
         }
-        if (on || av)
-        {
-            float g = on ? 14f : 12f;
-            DrawRuneGlyph(c, type, cx - g / 2f, cy - g / 2f, g, on ? Palette.Td.Amber : Palette.Td.Amber.WithAlpha(140), 2f);
-        }
+    }
+
+    private void DrawQuestion(SKCanvas c, float xDip, float yDip, float sizeDip, SKColor color)
+    {
+        c.Save();
+        c.Translate(_p.Px(xDip), _p.Px(yDip));
+        float k = _p.Px(sizeDip) / 24f;
+        c.Scale(k, k);
+        using var paint = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, Color = color, StrokeWidth = 2.4f, StrokeCap = SKStrokeCap.Round, StrokeJoin = SKStrokeJoin.Round };
+        c.DrawPath(QuestionPath, paint);
+        c.Restore();
     }
 
     // "Pebble" do design (46% 54% 50% 50% / 55% 48% 52% 45%): oval levemente irregular; halo/seleção sem fundo.
@@ -472,23 +530,142 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         c.DrawRoundRect(rr, paint);
     }
 
-    private void DrawRuneDetail(SKCanvas c, in TdUiItem it)
+    private List<string> WrapLines(string text, float sizeDip, float widthDip)
     {
-        var r = it.Rect;
-        bool on = it.Fill >= TdUiController.RuneOn, av = !on && it.Fill > 0f;
-        RoundBox(c, r, Palette.Td.BorderStrong, Palette.Td.Card, 8);
-        float cx = r.X + 12 + 22, cy = r.Y + r.H / 2f;
-        if (on) DrawPebble(c, cx, cy, 44, Palette.Td.Amber.WithAlpha(166), Palette.Td.Card, false);
-        else DrawPebble(c, cx, cy, 44, Palette.Td.BorderStrong, Palette.Td.Background, false, dashed: true);
-        DrawRuneGlyph(c, UnpackType(it.Arg), cx - 11, cy - 11, 22f, on ? Palette.Td.Amber : Palette.Td.Dim, 2f);
-        _p.Text(c, it.Text, PanelFont.JetBrainsMono, 13, new DipRect(r.X + 68, r.Y + 12, 150, 18), Palette.Td.Text);
-        string tag = it.Right ?? "";
-        float tw = _p.TextEnabled ? _p.Font(PanelFont.JetBrainsMono, 9).MeasureText(tag) / (_p.Dpi / 96f) + 12f : 76f;
-        var tagBox = new DipRect(r.X + r.W - tw - 12, r.Y + 12, tw, 16);
+        var lines = new List<string>(3);
+        if (!_p.TextEnabled)
+        {
+            int per = Math.Max(8, (int)(widthDip / (sizeDip * 0.6f)));
+            for (int i = 0; i < text.Length; i += per) lines.Add(text.Substring(i, Math.Min(per, text.Length - i)));
+            return lines;
+        }
+        var font = _p.Font(PanelFont.JetBrainsMono, sizeDip);
+        float max = _p.Px(widthDip);
+        string line = "";
+        foreach (var w in text.Split(' '))
+        {
+            var test = line.Length == 0 ? w : line + " " + w;
+            if (line.Length > 0 && font.MeasureText(test) > max) { lines.Add(line); line = w; } else line = test;
+        }
+        if (line.Length > 0) lines.Add(line);
+        return lines;
+    }
+
+    /// <summary>Medidas (DIP) do balão da runa: largura, altura e linhas do efeito. HUD: texto 12 DIP; modal: 13 DIP.</summary>
+    public (float W, float H, List<string> Lines, List<string> Action) RuneTipSize(TdRuneTip tip, bool modal)
+    {
+        float fs = modal ? 13f : 12f, w = modal ? 290f : 272f, pad = modal ? 12f : 9f, line = fs + 4f;
+        var lines = WrapLines(tip.Text, fs, w - 2 * pad);
+        var action = tip.Action.Length > 0 ? WrapLines(tip.Action, fs, w - 2 * pad) : [];
+        float top = modal ? 38f : line + 4f + line + 2f;
+        float h = pad + top + 4f + lines.Count * line + (action.Count > 0 ? 4f + action.Count * line : 0f) + pad - 2f;
+        return (w, h, lines, action);
+    }
+
+    /// <summary>
+    /// Balão do nó sob o mouse (TD.30c): nome, etiqueta (DESPERTADA/DISPONÍVEL/BLOQUEADA), efeito e ação; sempre dentro dos limites da janela
+    /// (flip vertical/horizontal por <see cref="TdRuneTipLayout"/>). Só desenho: o mouse passa por ele.
+    /// </summary>
+    private void DrawRuneTip(SKCanvas c, TdRuneTip tip, float boundsW, float boundsH, bool modal)
+    {
+        float fs = modal ? 13f : 12f, pad = modal ? 12f : 9f, line = fs + 4f;
+        var (w, h, lines, action) = RuneTipSize(tip, modal);
+        var (x, y, _) = TdRuneTipLayout.Place(tip.NodeX, tip.NodeY, tip.NodeSize * 1.2f, w, h, boundsW, boundsH, modal ? 8f : 4f);
+        bool on = tip.State == TdRuneState.Awake, av = tip.State == TdRuneState.Available;
+        _p.Fill(c, new DipRect(x + 2, y + 4, w, h), SKColors.Black.WithAlpha(90));
+        RoundBox(c, new DipRect(x, y, w, h), on ? Palette.Td.Amber.WithAlpha(153) : Palette.Td.BorderStrong, Palette.Td.Surface, 8);
+        float tx = x + pad, ty = y + pad;
+        if (modal)
+        {
+            float cx = x + pad + 17, cy = y + pad + 17;
+            if (on) DrawPebble(c, cx, cy, 34, Palette.Td.Amber.WithAlpha(180), Palette.Td.Button, false);
+            else DrawPebble(c, cx, cy, 34, Palette.Td.BorderStrong, Palette.Td.Background, false, dashed: true);
+            if (on) DrawRuneGlyph(c, Math.Clamp(tip.TypeIndex, 0, RunePaths.Length - 1), cx - 9, cy - 9, 18f, Palette.Td.Amber, 2f);
+            else DrawQuestion(c, cx - 9, cy - 9, 18f, Palette.Td.Dim);
+            tx += 46f;
+        }
+        _p.Text(c, tip.Name, PanelFont.JetBrainsMono, fs, new DipRect(tx, ty, w - (tx - x) - pad, line), Palette.Td.Text);
+        float tagY = ty + line + (modal ? 3f : 4f);
+        float tagW = (_p.TextEnabled ? _p.Font(PanelFont.JetBrainsMono, fs).MeasureText(tip.Tag) / (_p.Dpi / 96f) : tip.Tag.Length * fs * 0.6f) + 12f;
+        var tagBox = new DipRect(tx, tagY, tagW, line + 2f);
         if (on) RoundBox(c, tagBox, Palette.Td.Amber, Palette.Td.Amber, 4);
         else DashedBox(c, tagBox, av ? Palette.Td.Amber : Palette.Td.BorderStrong, 4);
-        _p.Text(c, tag, PanelFont.JetBrainsMono, 9, new DipRect(tagBox.X, tagBox.Y + 2, tagBox.W, 12), on ? Palette.Td.Background : av ? Palette.Td.Amber : Palette.Td.Muted, TextAlign.Center);
-        if (it.Sub is not null) DrawWrapped(c, it.Sub, new DipRect(r.X + 68, r.Y + 36, r.W - 80, 30), Palette.Td.Text);
+        _p.Text(c, tip.Tag, PanelFont.JetBrainsMono, fs, new DipRect(tagBox.X, tagBox.Y + 1f, tagBox.W, line), on ? Palette.Td.Background : av ? Palette.Td.Amber : Palette.Td.Muted, TextAlign.Center);
+        float by = y + pad + (modal ? 38f : line + 4f + line + 2f) + 4f;
+        for (int i = 0; i < lines.Count; i++)
+            _p.Text(c, lines[i], PanelFont.JetBrainsMono, fs, new DipRect(x + pad, by + i * line, w - 2 * pad, line), Palette.Td.Text);
+        var col = tip.ActionTone switch { TdTone.Good => Palette.Td.Green, TdTone.Accent => Palette.Td.Amber, TdTone.Bad => Palette.Td.Red, _ => Palette.Td.Muted };
+        for (int i = 0; i < action.Count; i++)
+            _p.Text(c, action[i], PanelFont.JetBrainsMono, fs, new DipRect(x + pad, by + lines.Count * line + 4f + i * line, w - 2 * pad, line), col);
+    }
+
+    /// <summary>Janela de runas ancorada no HUD (HUDRunas.dc.html): cabeçalho, mini-teia, dica, link "Teia completa" e a seta para o botão.</summary>
+    private void DrawRuneWindow(SKCanvas c, TdPopoverView v, int hover)
+    {
+        float boxH = v.Height - TdPopoverView.ArrowH;
+        var edge = Palette.Td.Amber.WithAlpha(115);
+        // seta (triângulo) para o botão Runas, por baixo da caixa: a base é coberta pela caixa
+        float ax = Math.Clamp(v.ArrowX, 14f, v.Width - 14f);
+        using (var b = new SKPathBuilder())
+        {
+            b.MoveTo(_p.Px(ax - 7f), _p.Px(boxH - 1f)); b.LineTo(_p.Px(ax), _p.Px(boxH + TdPopoverView.ArrowH - 0.5f)); b.LineTo(_p.Px(ax + 7f), _p.Px(boxH - 1f));
+            using var path = b.Detach();
+            using var fill = new SKPaint { IsAntialias = true, Color = Palette.Td.Surface };
+            using var line = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, Color = edge, StrokeWidth = Math.Max(1f, _p.Px(1f)), StrokeJoin = SKStrokeJoin.Miter };
+            c.DrawPath(path, fill);
+            c.DrawPath(path, line);
+        }
+        RoundBox(c, new DipRect(0, 0, v.Width, boxH), edge, Palette.Td.Surface, 10);
+        _p.Fill(c, new DipRect(ax - 6f, boxH - 1f, 12f, 2f), Palette.Td.Surface);
+        DrawStar(c, 19, 20, 14, 2f);
+        _p.Text(c, v.Title, PanelFont.JetBrainsMono, 13, new DipRect(34, 12, 60, 16), Palette.Td.Text);
+        DrawRuneWeb(c, v.Items, false);
+        for (int i = 0; i < v.Items.Length; i++)
+        {
+            var it = v.Items[i];
+            var r = it.Rect;
+            if (it.Action == TdUiAction.SelectRune) { DrawRuneNode(c, it, i == hover); continue; }
+            if (it.Action == TdUiAction.Close)
+            {
+                if (i == hover) RoundBox(c, r, Palette.Td.BorderStrong, Palette.Td.BorderStrong, 5);
+                DrawIcon(c, TdIcon.Cross, r.X + 5, r.Y + 5, 14, Palette.Td.Muted);
+                continue;
+            }
+            if (it.Action == TdUiAction.ModalTab)
+            {
+                var col = i == hover ? Palette.AmbarHover : Palette.Td.Amber;
+                _p.Text(c, it.Text, PanelFont.JetBrainsMono, 11, new DipRect(r.X + 4, r.Y + 2, r.W - 18, 14), col, TextAlign.Right);
+                DrawArrowNE(c, r.X + r.W - 10f, r.Y + 3f, 8f, col);
+                continue;
+            }
+            switch (it.SArg)
+            {
+                case "rcount": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 12, new DipRect(r.X + 74, r.Y + 5, 70, 16), Palette.Td.Muted); break;
+                case "rpill":
+                    RoundBox(c, r, Palette.Td.Amber.WithAlpha(31), Palette.Td.Amber.WithAlpha(31), 11);
+                    DrawRuneDiamond(c, r.X + 11, r.Y + r.H / 2f, 5f);
+                    _p.Text(c, it.Text, PanelFont.JetBrainsMono, 12, new DipRect(r.X + 20, r.Y + 3, r.W - 26, 16), Palette.Td.Amber, TextAlign.Right);
+                    break;
+                case "rhintw":
+                {
+                    var lines = WrapLines(it.Text, 11f, r.W);
+                    for (int l = 0; l < lines.Count && l < 2; l++)
+                        _p.Text(c, lines[l], PanelFont.JetBrainsMono, 11, new DipRect(r.X, r.Y + 1 + l * 14, r.W, 14), Palette.Td.Dim);
+                    break;
+                }
+            }
+        }
+        if (v.Tip is { } tip) DrawRuneTip(c, tip, v.Width, boxH, false);
+    }
+
+    private void DrawRuneDiamond(SKCanvas c, float cxDip, float cyDip, float rDip)
+    {
+        using var b = new SKPathBuilder();
+        b.MoveTo(_p.Px(cxDip), _p.Px(cyDip - rDip)); b.LineTo(_p.Px(cxDip + rDip * 0.7f), _p.Px(cyDip)); b.LineTo(_p.Px(cxDip), _p.Px(cyDip + rDip)); b.LineTo(_p.Px(cxDip - rDip * 0.7f), _p.Px(cyDip));
+        b.Close();
+        using var path = b.Detach();
+        using var paint = new SKPaint { IsAntialias = true, Color = Palette.Td.Amber };
+        c.DrawPath(path, paint);
     }
 
     private void DrawRankCard(SKCanvas c, in TdUiItem it)
@@ -530,6 +707,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             }
             return;
         }
+        if (v.RuneWindow) { DrawRuneWindow(c, v, hover); return; }
         bool modal = v.Width == 720 && v.Height == 480 && !v.HasArrow;
         _p.Box(c, new DipRect(0, 0, v.Width, boxH), modal ? Palette.Td.Border : v.HasArrow ? Palette.Ambar : Palette.BordaForte, modal ? Palette.Td.Background : Palette.BgPainel);
         if (modal)
@@ -540,12 +718,13 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             RoundBox(c, new DipRect(16, 10, 86, 24), Palette.Td.Surface, Palette.Td.PauseBadge, 4);
             _p.Text(c, "Ⅱ PAUSADO", PanelFont.JetBrainsMono, 10, new DipRect(21, 15, 80, 14), Palette.Td.Amber);
             _p.Text(c, v.Title, PanelFont.JetBrainsMono, 11, new DipRect(112, 15, 550, 16), Palette.Td.Muted);
-            DrawRuneLines(c, v.Items);
+            DrawRuneWeb(c, v.Items, true);
             for (int i = 0; i < v.Items.Length; i++)
             {
                 DrawModalItem(c, v.Items[i], i == hover);
                 if (v.Items[i].Highlight) DrawHighlight(c, v.Items[i].Rect);
             }
+            if (v.Tip is { } tip) DrawRuneTip(c, tip, v.Width, v.Height, true);
             return;
         }
         if (v.HasArrow) DrawArrow(c, Math.Clamp(v.ArrowX, 8f, v.Width - 8f), boxH);

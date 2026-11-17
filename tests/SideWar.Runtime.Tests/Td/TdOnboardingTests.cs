@@ -234,7 +234,7 @@ public sealed class TdOnboardingTests
         int pauses = r.Sent.OfType<Pause>().Count();
         r.Click(TdUiAction.ModalTab, arg: (int)TdUiMode.Runes);
         Assert.Equal(pauses, r.Sent.OfType<Pause>().Count());
-        Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Action == TdUiAction.AwakenRune && !i.Enabled && i.Text == "Sem fragmentos");
+        Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.SArg == "rhint" && i.Text.StartsWith("Sem fragmentos", StringComparison.Ordinal));
         r.Ui.Cancel(); r.Ui.Sync();
         Assert.False(r.Match.Paused);
         Assert.Single(r.Sent.OfType<Resume>());

@@ -50,7 +50,7 @@ public sealed partial class TdUiController
     public bool NoticeOpen => _noticeText is not null && !BossHidden && _now() < _noticeUntil;
     public string? NoticeText => NoticeOpen ? _noticeText : null;
     /// <summary>Qualquer popover pequeno ancorado ao chip: painel rápido, pergunta-bônus, aviso de fase ou cartão de fim. Nunca ativa janela.</summary>
-    public bool CornerPopover => QuickTowersOpen || EndCardOpen || NoticeOpen || ((Mode == TdUiMode.None || QuickTowersOpen) && QuizActive);
+    public bool CornerPopover => QuickTowersOpen || RuneWindowOpen || EndCardOpen || NoticeOpen || ((Mode == TdUiMode.None || QuickTowersOpen) && QuizActive);
     private int _chosenX = -1;       // X lógico já escolhido (passo "escolher a torre"); -1 = ainda no passo do ponto
     private int _moveTowerId;        // > 0: reposicionando uma torre SEM POSIÇÃO (sem escolha de tipo)
     private int _ghostX = -1;
@@ -66,6 +66,11 @@ public sealed partial class TdUiController
     /// <summary>TD.29b: pausa pedida pelo botão Pausar do HUD (Pause/Resume reais do Core); zera a cada partida nova.</summary>
     private bool _userPaused;
     private string? _selectedRune;
+    private string? _hoverRune;
+    /// <summary>TD.30c: janela de runas do HUD (popover no cantinho, ancorado no botão Runas; nunca abre sozinha, não pausa e não toma foco).</summary>
+    public bool RuneWindowOpen { get; private set; }
+    /// <summary>Id do nó sob o mouse (balão e destaque); nulo quando o mouse sai.</summary>
+    public string? HoverRune => _hoverRune;
     private string? _lastRune;
     private int _runeCount;
     private readonly HashSet<string> _runeKnown = [];
@@ -94,7 +99,7 @@ public sealed partial class TdUiController
     public bool BuildActive => Mode == TdUiMode.Build && (_placementType is not null || _moveTowerId > 0);
 
     /// <summary>Algum popover aberto (o ESC fecha). O painel de torres fixo (TD.28b) em repouso não conta: não rouba o ESC dos outros apps.</summary>
-    public bool PopoverOpen => !PinnedIdle && (QuickTowersOpen || Mode != TdUiMode.None || QuizActive);
+    public bool PopoverOpen => !PinnedIdle && (QuickTowersOpen || RuneWindowOpen || Mode != TdUiMode.None || QuizActive);
 
     /// <summary>Passo do ponto: o fantasma segue o mouse e o clique escolhe o ponto.</summary>
     public bool ChoosingPoint => BuildActive && _chosenX < 0;
@@ -167,6 +172,8 @@ public sealed partial class TdUiController
 
     public void Hover(TdUiItem? item)
     {
+        string? rune = item is { Action: TdUiAction.SelectRune, SArg: { } rid } ? rid : null;
+        if (rune != _hoverRune) { _hoverRune = rune; Changed?.Invoke(); }
         if (BuildActive) return;
         int def = -1;
         if (Mode == TdUiMode.Build && item is { Action: TdUiAction.ChooseTower, SArg: { } id })
@@ -195,6 +202,10 @@ public sealed partial class TdUiController
             case TdUiAction.QuizFalse: AnswerQuiz(false); break;
             case TdUiAction.QuizClose: CloseQuiz(); break;
             case TdUiAction.Close: Close(); break;
+            case TdUiAction.RuneWindow:
+                if (RuneWindowOpen) Close();
+                else if (!ModalOpen && _match().Phase is not (MatchPhase.Vitoria or MatchPhase.Derrota)) OpenRuneWindow();
+                break;
             case TdUiAction.QuickTowers:
                 if (QuickTowersOpen) Close();
                 else if (!ModalOpen && _match().Phase is not (MatchPhase.Vitoria or MatchPhase.Derrota)) OpenQuickTowers();
@@ -243,7 +254,14 @@ public sealed partial class TdUiController
             case TdUiAction.SetSpeed when !ModalOpen:
                 _host.SetGameOptions(_host.GameOptions with { GameSpeed = Math.Clamp(item.Arg, 1, 3) });
                 Changed?.Invoke(); break;
-            case TdUiAction.SelectRune when item.SArg is not null: _selectedRune = item.SArg; Changed?.Invoke(); break;
+            case TdUiAction.SelectRune when item.SArg is not null:
+            {
+                // TD.30c: clicar num nó disponível gasta 1 fragmento (o Core sorteia entre os disponíveis); bloqueado/despertado só seleciona.
+                _selectedRune = item.SArg;
+                var rm = _match();
+                if (rm.Fragments > 0 && !rm.IsAwakened(item.SArg) && rm.Frontier.Contains(item.SArg)) _send(new AwakenRune());
+                Changed?.Invoke(); break;
+            }
             case TdUiAction.AwakenRune:
                 if (_match().Fragments > 0 && _match().Frontier.Count > 0) _send(new AwakenRune());
                 Changed?.Invoke(); break;
@@ -302,7 +320,8 @@ public sealed partial class TdUiController
             _seenStages = m.StageResults.Count;
             _noticeText = null;
             _userPaused = false;
-            _selectedRune = _lastRune = null;
+            _selectedRune = _lastRune = _hoverRune = null;
+            RuneWindowOpen = false;
             _runeCount = m.AwakenedCount;
             _runeKnown.Clear();
             foreach (var rn in m.RuneWeb) if (m.IsAwakened(rn.Id)) _runeKnown.Add(rn.Id);
@@ -402,6 +421,8 @@ public sealed partial class TdUiController
     {
         ResetBuild();
         QuickTowersOpen = false;
+        RuneWindowOpen = false;
+        _hoverRune = null;
         _pinnedOpen = false;
         _noticeText = null;
         _endCorner = false;
@@ -414,8 +435,23 @@ public sealed partial class TdUiController
         Changed?.Invoke();
     }
 
+    /// <summary>TD.30c: abre a janela de runas do HUD (fecha o painel de torres, um por vez; o jogo segue rodando).</summary>
+    private void OpenRuneWindow()
+    {
+        ResetBuild();
+        QuickTowersOpen = false;
+        _pinnedOpen = false;
+        _hoverRune = null;
+        Mode = TdUiMode.None;
+        RuneWindowOpen = true;
+        UpdateModalPause();
+        Touch();
+        Changed?.Invoke();
+    }
+
     private void OpenQuickTowers()
     {
+        RuneWindowOpen = false; _hoverRune = null;
         QuickTowersOpen = true; Mode = TdUiMode.Build; ResetBuild(); UpdateModalPause(); Changed?.Invoke();
     }
 
@@ -424,7 +460,7 @@ public sealed partial class TdUiController
     {
         var m = _match();
         bool want = PanelPinned && !BossHidden && m.Phase is not (MatchPhase.Vitoria or MatchPhase.Derrota);
-        if (want && !QuickTowersOpen && Mode == TdUiMode.None) { OpenQuickTowers(); _pinnedOpen = true; }
+        if (want && !QuickTowersOpen && !RuneWindowOpen && Mode == TdUiMode.None) { OpenQuickTowers(); _pinnedOpen = true; }
         else if (!want && _pinnedOpen && QuickTowersOpen && !BuildActive) Close();
     }
 
@@ -473,6 +509,8 @@ public sealed partial class TdUiController
     {
         ResetBuild();
         QuickTowersOpen = false;
+        RuneWindowOpen = false;
+        _hoverRune = null;
         _endCorner = false;
         _confirmRestart = false;
         Mode = mode;
@@ -569,14 +607,21 @@ public sealed partial class TdUiController
             TdUiAction.HudRestore, Icon: TdIcon.Heart, Tone: integTone, Tip: coreTip + $" {stageText.Trim()} Onda {shown}/{m.TotalWaves}. Créditos ¢{m.Credits}. Clique para abrir o menu.",
             Highlight: needed && PulseOn));
         x += TdHudView.ChipWidth + TdHudView.Gap;
-        items.Add(new TdUiItem(new DipRect(x, 0, 28, 28), TdUiKind.Button, "", TdUiAction.QuickTowers,
+        const float bw = TdHudView.ButtonWidth;
+        items.Add(new TdUiItem(new DipRect(x, 0, bw, 28), TdUiKind.Button, "", TdUiAction.QuickTowers,
             Enabled: !ModalOpen, Icon: TdIcon.Castle, Tip: PanelPinned ? "Torres (painel fixo: Jogo ou Configurações)" : "Torres: escolha e posicione sem pausar", Selected: QuickTowersOpen));
-        x += 28 + TdHudView.Gap;
+        x += bw + TdHudView.Gap;
+        // TD.30c: botão Runas (estrela): ponto âmbar discreto só quando há fragmento E nó a despertar; nunca abre sozinho.
+        bool runeReady = m.Fragments > 0 && m.Frontier.Count > 0;
+        items.Add(new TdUiItem(new DipRect(x, 0, bw, 28), TdUiKind.Button, "", TdUiAction.RuneWindow,
+            Enabled: !ModalOpen, Icon: TdIcon.Star, Selected: RuneWindowOpen, Fill: runeReady ? 1f : 0f,
+            Tip: $"Runas {m.AwakenedCount}/{m.RuneWeb.Count}" + (runeReady ? $": {m.Fragments} fragmento(s) para despertar. " : ". ") + "Clique para abrir ou fechar a janela de runas."));
+        x += bw + TdHudView.Gap;
         bool paused = _userPaused && live;
-        items.Add(new TdUiItem(new DipRect(x, 0, 28, 28), TdUiKind.Button, "", TdUiAction.PauseToggle,
+        items.Add(new TdUiItem(new DipRect(x, 0, bw, 28), TdUiKind.Button, "", TdUiAction.PauseToggle,
             Enabled: !ModalOpen && live, Icon: paused ? TdIcon.Play : TdIcon.Pause,
             Tone: paused ? TdTone.Accent : TdTone.Normal, Selected: paused, Tip: paused ? "Retomar o jogo" : "Pausar o jogo"));
-        x += 28 + TdHudView.Gap;
+        x += bw + TdHudView.Gap;
         // Velocidade: um botão pequeno que mostra 1x/2x/3x e alterna (o seletor completo fica na aba Jogo).
         int speed = Math.Clamp(_host.GameOptions.GameSpeed, 1, 3);
         items.Add(new TdUiItem(new DipRect(x, 0, TdHudView.SpeedWidth, 28), TdUiKind.Button, $"{speed}x", TdUiAction.SetSpeed, speed % 3 + 1,
@@ -634,6 +679,7 @@ public sealed partial class TdUiController
         if (!BuildActive && (Mode == TdUiMode.None || QuickTowersOpen) && _quizQ is not null && QuizPhaseOk(m)) return BuildQuiz(m);
         if (!BuildActive && NoticeOpen && (Mode == TdUiMode.None || QuickTowersOpen)) return BuildNotice();
         if (QuickTowersOpen) return BuildQuickTowers(m);
+        if (RuneWindowOpen && Mode == TdUiMode.None) return BuildRuneWindow(m);
         if (BuildActive) return null;
         var view = Mode switch
         {
@@ -703,64 +749,103 @@ public sealed partial class TdUiController
     public static int PackRune(int typeIndex, int ring, int sector) => (typeIndex << 8) | (ring << 4) | sector;
     public static (int Type, int Ring, int Sector) UnpackRune(int arg) => (arg >> 8, (arg >> 4) & 15, arg & 15);
 
+    /// <summary>Tamanhos (DIP) do nó despertado, disponível e bloqueado: modal (Main.dc.html) e janela do HUD (HUDRunas.dc.html).</summary>
+    private readonly record struct RuneSizes(float On, float Available, float Locked, float MinHit);
+    private static readonly RuneSizes ModalRune = new(30f, 24f, 12f, 22f), HudRune = new(22f, 18f, 8f, 16f);
+
+    public const float RuneWindowWidth = 288f, RuneWebWidth = 268f, RuneWebHeight = 168f;
+
     /// <summary>
-    /// Teia do design: círculo de 350 DIP (anéis × setores, nós "pebble" despertados âmbar, disponíveis tracejados, bloqueados em ponto) à
-    /// esquerda; à direita FRAGMENTOS + botão "Despertar runa", detalhe do nó selecionado e a lista RAMOS × contagem.
-    /// Lê só o <see cref="TdMatchState"/> (Fragments, RuneWeb, IsAwakened, Frontier); o despertar envia <see cref="AwakenRune"/>.
+    /// Nós da teia REAL do Core (32 nós, 4 anéis × 8 setores; posição normalizada X/Y do conteúdo mapeada na área). Despertada: tipo e glifo
+    /// do ramo; disponível: "?" (o tipo fica OCULTO até despertar, nem o item carrega o índice); bloqueada: ponto. O <c>Rect</c> é a área
+    /// de acerto (mínimo <see cref="RuneSizes.MinHit"/>) e o diâmetro visual vai em <c>FontSize</c>. Devolve despertadas e o balão do nó sob o mouse.
     /// </summary>
-    private void AddRuneWeb(List<TdUiItem> items, TdMatchState m)
+    private (int Total, TdRuneTip? Tip) AddRuneNodes(List<TdUiItem> items, TdMatchState m, DipRect area, RuneSizes sz)
     {
         var types = m.Content.Runes.Types;
-        var nodes = m.RuneWeb;
         var frontier = new HashSet<string>(m.Frontier);
-        const float ox = 16, oy = 102, size = 350;
-        items.Add(new(new DipRect(ox, oy, size, size), TdUiKind.Label, "", SArg: "webbg"));
-        int[] counts = new int[types.Length];
-        int total = 0;
-        string detailId = _selectedRune ?? _lastRune ?? nodes[0].Id;
-        foreach (var n in nodes)
-        {
-            int ti = Array.FindIndex(types, t => t.Id == n.Type);
-            bool on = m.IsAwakened(n.Id), av = !on && frontier.Contains(n.Id);
-            if (on) { total++; counts[ti]++; }
-            float sz = on ? 28 : av ? 24 : 14;
-            float cx = ox + (float)n.X * size, cy = oy + (float)n.Y * size;
-            string state = on ? "DESPERTADA" : av ? "DISPONÍVEL" : "BLOQUEADA";
-            items.Add(new(new DipRect(cx - sz / 2, cy - sz / 2, sz, sz), TdUiKind.Button, $"{types[ti].Name}, {state.ToLowerInvariant()}",
-                TdUiAction.SelectRune, PackRune(ti, n.Ring, n.Sector), SArg: n.Id, Right: n.Id == _lastRune ? "last" : null,
-                Fill: on ? RuneOn : av ? RuneAvailable : RuneLocked, Selected: n.Id == detailId));
-        }
         long frag = m.Fragments;
-        bool done = frontier.Count == 0;
-        bool can = !done && frag >= 1;
-        const float px = 380, pw = 324;
-        items.Add(new(new DipRect(px, 102, pw, 60), TdUiKind.Label, frag.ToString(System.Globalization.CultureInfo.InvariantCulture), SArg: "fragcard"));
-        items.Add(new(new DipRect(px + pw - 12 - 156, 112, 156, 40), TdUiKind.Button, done ? "Teia completa" : frag < 1 ? "Sem fragmentos" : "Despertar runa",
-            TdUiAction.AwakenRune, Enabled: can, SArg: "awaken"));
-        items.Add(new(new DipRect(px, 168, pw, 14), TdUiKind.Label, "Cada despertar abre, ao acaso, uma runa ligada à teia.", SArg: "c11l"));
-        var dn = nodes.First(n => n.Id == detailId);
-        int dt = Array.FindIndex(types, t => t.Id == dn.Type);
-        bool dOn = m.IsAwakened(dn.Id), dAv = !dOn && frontier.Contains(dn.Id);
-        items.Add(new(new DipRect(px, 190, pw, 78), TdUiKind.Label, types[dt].Name, SArg: "detail", Arg: PackRune(dt, dn.Ring, dn.Sector),
-            Right: dOn ? "DESPERTADA" : dAv ? "DISPONÍVEL" : "BLOQUEADA",
-            Sub: dOn || dAv ? types[dt].Text : "Desperte uma runa vizinha na teia primeiro.", Fill: dOn ? RuneOn : dAv ? RuneAvailable : RuneLocked));
-        items.Add(new(new DipRect(px, 282, 160, 14), TdUiKind.Label, "TEIA DE RUNAS", SArg: "sec"));
-        items.Add(new(new DipRect(px, 282, pw, 14), TdUiKind.Label, $"{total}/{nodes.Count} runas", SArg: "secR"));
-        for (int i = 0; i < types.Length; i++)
-            items.Add(new(new DipRect(px + (i % 2) * 166, 304 + (i / 2) * 28, 158, 24), TdUiKind.Label, types[i].Name, SArg: "branch",
-                Arg: PackRune(i, 0, 0), Right: $"×{counts[i]}", Fill: counts[i] > 0 ? 1f : 0f));
+        int total = 0;
+        TdRuneTip? tip = null;
+        foreach (var n in m.RuneWeb)
+        {
+            bool on = m.IsAwakened(n.Id), av = !on && frontier.Contains(n.Id);
+            int ti = on ? Array.FindIndex(types, t => t.Id == n.Type) : -1;
+            if (on) total++;
+            float vis = on ? sz.On : av ? sz.Available : sz.Locked, hit = Math.Max(vis, sz.MinHit);
+            float cx = area.X + (float)n.X * area.W, cy = area.Y + (float)n.Y * area.H;
+            string label = on ? $"{types[ti].Name}, despertada" : av ? "Runa oculta, disponível" : "Runa bloqueada";
+            items.Add(new(new DipRect(cx - hit / 2, cy - hit / 2, hit, hit), TdUiKind.Button, label, TdUiAction.SelectRune,
+                PackRune(Math.Max(ti, 0), n.Ring, n.Sector), SArg: n.Id, Right: n.Id == _lastRune ? "last" : null,
+                Fill: on ? RuneOn : av ? RuneAvailable : RuneLocked, Selected: false, FontSize: vis));
+            if (n.Id != _hoverRune) continue;
+            tip = on
+                ? new TdRuneTip(n.Id, TdRuneState.Awake, ti, "Runa de " + types[ti].Name, "DESPERTADA", types[ti].Text, "Efeito ativo", TdTone.Good, cx, cy, vis)
+                : av
+                    ? new TdRuneTip(n.Id, TdRuneState.Available, -1, "Runa oculta", "DISPONÍVEL", "O tipo desta runa é revelado ao despertar.",
+                        frag > 0 ? "Clique para despertar · 1 fragmento" : "Sem fragmentos", frag > 0 ? TdTone.Accent : TdTone.Bad, cx, cy, vis)
+                    : new TdRuneTip(n.Id, TdRuneState.Locked, -1, "Runa bloqueada", "BLOQUEADA", "Desperte uma runa vizinha para liberar este ponto.", "", TdTone.Dim, cx, cy, vis);
+        }
+        return (total, tip);
+    }
+
+    /// <summary>
+    /// Aba Runas da modal (Main.dc.html): teia de 688×356 com FRAGMENTOS no canto esquerdo, contador no direito, dica embaixo e o balão do nó
+    /// sob o mouse (desenhado pelo renderer, dentro da janela). Lê só o <see cref="TdMatchState"/>; o despertar envia <see cref="AwakenRune"/>.
+    /// </summary>
+    private TdRuneTip? AddRuneWeb(List<TdUiItem> items, TdMatchState m)
+    {
+        var area = new DipRect(16, 102, 688, 356);
+        items.Add(new(area, TdUiKind.Label, "", SArg: "webbg"));
+        var (total, tip) = AddRuneNodes(items, m, area, ModalRune);
+        bool done = m.Frontier.Count == 0;
+        long frag = m.Fragments;
+        items.Add(new(new DipRect(area.X + 14, area.Y + 12, 200, 24), TdUiKind.Label, frag.ToString(System.Globalization.CultureInfo.InvariantCulture), SArg: "rfrag"));
+        items.Add(new(new DipRect(area.X + area.W - 214, area.Y + 12, 200, 34), TdUiKind.Label, $"{total}/{m.RuneWeb.Count} runas", SArg: "rtot"));
+        items.Add(new(new DipRect(area.X + 14, area.Y + area.H - 24, area.W - 28, 16), TdUiKind.Label,
+            done ? "Teia completa." : frag > 0 ? "Passe o mouse numa runa para ver o efeito. Clique numa runa tracejada para despertar." : "Sem fragmentos: conquiste mais para continuar a teia.",
+            SArg: "rhint"));
+        return tip;
+    }
+
+    /// <summary>
+    /// Janela de runas do HUD (HUDRunas.dc.html): popover de 288 DIP no cantinho, seta apontando para o botão Runas, cabeçalho (título,
+    /// n/total, fragmentos, fechar), mini-teia 268×168, dica e o link "Teia completa" (abre a modal na aba Runas). Não pausa o jogo.
+    /// </summary>
+    private TdPopoverView BuildRuneWindow(TdMatchState m)
+    {
+        var items = new List<TdUiItem>(48)
+        {
+            new(new DipRect(RuneWindowWidth - 10 - 24, 8, 24, 24), TdUiKind.Button, "Fechar runas", TdUiAction.Close),
+        };
+        var area = new DipRect(10, 40, RuneWebWidth, RuneWebHeight);
+        items.Add(new(area, TdUiKind.Label, "", SArg: "webbg"));
+        var (total, tip) = AddRuneNodes(items, m, area, HudRune);
+        items.Add(new(new DipRect(10, 8, 150, 24), TdUiKind.Label, $"{total}/{m.RuneWeb.Count}", SArg: "rcount"));
+        items.Add(new(new DipRect(RuneWindowWidth - 10 - 24 - 6 - 54, 9, 54, 22), TdUiKind.Label, m.Fragments.ToString(System.Globalization.CultureInfo.InvariantCulture), SArg: "rpill"));
+        float fy = area.Y + area.H + 8;
+        items.Add(new(new DipRect(10, fy, 168, 30), TdUiKind.Label, "Passe o mouse para ver; clique para despertar.", SArg: "rhintw"));
+        items.Add(new(new DipRect(RuneWindowWidth - 10 - 100, fy, 100, 30), TdUiKind.Button, "Teia completa", TdUiAction.ModalTab, (int)TdUiMode.Runes, SArg: "rlink"));
+        float boxH = fy + 30 + 10;
+        // Seta: aponta para o centro do botão Runas (a janela e o HUD ancoram na mesma borda direita).
+        var hud = BuildHud();
+        float arrowX = RuneWindowWidth - 12;
+        foreach (var it in hud.Items)
+            if (it.Action == TdUiAction.RuneWindow) { arrowX = RuneWindowWidth - (hud.Width - (it.Rect.X + it.Rect.W / 2f)); break; }
+        return new TdPopoverView("Runas", [.. items], RuneWindowWidth, boxH + TdPopoverView.ArrowH, 0, ArrowX: Math.Clamp(arrowX, 14f, RuneWindowWidth - 14f), Tip: tip, RuneWindow: true);
     }
 
     /// <summary>Composição do Main.dc.html para Runas, Torres, Jogo e Como jogar (modal 720×480, conteúdo a partir de y=100).</summary>
-    private void RelayoutTab(TdPopoverView view, List<TdUiItem> items)
+    private TdRuneTip? RelayoutTab(TdPopoverView view, List<TdUiItem> items)
     {
+        TdRuneTip? runeTip = null;
         TdUiItem Put(TdUiItem it, float x, float y, float w, float h) => it with { Rect = new DipRect(x, y, w, h) };
         var src = view.Items;
         foreach (var it in src) if (it.Action == TdUiAction.Close) items.Add(Put(it, 674, 4, 36, 36));
         switch (Mode)
         {
             case TdUiMode.Runes:
-                AddRuneWeb(items, _match());
+                runeTip = AddRuneWeb(items, _match());
                 break;
             case TdUiMode.Help:
             {
@@ -829,6 +914,7 @@ public sealed partial class TdUiController
                 break;
             }
         }
+        return runeTip;
     }
 
     private TdPopoverView? Modalize(TdPopoverView? view)
@@ -844,9 +930,9 @@ public sealed partial class TdUiController
         int towerRow = 0;
         if (Mode is TdUiMode.Menu or TdUiMode.Towers or TdUiMode.Help or TdUiMode.Runes)
         {
-            RelayoutTab(view, items);
+            var tip = RelayoutTab(view, items);
             AddModalTutorial(items);
-            return new TdPopoverView($"{view.Title}   ¢{_match().Credits}", [.. items], 720, 480, 0);
+            return new TdPopoverView($"{view.Title}   ¢{_match().Credits}", [.. items], 720, 480, 0, Tip: tip);
         }
         foreach (var item in view.Items)
         {

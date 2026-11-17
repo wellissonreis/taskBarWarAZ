@@ -164,15 +164,10 @@ public sealed class TdHud29bTests
         var nodes = items.Where(i => i.Action == TdUiAction.SelectRune).ToArray();
         Assert.Equal(32, nodes.Length);
         Assert.Equal(8, nodes.Count(n => n.Fill == TdUiController.RuneAvailable)); // só o anel interno está disponível no começo
-        var btn = items.Single(i => i.Action == TdUiAction.AwakenRune);
-        Assert.False(btn.Enabled);
-        Assert.Equal("Sem fragmentos", btn.Text);
-        Assert.Equal(8, items.Count(i => i.SArg == "branch"));
+        Assert.DoesNotContain(items, i => i.Action == TdUiAction.AwakenRune); // TD.30c: clicar no nó tracejado desperta (sem botão separado)
         typeof(TdMatchState).GetProperty("Fragments")!.SetValue(r.Match, 2L);
-        btn = r.Ui.BuildPopover()!.Items.Single(i => i.Action == TdUiAction.AwakenRune);
-        Assert.True(btn.Enabled);
-        Assert.Equal("Despertar runa", btn.Text);
-        r.Ui.Activate(btn);
+        var avail = r.Ui.BuildPopover()!.Items.First(i => i.Action == TdUiAction.SelectRune && i.Fill == TdUiController.RuneAvailable);
+        r.Ui.Activate(avail);
         Assert.Contains(r.Sent, c => c is AwakenRune);
     }
 

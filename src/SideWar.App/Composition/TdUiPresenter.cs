@@ -397,7 +397,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
             long ps = pop.Signature() * 31 + popHover;
             bool moved = bounds != popBounds || !popWindow.WantsVisible;
             if (moved) { popWindow.Apply(bounds); popBounds = bounds; popCanvas.Invalidate(); }
-            if (!popWindow.WantsVisible) { popWindow.Show(); popWindow.Surface.SetOpacity(controller.QuickTowersOpen ? focus.Alpha : (byte)255); if (quick) popWindow.DeactivateModal(); else popWindow.ActivateModal(); }
+            if (!popWindow.WantsVisible) { popWindow.Show(); popWindow.Surface.SetOpacity(controller.QuickTowersOpen || controller.RuneWindowOpen ? focus.Alpha : (byte)255); if (quick) popWindow.DeactivateModal(); else popWindow.ActivateModal(); }
             if (force || moved || ps != popSig)
             {
                 popSig = ps;

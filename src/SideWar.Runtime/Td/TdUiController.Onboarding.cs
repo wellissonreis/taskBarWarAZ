@@ -409,7 +409,7 @@ public sealed partial class TdUiController
                 case TdTutorialStep.Credits when it.Icon == TdIcon.Coin && it.Kind == TdUiKind.Label: return i;
                 case TdTutorialStep.Build when it.Action == TdUiAction.QuickTowers: return i;
                 case TdTutorialStep.Controls when it.Action == TdUiAction.PauseToggle: return i;
-                case TdTutorialStep.Runes when it.Action == TdUiAction.HudRestore: return i;
+                case TdTutorialStep.Runes when it.Action == TdUiAction.RuneWindow: return i;
                 case TdTutorialStep.Wave or TdTutorialStep.CallNext when it.Action == TdUiAction.StartWave: return i;
                 case TdTutorialStep.Sell when it.Action == TdUiAction.HudRestore: return i;
                 case TdTutorialStep.Ability when it.Action == TdUiAction.Ability && it.Enabled: return i;
@@ -431,7 +431,7 @@ public sealed partial class TdUiController
         TdTutorialStep.Point => (TdIcon.Build, "Clique num ponto da faixa", null, false),
         TdTutorialStep.Tower => (TdIcon.Build, "Escolha uma torre", null, false),
         TdTutorialStep.Controls => (TdIcon.Pause, "Pausar e velocidade 1x a 3x", "O botão ao lado pausa; 2x e 3x aceleram.", true),
-        TdTutorialStep.Runes => (TdIcon.Question, "Fragmentos despertam runas", "Chip, aba Runas, Despertar.", true),
+        TdTutorialStep.Runes => (TdIcon.Question, "Fragmentos despertam runas", "Botão Runas (estrela) do HUD.", true),
         TdTutorialStep.Range => (TdIcon.Target, "O círculo é o alcance.", "Ela só atira dentro dele.", true),
         TdTutorialStep.Wave => (TdIcon.Play, "Clique em Iniciar onda", null, false),
         TdTutorialStep.Hurt => (TdIcon.Alert, "Inimigo passou!", _hurtKind switch { 0 => "Construa perto do portal.", 1 => "Use uma habilidade.", _ => "Construa mais torres." }, false),

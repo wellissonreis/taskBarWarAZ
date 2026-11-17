@@ -11,6 +11,8 @@ namespace SideWar.Rendering.Panel;
 /// </summary>
 internal static class TdIconPainter
 {
+    private static readonly SKPath StarShape = SKPath.ParseSvgPathData("M12 2.5l2.7 6 6.5.7-4.9 4.4 1.4 6.4L12 16.8 6.3 20l1.4-6.4-4.9-4.4 6.5-.7z")!;
+
     public static void Draw(SKCanvas c, TdIcon icon, float x, float y, float size, SKColor color, SKColor accent)
     {
         if (icon == TdIcon.None || size < 2f) return;
@@ -125,6 +127,20 @@ internal static class TdIconPainter
                 b.LineTo(P(8.7f, 2.5f)); b.LineTo(P(8.7f, 4.5f)); b.LineTo(P(10, 4.5f)); b.LineTo(P(10, 2.5f)); b.LineTo(P(12, 2.5f)); b.LineTo(P(12, 7));
                 using var path = b.Detach();
                 c.DrawPath(path, line);
+                break;
+            }
+            case TdIcon.Star: // estrela da runa (design HUDRunas.dc.html, viewBox 24)
+            {
+                float k = size / 24f;
+                c.Save();
+                c.Translate(x, y);
+                c.Scale(k, k);
+                fill.Color = accent.WithAlpha(46);
+                line.StrokeWidth = 2f;
+                line.StrokeJoin = SKStrokeJoin.Round;
+                c.DrawPath(StarShape, fill);
+                c.DrawPath(StarShape, line);
+                c.Restore();
                 break;
             }
             case TdIcon.Pause:

@@ -35,7 +35,7 @@ public sealed class TdUiGoldenTests
         public bool PurchaseNode(string nodeId) => true;
     }
 
-    public enum UiScene { HudPrep, HudWave, HudMin, HudTip, Chooser, ChooserPoint, Inspector, Preview, Map, Seals, Victory, Menu, HudPlacing, Towers, Runes, Help, Defeat, QuickTowers }
+    public enum UiScene { HudPrep, HudWave, HudMin, HudTip, Chooser, ChooserPoint, Inspector, Preview, Map, Seals, Victory, Menu, HudPlacing, Towers, Runes, Help, Defeat, QuickTowers, RuneWindow, RuneWindowTipAvailable, RuneWindowTipAwake, RuneWindowTipLocked, RunesTipAvailable, RunesTipAwake, RunesTipLocked }
 
     public static TheoryData<UiScene, int> Cases()
     {
@@ -66,6 +66,27 @@ public sealed class TdUiGoldenTests
             case UiScene.Preview: ui.Activate(item(TdUiAction.Preview, 0)); break;
             case UiScene.QuickTowers: ui.Activate(item(TdUiAction.QuickTowers, 0)); break;
             case UiScene.Runes: ui.Activate(item(TdUiAction.ModalTab, (int)TdUiMode.Runes)); break;
+            case UiScene.RuneWindow or UiScene.RuneWindowTipAvailable or UiScene.RuneWindowTipAwake or UiScene.RuneWindowTipLocked:
+            case UiScene.RunesTipAvailable or UiScene.RunesTipAwake or UiScene.RunesTipLocked:
+            {
+                typeof(TdMatchState).GetProperty("Fragments")!.SetValue(match, 5L);
+                for (int i = 0; i < 4; i++) match.Apply(new AwakenRune());
+                typeof(TdMatchState).GetProperty("Fragments")!.SetValue(match, 2L);
+                ui.Sync();
+                bool modal = scene >= UiScene.RunesTipAvailable;
+                if (modal) ui.Activate(item(TdUiAction.ModalTab, (int)TdUiMode.Runes));
+                else ui.Activate(item(TdUiAction.RuneWindow, 0));
+                int want = scene is UiScene.RuneWindowTipAvailable or UiScene.RunesTipAvailable ? 1 : scene is UiScene.RuneWindowTipAwake or UiScene.RunesTipAwake ? 2 : scene is UiScene.RuneWindow ? -1 : 0;
+                if (want >= 0)
+                {
+                    var pop = ui.BuildPopover()!;
+                    // nó de cada estado mais próximo de um canto (balão forçado a virar/ficar dentro da janela)
+                    float fill = want == 1 ? TdUiController.RuneAvailable : want == 2 ? TdUiController.RuneOn : TdUiController.RuneLocked;
+                    var nodes = pop.Items.Where(i => i.Action == TdUiAction.SelectRune && i.Fill == fill).ToArray();
+                    ui.Hover(nodes[nodes.Length / 2]);
+                }
+                break;
+            }
             case UiScene.Help: ui.OpenHowTo(); break;
             case UiScene.Defeat:
                 typeof(TdMatchState).GetProperty("Phase")!.SetValue(match, MatchPhase.Derrota); ui.Sync(); break;
@@ -120,7 +141,8 @@ public sealed class TdUiGoldenTests
         using var pc = new SKCanvas(pb);
         pc.Clear(Backdrop);
         using var pl = new SKBitmap(new SKImageInfo(pw, ph, SKColorType.Bgra8888, SKAlphaType.Premul));
-        using (var plc = new SKCanvas(pl)) r.DrawPopover(plc, p, 1);
+        int hoverIndex = ui.HoverRune is { } hr ? Array.FindIndex(p.Items, i => i.SArg == hr && i.Action == TdUiAction.SelectRune) : 1;
+        using (var plc = new SKCanvas(pl)) r.DrawPopover(plc, p, hoverIndex);
         GoldenImage.Blit(pc, pl, 0, 0);
         return pb;
     }
