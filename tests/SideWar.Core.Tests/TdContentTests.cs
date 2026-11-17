@@ -218,16 +218,16 @@ public sealed class TdContentTests
         AssertError(TdContentLoader.Load(files), "td-runes.json: arquivo ausente");
     }
 
-    [Fact(DisplayName = "TD.19 / CA-29.2 Tower cost tables are the integer 1.25^n and 1.20^n curves (n = 0..47)")]
+    [Fact(DisplayName = "TD.22 / CA-29.2 Tower cost tables accelerate after the fourth tower (n = 0..47)")]
     public void TowerCostTables_AreIntegerCurves()
     {
         var r = TdContentLoader.LoadEmbedded().Stages.Rules;
         Assert.Equal(48, r.TowerCostTable.Length);
         Assert.Equal(48, r.TowerCostTableLow.Length);
-        Assert.Equal([100, 125, 156, 195, 244, 305, 381, 477, 596, 745, 931, 1164, 1455], r.TowerCostTable.Take(13));
-        Assert.Equal([100, 120, 144, 173, 207, 249, 299, 358, 430, 516, 619, 743, 892], r.TowerCostTableLow.Take(13));
+        Assert.Equal([100, 125, 156, 195, 268, 369, 507, 698, 960, 1320, 1814, 2495, 3431], r.TowerCostTable.Take(13));
+        Assert.Equal([100, 120, 144, 173, 228, 301, 398, 524, 693, 914, 1206, 1593, 2103], r.TowerCostTableLow.Take(13));
         Assert.All(Enumerable.Range(0, 48), n => Assert.True(r.TowerCostTableLow[n] <= r.TowerCostTable[n]));
-        AssertError(With("td-stages.json", "\"towerCostTable\": [100, 125,", "\"towerCostTable\": [100, 126,"), "towerCostTable[1] deve ser 125");
+        AssertError(With("td-stages.json", "\"towerCostTable\": [100, 125,", "\"towerCostTable\": [100, 99,"), "towerCostTable deve ser estritamente crescente");
         AssertError(With("td-stages.json", "\"towerCostTableLow\": [100, 120, 144, 173,", "\"towerCostTableLow\": [100, 120, 144,"), "towerCostTableLow deve ter 48 entradas");
     }
 

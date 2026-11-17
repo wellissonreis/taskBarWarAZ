@@ -146,14 +146,16 @@ public sealed class TdScoreTests
         Assert.Equal(0, r.Match.Score);
     }
 
-    [Fact(DisplayName = "RF-28.21 Bot: optimized stage 1 earns crown, Sem vender, Sem habilidades and Pressa")]
+    [Fact(DisplayName = "RF-28.21 Bot: optimized stage 1 sells for runes and earns crown, Sem habilidades and Pressa")]
     public void Bot_Medals()
     {
         var o = TdSanityBot.Run(Real, 1, TdBotProfile.Otimizado, 100);
         Assert.True(o.Match.Crown);
-        // Desafio (Frugal, <= 4 torres) fica de fora: sem melhoria, o bot gasta em mais torres; recalibra na TD.22.
-        Assert.Equal((TdMedals)7, o.Match.Medals & ~TdMedals.Desafio);
-        // A parte "bot que usa habilidade perde Sem habilidades" saiu: sem melhorias o médio só vence a fase 1 sem usar habilidade; volta na TD.22.
+        Assert.Equal(TdMedals.SemHabilidades | TdMedals.Pressa, o.Match.Medals);
+        var m = TdSanityBot.Run(Real, 3, TdBotProfile.Medio, 100);
+        Assert.True(m.Won);
+        Assert.True(m.Match.Medals.HasFlag(TdMedals.SemVender));
+        Assert.False(m.Match.Medals.HasFlag(TdMedals.SemHabilidades));
     }
 
     [Fact(DisplayName = "RF-28.21 Tracking stays out of the state hash")]
@@ -175,9 +177,9 @@ public sealed class TdScoreTests
         Assert.Equal(TdRankLevel.Estagiario, TdRank.For(4_999));
         Assert.Equal(TdRankLevel.Junior, TdRank.For(5_000));
         Assert.Equal(TdRankLevel.Pleno, TdRank.For(12_000));
-        Assert.Equal(TdRankLevel.Senior, TdRank.For(20_000));
-        Assert.Equal(TdRankLevel.Arquiteto, TdRank.For(25_000));
-        Assert.Equal(TdRankLevel.Mvp, TdRank.For(31_000));
+        Assert.Equal(TdRankLevel.Senior, TdRank.For(22_000));
+        Assert.Equal(TdRankLevel.Arquiteto, TdRank.For(29_000));
+        Assert.Equal(TdRankLevel.Mvp, TdRank.For(34_000));
         Assert.Equal(TdRankLevel.Mvp, TdRank.For(int.MaxValue));
         for (var l = TdRankLevel.Junior; l <= TdRankLevel.Mvp; l++) Assert.True(TdRank.Threshold(l) > TdRank.Threshold(l - 1));
     }
@@ -198,7 +200,7 @@ public sealed class TdScoreTests
     private static int Record(int stage, TdBotProfile p)
     {
         int best = 0;
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < 20; i++)
         {
             var r = TdSanityBot.Run(Real, stage, p, (ulong)(100 + i));
             if (r.Won) best = Math.Max(best, r.Match.Score);
@@ -206,7 +208,7 @@ public sealed class TdScoreTests
         return best;
     }
 
-    [Fact(DisplayName = "RF-28.21 Calibration: optimized bot reaches MVP, medium stays Pleno/Senior, no-counter stays Estagiario", Skip = "recalibra na TD.22: o bot ficou sem melhoria de torre (SDD-29, TD.20) e as runas só entram na TD.21/TD.22; curva desequilibrada ate la")]
+    [Fact(DisplayName = "RF-28.21 Calibration: optimized bot reaches MVP, medium stays Pleno/Senior, no-counter stays Estagiario")]
     public void Rank_BotCalibration()
     {
         int Total(TdBotProfile p) => Enumerable.Range(1, 6).Sum(st => Record(st, p));

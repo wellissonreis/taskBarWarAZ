@@ -2,8 +2,8 @@
   "rules": {
     "coreIntegrity": 20,
     "sellRefund": 0.7,
-    "towerCostTable": [100, 125, 156, 195, 244, 305, 381, 477, 596, 745, 931, 1164, 1455, 1819, 2274, 2842, 3553, 4441, 5551, 6939, 8674, 10842, 13553, 16941, 21176, 26470, 33087, 41359, 51699, 64623, 80779, 100974, 126218, 157772, 197215, 246519, 308149, 385186, 481482, 601853, 752316, 940395, 1175494, 1469368, 1836710, 2295887, 2869859, 3587324],
-    "towerCostTableLow": [100, 120, 144, 173, 207, 249, 299, 358, 430, 516, 619, 743, 892, 1070, 1284, 1541, 1849, 2219, 2662, 3195, 3834, 4601, 5521, 6625, 7950, 9540, 11448, 13737, 16484, 19781, 23738, 28485, 34182, 41019, 49222, 59067, 70880, 85056, 102067, 122481, 146977, 176373, 211647, 253977, 304772, 365726, 438871, 526646],
+    "towerCostTable": [100, 125, 156, 195, 268, 369, 507, 698, 960, 1320, 1814, 2495, 3431, 4718, 6488, 8919, 12266, 16865, 23188, 31885, 43842, 60281, 82889, 113971, 156708, 215473, 296271, 407375, 560143, 770188, 1059012, 1456145, 2002208, 2753027, 3785412, 5204947, 7156808, 9840605, 13530817, 18604890, 25581715, 35174858, 48365439, 66502502, 91440940, 125731265, 172880505, 237710710],
+    "towerCostTableLow": [100, 120, 144, 173, 228, 301, 398, 524, 693, 914, 1206, 1593, 2103, 2775, 3663, 4836, 6383, 8427, 11120, 14681, 19379, 25581, 33766, 44570, 58832, 77658, 102509, 135306, 178599, 235753, 311205, 410782, 542232, 715757, 944784, 1247127, 1646199, 2172983, 2868331, 3786216, 4997798, 6597116, 8708169, 11494810, 15173129, 20028509, 26437619, 34897711],
     "waveBonusBase": 20,
     "waveBonusPerWave": 4,
     "hpWaveGrowth": 1.07,
@@ -23,10 +23,10 @@
   },
   "stages": [
     { "id": 1, "title": "Brazil South",    "region": "brazilsouth",   "concept": "Tutorial: construir e iniciar a onda", "waves": 10, "startingCredits": 220, "challenge": "frugal" },
-    { "id": 2, "title": "East US",         "region": "eastus",        "concept": "Blindados e mira", "waves": 12, "startingCredits": 260, "challenge": "purist" },
+    { "id": 2, "title": "East US",         "region": "eastus",        "concept": "Blindados e mira", "waves": 12, "startingCredits": 300, "challenge": "purist" },
     { "id": 3, "title": "West Europe",     "region": "westeurope",    "concept": "Controle, habilidade e o primeiro chefe", "waves": 12, "startingCredits": 300, "challenge": "marathon" },
     { "id": 4, "title": "Japan East",      "region": "japaneast",     "concept": "Voadores e suporte (respiro)", "waves": 14, "startingCredits": 340, "challenge": "frugal" },
     { "id": 5, "title": "UK South",        "region": "uksouth",       "concept": "Regeneração e drenagem", "waves": 14, "startingCredits": 380, "challenge": "purist" },
-    { "id": 6, "title": "Australia East",  "region": "australiaeast", "concept": "Prova final", "waves": 15, "startingCredits": 520, "challenge": "marathon" }
+    { "id": 6, "title": "Australia East",  "region": "australiaeast", "concept": "Prova final", "waves": 15, "startingCredits": 560, "challenge": "marathon" }
   ]
 }

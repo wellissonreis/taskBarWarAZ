@@ -21,12 +21,14 @@ public enum TdTargeting : byte { First = 0, Last, Strong, Weak, Close }
 
 /// <summary>
 /// Torre da partida (<c>Id</c> sequencial próprio, independente do dos inimigos, para os comandos do log serem previsíveis).
-/// Sem nível, ramo nem valor investido (SDD-29): o preço de venda deriva da contagem do tipo.
+/// Sem nível ou ramo. A venda deriva da contagem e é limitada pelo preço efetivamente pago (TD.22).
 /// </summary>
 public struct TdTower
 {
     public int Id { get; set; }
     public int DefIndex { get; set; }
+    /// <summary>Preço efetivamente pago, usado como teto antiarbitragem da venda; entra no hash.</summary>
+    public long PurchasePrice { get; set; }
     /// <summary>Posição em unidades lógicas (mundo fixo 1.200, RF-28.15). Vale também para torre sem posição (posição gravada).</summary>
     public int X { get; set; }
     /// <summary>false = SEM POSIÇÃO (ADR-034): a zona sumiu após <c>LayoutChanged</c>; não atira, não dá aura.</summary>

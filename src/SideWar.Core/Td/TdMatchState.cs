@@ -134,8 +134,8 @@ public sealed partial class TdMatchState
     }
 
     /// <summary>
-    /// Valor devolvido ao vender uma torre do tipo com <paramref name="countBefore"/> torres do tipo (SDD-29 §5.2):
-    /// <c>floor(custo(tipo, n−1) × taxa)</c>, com a taxa em pontos-base limitada por <c>sellRefundCapBp</c> (85%). Piso (nunca arredonda para cima): comprar e vender sempre perde ≥ 15%.
+    /// Valor teórico de venda, antes do teto individual de PurchasePrice, para um tipo com <paramref name="countBefore"/> torres do tipo (SDD-29 §5.2):
+    /// <c>floor(custo(tipo, n−1) × taxa)</c>, com a taxa em pontos-base limitada por <c>sellRefundCapBp</c> (85%). Piso inteiro; a venda efetiva aplica também o teto pelo preço pago (TD.22).
     /// </summary>
     public long SellValueAt(int defIndex, int countBefore)
     {
@@ -150,7 +150,7 @@ public sealed partial class TdMatchState
     public long SellValue(int towerId)
     {
         int i = FindTower(towerId);
-        return i < 0 ? 0 : SellValueAt(_towers[i].DefIndex, TowerCount(_towers[i].DefIndex));
+        return i < 0 ? 0 : Math.Min(_towers[i].PurchasePrice, SellValueAt(_towers[i].DefIndex, TowerCount(_towers[i].DefIndex)));
     }
 
     /// <summary>Estrelas ganhas (0 até a Vitória; 0 na Derrota). ★1 concluir, ★2 perder ≤ 6, ★3 perder ≤ 2 (DP-28.8).</summary>
@@ -357,7 +357,7 @@ public sealed partial class TdMatchState
         long cost = NextTowerCost(di);
         if (Credits < cost) return Reject(CommandReason.InsufficientCredits, cost - Credits);
         Credits -= cost;
-        var t = new TdTower { Id = _nextTowerId++, DefIndex = di, X = px, Placed = true, Targeting = (byte)ParseTargeting(def.DefaultTargeting) };
+        var t = new TdTower { Id = _nextTowerId++, DefIndex = di, PurchasePrice = cost, X = px, Placed = true, Targeting = (byte)ParseTargeting(def.DefaultTargeting) };
         _towers.Add(t);
         if (_towers.Count > _peakTowers) _peakTowers = _towers.Count;
         Emit(TdEventType.TowerBuilt, t.Id, cost);
@@ -369,7 +369,7 @@ public sealed partial class TdMatchState
         if (!Running) return Reject(CommandReason.InvalidPhase);
         int i = FindTower(cmd.TowerId);
         if (i < 0) return Reject(CommandReason.TowerNotFound);
-        long refund = SellValueAt(_towers[i].DefIndex, TowerCount(_towers[i].DefIndex));
+        long refund = SellValue(cmd.TowerId);
         Credits = Sat.Add(Credits, refund);
         _sold = true;
         Emit(TdEventType.TowerSold, _towers[i].Id, refund);

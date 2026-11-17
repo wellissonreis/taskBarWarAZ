@@ -77,8 +77,8 @@ public static class TdContentValidator
         var r = def.Rules;
         Req(e, r.CoreIntegrity >= 1, "td-stages.rules.coreIntegrity deve ser >= 1");
         Req(e, r.SellRefund is > 0 and <= 1, "td-stages.rules.sellRefund deve estar em (0, 1]");
-        CostTable(e, r.TowerCostTable, "towerCostTable", 125);
-        CostTable(e, r.TowerCostTableLow, "towerCostTableLow", 120);
+        CostTable(e, r.TowerCostTable, "towerCostTable");
+        CostTable(e, r.TowerCostTableLow, "towerCostTableLow");
         if (r.TowerCostTable.Length == r.TowerCostTableLow.Length)
             for (var n = 0; n < r.TowerCostTable.Length; n++)
                 Req(e, r.TowerCostTableLow[n] <= r.TowerCostTable[n], $"td-stages.rules.towerCostTableLow[{n}] deve ser <= towerCostTable[{n}]");
@@ -143,7 +143,7 @@ public static class TdContentValidator
 
     private const int CostTableLength = 48; // n = 0..47 (teto técnico de 48 torres, SDD-29 §5.3)
 
-    private static void CostTable(List<string> e, int[] table, string name, int growthPercent)
+    private static void CostTable(List<string> e, int[] table, string name)
     {
         Req(e, table is not null && table.Length == CostTableLength, $"td-stages.rules.{name} deve ter {CostTableLength} entradas (n = 0..{CostTableLength - 1})");
         if (table is null || table.Length == 0)
@@ -151,10 +151,6 @@ public static class TdContentValidator
         Req(e, table[0] == 100, $"td-stages.rules.{name}[0] deve ser 100");
         for (var n = 1; n < table.Length; n++)
             Req(e, table[n] > table[n - 1], $"td-stages.rules.{name} deve ser estritamente crescente (índice {n})");
-        // Tabela inteira pré-computada = round(100 × g^n); confere sem Math.Pow (decimal exato).
-        decimal f = 100m, g = growthPercent / 100m;
-        for (var n = 0; n < table.Length; n++, f *= g)
-            Req(e, table[n] == (int)Math.Round(f, MidpointRounding.AwayFromZero), $"td-stages.rules.{name}[{n}] deve ser {(int)Math.Round(f, MidpointRounding.AwayFromZero)} (round(100 × {g}^{n}))");
     }
 
     // ---------------------------------------------------------------- inimigos

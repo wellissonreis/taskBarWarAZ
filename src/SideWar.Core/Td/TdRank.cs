@@ -19,12 +19,12 @@ public readonly record struct TdRankProgress(TdRankLevel Current, TdRankLevel? N
 }
 
 /// <summary>
-/// Limiares calibrados com o <c>TdSanityBot</c> (TD.13): a soma dos melhores de 20 seeds por fase dá Novato 19,2k (Pleno), Médio 21,6k (Sênior),
-/// Otimizado 33,5k (MVP; média 32,0k) e SemContra 0 (Estagiário). O teto teórico fica em ~36k (1,5 × ~6,1k por fase, 6 fases).
+/// Limiares recalibrados com 20 seeds por fase no TdSanityBot (TD.22): Médio Sênior,
+/// Otimizado MVP e SemContra Estagiário. Evidência em specs/evidencias/TD.22.md.
 /// </summary>
 public static class TdRank
 {
-    private static readonly int[] Thresholds = [0, 5_000, 12_000, 20_000, 25_000, 31_000];
+    private static readonly int[] Thresholds = [0, 5_000, 12_000, 22_000, 29_000, 34_000];
 
     public static int Threshold(TdRankLevel level) => Thresholds[(int)level];
 

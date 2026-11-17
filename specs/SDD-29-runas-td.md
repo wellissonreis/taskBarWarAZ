@@ -136,35 +136,29 @@ O **nó pequeno** mostra só o ícone do atributo e o número (ex.: "⚡ +6%"); 
 
 ### 5.1 Custo crescente exorbitante por torre (decisão 6)
 
-`custo(tipo, n) = round(base × F[n] / 100)`, com `n` = quantas torres **desse tipo** existem agora (inclui as SEM POSIÇÃO, que ainda contam como quota) e `F[n] = round(100 × 1,25ⁿ)` numa **tabela inteira pré-computada** no Core (n = 0..47, sem `Math.Pow`, determinismo). Em JSON: `rules.towerCostTable` (a tabela fica no conteúdo e entra no `ContentHash`). **Cota folgada** troca a tabela por uma de expoente 1,20 (`towerCostTableLow`).
+**Calibração TD.22 (20 seeds por perfil/fase):** custo = `round(base × F[n] / 100)`, metade-para-o-par em inteiros. `n` conta as torres do tipo, inclusive SEM POSIÇÃO. Tabelas inteiras de 48 entradas no JSON, incluídas no ContentHash; nenhum `Math.Pow` em simulação.
 
-Fatores `F[n]` (n = 0..12): **100 · 125 · 156 · 195 · 244 · 305 · 381 · 477 · 596 · 745 · 931 · 1.164 · 1.455.**
+Até `n = 3`, mantêm-se os fatores iniciais ×1,25 (normal) e ×1,20 (Cota folgada). A partir de `n = 4`, cada fator antigo recebe `1,10^(n−3)`, arredondado ao inteiro mais próximo: `F[n] = round(Fantigo[n] × 1,10^max(0,n−3))`. Assim a cauda cresce aproximadamente ×1,375/×1,32 por repetição; comprar muitos exemplares iguais fica exorbitante sem teto de design. O validador aceita tabelas configuráveis estritamente crescentes, início 100, 48 entradas, Low ≤ normal.
 
-Preço de cada torre (créditos, arredondado), por tipo:
+Fatores normais n = 0..12: **100 · 125 · 156 · 195 · 268 · 369 · 507 · 698 · 960 · 1320 · 1814 · 2495 · 3431**.
 
-| n (torres do tipo já em campo) | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+| Tipo / n já em campo | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| **Raio** e **Gelo** (base 90) | 90 | 112 | 140 | 176 | 220 | 274 | 343 | 429 | 536 | 670 | 838 |
-| **Canhão** (base 120) | 120 | 150 | 187 | 234 | 293 | 366 | 457 | 572 | 715 | 894 | 1.117 |
-| **Balanceador** (base 100) | 100 | 125 | 156 | 195 | 244 | 305 | 381 | 477 | 596 | 745 | 931 |
-| **Scale Set** (base 150) | 150 | 188 | 234 | 292 | 366 | 458 | 572 | 716 | 894 | 1.118 | 1.396 |
+| Raio/Gelo | 90 | 112 | 140 | 176 | 241 | 332 | 456 | 628 | 864 | 1188 | 1633 |
+| Canhão | 120 | 150 | 187 | 234 | 322 | 443 | 608 | 838 | 1152 | 1584 | 2177 |
+| Balanceador | 100 | 125 | 156 | 195 | 268 | 369 | 507 | 698 | 960 | 1320 | 1814 |
+| Scale Set | 150 | 188 | 234 | 292 | 402 | 554 | 760 | 1047 | 1440 | 1980 | 2721 |
 
-Custo **acumulado** de ter `k` torres de um tipo (soma): 4 Raios = **518**; 8 Raios = **1.784**; 10 Raios = **2.886**; 8 Canhões = **2.379**; 8 Scale Sets = **2.976**.
-
-**Calibração para 12 a 16 torres por partida (meta, a confirmar pelo bot):**
-
-- Um "build médio" de **14 torres** (Raio 4, Gelo 3, Canhão 3, Balanceador 2, Scale Set 2) custa **1.880** créditos em torres. Um build "especialista" (Raio 6, Gelo 3, Canhão 3, Balanceador 2, Scale Set 2 = 16 torres) custa **2.374**. **10 torres só de Raio** custam **2.886**: a especialização radical em quantidade é cara de propósito.
-- A **6ª torre do mesmo tipo** (274 a 458) já custa mais que **6 nós pequenos** de runa (240) e a 10ª (670 a 1.118) custa **mais que um setor inteiro com notáveis, sem keystone** (480); a curva faz o jogador **trocar quantidade por runas** a partir do meio do jogo, sem ninguém proibir nada.
-- Como os créditos também compram runas (1 a 2 setores ≈ 680 a 1.020 por partida), o **orçamento-alvo da partida** é ≈ **2.900 a 3.100** em fase 1 (1.880 de torres + ~1.000 de runas). **A renda atual (créditos iniciais, bônus de onda, abates) não foi medida nesta ficha**; a TD.22 mede e ajusta `base × F[n]`, a renda da §6 e o expoente até a **mediana do perfil Médio** cair em **12 a 16 torres** (meta de calibração, não garantia).
-- **Alternativa considerada** (curva quadrática: `base × (1 + 0,35·n²)`): n = 5 → 9,75×; n = 10 → 36×. Mais suave no início e mais cruel depois; **rejeitada** por ser menos legível ("+25% a cada torre igual" cabe numa frase).
+O Médio constrói em média 13, 14, 14, 14, 15, 15 torres nas fases 1..6 (mediana global 14); Otimizado 13..16. São roteiros de jogador, sem teto interno de torres no bot. A decisão de gastar a sobra em runas ou guardá-la para score continua livre. Valores medidos, renda, resultados e limites dessa amostra em `specs/evidencias/TD.22.md`.
 
 O Popover/aba **Construir** mostra o **próximo preço** e o contador ("⚡ ×3 · 176").
 
 ### 5.2 Venda e arbitragem (regra simples)
 
-- **Vender devolve `taxa × custo(tipo, n−1)`**, com `n` a contagem antes de vender e `taxa` = `sellRefund` (70%; as runas Gerais sobem até **85%**). Efeitos: (1) torres do mesmo tipo são **fungíveis** (vender a velha ou a nova rende o mesmo); (2) vender **reduz a contagem** e o custo da próxima; (3) comprar e vender em seguida **perde sempre ≥ 15%** (o teto 85% nunca dá lucro).
-- **Compra/devolução de runa em loop:** como o nó tem **custo fixo** e a devolução é **100%** do preço pago, o loop é **neutro** (zero ganho, zero perda). **É aceitável** e é a "liberdade total" da decisão 2: só mexe em estado reversível. Não precisa de taxa.
-- **Regra anti-exploit única:** **nenhum desconto ou bônus de runa pode ser maior que o prejuízo da venda.** Verificado: o único desconto de compra é **Auto-orçamento (−5%)** e a taxa mínima de perda na venda é 15%, então "comprar a runa de desconto → comprar torre barata → devolver a runa → vender" perde ≥ 10%. O validador do conteúdo (§17) **rejeita** conteúdo em que `descontoMáximoDeCompra + tetoDeVenda ≥ 100%`.
+- **Vender devolve `min(preço efetivamente pago pela torre, floor(taxa × custo vigente(tipo,n−1)))`**. Taxa 70%, runas até 85%. O teto individual corrige a arbitragem de Cota folgada: comprar pela curva Low, devolver a runa e vender pela normal nunca rende mais que o desembolso. A devolução de runa continua livre, 100%, em qualquer momento. A venda reduz a contagem e o próximo preço.
+- `TdTower.PurchasePrice` registra o preço já com todos os descontos e entra no StateHash, pois influencia comandos futuros. `SellValueAt` é o valor teórico da curva; `SellValue(id)` aplica o teto individual e é usado pelo comando e pela UI. Torres deixam de ser estritamente fungíveis quando o teto individual atua. Sem trocar modificadores/contagem, a recompra imediata ainda perde pelo menos 15%; ao trocar runas o piso é zero lucro, não necessariamente 15% de perda.
+- **Compra/devolução de runa em loop:** preço fixo e reembolso de 100% tornam o loop neutro. Nenhuma trava de devolução ou taxa foi introduzida.
+- O validador preserva a restrição conservadora `descontoMáximoDeCompra + tetoDeVenda < 100%`, mas ela sozinha não cobria a troca de curva. A garantia geral agora vem do teto pelo preço pago, verificado em varredura dos cinco tipos × 48 contagens × desconto de fronteira ligado/desligado × bônus de venda ligado/desligado.
 - **Efeito que vira estado:** o bônus de uma runa vale **no instante da compra** e some **no instante da devolução** (modificadores recalculados; **temporizadores, recargas e tiros em curso não reiniciam**). Assim, "trocar de runa para zerar recarga" não existe.
 - **Venda de todas as torres é permitida** (decisão 1): a defesa pode ficar só com runas e uma torre; a partida segue sendo derrota por vazamento, não por regra.
 - A medalha "Sem vender" continua e passa a ter peso real.
@@ -181,13 +175,13 @@ Não há tokens. As fontes que antes davam tokens agora pagam **créditos**, no 
 
 | Fonte | Créditos | Regra |
 |---|---|---|
-| **Início da partida** | créditos iniciais da fase **+80** (passam de 220…520 para 300…600) | sobe `startingCredits`; selos "Créditos iniciais" somam (§7) |
+| **Início da partida** | créditos iniciais da fase **+80** (totais TD.22: 300/380/380/420/460/640) | sobe `startingCredits`; selos "Créditos iniciais" somam (§7) |
 | **Fechar onda** | `waveBonusBase` 20 → **60**, `waveBonusPerWave` 4 → **5** (onda 1 = 65; onda 10 = 110) | onda concluída (mortos ou vazados) |
 | **Onda sem vazamento** | **+40** (+2 por onda) | nenhum inimigo chegou ao núcleo |
 | **Caixa-bomba coletada** | **+40** (+2 por onda) | `CollectCrate` aceito (RF-28.19); explodir não dá. Hoje a caixa só reduz recarga (20 s): **mantém a redução e passa a pagar créditos** |
 | **Pergunta-bônus V/F acertada** | `creditsBase` 15 → **40**, `creditsPerWave` 3 → **3** | `AnswerBonus` com acerto (RF-28.23), 1 por Preparo; erro = 0 |
 | **Chefe derrotado** | **+120** | chefe morto (não vazado); o selo/estrela de chefe segue o SDD-28 |
-| **Venda de torre** | 70 a 85% de `custo(n−1)` | §5.2 |
+| **Venda de torre** | 70 a 85% de `custo(n−1)`, limitado ao preço pago | §5.2 |
 | **Devolução de runa** | **100%** do preço | §8 |
 | **Abate de inimigo** | como hoje (`td-enemies.json`); runa Geral **+4%** por nó | inalterado |
 
@@ -229,7 +223,7 @@ Créditos **não têm juros** e **sobra de crédito** continua na pontuação do
 
 - **Coroa e medalhas** (RF-28.21): inalteradas em regra. "Sem vender" ganha sentido. Medalha "Especialista" e desafio "Sem runas": **pós-MVP** (decisão 7).
 - **Pontuação:** a fórmula do RF-28.21 **não muda** (integridade, tempo, chamadas, créditos sobrando); com moeda única, "créditos sobrando" vira trade-off real (§6).
-- **Patente:** os limiares (5.000 · 12.000 · 20.000 · 25.000 · 31.000) foram calibrados **antes** das runas; a **TD.22 recalibra**: Otimizado = MVP, Médio = Pleno/Sênior, SemContra = Estagiário (CA-28.17).
+- **Patente:** os limiares (5.000 · 12.000 · 20.000 · 25.000 · 31.000) foram calibrados **antes** das runas; a **TD.22 recalibrou para 5.000 / 12.000 / 22.000 / 29.000 / 34.000**: Otimizado = MVP, Médio = Pleno/Sênior, SemContra = Estagiário (CA-28.17).
 - **Pausa e tempo:** o tempo de pausa **não conta** no tempo da partida (a simulação não avança, §11); a pontuação por tempo não é afetada.
 - **Perfil v2 → v3:** §15.
 
@@ -247,11 +241,11 @@ Tudo continua determinístico e no log do replay.
 
 ## 12. Balanceamento e o `TdSanityBot`
 
-O poder que vinha de "nível 3 = ×2,2 de dano" passa a vir de **mais torres** (custo ×1,25 por torre igual) e **runas** (~680 a 1.020 créditos por partida). Ações da TD.22:
+O poder que vinha de "nível 3 = ×2,2 de dano" passa a vir de **mais torres** (curva calibrada na §5.1) e **runas** (~680 a 1.020 créditos por partida). Ações da TD.22:
 
 - **Roteiros do bot (DSL `TdBotPlans`)** ganham passos `rune <id>`, `runeSector <setor> <n>` e `sell <tipo>`; a ordem de compra usa `TdRuneGraph.PathTo(alvo, possuídos)` (Core, também usado pela UI para destacar caminho).
 - **Perfis:** **Novato** compra o setor mais barato adjacente; **Médio** especializa **1 setor** pelo contra da fase; **Otimizado** vai ao keystone/notáveis do setor ideal e a 1 ◇ de sinergia, e **vende** torres fracas para pagar runas quando faz sentido; **SemContra** **não compra** setor do contra.
-- **Metas (20 seeds, ordem de grandeza da TD.10; a confirmar):** fases 1 a 5 Otimizado 100% e ★ médio ≈ 3; Médio ≥ 85% e ★ 1,1 a 2,9; Novato ≤ 100% mas com perda de integridade; SemContra 0%. Fase 6: Otimizado 100% e Novato 0%. **Novo:** mediana do Médio em **12 a 16 torres** e **nenhuma** estratégia dominante "vender tudo e só runas do Raio" que vença a fase 6 sem risco (se existir, é falha de balanceamento, não de regra: ajustar custo do keystone e a curva).
+- **Metas TD.22 (20 seeds):** Otimizado 100% e 3★ em todas as fases; Médio ≥ 85% e ★ médio ≥ 2 em 1..5; Novato ≤ 100% mas com perda de integridade; SemContra 0%. Fase 6: Otimizado 100% e Novato 0%. **Novo:** mediana do Médio em **12 a 16 torres** e **nenhuma** estratégia dominante "vender tudo e só runas do Raio" que vença a fase 6 sem risco (se existir, é falha de balanceamento, não de regra: ajustar custo do keystone e a curva).
 - **Pontos a recalibrar:** `base × F[n]`, créditos iniciais e bônus de onda (§6), HP dos inimigos, ganho por setor (×1,8), soma com os selos "Dano +3%/Alcance +5%".
 - **Evidência:** `specs/evidencias/TD.22.md` com tabela antes/depois como a da TD.10.
 
@@ -267,7 +261,7 @@ O poder que vinha de "nível 3 = ×2,2 de dano" passa a vir de **mais torres** (
 | **DP-29.6** | Fontes e valores de tokens | **Sem tokens**: fontes viram créditos (decisão 1; §6) |
 | **DP-29.7** | Teto de torres e `maxTowers` | **Ilimitado por fase**, teto técnico **48**, só o Frugal limita (decisão 6; §5.3) |
 | **DP-29.8** | Medalha "Especialista" e desafio "Sem runas" | **Pós-MVP** (decisão 7) |
-| **DP-29.9** | Crescimento de custo | **×1,25 por torre do mesmo tipo**, tabela inteira; **Cota folgada** reduz para ×1,20 (§5.1) |
+| **DP-29.9** | Crescimento de custo | Tabela inteira com cauda acelerada na TD.22; **Cota folgada** usa Low (§5.1) |
 | **DP-29.10** | Presets/"páginas salvas" | **Pós-MVP** (decisão 7) |
 
 **Fechadas por consequência (recomendação adotada, sem ação do usuário):**
@@ -275,7 +269,7 @@ O poder que vinha de "nível 3 = ×2,2 de dano" passa a vir de **mais torres** (
 | ID | Pergunta | Resolução |
 |---|---|---|
 | **DP-29.2** | Tamanho/forma do grafo e custos | 61 nós, custos 40/120/120/200 créditos (§4); só a calibração numérica fica com a TD.22 |
-| **DP-29.5** | Regra de venda | 70% (até 85%) de `custo(tipo, n−1)`, fungível e sem lucro (§5.2) |
+| **DP-29.5** | Regra de venda | `min(preço pago, taxa × custo(tipo,n−1))`, sem lucro (§5.2, TD.22) (§5.2) |
 
 **Abertas:** **nenhuma decisão de produto.** Ficam só os itens de **medição** (não são DPs): renda real por fase (§5.1/§6), expoente 1,25 e base de cada torre (TD.22), valores de `Créditos iniciais` e comportamento exato da modal ao ocultar a faixa por tela cheia (§14.7, verificado pela TD.19b).
 
@@ -344,7 +338,7 @@ A TD.17 **não** cria passos de "melhorar torre/ramo A/B" nem de "painel acima d
 - **Passo 2 (na modal):** "Escolha uma torre e toque no trilho"; depois da colocação a modal retoma sozinha (14.2).
 - **Passo condicional de runas (TD.25):** ao ter créditos para o primeiro nó: "Runas: reforce um tipo" apontando a aba **Runas**; abrindo: "Compre um nó aceso"; depois: "Foque num tipo de torre" (dica, nunca obrigatória).
 - **Dica de 1ª vez:** o setor de cada tipo, uma linha curta ("⚡ Raio: foco em 1 alvo. Compre Dano.").
-- **"Como jogar" (aba 4):** o cartão ganha uma linha de runas ("Runas reforçam todas as torres do tipo"), uma de custo crescente ("Cada torre igual custa +25%") e uma de moeda única ("Vender devolve ¢ para runas").
+- **"Como jogar" (aba 4):** o cartão ganha uma linha de runas ("Runas reforçam todas as torres do tipo"), uma de custo crescente ("Cada torre igual fica mais cara") e uma de moeda única ("Vender devolve ¢ para runas").
 - **Tutorial × pausa:** enquanto o tutorial mostra dica sobre a modal, a pausa **não** muda; fechar a modal sem completar o passo **volta** o passo (ex.: "Toque no chip").
 
 ## 17. Critérios de aceitação e testes
@@ -352,7 +346,7 @@ A TD.17 **não** cria passos de "melhorar torre/ramo A/B" nem de "painel acima d
 | CA | Critério |
 |---|---|
 | **CA-29.1** | Não existem `UpgradeTower`/`ChooseBranch`; `td-towers.json` sem `levels/branches`; nenhum botão "Melhorar" (T-29.1) |
-| **CA-29.2** | Custo da n-ésima torre do tipo = `round(base×F[n]/100)` pela tabela inteira; vender devolve `taxa × custo(n−1)` (taxa 70 a 85%) e reduz o próximo custo; comprar e vender em seguida **sempre perde ≥ 15%** (T-29.2, T-29.3) |
+| **CA-29.2** | Custo da n-ésima torre do tipo = `round(base×F[n]/100)` pela tabela inteira; vender devolve `min(preço pago, taxa × custo(n−1))` (taxa 70 a 85%) e reduz o próximo custo; trocar runas nunca gera lucro na venda (T-29.2, T-29.3) |
 | **CA-29.3** | Sem `maxTowers` por fase; teto técnico 48 respeitado; Frugal respeita seu teto (T-29.4) |
 | **CA-29.4** | `td-runes.json` válido: grafo **conexo**, cada nó alcançável do Núcleo, custos 40/120/120/200, **`descontoMáximoDeCompra + tetoDeVenda < 100%`** (T-29.5) |
 | **CA-29.5** | Só compra adjacente a possuído; ◇ por qualquer lado; sem créditos rejeita; devolver a qualquer momento (inclusive em Onda) devolve 100% em cascata e mantém o grafo conexo (T-29.6, T-29.7) |
@@ -364,7 +358,7 @@ A TD.17 **não** cria passos de "melhorar torre/ramo A/B" nem de "painel acima d
 | **CA-29.11** | Migração v2 → v3 sem perder selos (T-29.13) |
 | **CA-29.12** | Modal: toma foco ao abrir e devolve ao fechar; Esc/Tab/Enter/1-4; esmaecer da faixa suspenso; clique fora não conta como ausência (T-29.14) |
 
-Testes: **T-29.1** conteúdo sem `levels/branches`; **T-29.2** tabela de custo inteira; **T-29.3** venda/fungibilidade/sem lucro; **T-29.4** teto técnico e Frugal; **T-29.5** validador do grafo e da regra anti-exploit; **T-29.6** adjacência e ◇; **T-29.7** devolução em cascata e a qualquer momento; **T-29.8** fontes de crédito e loop neutro; **T-29.9** efeito por tipo e sinergias; **T-29.10** replay/hash/pausa; **T-29.11** bot e patente; **T-29.12** UI (hit-test, pan/zoom, goldens `td-ui-runes`); **T-29.13** migração de perfil; **T-29.14** modal (foco, teclado, monitor, DPI, esmaecer, tutorial).
+Testes: **T-29.1** conteúdo sem `levels/branches`; **T-29.2** tabela de custo inteira; **T-29.3** venda/teto pelo preço pago/sem lucro; **T-29.4** teto técnico e Frugal; **T-29.5** validador do grafo e da regra anti-exploit; **T-29.6** adjacência e ◇; **T-29.7** devolução em cascata e a qualquer momento; **T-29.8** fontes de crédito e loop neutro; **T-29.9** efeito por tipo e sinergias; **T-29.10** replay/hash/pausa; **T-29.11** bot e patente; **T-29.12** UI (hit-test, pan/zoom, goldens `td-ui-runes`); **T-29.13** migração de perfil; **T-29.14** modal (foco, teclado, monitor, DPI, esmaecer, tutorial).
 
 ## 18. Fichas de implementação (TD.19+)
 
@@ -385,7 +379,7 @@ Ficha TD.19 anterior (conteúdo) fica; a **modal central e a pausa viram fichas 
 | **TD.19b** ✅ | **Pausa no Core:** `Paused` no hash, comandos `Pause`/`Resume`, recusa de comandos de tempo, log `(tick, seq)`, caixa-bomba e temporizadores congelados; testes de determinismo e replay | TD.19 | 🟢 |
 | **TD.20** ✅ | Core economia: custo crescente por tipo (tabela inteira), venda (§5.2), remover `UpgradeTower`/`ChooseBranch`, teto técnico 48, espaço | TD.19 | 🟢 |
 | **TD.21** ✅ | Core runas: `BuyRune`/`RefundRune` (créditos, cascata), modificadores por tipo, mover efeitos de ramos/capstones para runas, sinergias ◇, `StateHash`, replay; regenerar goldens TD | TD.19, TD.19b, TD.20 | 🟢 |
-| **TD.22** | Bot e balanceamento: `rune`/`runeSector`/`sell`, `TdRuneGraph.PathTo`, recalibrar curva `F[n]`, créditos/renda e patente; evidência `TD.22.md` | TD.21 | 🟢 |
+| **TD.22** ✅ | Bot e balanceamento: `rune`/`runeSector`/`sell`, `TdRuneGraph.PathTo`, recalibrar curva `F[n]`, créditos/renda e patente; evidência `TD.22.md` | TD.21 | 🟢 |
 | **TD.23** | Perfil v2 → v3 e árvore de selos ("Créditos iniciais I a III") | TD.19, TD.21 | 🟢 |
 | **TD.24a** | **Modal central + pausa na UI:** janela própria (720 × 480 DIP, DPI, monitor da barra, scrim, foco/Esc/teclado), chip mínimo na faixa, contador de modais, modo posicionar, inspetor de torre, pergunta-bônus, cartões de vitória/derrota, aba Jogo (config) e aba Como jogar migrados para a modal, esmaecer/ausência (14.7) | TD.19b, TD.14, TD.16 | 🟡 |
 | **TD.24b** | **Aba Runas:** grafo radial (estados, pan/zoom, tooltips, caminho até alvo, devolução com aviso de cascata) e aba Construir com preço crescente | TD.21, TD.24a | 🟡 |
@@ -399,7 +393,7 @@ Ordem: TD.19 → TD.19b → TD.20 → TD.21 → (TD.22 ‖ TD.23 ‖ TD.24a) →
 
 | ID | Risco | Mitigação |
 |---|---|---|
-| R-29.1 | Barras muito largas dão espaço de sobra e "mais torres" ficam baratas | Custo ×1,25 já impõe o limite econômico; teto técnico 48; a TD.22 valida em barra larga |
+| R-29.1 | Barras muito largas dão espaço de sobra e "mais torres" ficam baratas | Curva com cauda acelerada (§5.1); teto técnico 48; varredura TD.22 até n=47 |
 | R-29.2 | Grafo difícil de ler em 720 × 480 | Só ícones/números; hover para texto; caminho destacado; zoom |
 | R-29.3 | "Vender tudo e só runas do Raio" vira estratégia dominante | Bot a mede (§12); keystones com contrapartida; ajustar custo do keystone e a curva |
 | R-29.4 | Setor dominante (Raio ×1,8 resolve tudo) | Bot por perfil; Diversidade; recalibrar |
@@ -408,3 +402,5 @@ Ordem: TD.19 → TD.19b → TD.20 → TD.21 → (TD.22 ‖ TD.23 ‖ TD.24a) →
 | R-29.7 | Modal que toma foco atrapalha quem joga ao lado do trabalho | Pausa evita perda; devolve o foco ao fechar; só abre por ação do usuário (chip, torre, evento do Preparo) |
 | R-29.8 | Pergunta-bônus com tempo de parede "vazando" para o Core | Só o resultado entra no log (§14.4); modal pausa a simulação |
 | R-29.9 | Pausa abusada para "pensar a onda inteira" sem custo | Pausa não dá comando de tempo nem muda a simulação; sem benefício além de tempo de parede; pontuação por tempo usa ticks de simulação |
+
+**TD.22 concluída (2026-11-17):** bot com `rune`, `runeSector`, `sell` e `TdRuneGraph.PathTo`; cauda F[n] acelerada; orçamento inicial das fases 2/6 +40; fontes de evento da §6 mantidas após medição. HP, estrelas, selos e fórmula de score mantidos: a dificuldade foi recalibrada pelo orçamento e pelas decisões de compra. Patentes 5k/12k/22k/29k/34k. Regra antiarbitragem por preço pago, varredura e cinco goldens TD atualizados; idle intactos. Matriz de 480 partidas e comparação antes/depois em `specs/evidencias/TD.22.md`.

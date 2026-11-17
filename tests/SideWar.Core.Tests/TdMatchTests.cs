@@ -193,8 +193,8 @@ public sealed class TdMatchTests
         Assert.Equal(10_080 - 70 - 88 - 90, s.Credits);
     }
 
-    [Fact(DisplayName = "TD.20 / CA-29.2 Sell is fungible: refunds rate × cost(type, n−1) whichever tower is sold, and lowers the next price")]
-    public void Sell_IsFungibleAndLowersNextCost()
+    [Fact(DisplayName = "TD.22 / CA-29.2 Sell uses current curve capped at paid price, and lowers the next price")]
+    public void Sell_IsCappedAtPaidPriceAndLowersNextCost()
     {
         long Run(int sellIndex)
         {
@@ -202,13 +202,13 @@ public sealed class TdMatchTests
             for (int i = 0; i < 3; i++) Assert.True(s.Apply(new BuildTower("bolt", 100 + 200 * i)).IsOk);
             long before = s.Credits;
             Assert.Equal(136, s.NextTowerCost(0));            // n = 3: 70 × 1,95 = 136,5 → 136 (par)
-            Assert.Equal(76, s.SellValue(s.Towers[sellIndex].Id)); // floor(109 × 0,7) = 76
+            Assert.Equal(sellIndex == 0 ? 70 : 76, s.SellValue(s.Towers[sellIndex].Id)); // floor(109 × 0,7) = 76
             Assert.True(s.Apply(new SellTower(s.Towers[sellIndex].Id)).IsOk);
-            Assert.Equal(before + 76, s.Credits);
+            Assert.Equal(before + (sellIndex == 0 ? 70 : 76), s.Credits);
             Assert.Equal(109, s.NextTowerCost(0)); // n voltou a 2
             return s.Credits;
         }
-        Assert.Equal(Run(0), Run(2));
+        Assert.Equal(6, Run(2) - Run(0));
     }
 
     [Fact(DisplayName = "TD.20 / CA-29.2 Prices follow the SDD-29 §5.1 table with half-to-even rounding")]
@@ -218,10 +218,10 @@ public sealed class TdMatchTests
         var s = TdMatchState.Create(c, 6, Rng.Seed(1, 54));
         int bolt = Array.FindIndex(c.Towers, t => t.Id == "bolt"), cannon = Array.FindIndex(c.Towers, t => t.Id == "cannon");
         int bal = Array.FindIndex(c.Towers, t => t.Id == "balancer"), set = Array.FindIndex(c.Towers, t => t.Id == "scaleset");
-        Assert.Equal([90L, 112, 140, 176, 220, 274, 343, 429, 536, 670, 838], Enumerable.Range(0, 11).Select(n => s.TowerCostAt(bolt, n)));
-        Assert.Equal([120L, 150, 187, 234, 293, 366, 457, 572, 715, 894, 1117], Enumerable.Range(0, 11).Select(n => s.TowerCostAt(cannon, n)));
-        Assert.Equal([100L, 125, 156, 195, 244, 305, 381, 477, 596, 745, 931], Enumerable.Range(0, 11).Select(n => s.TowerCostAt(bal, n)));
-        Assert.Equal([150L, 188, 234, 292, 366, 458, 572, 716, 894, 1118, 1396], Enumerable.Range(0, 11).Select(n => s.TowerCostAt(set, n)));
+        Assert.Equal([90L, 112, 140, 176, 241, 332, 456, 628, 864, 1188, 1633], Enumerable.Range(0, 11).Select(n => s.TowerCostAt(bolt, n)));
+        Assert.Equal([120L, 150, 187, 234, 322, 443, 608, 838, 1152, 1584, 2177], Enumerable.Range(0, 11).Select(n => s.TowerCostAt(cannon, n)));
+        Assert.Equal([100L, 125, 156, 195, 268, 369, 507, 698, 960, 1320, 1814], Enumerable.Range(0, 11).Select(n => s.TowerCostAt(bal, n)));
+        Assert.Equal([150L, 188, 234, 292, 402, 554, 760, 1047, 1440, 1980, 2721], Enumerable.Range(0, 11).Select(n => s.TowerCostAt(set, n)));
     }
 
     [Fact(DisplayName = "TD.20 / CA-29.2 Buying then selling always loses at least 15% (cap 85%), even with a higher sellRefund")]
@@ -448,7 +448,7 @@ public sealed class TdMatchTests
         Assert.True(r.Ticks > 0);
     }
 
-    private const ulong GoldenReplay = 2075538275561993642UL;
+    private const ulong GoldenReplay = 4316735678008544025UL;
 
     private static TdReplayResult RunScript(ulong seed)
     {

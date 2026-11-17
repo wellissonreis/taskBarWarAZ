@@ -14,7 +14,7 @@ public sealed class TdSanityBotTests
     internal static string Dump(TdContent content, int seeds)
     {
         var sb = new StringBuilder();
-        sb.AppendLine("fase perfil     vit  estrelas  perda  creditos  onda  combate_s  total_s  rej  perde_onda  kills");
+        sb.AppendLine("fase perfil     vit  estrelas  perda  creditos torres score onda  combate_s  total_s  rej  perde_onda  kills");
         for (int stage = 1; stage <= 6; stage++)
             foreach (var p in Enum.GetValues<TdBotProfile>())
             {
@@ -30,13 +30,13 @@ public sealed class TdSanityBotTests
                 var kills = rs.SelectMany(r => r.KillsByTowerType).GroupBy(k => k.Key).OrderBy(g => g.Key)
                     .Select(g => $"{g.Key}:{g.Sum(k => k.Value) / seeds}");
                 sb.AppendLine(string.Create(CultureInfo.InvariantCulture,
-                    $"{stage,4} {p,-10} {wins,4:P0} {stars,8:F1} {lost,6:F1} {cr,9:F0} {wv,5:F1} {cs,10:F0} {ts,8:F0} {rejA,4:F0}  {(losses.Length == 0 ? "-" : string.Join(",", losses.Distinct().Order()))}  {string.Join(" ", kills)}"));
+                    $"{stage,4} {p,-10} {wins,4:P0} {stars,8:F1} {lost,6:F1} {cr,9:F0} {rs.Average(r => r.TowersBuilt):F1} {rs.Max(r => r.Match.Score)} {wv,5:F1} {cs,10:F0} {ts,8:F0} {rejA,4:F0}  {(losses.Length == 0 ? "-" : string.Join(",", losses.Distinct().Order()))}  {string.Join(" ", kills)}"));
             }
         return sb.ToString();
     }
 
-    private const ulong GoldenOptimizedStage3 = 15227494432892406870UL;
-    private const int Seeds = 6;
+    private const ulong GoldenOptimizedStage3 = 2514828015037595496UL;
+    private const int Seeds = 20;
     private static readonly Lazy<TdBotResult[]> Matrix = new(() =>
     {
         var list = new List<TdBotResult>();
@@ -54,27 +54,28 @@ public sealed class TdSanityBotTests
     [Fact(DisplayName = "TD.10 Novato (só o básico) vence as fases 1 e 2 e perde a fase 6")]
     public void Novato_WinsEarlyStages_LosesFinal()
     {
-        for (int stage = 1; stage <= 2; stage++) Assert.True(WinRate(stage, TdBotProfile.Novato) >= 5.0 / Seeds, $"fase {stage}");
-        Assert.True(WinRate(6, TdBotProfile.Novato) <= 1.0 / Seeds, "fase 6 deve ser derrota esperada para o novato");
+        for (int stage = 1; stage <= 2; stage++) Assert.True(WinRate(stage, TdBotProfile.Novato) >= 0.85, $"fase {stage}");
+        Assert.True(WinRate(6, TdBotProfile.Novato) == 0, "fase 6 deve ser derrota esperada para o novato");
     }
 
-    [Fact(DisplayName = "TD.10 Médio vence as fases 1 a 5 com média de ★ >= 2", Skip = "recalibra na TD.22: o bot ficou sem melhoria de torre (SDD-29, TD.20) e as runas só entram na TD.21/TD.22; curva desequilibrada ate la")]
+    [Fact(DisplayName = "TD.10 Médio vence as fases 1 a 5 com média de ★ >= 2")]
     public void Medio_WinsStages1To5_WithTwoStars()
     {
         for (int stage = 1; stage <= 5; stage++)
         {
-            Assert.True(WinRate(stage, TdBotProfile.Medio) >= 5.0 / Seeds, $"vitórias fase {stage}");
+            Assert.True(WinRate(stage, TdBotProfile.Medio) >= 0.85, $"vitórias fase {stage}");
+            Assert.InRange(Cell(stage, TdBotProfile.Medio).Average(r => r.TowersBuilt), 12, 16);
             Assert.True(Stars(stage, TdBotProfile.Medio) >= 2.0, $"estrelas fase {stage}: {Stars(stage, TdBotProfile.Medio):F2}");
         }
     }
 
-    [Fact(DisplayName = "TD.10 Otimizado tira ★ >= 2,5 em média nas 6 fases e nunca fica pior que o médio", Skip = "recalibra na TD.22: o bot ficou sem melhoria de torre (SDD-29, TD.20) e as runas só entram na TD.21/TD.22; curva desequilibrada ate la")]
+    [Fact(DisplayName = "TD.22 Otimizado vence com três estrelas nas seis fases")]
     public void Otimizado_ThreeStarsEverywhere()
     {
         for (int stage = 1; stage <= 6; stage++)
         {
-            Assert.True(WinRate(stage, TdBotProfile.Otimizado) >= 5.0 / Seeds, $"vitórias fase {stage}");
-            Assert.True(Stars(stage, TdBotProfile.Otimizado) >= 2.5, $"estrelas fase {stage}: {Stars(stage, TdBotProfile.Otimizado):F2}");
+            Assert.True(WinRate(stage, TdBotProfile.Otimizado) == 1.0, $"vitórias fase {stage}");
+            Assert.True(Stars(stage, TdBotProfile.Otimizado) == 3.0, $"estrelas fase {stage}: {Stars(stage, TdBotProfile.Otimizado):F2}");
             Assert.True(Stars(stage, TdBotProfile.Otimizado) >= Stars(stage, TdBotProfile.Medio), $"habilidade deve compensar na fase {stage}");
         }
     }
@@ -83,7 +84,7 @@ public sealed class TdSanityBotTests
     public void IgnoringTheCounter_Loses()
     {
         for (int stage = 1; stage <= 6; stage++)
-            Assert.True(WinRate(stage, TdBotProfile.SemContra) <= 1.0 / Seeds, $"fase {stage}: SemContra venceu {WinRate(stage, TdBotProfile.SemContra):P0}");
+            Assert.True(WinRate(stage, TdBotProfile.SemContra) == 0, $"fase {stage}: SemContra venceu {WinRate(stage, TdBotProfile.SemContra):P0}");
     }
 
     [Fact(DisplayName = "TD.10 Duração de partida de 7,5 a 15 min (DP-28.10) para quem vence, e as ondas terminam")]
@@ -113,6 +114,14 @@ public sealed class TdSanityBotTests
     {
         foreach (var r in Matrix.Value.Where(r => r.Profile == TdBotProfile.Otimizado))
             Assert.True(r.CommandsRejected <= 12, $"fase {r.Stage} seed {r.Seed}: {r.CommandsRejected} rejeições");
+    }
+
+    [Fact]
+    public void Bolt_only_with_full_sector_does_not_trivialize_final()
+    {
+        const string script = "+bolt@900 +bolt@700 +bolt@550 runeSector bolt 9 +bolt@450 +bolt@1000 +bolt@300";
+        for (ulong seed = 100; seed < 120; seed++)
+            Assert.False(TdSanityBot.Run(Content, 6, TdBotProfile.Otimizado, seed, script).Won);
     }
 
     [Fact]
