@@ -47,6 +47,7 @@ public static class SettingsSerializer
         w.WriteString("ToggleVisibility", s.Hotkeys.ToggleVisibility);
         w.WriteString("TogglePause", s.Hotkeys.TogglePause);
         w.WriteString("StartTdWave", s.Hotkeys.StartWave);
+        w.WriteString("CollectTdCrate", s.Hotkeys.CollectCrate);
         w.WriteEndObject();
         w.WriteStartObject("audio");
         w.WriteBoolean("enabled", s.Audio.Enabled);
@@ -126,6 +127,7 @@ public static class SettingsSerializer
                 ToggleVisibility = Hotkey(hot, "ToggleVisibility", d.Hotkeys.ToggleVisibility),
                 TogglePause = Hotkey(hot, "TogglePause", d.Hotkeys.TogglePause),
                 StartWave = Hotkey(hot, "StartTdWave", d.Hotkeys.StartWave),
+                CollectCrate = Hotkey(hot, "CollectTdCrate", d.Hotkeys.CollectCrate),
             },
             Audio = new AudioSettings
             {

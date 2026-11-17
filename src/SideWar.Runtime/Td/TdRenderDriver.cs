@@ -17,6 +17,9 @@ public readonly record struct TdView(int SelectedTowerId, int HoverTowerId, bool
     /// <summary>Ponto já escolhido no modo construção (-1 = ainda escolhendo): fica marcado enquanto o popover de torres está aberto.</summary>
     public int ChosenX { get; init; } = -1;
 
+    /// <summary>TD.16b: modo posicionar ativo (a faixa aceita clique): borda e realce em toda a faixa; fora dele a faixa é click-through e não tem borda.</summary>
+    public bool PlacingMode { get; init; }
+
     /// <summary>Tutorial (TD.15): contorno pulsante em toda a faixa de torres (passo "clique num ponto da faixa").</summary>
     public bool BandHint { get; init; }
 

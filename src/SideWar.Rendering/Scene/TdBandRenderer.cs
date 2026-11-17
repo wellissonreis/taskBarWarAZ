@@ -115,6 +115,7 @@ public sealed class TdBandRenderer : IDisposable
         DrawFire(canvas, match, w);
         DrawCrate(canvas, match, view, now, w);
         DrawHint(canvas, view, now, w);
+        DrawPlacingMode(canvas, view, w);
         canvas.Restore();
     }
 
@@ -416,6 +417,18 @@ public sealed class TdBandRenderer : IDisposable
         _stroke.PathEffect = _dash;
         c.DrawRoundRect(x + 0.5f, TdBand.TowerTop + 0.5f, TdBand.TowerWidth - 1, TdBand.TowerHeight - 1, 3, 3, _stroke);
         _stroke.PathEffect = null;
+    }
+
+    // Modo posicionar (TD.16b): a faixa passa a aceitar clique; borda menta em toda a faixa + véu leve, para o modo ser inequívoco.
+    private void DrawPlacingMode(SKCanvas c, in TdView view, int w)
+    {
+        if (!view.PlacingMode) return;
+        _fill.Color = Palette.Menta.WithAlpha(22);
+        c.DrawRect(0, 0, w, TdBand.HeightDip, _fill);
+        _stroke.Color = Palette.Menta.WithAlpha(235);
+        _stroke.StrokeWidth = 2f;
+        c.DrawRect(1f, 1f, w - 2f, TdBand.HeightDip - 2f, _stroke);
+        _stroke.StrokeWidth = 1f;
     }
 
     // Destaque do tutorial (TD.15): contorno âmbar pulsante na zona de torres ou anel no alvo (torre/caixa). Alfa pela fase do relógio.

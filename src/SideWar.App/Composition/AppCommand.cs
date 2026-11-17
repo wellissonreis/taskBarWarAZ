@@ -18,6 +18,8 @@ internal enum AppCommandKind
     ShowAndInteract,
     /// <summary>ESC temporário do modo construção/popover TD.</summary>
     CancelBuild,
+    /// <summary>TD.16b: coleta a caixa-bomba (atalho global ou bandeja).</summary>
+    CollectCrate,
 }
 
 /// <summary>Comando do App (bandeja, instância única) postado à T-Game; interceptado antes da simulação.</summary>

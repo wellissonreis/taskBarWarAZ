@@ -104,7 +104,7 @@ public sealed class TdOnboardingGoldenTests
             case Scene.Portal: Intro(); Acks(2); break;
             case Scene.Build: Intro(); Acks(3); break;
             case Scene.Point: Intro(); Acks(3); ui.Activate(item(TdUiAction.BuildToggle, null)); break;
-            case Scene.Tower: Intro(); Acks(3); ui.SceneLeftClick(600, 20, HitTarget.None); break;
+            case Scene.Tower: Intro(); Acks(3); ui.ClickPoint(600); break;
             case Scene.Range: Intro(); Acks(3); Bolt(330); break;
             case Scene.Wave: Intro(); Acks(3); Bolt(330); Acks(1); break;
             case Scene.Hurt:

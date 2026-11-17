@@ -20,6 +20,8 @@ public enum TdStripScene
     PrepRange,
     Crate,
     Unpositioned,
+    /// <summary>TD.16b: modo posicionar (borda e véu na faixa, fantasma seguindo o mouse).</summary>
+    Placing,
 }
 
 /// <summary>
@@ -39,6 +41,7 @@ public static class TdStripScenes
         TdStripScene.Wave => "td-strip-wave",
         TdStripScene.PrepRange => "td-strip-prep-range",
         TdStripScene.Crate => "td-strip-crate",
+        TdStripScene.Placing => "td-strip-placing",
         _ => "td-strip-unpositioned",
     };
 
@@ -116,6 +119,10 @@ public static class TdStripScenes
                 Do(m, new StartWave());
                 Steps(m, 30 * 14);
                 return (m, TdView.None, 100.0);
+            case TdStripScene.Placing:
+                Build(m, "bolt", 330, 2, "B");
+                Build(m, "frost", 440, 2);
+                return (m, new TdView(0, 0, false) { PlacingMode = true, GhostX = 650, GhostValid = true, GhostDef = 0 }, 100.0);
             case TdStripScene.PrepRange:
                 Build(m, "bolt", 330, 2, "B");
                 Build(m, "frost", 440, 2);

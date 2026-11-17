@@ -104,7 +104,7 @@ public sealed class TdOnboardingTests
         public void BuildBolt()
         {
             Click(TdUiAction.BuildToggle);
-            Ui.SceneLeftClick(300, 20, HitTarget.None);
+            Ui.ClickPoint(300);
             Click(TdUiAction.ChooseTower, "bolt");
         }
 
@@ -188,7 +188,7 @@ public sealed class TdOnboardingTests
         Assert.Equal(TdTutorialStep.Build, r.Ui.Step); // ler sem pressa: o tempo não avança o passo
         r.Click(TdUiAction.BuildToggle);
         Assert.Equal(TdTutorialStep.Point, r.Ui.Step);
-        r.Ui.SceneLeftClick(300, 20, HitTarget.None);
+        r.Ui.ClickPoint(300);
         Assert.Equal(TdTutorialStep.Tower, r.Ui.Step);
         r.Click(TdUiAction.ChooseTower, "bolt");
         Assert.Equal(TdTutorialStep.Range, r.Ui.Step);
@@ -204,7 +204,7 @@ public sealed class TdOnboardingTests
     public void Clicking_a_band_point_directly_skips_to_tower_step()
     {
         var r = new Rig();
-        r.Ui.SceneLeftClick(300, 20, HitTarget.None);
+        r.Ui.ClickPoint(300);
         Assert.Equal(TdTutorialStep.Tower, r.Ui.Step);
     }
 
@@ -249,7 +249,7 @@ public sealed class TdOnboardingTests
         Assert.Contains(point.Items, i => i.Text.Contains("ponto da faixa"));
         Assert.Contains(point.Items, i => i.Action == TdUiAction.TutorialSkip);
         Assert.True(r.Ui.View.BandHint);
-        r.Ui.SceneLeftClick(300, 20, HitTarget.None);
+        r.Ui.ClickPoint(300);
         var tower = r.Ui.BuildPopover()!;
         Assert.False(r.Ui.View.BandHint);
         var hi = Assert.Single(tower.Items, i => i.Highlight);
@@ -327,8 +327,11 @@ public sealed class TdOnboardingTests
         if (r.Match.Phase == MatchPhase.Preparo)
         {
             Assert.Equal(TdTutorialStep.Sell, r.Ui.Step);
-            Assert.True(r.Ui.View.HintX > 0);
-            r.Ui.SceneLeftClick(0, 0, HitTarget.TdTower(r.Match.Towers[0].Id));
+            Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Action == TdUiAction.TutorialSkip); // balão do passo, apontando o Menu
+            Assert.Equal(TdUiAction.Menu, Assert.Single(r.Ui.BuildHud().Items, i => i.Highlight).Action);
+            r.Click(TdUiAction.Menu);
+            Assert.Equal(TdUiAction.TowersOpen, Assert.Single(r.Ui.BuildPopover()!.Items, i => i.Highlight).Action);
+            r.Click(TdUiAction.TowersOpen);
             Assert.Equal(TdUiAction.Sell, Assert.Single(r.Ui.BuildPopover()!.Items, i => i.Highlight).Action);
         }
     }
@@ -361,11 +364,11 @@ public sealed class TdOnboardingTests
         typeof(TdMatchState).GetProperty("CrateX")!.SetValue(r.Match, 600);
         r.Ui.Sync();
         Assert.Equal(TdTutorialStep.Crate, r.Ui.Step);
-        Assert.True(r.Ui.View.HintX > 0);
         var pop = r.Ui.BuildPopover()!;
-        Assert.Contains(pop.Items, i => i.Text == "Clique na caixa-bomba!" && i.Icon == TdIcon.Box);
-        Assert.Contains(pop.Items, i => i.Text == "Longe do PC? Ela some."); // regra de ausência
-        Assert.True(pop.AnchorX > 0);
+        Assert.Contains(pop.Items, i => i.Text == "Clique em Coletar caixa!" && i.Icon == TdIcon.Box);
+        Assert.Contains(pop.Items, i => i.Text.Contains("Longe do PC? Ela some.")); // regra de ausência
+        var crateBtn = Assert.Single(r.Ui.BuildHud().Items, i => i.Action == TdUiAction.CollectCrate);
+        Assert.True(crateBtn.Enabled);
         typeof(TdMatchState).GetProperty("CrateActive")!.SetValue(r.Match, false);
         r.Ui.Sync();
         Assert.NotEqual(TdTutorialStep.Crate, r.Ui.Step);
@@ -423,7 +426,7 @@ public sealed class TdOnboardingTests
                 : new TdUiController(() => m, c => m.Apply(c is TdWaveRequest ? new StartWave() : c), new Host(), () => 0);
             ui.Sync();
             ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.BuildToggle));
-            ui.SceneLeftClick(300, 20, HitTarget.None);
+            ui.ClickPoint(300);
             ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.ChooseTower, 0, "bolt"));
             ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.StartWave));
             for (int i = 0; i < 600; i++) { m.Step(); if (i % 30 == 0) { m.ClearEvents(); ui.Sync(); ui.BuildHud(); ui.BuildPopover(); } }

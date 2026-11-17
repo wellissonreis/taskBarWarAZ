@@ -19,7 +19,8 @@ namespace SideWar.Runtime.Td;
 public sealed partial class TdUiController
 {
     public const float PopoverWidth = 300f, Pad = 6f, RowH = 20f, TwoLineH = 34f, HeaderH = 22f, BadgeH = 14f;
-    public const double BuildTimeoutSeconds = 30.0;
+    /// <summary>TD.16b: o modo posicionar (faixa aceita clique) sai sozinho após este tempo sem ação.</summary>
+    public const double BuildTimeoutSeconds = 15.0;
 
     private static readonly string[] TargetLabels = ["Primeiro", "Ultimo", "Forte", "Fraco", "Proximo"];
 
@@ -56,7 +57,10 @@ public sealed partial class TdUiController
 
     public TdUiMode Mode { get; private set; }
 
-    /// <summary>Modo construção ativo (passo do ponto ou da escolha): a cena precisa de mouse e o ESC fica registrado.</summary>
+    /// <summary>
+    /// Modo posicionar ativo (TD.16b; passo do ponto ou da escolha): é o ÚNICO momento em que a faixa aceita clique (fora dele ela é
+    /// click-through e o mouse vai para o app de baixo); o ESC fica registrado.
+    /// </summary>
     public bool BuildActive => Mode == TdUiMode.Build;
 
     /// <summary>Algum popover aberto (o ESC fecha).</summary>
@@ -80,6 +84,7 @@ public sealed partial class TdUiController
         GhostValid = _ghostValid,
         GhostDef = _hoverDef >= 0 ? _hoverDef : -1,
         ChosenX = BuildActive ? _chosenX : -1,
+        PlacingMode = BuildActive,
         BandHint = Step == TdTutorialStep.Point,
         HintX = HintX(),
     };
@@ -92,55 +97,29 @@ public sealed partial class TdUiController
         Changed?.Invoke();
     }
 
-    /// <summary>Botão esquerdo na faixa. Devolve verdadeiro se tratou o clique.</summary>
+    /// <summary>
+    /// Botão esquerdo na faixa. TD.16b: só existe no modo posicionar (a janela é click-through fora dele); fora do modo devolve falso e não
+    /// faz nada (não há inspetor por clique, nem popover ao clicar num ponto livre, nem coleta da caixa na faixa).
+    /// </summary>
     public bool SceneLeftClick(float xDip, float yDip, HitTarget target)
     {
+        if (!BuildActive) return false;
         Touch();
-        if (target.Kind == HitKind.TdCrate) return false; // o App coleta
-        if (target.Kind == HitKind.TdTower && !(BuildActive && _moveTowerId == 0))
+        // Clique no passo do ponto (ou novo ponto durante a escolha): valida e avança.
+        UpdateGhost(xDip);
+        if (!_ghostValid) { Changed?.Invoke(); return true; }
+        _anchorX = xDip;
+        if (_moveTowerId > 0)
         {
-            OpenInspector(target.TowerId);
-            return true;
+            _send(new MoveTower(_moveTowerId, _ghostX));
+            Close();
         }
-        if (BuildActive)
+        else
         {
-            // Clique no passo do ponto (ou novo ponto durante a escolha): valida e avança.
-            UpdateGhost(xDip);
-            if (!_ghostValid) { Changed?.Invoke(); return true; }
-            _anchorX = xDip;
-            if (_moveTowerId > 0)
-            {
-                _send(new MoveTower(_moveTowerId, _ghostX));
-                Close();
-            }
-            else
-            {
-                _chosenX = _ghostX;
-                _notice = null;
-                Changed?.Invoke();
-            }
-            return true;
-        }
-        // Fora do modo construção: clique num ponto livre abre o popover de torres ali (RF-28.20 passo 2/3).
-        if (Mode == TdUiMode.None || Mode == TdUiMode.Inspector || Mode == TdUiMode.Preview)
-        {
-            EnterBuild();
-            UpdateGhost(xDip);
-            if (_ghostValid)
-            {
-                _anchorX = xDip;
-                _chosenX = _ghostX;
-                _notice = null;
-            }
-            else
-            {
-                Close(); // ponto inválido fora do modo construção: nada acontece
-                return true;
-            }
+            _chosenX = _ghostX;
+            _notice = null;
             Changed?.Invoke();
-            return true;
         }
-        Close();
         return true;
     }
 
@@ -209,7 +188,16 @@ public sealed partial class TdUiController
                 _send(new SetTargeting(item.Arg, mode));
                 Changed?.Invoke();
                 break;
-            case TdUiAction.Sell: _send(new SellTower(item.Arg)); Close(); break;
+            case TdUiAction.Sell:
+                _send(new SellTower(item.Arg));
+                if (Mode == TdUiMode.Towers) Changed?.Invoke(); else Close();
+                break;
+            case TdUiAction.CollectCrate:
+                if (_match().CrateActive) _send(new CollectCrate(_match().CrateId));
+                Changed?.Invoke();
+                break;
+            case TdUiAction.TowersOpen: SetMode(TdUiMode.Towers); break;
+            case TdUiAction.OpenTower: OpenInspector(item.Arg); break;
             case TdUiAction.Reposition:
                 EnterBuild();
                 _moveTowerId = item.Arg;
@@ -273,7 +261,7 @@ public sealed partial class TdUiController
             }
             if (_now() - _lastActionAt > BuildTimeoutSeconds) Close();
         }
-        else if (Mode == TdUiMode.Inspector && FindTower(m, _selectedTowerId) < 0) Close();
+        else if (Mode == TdUiMode.Inspector && FindTower(m, _selectedTowerId) < 0) SetMode(TdUiMode.Towers);
     }
 
     // ================================================================ estado
@@ -368,9 +356,11 @@ public sealed partial class TdUiController
         if (_host.HudMinimized)
         {
             bool needed = _onb is not null && (HudNeeded(m) || ComputeStep(m) == TdTutorialStep.HudOpen);
+            bool crateChip = m.CrateActive; // TD.16b: o chip pisca enquanto há caixa (abra o HUD ou use o atalho)
             items.Add(new TdUiItem(new DipRect(0, 0, TdHudView.ChipWidth, TdHudView.ChipHeight), TdUiKind.Button,
                 $"{integ}/{max}  Onda {shown}/{m.TotalWaves}", TdUiAction.HudRestore, Icon: TdIcon.Heart, Tone: integTone,
-                Tip: "Clique para abrir", RightIcon: TdIcon.Expand, Right: needed ? "Abrir HUD" : null, Highlight: needed && PulseOn));
+                Tip: crateChip ? "Caixa-bomba ativa! Abra o HUD ou use o atalho." : "Clique para abrir", RightIcon: TdIcon.Expand,
+                Right: crateChip ? "Caixa!" : needed ? "Abrir HUD" : null, Highlight: (needed || crateChip) && PulseOn));
             return new TdHudView([.. items], TdHudView.ChipWidth, TdHudView.ChipHeight, Minimized: true);
         }
 
@@ -379,6 +369,11 @@ public sealed partial class TdUiController
             Tip: "Créditos: moeda da partida. Use para construir e melhorar torres; vender devolve parte. Cada onda concluída rende bônus."));
         items.Add(new TdUiItem(new DipRect(208, 3, 100, 26), TdUiKind.Label, $"Onda {shown} de {m.TotalWaves}", Icon: TdIcon.Wave,
             Tip: $"Onda atual: {shown} de {m.TotalWaves}. Sobreviva a todas as ondas da fase para vencer."));
+        bool crate = m.CrateActive;
+        items.Add(new TdUiItem(new DipRect(312, 3, 116, 26), TdUiKind.Button, crate ? "Coletar caixa" : "Caixa", TdUiAction.CollectCrate, Icon: TdIcon.Box,
+            Enabled: crate, Tone: crate ? TdTone.Warn : TdTone.Dim, Highlight: crate && PulseOn,
+            Tip: crate ? "Caixa-bomba ativa: colete antes que ela exploda suas torres. Também funciona pelo atalho (Configurações > Atalhos)."
+                : "Caixa-bomba: quando aparecer, este botão pisca. Colete pelo botão ou pelo atalho (Configurações > Atalhos)."));
         items.Add(new TdUiItem(new DipRect(432, 3, 24, 26), TdUiKind.Button, "", TdUiAction.HudMinimize, Icon: TdIcon.Collapse,
             Tip: "Recolher"));
 
@@ -405,9 +400,10 @@ public sealed partial class TdUiController
             items.Add(new TdUiItem(rect, TdUiKind.Button, text, TdUiAction.Ability, SArg: st.Id, Enabled: ready,
                 Tone: !st.Unlocked ? TdTone.Dim : st.ActiveTicks > 0 ? TdTone.Good : TdTone.Normal, Fill: fill, Sub: label, Icon: icon, Tip: tip));
         }
-        items.Add(new TdUiItem(new DipRect(350, 33, 74, 28), TdUiKind.Button, "Construir", TdUiAction.BuildToggle, Icon: TdIcon.Build,
-            Selected: BuildActive, Enabled: m.Phase is MatchPhase.Preparo or MatchPhase.Onda,
-            Tip: "Construir torre: clique num ponto livre da faixa e escolha a torre. ESC ou botão direito cancela."));
+        items.Add(new TdUiItem(new DipRect(350, 33, 74, 28), TdUiKind.Button, BuildActive ? "Cancelar" : "Construir", TdUiAction.BuildToggle,
+            Icon: BuildActive ? TdIcon.Cross : TdIcon.Build, Selected: BuildActive, Enabled: m.Phase is MatchPhase.Preparo or MatchPhase.Onda,
+            Tip: BuildActive ? "Cancelar: sai do modo posicionar e a faixa volta a deixar seus cliques passarem. ESC e botão direito também cancelam."
+                : "Construir torre: a faixa passa a aceitar clique; escolha um ponto livre e a torre. Fora desse modo a faixa não captura o mouse."));
         items.Add(new TdUiItem(new DipRect(428, 33, 28, 28), TdUiKind.Button, "", TdUiAction.Menu, Icon: TdIcon.Menu, Selected: Mode == TdUiMode.Menu,
             Tip: "Menu: próxima onda, mapa de fases e selos, pausar, configurações e sair."));
         return new TdHudView(HighlightHud(items), TdHudView.DefaultWidth, TdHudView.DefaultHeight);
@@ -465,6 +461,7 @@ public sealed partial class TdUiController
             TdUiMode.Inspector => BuildInspector(m),
             TdUiMode.Preview => BuildPreview(m),
             TdUiMode.Menu => BuildMenu(m),
+            TdUiMode.Towers => BuildTowers(m),
             TdUiMode.Map => BuildMap(m),
             TdUiMode.End => BuildEnd(m),
             TdUiMode.Help => BuildHelp(m),
@@ -643,11 +640,37 @@ public sealed partial class TdUiController
         return Finish(title, s, 0);
     }
 
+    /// <summary>
+    /// TD.16b: acesso às torres sem clicar na faixa (click-through): lista cada torre com "Vender" (reembolso) e abre o inspetor pelo nome;
+    /// torre SEM POSIÇÃO ganha "Reposicionar" (modo posicionar). Simples de propósito: a modal TD.24a (SDD-29) substitui.
+    /// </summary>
+    private static TdPopoverView BuildTowers(TdMatchState m)
+    {
+        var s = new Stack(PopoverWidth);
+        s.Add(TdUiKind.Label, $"Torres {m.Towers.Count}/{m.MaxTowers}", RowH - 4, tone: TdTone.Dim);
+        if (m.Towers.Count == 0) s.Add(TdUiKind.Label, "Nenhuma torre. Use Construir.", RowH, tone: TdTone.Dim);
+        float sellW = 98f;
+        for (int i = 0; i < m.Towers.Count; i++)
+        {
+            var t = m.Towers[i];
+            var d = m.Content.Towers[t.DefIndex];
+            long refund = (long)Math.Floor(t.Invested * m.Content.Stages.Rules.SellRefund + 1e-9);
+            s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, PopoverWidth - 3 * Pad - sellW, RowH + 2), TdUiKind.Button,
+                $"{d.Name} nivel {t.Level}", TdUiAction.OpenTower, t.Id, Tone: t.Placed ? TdTone.Normal : TdTone.Warn));
+            s.Items.Add(new TdUiItem(new DipRect(PopoverWidth - Pad - sellW, s.Y, sellW, RowH + 2), TdUiKind.Button,
+                "Vender", TdUiAction.Sell, t.Id, Right: $"+${refund}", Tone: TdTone.Bad));
+            s.Y += RowH + 4;
+            if (!t.Placed) s.Add(TdUiKind.Button, "SEM POSICAO: reposicionar", RowH - 2, TdUiAction.Reposition, arg: t.Id, tone: TdTone.Warn);
+        }
+        return Finish("Torres", s, 0);
+    }
+
     private TdPopoverView BuildMenu(TdMatchState m)
     {
         var s = new Stack(260f);
         AddRankBar(s, _host.Rank);
         s.Add(TdUiKind.Button, "Como jogar", RowH, TdUiAction.HowTo, tone: TdTone.Accent);
+        s.Add(TdUiKind.Button, "Torres (vender)", RowH, TdUiAction.TowersOpen);
         s.Add(TdUiKind.Button, "Proxima onda", RowH, TdUiAction.Preview);
         s.Add(TdUiKind.Button, "Mapa de fases e selos", RowH, TdUiAction.MapOpen);
         s.Add(TdUiKind.Button, _host.Paused ? "Retomar" : "Pausar", RowH, TdUiAction.Pause);

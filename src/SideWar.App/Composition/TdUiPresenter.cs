@@ -93,6 +93,15 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     /// <summary>"Como jogar" da bandeja (TD.15).</summary>
     public void OpenHowTo() { controller.OpenHowTo(); Kick(); }
 
+    /// <summary>TD.16b: atalho global "Coletar caixa" (a faixa é click-through; o botão do HUD usa o mesmo comando).</summary>
+    public void CollectCrate()
+    {
+        Present();
+        runtime.NotifyInteraction();
+        td.Host.RequestCollectCrate();
+        Kick();
+    }
+
     public string TipsSeen => tipsSeenText;
     public string QuestionsSeen => questionsSeenText;
 
@@ -179,15 +188,13 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         popWindow.RightUp += (_, _) => controller.Cancel();
         tipWindow.LeftUp += (_, _) => { Present(); controller.DismissTip(); };
 
-        game.Mode.TdHoverDetected += Present;
         game.Mode.TdPointerMoved += (x, _) => { Present(); controller.PointerMoved(x / k); };
         game.Mode.TdRightClicked += () => { Present(); runtime.NotifyInteraction(); controller.SceneRightClick(); };
         game.Mode.TdLeftClicked += (x, y, target) =>
         {
             Present();
             runtime.NotifyInteraction();
-            if (target.Kind == HitKind.TdCrate) td.Host.RequestCollectCrate();
-            else controller.SceneLeftClick(x / k, y / k, target);
+            controller.SceneLeftClick(x / k, y / k, target);
             Kick();
         };
         Relayout();

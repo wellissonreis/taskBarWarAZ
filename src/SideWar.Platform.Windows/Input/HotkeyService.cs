@@ -20,7 +20,7 @@ public sealed class HotkeyService : IDisposable
     private const int FirstId = 0x5701;
     internal static int IdFor(HotkeyAction action) => FirstId + (int)action;
     private static readonly HotkeyAction[] BaseActions = [HotkeyAction.ToggleInteractive, HotkeyAction.ToggleVisibility, HotkeyAction.TogglePause];
-    private const int ActionCount = 5;
+    private const int ActionCount = 6;
 
     private readonly GameThread owner;
     private readonly SceneWindow scene;
@@ -44,7 +44,10 @@ public sealed class HotkeyService : IDisposable
         this.log = log ?? (m => Trace.WriteLine(m));
         owner.VerifyAccess();
         // StartWave (modo TD) só é registrada se o host passou o atalho; no idle ele não rouba a tecla.
-        Actions = bindings is not null && bindings.ContainsKey(HotkeyAction.StartWave) ? [.. BaseActions, HotkeyAction.StartWave] : BaseActions;
+        var actions = new List<HotkeyAction>(BaseActions);
+        if (bindings is not null && bindings.ContainsKey(HotkeyAction.StartWave)) actions.Add(HotkeyAction.StartWave);
+        if (bindings is not null && bindings.ContainsKey(HotkeyAction.CollectCrate)) actions.Add(HotkeyAction.CollectCrate);
+        Actions = [.. actions];
         foreach (var a in Actions)
             text[(int)a] = bindings is not null && bindings.TryGetValue(a, out var t) ? t : Describe(a);
     }
@@ -60,6 +63,7 @@ public sealed class HotkeyService : IDisposable
         HotkeyAction.TogglePause => "Ctrl+Alt+P",
         HotkeyAction.StartWave => "Ctrl+Alt+Space",
         HotkeyAction.CancelBuild => "Esc",
+        HotkeyAction.CollectCrate => "Ctrl+Alt+C",
         _ => throw new ArgumentOutOfRangeException(nameof(action)),
     };
 

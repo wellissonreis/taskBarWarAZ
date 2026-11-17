@@ -76,6 +76,9 @@
           <TextBlock Text="Iniciar onda (Tower Defense)" />
           <TextBox x:Name="HkStartWave" Margin="0,2,0,2" />
           <TextBlock x:Name="HkStartWaveErr" Foreground="Firebrick" Margin="0,0,0,8" />
+          <TextBlock Text="Coletar caixa-bomba (Tower Defense)" />
+          <TextBox x:Name="HkCollectCrate" Margin="0,2,0,2" />
+          <TextBlock x:Name="HkCollectCrateErr" Foreground="Firebrick" Margin="0,0,0,8" />
           <TextBlock x:Name="HkConflictText" Foreground="Firebrick" />
           <Button Content="Restaurar padrão" HorizontalAlignment="Left" Click="OnRestoreHotkeys" Margin="0,8,0,0" />
         </StackPanel>

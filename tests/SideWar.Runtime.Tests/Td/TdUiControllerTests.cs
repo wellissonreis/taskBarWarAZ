@@ -77,7 +77,7 @@ public sealed class TdUiControllerTests
     public void Click_on_free_point_opens_chooser_and_confirm_sends_BuildTower()
     {
         var r = new Rig();
-        r.Ui.SceneLeftClick(300, 20, HitTarget.None);
+        r.Ui.ClickPoint(300);
         Assert.Equal(TdUiMode.Build, r.Ui.Mode);
         var pop = r.Ui.BuildPopover()!;
         Assert.Contains(pop.Items, i => i.Action == TdUiAction.ChooseTower && i.SArg == "bolt" && i.Enabled);
@@ -93,14 +93,17 @@ public sealed class TdUiControllerTests
     public void Click_outside_zone_does_nothing_and_cancel_sends_no_command()
     {
         var r = new Rig();
-        r.Ui.SceneLeftClick(2, 20, HitTarget.None); // fora da zona livre (32..968)
+        Assert.False(r.Ui.SceneLeftClick(300, 20, HitTarget.None)); // TD.16b: fora do modo posicionar a faixa não faz nada
         Assert.Equal(TdUiMode.None, r.Ui.Mode);
+        r.Ui.ClickPoint(2); // fora da zona livre (32..968), já em modo posicionar
+        Assert.True(r.Ui.BuildActive);
+        r.Ui.Cancel();
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "TORRE", TdUiAction.BuildToggle));
         Assert.True(r.Ui.ChoosingPoint);
         r.Ui.PointerMoved(2);
         Assert.False(r.Ui.View.GhostX < 0);
         Assert.False(r.Ui.View.GhostValid);
-        r.Ui.SceneLeftClick(2, 20, HitTarget.None);
+        r.Ui.ClickPoint(2);
         Assert.True(r.Ui.ChoosingPoint); // clique inválido não avança
         r.Ui.Cancel();
         Assert.Equal(TdUiMode.None, r.Ui.Mode);
@@ -108,14 +111,14 @@ public sealed class TdUiControllerTests
     }
 
     [Fact]
-    public void Build_mode_times_out_after_30_seconds()
+    public void Build_mode_times_out_after_15_seconds()
     {
         var r = new Rig();
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "TORRE", TdUiAction.BuildToggle));
         r.Now = 10;
         r.Ui.Sync();
         Assert.True(r.Ui.BuildActive);
-        r.Now = 31;
+        r.Now = 16;
         r.Ui.Sync();
         Assert.Equal(TdUiMode.None, r.Ui.Mode);
     }
@@ -136,7 +139,7 @@ public sealed class TdUiControllerTests
     public void Chooser_disables_unaffordable_and_revalidates_after_credits_drop()
     {
         var r = new Rig();
-        r.Ui.SceneLeftClick(300, 20, HitTarget.None);
+        r.Ui.ClickPoint(300);
         var pop = r.Ui.BuildPopover()!;
         Assert.All(pop.Items.Where(i => i.Action == TdUiAction.ChooseTower && i.Enabled), i => Assert.Contains(i.SArg, Affordable));
         // outra torre ocupa o ponto: volta ao passo do ponto com aviso
@@ -152,7 +155,7 @@ public sealed class TdUiControllerTests
         var r = new Rig();
         r.Match.Apply(new BuildTower("bolt", 600));
         int id = r.Match.Towers[0].Id;
-        r.Ui.SceneLeftClick(500, 20, HitTarget.TdTower(id));
+        r.Ui.OpenTowerFromList(id);
         Assert.Equal(TdUiMode.Inspector, r.Ui.Mode);
         Assert.Equal(id, r.Ui.View.SelectedTowerId);
         var v = r.Ui.BuildPopover()!;
@@ -343,11 +346,121 @@ public sealed class TdUiControllerTests
     public void Popover_hit_test_ignores_labels_and_disabled_items()
     {
         var r = new Rig();
-        r.Ui.SceneLeftClick(300, 20, HitTarget.None);
+        r.Ui.ClickPoint(300);
         var pop = r.Ui.BuildPopover()!;
         var disabled = pop.Items.First(i => i.SArg == "balancer");
         Assert.Equal(-1, pop.HitTest(disabled.Rect.X + 2, disabled.Rect.Y + 2));
         var ok = pop.Items.First(i => i.SArg == "bolt");
         Assert.True(pop.HitTest(ok.Rect.X + 2, ok.Rect.Y + 2) >= 0);
+    }
+
+    // ------------------------------------------------------------ TD.16b: faixa click-through, modo posicionar, caixa pelo HUD
+
+    [Fact]
+    public void Band_ignores_clicks_outside_the_placing_mode_and_only_the_placing_mode_accepts_them()
+    {
+        var r = new Rig();
+        Assert.False(r.Ui.BuildActive);
+        Assert.False(r.Ui.View.PlacingMode);
+        Assert.False(r.Ui.SceneLeftClick(300, 20, HitTarget.None));
+        Assert.False(r.Ui.SceneLeftClick(300, 20, HitTarget.TdTower(1)));
+        Assert.False(r.Ui.SceneLeftClick(300, 20, HitTarget.Crate(1)));
+        Assert.Equal(TdUiMode.None, r.Ui.Mode);
+        Assert.Empty(r.Sent);
+        // Construir (HUD) entra no modo posicionar; Cancelar do HUD sai e a faixa volta a ser click-through.
+        var build = r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.BuildToggle);
+        Assert.Equal("Construir", build.Text);
+        r.Ui.Activate(build);
+        Assert.True(r.Ui.BuildActive);
+        Assert.True(r.Ui.View.PlacingMode);
+        var cancel = r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.BuildToggle);
+        Assert.Equal("Cancelar", cancel.Text);
+        r.Ui.Activate(cancel);
+        Assert.False(r.Ui.BuildActive);
+        Assert.False(r.Ui.View.PlacingMode);
+        Assert.False(r.Ui.SceneLeftClick(300, 20, HitTarget.None));
+    }
+
+    [Fact]
+    public void Placing_mode_exits_on_escape_right_click_and_timeout_and_ghost_follows_the_mouse_only_inside_it()
+    {
+        var r = new Rig();
+        r.Ui.PointerMoved(300);
+        Assert.True(r.Ui.View.GhostX < 0); // fora do modo o mouse não move fantasma
+        r.Ui.ClickPoint(300);
+        Assert.True(r.Ui.BuildActive);
+        r.Ui.SceneRightClick();
+        Assert.False(r.Ui.BuildActive);
+        r.Ui.ClickPoint(300);
+        r.Ui.Cancel(); // ESC
+        Assert.False(r.Ui.BuildActive);
+        r.Ui.ClickPoint(300);
+        r.Now = 14;
+        r.Ui.Sync();
+        Assert.True(r.Ui.BuildActive);
+        r.Now = 16;
+        r.Ui.Sync();
+        Assert.False(r.Ui.BuildActive);
+        Assert.Empty(r.Sent);
+    }
+
+    [Fact]
+    public void Towers_popover_lists_towers_with_sell_and_reposition_for_unplaced()
+    {
+        var r = new Rig();
+        r.Match.Apply(new BuildTower("bolt", 600));
+        int id = r.Match.Towers[0].Id;
+        var menu = r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.Menu);
+        r.Ui.Activate(menu);
+        var towersItem = Find(r.Ui.BuildPopover()!, TdUiAction.TowersOpen);
+        r.Ui.Activate(towersItem);
+        Assert.Equal(TdUiMode.Towers, r.Ui.Mode);
+        var pop = r.Ui.BuildPopover()!;
+        Assert.Contains(pop.Items, i => i.Action == TdUiAction.OpenTower && i.Arg == id);
+        long before = r.Match.Credits;
+        r.Ui.Activate(Find(pop, TdUiAction.Sell));
+        Assert.IsType<SellTower>(r.Sent.Last());
+        Assert.Empty(r.Match.Towers);
+        Assert.True(r.Match.Credits > before);
+        Assert.Equal(TdUiMode.Towers, r.Ui.Mode); // a lista continua aberta
+        // abrir uma torre da lista mostra o inspetor completo
+        r.Match.Apply(new BuildTower("bolt", 600));
+        r.Ui.OpenTowerFromList(r.Match.Towers[0].Id);
+        Assert.Equal(TdUiMode.Inspector, r.Ui.Mode);
+    }
+
+    [Fact]
+    public void Crate_button_in_the_hud_is_disabled_without_crate_and_collects_through_the_host_when_there_is_one()
+    {
+        var r = new Rig();
+        var idle = r.Ui.BuildHud().Items.Single(i => i.Action == TdUiAction.CollectCrate);
+        Assert.False(idle.Enabled);
+        Assert.False(idle.Highlight);
+        r.Ui.Activate(idle);
+        Assert.Empty(r.Sent);
+        typeof(TdMatchState).GetProperty("CrateActive")!.SetValue(r.Match, true);
+        typeof(TdMatchState).GetProperty("CrateId")!.SetValue(r.Match, 7);
+        r.Now = 0; // fase do pulso ligada
+        var live = r.Ui.BuildHud().Items.Single(i => i.Action == TdUiAction.CollectCrate);
+        Assert.True(live.Enabled);
+        Assert.True(live.Highlight);
+        Assert.Equal("Coletar caixa", live.Text);
+        r.Ui.Activate(live);
+        var cmd = Assert.IsType<CollectCrate>(r.Sent.Single());
+        Assert.Equal(7, cmd.CrateId);
+    }
+
+    [Fact]
+    public void Minimized_chip_blinks_and_says_Caixa_while_a_crate_is_active()
+    {
+        var r = new Rig();
+        r.Host.HudMinimized = true;
+        Assert.False(r.Ui.Pulsing);
+        typeof(TdMatchState).GetProperty("CrateActive")!.SetValue(r.Match, true);
+        Assert.True(r.Ui.Pulsing);
+        r.Now = 0;
+        var chip = r.Ui.BuildHud().Items.Single();
+        Assert.Equal("Caixa!", chip.Right);
+        Assert.True(chip.Highlight);
     }
 }

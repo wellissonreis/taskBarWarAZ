@@ -35,7 +35,7 @@ public sealed class TdUiGoldenTests
         public bool PurchaseNode(string nodeId) => true;
     }
 
-    public enum UiScene { HudPrep, HudWave, HudMin, HudTip, Chooser, ChooserPoint, Inspector, Branches, Preview, Map, Seals, Victory, Menu }
+    public enum UiScene { HudPrep, HudWave, HudMin, HudTip, Chooser, ChooserPoint, Inspector, Branches, Preview, Map, Seals, Victory, Menu, HudCrate, HudPlacing, Towers }
 
     public static TheoryData<UiScene, int> Cases()
     {
@@ -61,15 +61,23 @@ public sealed class TdUiGoldenTests
                 match.ClearEvents();
                 break;
             case UiScene.ChooserPoint: ui.Activate(item(TdUiAction.BuildToggle, 0)); ui.PointerMoved(1100); break;
-            case UiScene.Chooser: ui.SceneLeftClick(700, 20, HitTarget.None); break;
-            case UiScene.Inspector: ui.SceneLeftClick(0, 0, HitTarget.TdTower(match.Towers[0].Id)); break;
+            case UiScene.Chooser: ui.ClickPoint(700); break;
+            case UiScene.Inspector: ui.OpenTowerFromList(match.Towers[0].Id); break;
             case UiScene.Branches:
                 match.Apply(new UpgradeTower(match.Towers[2].Id));
                 match.Apply(new UpgradeTower(match.Towers[2].Id));
-                ui.SceneLeftClick(0, 0, HitTarget.TdTower(match.Towers[2].Id));
+                ui.OpenTowerFromList(match.Towers[2].Id);
                 break;
             case UiScene.Preview: ui.Activate(item(TdUiAction.Preview, 0)); break;
             case UiScene.Menu: ui.Activate(item(TdUiAction.Menu, 0)); break;
+            case UiScene.Towers: ui.Activate(item(TdUiAction.TowersOpen, 0)); break;
+            case UiScene.HudPlacing: ui.Activate(item(TdUiAction.BuildToggle, 0)); break;
+            case UiScene.HudCrate:
+                match.Apply(new StartWave());
+                for (int i = 0; i < 30; i++) match.Step();
+                typeof(TdMatchState).GetProperty("CrateActive")!.SetValue(match, true);
+                typeof(TdMatchState).GetProperty("CrateId")!.SetValue(match, 1);
+                break;
             case UiScene.Map: ui.Activate(item(TdUiAction.MapOpen, 0)); break;
             case UiScene.Seals: ui.Activate(item(TdUiAction.MapOpen, 0)); ui.Activate(item(TdUiAction.MapTab, 1)); break;
             case UiScene.Victory:
@@ -99,7 +107,7 @@ public sealed class TdUiGoldenTests
             GoldenImage.Blit(tc, tl, 0, 0);
             return tb;
         }
-        bool hud = scene is UiScene.HudPrep or UiScene.HudWave or UiScene.HudMin;
+        bool hud = scene is UiScene.HudPrep or UiScene.HudWave or UiScene.HudMin or UiScene.HudCrate or UiScene.HudPlacing;
         if (hud)
         {
             var v = ui.BuildHud();

@@ -287,7 +287,8 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             [HotkeyAction.TogglePause] = settings.Hotkeys.TogglePause,
             // Só no modo TD (no idle a tecla não é registrada).
             [HotkeyAction.StartWave] = settings.Hotkeys.StartWave,
-        }.Where(kv => td is not null || kv.Key != HotkeyAction.StartWave).ToDictionary());
+            [HotkeyAction.CollectCrate] = settings.Hotkeys.CollectCrate,
+        }.Where(kv => td is not null || kv.Key is not (HotkeyAction.StartWave or HotkeyAction.CollectCrate)).ToDictionary());
         hotkeys.Conflict += (_, message) => log(message);
         hotkeys.Register();
         res.Started("hotkeys", hotkeys.Dispose); // UnregisterHotKey
@@ -298,7 +299,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             tdUi = new TdUiPresenter(game, runtime, td, tdDriver, typography!, clock, ui, () => hotkeys, tdFocus!, tdBandHeight,
                 settings.Td.HudMinimized, PublishMenu, atlas, settings.Td.TutorialDone, settings.Td.TipsSeen,
                 settings.Td.BonusQuestions, settings.Td.QuestionsSeen);
-            game.Mode.EnableTdHover(1.5);
+            game.Mode.EnableTdPolling(1.5);
             tdUi.Setup();
             loop.AddAfter(new LoopParticipant(() => tdUi.NextDeadline, _ => tdUi.OnWake()));
             res.Started("td-ui", () => tdUi.Dispose());
@@ -435,12 +436,18 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         {
             case HotkeyCommand hotkey:
                 runtime.NotifyInteraction();
+                if (tdFocus is not null)
+                {
+                    tdFocus.OnInteraction(); // TD.16b: atalho do SideWar é presença; a tecla do atalho não pode virar "digitou em outro app"
+                    game.Mode.SuppressExternalInput(0.6);
+                }
                 Execute(hotkey.Action switch
                 {
                     HotkeyAction.ToggleInteractive => AppCommandKind.ToggleInteractive,
                     HotkeyAction.ToggleVisibility => AppCommandKind.ToggleVisibility,
                     HotkeyAction.StartWave => AppCommandKind.StartWave,
                     HotkeyAction.CancelBuild => AppCommandKind.CancelBuild,
+                    HotkeyAction.CollectCrate => AppCommandKind.CollectCrate,
                     _ => AppCommandKind.TogglePause,
                 });
                 return true;
@@ -459,17 +466,18 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     {
         switch (kind)
         {
-            case AppCommandKind.ToggleInteractive: game.Mode.ToggleInteractive(); break;
+            case AppCommandKind.ToggleInteractive: if (td is null) game.Mode.ToggleInteractive(); break; // TD.16b: faixa TD só interativa no modo posicionar
             case AppCommandKind.ToggleVisibility: runtime.ToggleVisibilityByUser(); break;
             case AppCommandKind.TogglePause: runtime.TogglePause(); break;
             case AppCommandKind.StartWave: td?.Host.RequestWave(); break;
             case AppCommandKind.ToggleHud: tdUi?.ToggleHud(); break;
             case AppCommandKind.HowToPlay: tdUi?.OpenHowTo(); break;
             case AppCommandKind.CancelBuild: tdUi?.Controller.Cancel(); break;
+            case AppCommandKind.CollectCrate: tdUi?.CollectCrate(); break;
             case AppCommandKind.SelectMonitor: SelectMonitor(monitorIndex); break;
             case AppCommandKind.ShowAndInteract:
                 runtime.ShowByUser();
-                if (runtime.App.IsVisible) game.Mode.SetMode(OverlayMode.Interactive);
+                if (runtime.App.IsVisible && td is null) game.Mode.SetMode(OverlayMode.Interactive);
                 break;
         }
         PublishMenu();

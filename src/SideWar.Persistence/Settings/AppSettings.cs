@@ -79,6 +79,8 @@ public sealed record HotkeySettings
     public string TogglePause { get; init; } = "Ctrl+Alt+P";
     /// <summary>Iniciar onda / chamar a próxima (só registrado no modo TD).</summary>
     public string StartWave { get; init; } = "Ctrl+Alt+Space";
+    /// <summary>TD.16b: coletar a caixa-bomba (só registrado no modo TD); a faixa é click-through, então a coleta é por botão do HUD ou por este atalho.</summary>
+    public string CollectCrate { get; init; } = "Ctrl+Alt+C";
 }
 
 public sealed record AudioSettings

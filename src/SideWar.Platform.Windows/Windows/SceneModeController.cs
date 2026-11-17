@@ -54,8 +54,12 @@ public sealed class SceneModeController
     /// <summary>TD mode (TD.7): hit test in DIP for the TD band (<c>TdHitTester</c>); null = the idle test.</summary>
     public Func<float, float, HitTarget>? TdHitTest { get; set; }
 
-    /// <summary>TD (TD.8): the scene turns Interactive while the cursor is over it (polled at 10 Hz) and returns to Passive shortly after it leaves.</summary>
-    public void EnableTdHover(double returnSeconds)
+    /// <summary>
+    /// TD (TD.16b): a faixa é CLICK-THROUGH por padrão (WS_EX_TRANSPARENT: cliques e roda vão para o app de baixo) e hover NÃO a torna
+    /// interativa nem conta como presença. Só o modo posicionar (<see cref="SetBuildMode"/>) a torna Interativa. Liga o poll de 10 Hz que
+    /// detecta clique/tecla em outro app (<see cref="TdExternalInput"/>).
+    /// </summary>
+    public void EnableTdPolling(double returnSeconds)
     {
         owner.VerifyAccess();
         mode = new OverlayModeController(Stopwatch.Frequency, returnSeconds);
@@ -63,13 +67,15 @@ public sealed class SceneModeController
         hoverNext = Now;
     }
 
+    private long suppressExternalUntil;
+
+    /// <summary>TD.16b: ignora "entrada externa" por alguns segundos (o próprio atalho global do SideWar não é digitação em outro app).</summary>
+    public void SuppressExternalInput(double seconds) => suppressExternalUntil = Now + (long)(seconds * Stopwatch.Frequency);
+
     /// <summary>TD pointer over the scene while Interactive: (xDip, yDip) move; click with its hit target; right click.</summary>
     public event Action<float, float>? TdPointerMoved;
     public event Action<float, float, HitTarget>? TdLeftClicked;
     public event Action? TdRightClicked;
-
-    /// <summary>TD.14: o poll de 10 Hz viu o cursor sobre a faixa (mesmo Passivo): o jogador está presente.</summary>
-    public event Action? TdHoverDetected;
 
     /// <summary>
     /// TD.16: clique de mouse com o cursor FORA de qualquer janela do SideWar, ou tecla digitada com o foreground em outro app (poll de
@@ -167,13 +173,12 @@ public sealed class SceneModeController
         if (tdHover && now >= hoverNext)
         {
             hoverNext = now + Stopwatch.Frequency / 10;
-            if (owner.Scene.IsVisible && mode.Mode == OverlayMode.Passive && !mode.BuildActive && CursorInStrip())
+            if (TdExternalInput is not null && owner.Scene.IsVisible)
             {
-                TdHoverDetected?.Invoke();
-                SetMode(OverlayMode.Interactive);
+                bool seen = ExternalInputSeen();
+                if (seen && now >= suppressExternalUntil) TdExternalInput();
             }
         }
-        if (tdHover && TdExternalInput is not null && owner.Scene.IsVisible && ExternalInputSeen()) TdExternalInput();
         if (peek.PollDue(now) && peek.OnSample(now, CursorInStrip())) ApplyOpacity();
     }
 

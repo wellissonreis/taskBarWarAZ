@@ -33,11 +33,11 @@ public enum TdTutorialStep : byte
     CallNext,
     /// <summary>Quando houver pergunta-bônus: exemplo guiado.</summary>
     Quiz,
-    /// <summary>"Clique numa torre para vender" (Preparo, depois da 1ª onda).</summary>
+    /// <summary>"Venda em Menu, Torres" (Preparo, depois da 1ª onda); a faixa é click-through, a venda é pelo HUD (TD.16b).</summary>
     Sell,
     /// <summary>"Use uma habilidade" (liberada e pronta).</summary>
     Ability,
-    /// <summary>"Clique na caixa-bomba" (na 1ª caixa), com a regra de ausência.</summary>
+    /// <summary>"Clique em Coletar caixa" (na 1ª caixa): botão do HUD ou atalho, com a regra de ausência (TD.16b).</summary>
     Crate,
 }
 
@@ -170,11 +170,8 @@ public sealed partial class TdUiController
             case TdTutorialStep.Hurt when _hurtKind == 0:
                 return w - 30f;
             case TdTutorialStep.Range:
-            case TdTutorialStep.Sell:
                 int ti = FirstPlacedTower(m);
                 return ti >= 0 ? TdBand.TowerCenterDip(m, m.Towers[ti], w) : -1f;
-            case TdTutorialStep.Crate:
-                return m.CrateActive ? TdBand.ToDip(m.CrateX, w) : -1f;
             default: return -1f;
         }
     }
@@ -381,7 +378,8 @@ public sealed partial class TdUiController
 
     private static bool HudStep(TdTutorialStep s) =>
         s is TdTutorialStep.Core or TdTutorialStep.Credits or TdTutorialStep.Build or TdTutorialStep.Wave or TdTutorialStep.CallNext
-            or TdTutorialStep.Ability or TdTutorialStep.HudCollapse or TdTutorialStep.HudOpen || s == TdTutorialStep.Hurt;
+            or TdTutorialStep.Ability or TdTutorialStep.HudCollapse or TdTutorialStep.HudOpen or TdTutorialStep.Sell or TdTutorialStep.Crate
+            || s == TdTutorialStep.Hurt;
 
     private TdUiItem[] HighlightHud(List<TdUiItem> items)
     {
@@ -407,6 +405,8 @@ public sealed partial class TdUiController
                 case TdTutorialStep.Credits when it.Icon == TdIcon.Coin && it.Kind == TdUiKind.Label: return i;
                 case TdTutorialStep.Build when it.Action == TdUiAction.BuildToggle: return i;
                 case TdTutorialStep.Wave or TdTutorialStep.CallNext when it.Action == TdUiAction.StartWave: return i;
+                case TdTutorialStep.Sell when it.Action == TdUiAction.Menu: return i;
+                case TdTutorialStep.Crate when it.Action == TdUiAction.CollectCrate: return i;
                 case TdTutorialStep.Ability when it.Action == TdUiAction.Ability && it.Enabled: return i;
                 case TdTutorialStep.Hurt when _hurtKind == 1 && it.Action == TdUiAction.Ability && it.Enabled: return i;
                 case TdTutorialStep.Hurt when _hurtKind == 2 && it.Action == TdUiAction.BuildToggle: return i;
@@ -429,9 +429,9 @@ public sealed partial class TdUiController
         TdTutorialStep.Wave => (TdIcon.Play, "Clique em Iniciar onda", null, false),
         TdTutorialStep.Hurt => (TdIcon.Alert, "Inimigo passou!", _hurtKind switch { 0 => "Construa perto do portal.", 1 => "Use uma habilidade.", _ => "Construa mais torres." }, false),
         TdTutorialStep.CallNext => (TdIcon.FastForward, "Chame a próxima: ganhe bônus", null, true),
-        TdTutorialStep.Sell => (TdIcon.Coin, "Clique numa torre para vender", $"Devolve {Math.Round(m.Content.Stages.Rules.SellRefund * 100):0}%.", true),
+        TdTutorialStep.Sell => (TdIcon.Coin, "Venda: Menu, depois Torres", $"Devolve {Math.Round(m.Content.Stages.Rules.SellRefund * 100):0}%.", true),
         TdTutorialStep.Ability => (TdIcon.Scale, "Use uma habilidade", null, false),
-        TdTutorialStep.Crate => (TdIcon.Box, "Clique na caixa-bomba!", "Longe do PC? Ela some.", false),
+        TdTutorialStep.Crate => (TdIcon.Box, "Clique em Coletar caixa!", "Ou use o atalho. Longe do PC? Ela some.", false),
         _ => (TdIcon.None, "", null, false),
     };
 
@@ -442,7 +442,7 @@ public sealed partial class TdUiController
         if (step == TdTutorialStep.None) return view;
         if (view is null) return Mode == TdUiMode.None ? BuildCallout(m, step) : null;
         bool decorate = (Mode == TdUiMode.Build && step is TdTutorialStep.Point or TdTutorialStep.Tower)
-            || (Mode == TdUiMode.Inspector && step == TdTutorialStep.Sell);
+            || (Mode is TdUiMode.Menu or TdUiMode.Towers && step == TdTutorialStep.Sell);
         return decorate ? AppendTutorial(view, step, m) : view;
     }
 
@@ -463,12 +463,8 @@ public sealed partial class TdUiController
                 anchor = MathF.Max(1f, TdBand.WidthDip(m) - 24f);
                 break;
             case TdTutorialStep.Range:
-            case TdTutorialStep.Sell:
                 int ti = FirstPlacedTower(m);
                 if (ti >= 0) anchor = MathF.Max(1f, m.TowerDip(m.Towers[ti]));
-                break;
-            case TdTutorialStep.Crate:
-                anchor = MathF.Max(1f, TdBand.ToDip(m.CrateX, TdBand.WidthDip(m)));
                 break;
             default:
                 var hud = BuildHud();
@@ -488,7 +484,7 @@ public sealed partial class TdUiController
         foreach (var it in view.Items)
         {
             bool target = !marked && ((step == TdTutorialStep.Tower && it.Action == TdUiAction.ChooseTower && it.Enabled)
-                || (step == TdTutorialStep.Sell && it.Action == TdUiAction.Sell && it.Enabled));
+                || (step == TdTutorialStep.Sell && (it.Action == TdUiAction.Sell || (Mode == TdUiMode.Menu && it.Action == TdUiAction.TowersOpen)) && it.Enabled));
             if (target) marked = true;
             items.Add(target ? it with { Highlight = true } : it);
         }
@@ -510,13 +506,13 @@ public sealed partial class TdUiController
         Card(TdIcon.Heart, "Proteja o núcleo: 0 = derrota.");
         Card(TdIcon.Coin, "Créditos compram torres.");
         Card(TdIcon.Portal, "Inimigos saem do portal.");
-        Card(TdIcon.Build, "Construa: clique num ponto da faixa.");
+        Card(TdIcon.Build, "Construir: depois clique num ponto.");
         Card(TdIcon.Target, "O círculo mostra o alcance.");
         Card(TdIcon.Play, "Inicie a onda: o preparo espera.");
         Card(TdIcon.FastForward, "Chame a próxima: ganhe bônus.");
-        Card(TdIcon.Coin, $"Venda torres: devolve {Math.Round(m.Content.Stages.Rules.SellRefund * 100):0}%.");
+        Card(TdIcon.Coin, $"Venda em Menu, Torres: devolve {Math.Round(m.Content.Stages.Rules.SellRefund * 100):0}%.");
         Card(TdIcon.Scale, "Use habilidades: recarregam sozinhas.");
-        Card(TdIcon.Box, "Clique na caixa antes de explodir.");
+        Card(TdIcon.Box, "Colete a caixa: botão ou atalho.");
         Card(TdIcon.Question, "Responda V ou F: ganhe bônus.");
         Card(TdIcon.Crown, "Vença sem perder núcleo: coroa.");
         Card(TdIcon.Medal, "Medalhas e patente: seus recordes.");
@@ -543,7 +539,7 @@ public sealed partial class TdUiController
         return d.Reason switch
         {
             TdDefeatReason.BossLeaked => (TdIcon.Alert, $"{EnemyName(m, d.EnemyId)} passou!", TdIcon.Scale, "Use habilidades no chefe."),
-            TdDefeatReason.CrateBlast => (TdIcon.Alert, "A caixa explodiu suas torres.", TdIcon.Box, "Clique na caixa a tempo."),
+            TdDefeatReason.CrateBlast => (TdIcon.Alert, "A caixa explodiu suas torres.", TdIcon.Box, "Colete a caixa a tempo."),
             TdDefeatReason.FlyersLeaked => (TdIcon.Alert, "Voadores passaram.", TdIcon.Target, useCounters),
             TdDefeatReason.FewTowersNearPortal => (TdIcon.Alert, "Poucas torres perto do portal.", TdIcon.Build, "Construa perto do portal."),
             _ => (TdIcon.Alert, $"{EnemyName(m, d.EnemyId)} passou.", TdIcon.Target, useCounters),
