@@ -165,7 +165,7 @@ public sealed class TdContinuousRunTests
     }
 
     [Fact]
-    public void Bonus_question_can_be_answered_once_per_wave_during_the_wave()
+    public void Bonus_question_can_be_answered_in_any_phase_of_any_mode_per_offered_question()
     {
         var s = New(Tiny(3), 1);
         Armed(s);
@@ -173,13 +173,12 @@ public sealed class TdContinuousRunTests
         long before = s.Credits;
         Assert.True(s.Apply(new AnswerBonus(1, true)).IsOk);
         Assert.Equal(before + s.BonusCreditsFor(1), s.Credits);
-        Assert.Equal(CommandReason.AlreadyUsed, s.Apply(new AnswerBonus(2, true)).Reason);
+        Assert.True(s.Apply(new AnswerBonus(2, true)).IsOk); // TD.30b: não é mais 1 por onda
         StepUntil(s, TdEventType.WaveStarted); // onda 2
-        Assert.False(s.BonusAnswered);
         Assert.True(s.Apply(new AnswerBonus(3, false)).IsOk);
         var classic = New(Tiny(3), 1, TdMatchOptions.Classic);
         Assert.True(classic.Apply(new StartWave()).IsOk);
-        Assert.Equal(CommandReason.InvalidPhase, classic.Apply(new AnswerBonus(1, true)).Reason);
+        Assert.True(classic.Apply(new AnswerBonus(1, true)).IsOk); // clássico também em Onda
     }
 
     [Fact]

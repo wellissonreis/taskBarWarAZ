@@ -44,7 +44,7 @@ public enum TdIcon : byte
 public readonly record struct TdUiItem(
     DipRect Rect, TdUiKind Kind, string Text, TdUiAction Action = TdUiAction.None, int Arg = 0, string? SArg = null,
     string? Right = null, string? Sub = null, bool Enabled = true, bool Selected = false, TdTone Tone = TdTone.Normal, float Fill = 0f,
-    TdIcon Icon = TdIcon.None, string? Tip = null, bool RightCoin = false, bool Highlight = false, TdIcon RightIcon = TdIcon.None)
+    TdIcon Icon = TdIcon.None, string? Tip = null, bool RightCoin = false, bool Highlight = false, TdIcon RightIcon = TdIcon.None, float FontSize = 0f)
 {
     public bool Clickable => Kind == TdUiKind.Button && Enabled && Action != TdUiAction.None;
 }

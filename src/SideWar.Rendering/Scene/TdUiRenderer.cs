@@ -587,8 +587,8 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
                 DrawBadges(c, it);
                 return;
             case TdUiKind.Bar:
-                _p.Text(c, it.Text, PanelFont.JetBrainsMono, 9f, r, color);
-                if (it.Right is not null) _p.Text(c, it.Right, PanelFont.JetBrainsMono, 8f, r, Palette.TxtRotulo, TextAlign.Right);
+                _p.Text(c, it.Text, PanelFont.JetBrainsMono, it.FontSize > 0f ? it.FontSize : 9f, r, color);
+                if (it.Right is not null) _p.Text(c, it.Right, PanelFont.JetBrainsMono, it.FontSize > 0f ? it.FontSize : 8f, r, Palette.TxtRotulo, TextAlign.Right);
                 _p.Fill(c, new DipRect(r.X, r.Y + r.H - 3, r.W, 3), Palette.BgTrilho);
                 if (it.Fill > 0f) _p.Fill(c, new DipRect(r.X, r.Y + r.H - 3, r.W * Math.Clamp(it.Fill, 0f, 1f), 3), Palette.Ambar);
                 return;
@@ -597,6 +597,11 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
                 {
                     DrawIcon(c, it.Icon, r.X, r.H >= 24f ? r.Y + 1f : r.Y + (r.H - 12f) / 2f, 12f, color);
                     r = new DipRect(r.X + 16f, r.Y, r.W - 16f, r.H);
+                }
+                if (it.FontSize > 0f)
+                {
+                    DrawWrappedSized(c, it.Text, r, color, it.FontSize);
+                    return;
                 }
                 if (!small && r.H >= 24f && _p.TextEnabled && _p.Font(PanelFont.JetBrainsMono, size).MeasureText(it.Text) > _p.Px(r.W))
                 {
@@ -626,7 +631,8 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             DrawIcon(c, it.Icon, r.X + 5f, r.Y + (r.H - 12f) / 2f, 12f, textColor);
             shift = 17f;
         }
-        var box = new DipRect(r.X + 4 + shift, top, r.W - 8 - shift, 12);
+        if (it.FontSize > 0f) { size = it.FontSize; top = r.Y + (r.H - size * 1.3f) / 2f; }
+        var box = new DipRect(r.X + 4 + shift, top, r.W - 8 - shift, it.FontSize > 0f ? it.FontSize * 1.3f : 12);
         _p.Text(c, it.Text, small ? PanelFont.Silkscreen : PanelFont.JetBrainsMono, small ? 8.5f : size, box, textColor, small && it.Right is null ? TextAlign.Center : TextAlign.Left);
         if (it.Right is not null) _p.Text(c, it.Right, small ? PanelFont.Silkscreen : PanelFont.JetBrainsMono, small ? 8.5f : size, box, enabled ? Palette.Ambar : Palette.TxtRotulo, TextAlign.Right);
         if (it.Sub is not null && !small) DrawWrapped(c, it.Sub, new DipRect(r.X + 4 + shift, r.Y + 16, r.W - 8 - shift, r.H - 17), Palette.TxtTerciario);
@@ -694,6 +700,30 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         using var paint = new SKPaint { IsAntialias = false, Color = Palette.TxtBranco.WithAlpha(alpha) };
         float x = MathF.Round(_p.Px(xDip)) + MathF.Max(0f, MathF.Round((_p.Px(heightDip) - img.Width) / 2f));
         c.DrawImage(img, x, MathF.Round(_p.Px(yDip)), Nearest, paint);
+    }
+
+    /// <summary>TD.30b: texto legível (fonte em DIP, escalada pelo monitor) com quebra por palavra em tantas linhas quantas cabem na altura do item.</summary>
+    private void DrawWrappedSized(SKCanvas c, string text, DipRect box, SKColor color, float size)
+    {
+        float lineH = size * TdUiController.QuizLineFactor;
+        int maxLines = Math.Max(1, (int)MathF.Floor((box.H + 1f) / lineH));
+        if (!_p.TextEnabled) return;
+        var font = _p.Font(PanelFont.JetBrainsMono, size);
+        float max = _p.Px(box.W);
+        var line = "";
+        int n = 0;
+        foreach (var w in text.Split(' '))
+        {
+            var test = line.Length == 0 ? w : line + " " + w;
+            if (line.Length > 0 && font.MeasureText(test) > max && n < maxLines - 1)
+            {
+                _p.Text(c, line, PanelFont.JetBrainsMono, size, new DipRect(box.X, box.Y + n * lineH, box.W, lineH), color);
+                n++;
+                line = w;
+            }
+            else line = test;
+        }
+        if (line.Length > 0) _p.Text(c, line, PanelFont.JetBrainsMono, size, new DipRect(box.X, box.Y + n * lineH, box.W, lineH), color);
     }
 
     // Duas linhas no máximo (quebra por palavra; reticências no excesso): RNF-28.3 pede a fraqueza completa legível.

@@ -29,8 +29,8 @@ public sealed partial class TdUiController
 
     private int _quizKey;
 
-    /// <summary>Pergunta vale no Preparo; com ondas contínuas (TD.28b) também durante a onda (1 por onda, no cartão do cantinho).</summary>
-    private static bool QuizPhaseOk(TdMatchState m) => m.Phase == MatchPhase.Preparo || (m.Options.ContinuousWaves && m.Phase == MatchPhase.Onda);
+    /// <summary>TD.30b: a pergunta vale em Preparo ou Onda (cartão do cantinho); a cadência é por tempo real, não por onda.</summary>
+    private static bool QuizPhaseOk(TdMatchState m) => m.Phase is MatchPhase.Preparo or MatchPhase.Onda;
 
     private static int QuizKey(TdMatchState m) => m.Options.ContinuousWaves ? m.StageNumber * 1000 + m.WaveNumber : m.NextWaveNumber;
 
@@ -63,27 +63,68 @@ public sealed partial class TdUiController
         Changed?.Invoke();
     }
 
+    /// <summary>TD.30b: a cada ~5 min de relógio real (sorteio 4–6 min) uma pergunta, independente de onda, velocidade e fase.</summary>
+    public const double QuizMinIntervalSeconds = 240.0, QuizMaxIntervalSeconds = 360.0;
+
+    /// <summary>Um salto de relógio maior que isto entre dois despertares (suspensão, hibernação) não conta como jogo rodando.</summary>
+    private const double QuizMaxDeltaSeconds = 30.0;
+
+    private readonly Func<double> _quizDraw = Random.Shared.NextDouble; // [0,1) injetável nos testes
+    private TdMatchState? _quizMatch;
+    private double _quizClockLast = -1.0, _quizElapsed, _quizInterval = QuizMaxIntervalSeconds;
+
+    /// <summary>Segundos de jogo rodando acumulados desde a última pergunta (testes).</summary>
+    public double QuizElapsedSeconds => _quizElapsed;
+
+    /// <summary>Intervalo sorteado para a próxima pergunta (testes).</summary>
+    public double QuizIntervalSeconds => _quizInterval;
+
+    private void RestartQuizClock()
+    {
+        _quizElapsed = 0.0;
+        _quizInterval = QuizMinIntervalSeconds + Math.Clamp(_quizDraw(), 0.0, 1.0) * (QuizMaxIntervalSeconds - QuizMinIntervalSeconds);
+    }
+
+    /// <summary>Jogo rodando de verdade: sem pausa (usuário ou modal), com a janela visível (boss key) e em Preparo/Onda.</summary>
+    private bool QuizClockRunning(TdMatchState m) => QuizPhaseOk(m) && !m.Paused && !_host.Paused && !ModalOpen && !BossHidden;
+
     private void SyncQuiz(TdMatchState m)
     {
-        if (!QuizPhaseOk(m)) { ClearQuiz(); return; }
         double now = _now();
+        double dt = _quizClockLast < 0.0 ? 0.0 : Math.Clamp(now - _quizClockLast, 0.0, QuizMaxDeltaSeconds);
+        _quizClockLast = now;
+        if (!ReferenceEquals(m, _quizMatch))
+        {
+            _quizMatch = m;
+            RestartQuizClock(); // app novo/partida nova/retomada: o primeiro intervalo é cheio
+            dt = 0.0;
+        }
+        if (!QuizPhaseOk(m)) { ClearQuiz(); return; }
         int key = QuizKey(m);
         if (_quizQ is null)
         {
-            if (BossHidden || !QuizEnabled || m.WaveNumber < 1 || m.BonusAnswered || (!m.Options.ContinuousWaves && m.NextWaveNumber == 0) || _quizWave == key
-                || (Mode != TdUiMode.None && !QuickTowersOpen)) return;
+            if (!QuizEnabled) return;
+            bool tutorial = TutorialOn(m) && !_quizExampleDone;
+            bool due;
+            if (tutorial) due = m.WaveNumber >= 1 && _quizWave != key && (m.Phase == MatchPhase.Preparo || m.Options.ContinuousWaves); // exemplo guiado do tutorial: logo após a 1ª onda
+            else
+            {
+                if (QuizClockRunning(m)) _quizElapsed += dt;
+                due = _quizElapsed >= _quizInterval;
+            }
+            if (!due || BossHidden || m.Paused || (Mode != TdUiMode.None && !QuickTowersOpen)) return;
             _quizWave = key;
             _quizKey = key;
-            _quizQ = _quiz!.Pick(TutorialOn(m) && !_quizExampleDone ? QuizExampleId : null);
+            _quizQ = _quiz!.Pick(tutorial ? QuizExampleId : null);
             _quizOut = QuizOutcome.None;
             _quizStart = now;
+            RestartQuizClock(); // ignorar/expirar/responder reinicia o relógio: não acumula
             UpdateModalPause();
             Changed?.Invoke();
             return;
         }
         if (_quizOut == QuizOutcome.None)
         {
-            if (m.BonusAnswered || key != _quizKey) { ClearQuiz(); return; }
             if (now - _quizStart >= m.Content.Stages.Rules.BonusQuestion.TimerSeconds)
             {
                 _send(new AnswerBonus(QuizNumber(_quizQ.Id), false));
@@ -143,44 +184,70 @@ public sealed partial class TdUiController
         _prepSince = _now();
     }
 
+    /// <summary>TD.30b: fontes do cartão (DIP; o renderer escala pelo monitor), largura máx. no cantinho e fator de altura de linha.</summary>
+    public const float QuizStatementFont = 15f, QuizOptionFont = 14f, QuizWidth = 360f, QuizLineFactor = 1.3f, QuizCharWidth = 0.62f;
+
+    /// <summary>Linhas que o texto ocupa (quebra por palavra; largura de caractere conservadora para não cortar no renderer).</summary>
+    public static int QuizLines(string text, float widthDip, float fontDip)
+    {
+        int cap = Math.Max(1, (int)(widthDip / (fontDip * QuizCharWidth)));
+        int lines = 1, cur = 0;
+        foreach (var w in text.Split(' '))
+        {
+            if (cur == 0) cur = w.Length;
+            else if (cur + 1 + w.Length <= cap) cur += 1 + w.Length;
+            else { lines++; cur = w.Length; }
+            while (cur > cap) { lines++; cur -= cap; }
+        }
+        return lines;
+    }
+
+    private static void QuizText(Stack s, string text, float font, TdTone tone = TdTone.Normal, TdIcon icon = TdIcon.None)
+    {
+        float inner = s.Width - 2 * Pad - (icon != TdIcon.None ? 16f : 0f);
+        float h = QuizLines(text, inner, font) * font * QuizLineFactor + 2f;
+        s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, s.Width - 2 * Pad, h), TdUiKind.Label, text, Tone: tone, Icon: icon, FontSize: font));
+        s.Y += h + 4f;
+    }
+
     private TdPopoverView BuildQuiz(TdMatchState m)
     {
         var q = _quizQ!;
         var rules = m.Content.Stages.Rules.BonusQuestion;
         bool tutorial = TutorialOn(m) && _quizOut == QuizOutcome.None;
-        var s = new Stack(260f);
-        if (tutorial) s.Add(TdUiKind.Label, "Exemplo: clique em V ou F", 14f, tone: TdTone.Accent, icon: TdIcon.Question);
+        var s = new Stack(QuizWidth);
+        if (tutorial) QuizText(s, "Exemplo: clique em V ou F", QuizOptionFont, TdTone.Accent, TdIcon.Question);
         string answerText = q.Answer ? "VERDADEIRO" : "FALSO";
         switch (_quizOut)
         {
             case QuizOutcome.Correct:
-                s.Add(TdUiKind.Label, $"Acertou! +{_quizPaid} créditos", 18f, tone: TdTone.Good, icon: TdIcon.Check);
-                s.Add(TdUiKind.Label, q.Explanation, 14f, tone: TdTone.Dim);
+                QuizText(s, $"Acertou! +{_quizPaid} créditos", QuizStatementFont, TdTone.Good, TdIcon.Check);
+                QuizText(s, q.Explanation, QuizOptionFont, TdTone.Dim);
                 break;
             case QuizOutcome.Wrong:
             case QuizOutcome.Expired:
-                s.Add(TdUiKind.Label, (_quizOut == QuizOutcome.Expired ? "Tempo! " : "") + $"Era {answerText}.", 18f, tone: TdTone.Bad,
-                    icon: _quizOut == QuizOutcome.Expired ? TdIcon.Clock : TdIcon.Cross);
-                s.Add(TdUiKind.Label, q.Explanation, 14f, tone: TdTone.Dim);
+                QuizText(s, (_quizOut == QuizOutcome.Expired ? "Tempo! " : "") + $"Era {answerText}.", QuizStatementFont, TdTone.Bad,
+                    _quizOut == QuizOutcome.Expired ? TdIcon.Clock : TdIcon.Cross);
+                QuizText(s, q.Explanation, QuizOptionFont, TdTone.Dim);
                 break;
             default:
             {
-                s.Add(TdUiKind.Label, q.Text, 28f, icon: TdIcon.Question);
+                QuizText(s, q.Text, QuizStatementFont, icon: TdIcon.Question);
                 double left = Math.Max(0.0, rules.TimerSeconds - (_now() - _quizStart));
-                s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, s.Width - 2 * Pad, RowH - 4), TdUiKind.Bar, "Tempo",
+                s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, s.Width - 2 * Pad, 22f), TdUiKind.Bar, "Tempo",
                     Right: Math.Ceiling(left).ToString("0", System.Globalization.CultureInfo.InvariantCulture) + " s", Tone: TdTone.Accent,
-                    Fill: (float)Math.Clamp(left / rules.TimerSeconds, 0.0, 1.0)));
-                s.Y += RowH;
-                float half = (s.Width - 2 * Pad - 2f) / 2f;
-                s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, half, 34f), TdUiKind.Button, "V  Verdadeiro", TdUiAction.QuizTrue, Tone: TdTone.Good,
-                    Highlight: tutorial && q.Answer));
-                s.Items.Add(new TdUiItem(new DipRect(Pad + half + 2f, s.Y, half, 34f), TdUiKind.Button, "F  Falso", TdUiAction.QuizFalse, Tone: TdTone.Bad,
-                    Highlight: tutorial && !q.Answer));
-                s.Y += 36f;
-                s.Add(TdUiKind.Label, $"Acerte: +{m.BonusCreditsFor(QuizPayWave(m))} créditos", 14f, tone: TdTone.Dim, icon: TdIcon.Coin);
+                    Fill: (float)Math.Clamp(left / rules.TimerSeconds, 0.0, 1.0), FontSize: 12f));
+                s.Y += 26f;
+                float half = (s.Width - 2 * Pad - 4f) / 2f;
+                s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, half, 40f), TdUiKind.Button, "V  Verdadeiro", TdUiAction.QuizTrue, Tone: TdTone.Good,
+                    Highlight: tutorial && q.Answer, FontSize: QuizOptionFont));
+                s.Items.Add(new TdUiItem(new DipRect(Pad + half + 4f, s.Y, half, 40f), TdUiKind.Button, "F  Falso", TdUiAction.QuizFalse, Tone: TdTone.Bad,
+                    Highlight: tutorial && !q.Answer, FontSize: QuizOptionFont));
+                s.Y += 44f;
+                QuizText(s, $"Acerte: +{m.BonusCreditsFor(QuizPayWave(m))} créditos", QuizOptionFont, TdTone.Dim, TdIcon.Coin);
                 if (tutorial)
-                    s.Items.Add(new TdUiItem(new DipRect(s.Width - Pad - 96f, s.Y, 96f, 16f), TdUiKind.Button, "Pular", TdUiAction.TutorialSkip, Tone: TdTone.Dim, Icon: TdIcon.Cross));
-                if (tutorial) s.Y += 18f;
+                    s.Items.Add(new TdUiItem(new DipRect(s.Width - Pad - 96f, s.Y, 96f, 18f), TdUiKind.Button, "Pular", TdUiAction.TutorialSkip, Tone: TdTone.Dim, Icon: TdIcon.Cross, FontSize: 12f));
+                if (tutorial) s.Y += 22f;
                 break;
             }
         }

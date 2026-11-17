@@ -28,7 +28,7 @@ public sealed class TdBonusDefeatTests
     }
 
     [Fact]
-    public void AnswerBonus_correct_pays_base_plus_per_wave_once_per_prep_and_logs_event()
+    public void AnswerBonus_correct_pays_base_plus_per_wave_per_offered_question_and_logs_event()
     {
         var s = New();
         long c0 = s.Credits;
@@ -37,34 +37,39 @@ public sealed class TdBonusDefeatTests
         var q = C.Runes.CreditSources;
         Assert.Equal(c0 + q.BonusQuestionBase + q.BonusQuestionPerWave * 1, s.Credits);
         Assert.Contains(s.Events, e => e.Type == TdEventType.BonusAnswered && e.A == 7 && e.B == s.Credits - c0);
-        Assert.Equal(CommandReason.AlreadyUsed, s.Apply(new AnswerBonus(8, true)).Reason);
-        Assert.Equal(c0 + q.BonusQuestionBase + q.BonusQuestionPerWave, s.Credits);
+        // TD.30b: cada pergunta oferecida (cadência por tempo real no Runtime) vale uma resposta; a 2ª paga de novo.
+        Assert.True(s.Apply(new AnswerBonus(8, true)).IsOk);
+        Assert.Equal(c0 + 2 * (q.BonusQuestionBase + q.BonusQuestionPerWave), s.Credits);
     }
 
     [Fact]
-    public void AnswerBonus_wrong_has_no_penalty_but_uses_the_prep_slot()
+    public void AnswerBonus_wrong_has_no_penalty_and_does_not_block_the_next_question()
     {
         var s = New();
         long c0 = s.Credits;
         Assert.True(s.Apply(new AnswerBonus(3, false)).IsOk);
         Assert.Equal(c0, s.Credits);
-        Assert.Equal(CommandReason.AlreadyUsed, s.Apply(new AnswerBonus(4, true)).Reason);
         Assert.Equal(1, s.BonusWrongCount);
+        Assert.True(s.Apply(new AnswerBonus(4, true)).IsOk);
+        Assert.Equal(1, s.BonusCorrectCount);
     }
 
     [Fact]
-    public void AnswerBonus_is_rejected_in_wave_and_available_again_next_prep()
+    public void AnswerBonus_is_accepted_in_prep_and_in_wave_paying_by_the_current_wave_number()
     {
         var s = New();
         Assert.True(s.Apply(new BuildTower("bolt", 600)).IsOk);
+        long c0 = s.Credits;
+        Assert.True(s.Apply(new AnswerBonus(1, true)).IsOk); // Preparo: paga pela próxima onda (1)
+        Assert.Equal(c0 + s.BonusCreditsFor(1), s.Credits);
         Assert.True(s.Apply(new StartWave()).IsOk);
-        ulong h = s.ComputeStateHash();
-        Assert.Equal(CommandReason.InvalidPhase, s.Apply(new AnswerBonus(1, true)).Reason);
-        Assert.Equal(h, s.ComputeStateHash()); // rejeição não altera o estado
+        long c1 = s.Credits;
+        Assert.True(s.Apply(new AnswerBonus(2, true)).IsOk); // Onda (clássico): vale e paga pela onda atual
+        Assert.Equal(c1 + s.BonusCreditsFor(s.WaveNumber), s.Credits);
+        Assert.True(s.Apply(new AnswerBonus(3, false)).IsOk); // várias por onda: a cadência é do Runtime
         RunWave(s);
         Assert.Equal(MatchPhase.Preparo, s.Phase);
-        Assert.False(s.BonusAnswered);
-        Assert.True(s.Apply(new AnswerBonus(1, true)).IsOk);
+        Assert.True(s.Apply(new AnswerBonus(4, true)).IsOk);
     }
 
     [Fact]

@@ -74,8 +74,9 @@ public sealed partial class TdUiController
     private float _anchorX;
 
     public TdUiController(Func<TdMatchState> match, Action<IGameCommand> send, ITdUiHost host, Func<double>? now = null,
-        ITdOnboardingStore? onboarding = null, TdQuestionPicker? quiz = null)
+        ITdOnboardingStore? onboarding = null, TdQuestionPicker? quiz = null, Func<double>? quizDraw = null)
     {
+        if (quizDraw is not null) _quizDraw = quizDraw;
         _onb = onboarding;
         _quiz = quiz;
         _match = match ?? throw new ArgumentNullException(nameof(match));

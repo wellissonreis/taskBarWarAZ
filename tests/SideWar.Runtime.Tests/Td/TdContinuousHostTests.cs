@@ -73,14 +73,14 @@ public sealed class TdContinuousHostTests
         public readonly List<IGameCommand> Sent = [];
         public double Now;
 
-        public Rig(TdMatchOptions? options = null, bool quiz = false, TdContent? content = null)
+        public Rig(TdMatchOptions? options = null, bool quiz = false, TdContent? content = null, double draw = 0.9)
         {
             Match = TdMatchState.Create(content ?? Tiny(), 1, Rng.Seed(42, 54), null, options ?? TdMatchOptions.Default);
             Match.Apply(new LayoutChanged(StripLayout.Create(Width, Width - 46, 88, 4, Width - 80, TowerHost.Band, [new FreeZone(32, Width - 32)])));
             App.LeaveHidden(HiddenReason.Starting);
             Game = new TdGameHost(Clock, App, Match, null, Focus);
             TdQuestionPicker? picker = quiz ? new TdQuestionPicker(TdQuestionBank.LoadEmbedded(), "", n => 0, _ => { }) : null;
-            Ui = new TdUiController(() => Match, c => { Sent.Add(c); Game.OnCommand(c); }, Host, () => Now, quiz ? new Store() : null, picker);
+            Ui = new TdUiController(() => Match, c => { Sent.Add(c); Game.OnCommand(c); }, Host, () => Now, quiz ? new Store() : null, picker, () => draw); // draw 0,9 ⇒ intervalo de 348 s
             Ui.Sync();
             Game.OnWake(Clock);
         }
@@ -196,11 +196,12 @@ public sealed class TdContinuousHostTests
     }
 
     [Fact]
-    public void Bonus_question_appears_during_the_wave_as_a_corner_card_without_pausing()
+    public void Bonus_question_appears_on_the_real_time_cadence_as_a_corner_card_without_pausing()
     {
-        var r = new Rig(quiz: true);
-        r.Start();
-        r.Run(0.5);
+        var r = new Rig(quiz: true); // sem Iniciar: o Preparo inicial conta (a cadência não depende da fase) e nada vaza
+        r.Run(60);
+        Assert.False(r.Ui.QuizActive); // cadência por tempo real (TD.30b): nada de pergunta a cada onda
+        r.Run(290); // 350 s de relógio real no total: acima do intervalo sorteado (348 s)
         Assert.True(r.Ui.QuizActive);
         Assert.True(r.Ui.CornerPopover);
         Assert.False(r.Ui.ModalOpen);
@@ -258,11 +259,10 @@ public sealed class TdContinuousHostTests
         var boss = new TdBossKey(r.Ui.SetBossHidden, scene.Add, r.Focus, () => false, () => { });
         boss.Toggle();
         Assert.Empty(scene);
-        r.Start();
-        r.Run(1);
-        Assert.False(r.Ui.QuizActive); // a pergunta espera a volta
+        r.Run(TdUiController.QuizMaxIntervalSeconds + 10);
+        Assert.False(r.Ui.QuizActive); // o relógio não conta com a janela escondida: a pergunta espera a volta
         boss.Toggle();
-        r.Run(0.2);
+        r.Run(350);
         Assert.True(r.Ui.QuizActive);
     }
 

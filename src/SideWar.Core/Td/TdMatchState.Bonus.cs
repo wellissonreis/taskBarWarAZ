@@ -2,7 +2,7 @@ using SideWar.Core.Simulation;
 
 namespace SideWar.Core.Td;
 
-// Pergunta-bônus do Preparo (SDD-28 RF-28.23) e estatísticas de derrota (RF-28.24). Os contadores de derrota ficam FORA do StateHash.
+// Pergunta-bônus (SDD-28 RF-28.23; TD.30b: cadência por tempo real no Runtime, vale em Preparo ou Onda) e estatísticas de derrota (RF-28.24). Os contadores de derrota ficam FORA do StateHash.
 public sealed partial class TdMatchState
 {
     private int[]? _leakCount;
@@ -10,7 +10,7 @@ public sealed partial class TdMatchState
     private int _bonusCorrect;
     private int _bonusWrong;
 
-    /// <summary>Já houve resposta à pergunta-bônus neste Preparo (entra no hash: bloqueia a 2ª resposta).</summary>
+    /// <summary>Houve resposta à pergunta-bônus desde o início da onda/Preparo atual (informativo, entra no hash; TD.30b: não bloqueia novas respostas, o Runtime oferece uma pergunta por vez).</summary>
     public bool BonusAnswered => _bonusAnswered;
     public int BonusCorrectCount => _bonusCorrect;
     public int BonusWrongCount => _bonusWrong;
@@ -23,9 +23,8 @@ public sealed partial class TdMatchState
 
     private CommandResult DoAnswerBonus(AnswerBonus cmd)
     {
-        // Clássico: só em Preparo. Contínuo (TD.28a): não há Preparo entre ondas; a pergunta vale durante a onda em andamento (1 por onda iniciada).
-        if (Phase != MatchPhase.Preparo && !(_options.ContinuousWaves && Phase == MatchPhase.Onda)) return Reject(CommandReason.InvalidPhase);
-        if (_bonusAnswered) return Reject(CommandReason.AlreadyUsed);
+        // TD.30b: a cadência é por tempo real (Runtime); cada pergunta oferecida vale uma resposta, em Preparo ou Onda, em qualquer modo.
+        if (Phase != MatchPhase.Preparo && Phase != MatchPhase.Onda) return Reject(CommandReason.InvalidPhase);
         _bonusAnswered = true;
         long paid = 0;
         if (cmd.Correct)
