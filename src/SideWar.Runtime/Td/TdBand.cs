@@ -16,6 +16,19 @@ public static class TdBand
     /// </summary>
     public const int HeightDip = 32;
 
+    /// <summary>
+    /// TD.28c: folga extra (DIP do espaço de desenho) ACIMA do espaço de 32 para o portal e o núcleo (~42 de altura) e a barra de
+    /// integridade passarem do topo da faixa. Escolha mais simples: a janela da cena fica (32 + 14)/32 mais alta em toda a largura, mas
+    /// com alfa 0 na folga (o Windows deixa o clique passar); o desenho e o hit-test deslocam y por esta folga.
+    /// </summary>
+    public const float EdgeHeadroomDip = 14f;
+
+    /// <summary>Altura real (DIP) da janela da cena = faixa + folga do portal/núcleo, escalada com a faixa.</summary>
+    public static float SceneHeightDip(int bandHeightDip) => Math.Clamp(bandHeightDip, MinHeightDip, MaxHeightDip) * (HeightDip + EdgeHeadroomDip) / HeightDip;
+
+    /// <summary>Folga (DIP reais) acima da faixa na janela da cena.</summary>
+    public static float HeadroomRealDip(int bandHeightDip) => Math.Clamp(bandHeightDip, MinHeightDip, MaxHeightDip) * EdgeHeadroomDip / HeightDip;
+
     public const int MinHeightDip = 32, MaxHeightDip = 96, DefaultHeightDip = 64;
 
     /// <summary>Fator de escala do desenho da faixa: <c>altura real / 32</c> (limitada a 32..96).</summary>

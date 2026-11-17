@@ -79,6 +79,9 @@ public partial class SettingsWindow : Window
         else Refresh();
     }
 
+    private void OnSpeed1(object sender, RoutedEventArgs e) => ViewModel.TdGameSpeed = 1;
+    private void OnSpeed2(object sender, RoutedEventArgs e) => ViewModel.TdGameSpeed = 2;
+    private void OnSpeed3(object sender, RoutedEventArgs e) => ViewModel.TdGameSpeed = 3;
     private void OnBandSmall(object sender, RoutedEventArgs e) => ViewModel.TdBandHeight = TdSettings.SmallBandHeightDip;
     private void OnBandMedium(object sender, RoutedEventArgs e) => ViewModel.TdBandHeight = TdSettings.DefaultBandHeightDip;
     private void OnBandLarge(object sender, RoutedEventArgs e) => ViewModel.TdBandHeight = TdSettings.LargeBandHeightDip;

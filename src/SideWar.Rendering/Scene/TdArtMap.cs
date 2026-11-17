@@ -15,16 +15,16 @@ public readonly record struct TdArtEntry(string Id, SpriteId Sprite, float Heigh
 public static class TdArtMap
 {
     /// <summary>
-    /// Altura alvo das torres (DIP do espaço de desenho de 32). TD.28b: 21 (era 28): o núcleo e o portal (32 = faixa inteira, o limite do espaço de
-    /// desenho) ficam ~1,5× a torre (32/21 ≈ 1,52; 42 vs 64 DIP reais na faixa de 64; escala junto com 40/88 porque tudo é multiplicado por altura/32).
+    /// Altura alvo das torres (DIP do espaço de desenho de 32). TD.28c: de volta a 28 (o usuário aprovou o tamanho torre × inimigos);
+    /// o núcleo e o portal ficaram maiores (42 = 1,5× a torre) e passam do topo do espaço de 32 (<see cref="SideWar.Runtime.Td.TdBand.EdgeHeadroomDip"/>).
     /// </summary>
-    public const float TowerHeightDip = 21f;
+    public const float TowerHeightDip = 28f;
 
     /// <summary>Largura (DIP) do núcleo e do portal: cabem na folga de 32 DIP às pontas.</summary>
     public const float EdgeWidthDip = 32f;
 
-    /// <summary>Altura (DIP) do núcleo e do portal: ocupam a faixa inteira (32), ~1,5× a torre (21) — o limite do espaço de desenho.</summary>
-    public const float EdgeHeightDip = 32f;
+    /// <summary>Altura (DIP) do núcleo e do portal: 42 = 1,5× a torre (28); passam do topo do espaço de 32 (folga de 14 na janela da cena).</summary>
+    public const float EdgeHeightDip = 42f;
 
     /// <summary>Largura (DIP) da caixa-bomba (a área de clique tem 24 DIP de largura).</summary>
     public const float CrateWidthDip = 26f;

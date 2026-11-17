@@ -387,6 +387,7 @@ Ficha TD.19 anterior (conteúdo) fica; a **modal central e a pausa viram fichas 
 | **TD.26** | Documentação: revisar SDD-28 (RF-28.4/28.5/28.13/28.22, CA/T), ADR, `PLANO.md`, MTC | TD.19 a TD.25 | 🟢 |
 | **TD.28a** ✅ | **Corrida contínua no Core:** `TdMatchOptions` (ondas contínuas, corrida persistente), `StageCleared`, infinito depois da fase 6, `TdSanityBot.RunContinuous`; ver §20 | TD.22, TD.24c | 🟢 |
 | **TD.28b** ✅ | **Host da corrida contínua:** `TdMatchOptions.Default` no host (`td.continuousWaves`, padrão ligado; desligado = Classic), `StageCleared` → perfil por `StageId` + aviso discreto no cantinho, derrota = fim da corrida com "Reiniciar", chip "Fase N · Onda n/Total", Iniciar só no Preparo inicial, pergunta-bônus durante a onda, atalho global de minimizar (boss key), painel de torres fixo (`td.towerPanelPinned`), núcleo/portal ~1,5× a torre; ver §20 | TD.28a, TD.24d | 🟢 |
+| **TD.28c** ✅ | **Foto das torres, faixa ao vivo, fps fixo, velocidade:** sprite real da torre nos cards (painel rápido, Construir, Torres); `td.bandHeightDip` aplica na hora; sem queda para 8 fps sem foco; `td.gameSpeed` 1x/2x/3x (botão no chip e aba Jogo; host faz N Steps por tick, replay igual); torres de volta a 28 e portal/núcleo 42 (janela da cena com folga de 14 DIP×k acima da faixa, alfa 0) | TD.28b | 🟢 |
 | **TD.27** (pós-MVP) | Medalha "Especialista", desafio "Sem runas", páginas salvas | TD.24b | 🟡 |
 
 Ordem: TD.19 → TD.19b → TD.20 → TD.21 → (TD.22 ‖ TD.23 ‖ TD.24a) → TD.24b → TD.25 → TD.26; TD.27 por último.

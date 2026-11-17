@@ -12,7 +12,7 @@ namespace SideWar.Rendering.Scene;
 /// Faixa TD de 32 DIP (TD.7, SDD-28 RF-28.15 com o fallback Band de RF-28.18): trilho dos inimigos no topo (núcleo à esquerda, portal à
 /// direita), torres embaixo. Lê o <see cref="TdMatchState"/> (só leitura) e desenha num <see cref="SKCanvas"/> transparente.
 /// TD.9: usa as SPRITES do design (<see cref="TdArtMap"/>), pré-escaladas por DPI (<see cref="TdSpriteBaker"/>) e desenhadas em pixels
-/// inteiros (nítidas a 100/150%): torres de 21 DIP, núcleo/portal de 32 DIP (~1,5× a torre), inimigos de 11 a 28 DIP, caixa-bomba de 26 DIP.
+/// inteiros (nítidas a 100/150%): torres de 28 DIP, núcleo/portal de 42 DIP (1,5× a torre, passam do topo da faixa), inimigos de 11 a 28 DIP, caixa-bomba de 26 DIP.
 /// Tudo apoiado no chão (base da faixa); inimigos à frente das torres. Legibilidade por cima das sprites: tipo de inimigo por <b>tinta +
 /// pino de traço</b> (voador losango, blindado quadrado, regenera triângulo, drena cruz, chefe quadrado vermelho), barra de vida só para
 /// chefe e elite danificado, alcance como barra no topo, nós do balanceador, caixa-bomba
@@ -85,7 +85,7 @@ public sealed class TdBandRenderer : IDisposable
     public float BandScale => _k;
 
     /// <summary>Tamanho físico da janela para uma largura de faixa em DIP.</summary>
-    public (int Width, int Height) PhysicalSize(int widthDip) => ((int)MathF.Round(widthDip * _s), (int)MathF.Round(TdBand.HeightDip * _s));
+    public (int Width, int Height) PhysicalSize(int widthDip) => ((int)MathF.Round(widthDip * _s), (int)MathF.Round((TdBand.HeightDip + TdBand.EdgeHeadroomDip) * _s));
 
     public void Draw(SKCanvas canvas, TdMatchState match, double now, in TdView view)
     {
@@ -97,6 +97,7 @@ public sealed class TdBandRenderer : IDisposable
         int w = TdBand.WidthDip(match);
         canvas.Save();
         canvas.Scale(_s);
+        canvas.Translate(0, TdBand.EdgeHeadroomDip); // folga acima da faixa: só o portal/núcleo/barra de integridade desenham lá (TD.28c)
 
         // Alfa 1/255 em toda a faixa: o Windows só entrega o mouse (modo Interativo, TD.8) a pixels com alfa > 0; invisível a olho nu.
         _fill.Color = Palette.Td.HitSurface;
@@ -180,7 +181,7 @@ public sealed class TdBandRenderer : IDisposable
         c.Save();
         c.ResetMatrix();
         _img.Color = Palette.TxtBranco.WithAlpha(alpha);
-        c.DrawImage(img, MathF.Round(cxDip * _s - img.Width / 2f), MathF.Round(bottomDip * _s - img.Height), Nearest, _img);
+        c.DrawImage(img, MathF.Round(cxDip * _s - img.Width / 2f), MathF.Round((bottomDip + TdBand.EdgeHeadroomDip) * _s - img.Height), Nearest, _img);
         c.Restore();
     }
 
@@ -225,7 +226,7 @@ public sealed class TdBandRenderer : IDisposable
         Blit(c, _coreImg, cx, Ground);
         // integridade legível por cima da sprite: barra acima do núcleo
         float frac = m.IntegrityMax > 0 ? Math.Clamp(m.Integrity / (float)m.IntegrityMax, 0f, 1f) : 0f;
-        float top = Math.Max(1f, Ground - HeightDip(_coreImg) - 3.5f);
+        float top = Math.Max(1f - TdBand.EdgeHeadroomDip, Ground - HeightDip(_coreImg) - 3.5f);
         _fill.Color = Palette.Placeholder.Edge;
         c.DrawRect(1, top - 0.5f, 30, 3.5f, _fill);
         _fill.Color = frac > 0.5f ? Palette.Menta : frac > 0.25f ? Palette.Ambar : Palette.Perigo;
@@ -571,7 +572,7 @@ public sealed class TdBandRenderer : IDisposable
         c.ResetMatrix();
         var font = _typography.GetFont(FontRole.SilkscreenBold, 8, (int)MathF.Round(_dpi * _k));
         _text.Color = urgent ? Palette.Perigo : Palette.Ambar;
-        c.DrawText(Digits[sec], (bx + 6.5f) * _s, (by + 4.5f) * _s + font.Size * 0.35f, SKTextAlign.Center, font, _text);
+        c.DrawText(Digits[sec], (bx + 6.5f) * _s, (by + 4.5f + TdBand.EdgeHeadroomDip) * _s + font.Size * 0.35f, SKTextAlign.Center, font, _text);
         c.Restore();
     }
 

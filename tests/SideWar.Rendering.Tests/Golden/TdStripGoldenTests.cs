@@ -45,7 +45,7 @@ public sealed class TdStripGoldenTests
     {
         using var bmp = TdStripScenes.Render(scene, 96, bandHeightDip);
         Assert.Equal((int)Math.Round(TdStripScenes.WidthDip * bandHeightDip / 32.0), bmp.Width);
-        Assert.Equal(bandHeightDip + TdStripScenes.BarDip, bmp.Height);
+        Assert.Equal((int)Math.Round(bandHeightDip * (TdBand.HeightDip + TdBand.EdgeHeadroomDip) / 32.0) + TdStripScenes.BarDip, bmp.Height); // faixa + folga do portal/núcleo (TD.28c)
         string? failure = GoldenImage.Verify(TdStripScenes.BandGoldenName(scene, bandHeightDip), bmp);
         Assert.True(failure is null, failure);
     }
@@ -80,17 +80,27 @@ public sealed class TdStripGoldenTests
         using var typo = new SideWar.Rendering.Text.Typography();
         using var r = new SideWar.Rendering.Scene.TdBandRenderer(typo);
         r.SetDpi(96);
-        using var bmp = new SKBitmap(new SKImageInfo(1200, 32, SKColorType.Bgra8888, SKAlphaType.Premul));
+        using var bmp = new SKBitmap(new SKImageInfo(1200, 46, SKColorType.Bgra8888, SKAlphaType.Premul));
         using var canvas = new SKCanvas(bmp);
         r.Draw(canvas, match, now, view);
-        Assert.Equal(1, bmp.GetPixel(600, 10).Alpha); // espaço livre: alfa 1/255 (invisível, mas recebe o mouse no modo Interativo; passivo = WS_EX_TRANSPARENT)
-        Assert.NotEqual(0, bmp.GetPixel(600, 30).Alpha); // chão
-        Assert.True(HasOpaque(bmp, 0, 12, 32, 32), "núcleo (sprite core)");
-        Assert.True(HasOpaque(bmp, 1168, 12, 1200, 32), "portal (sprite portal)");
-        Assert.True(HasOpaque(bmp, 318, 6, 342, 31), "torre selecionada (sprite tower-bolt)");
+        Assert.Equal(0, bmp.GetPixel(600, 5).Alpha); // folga acima da faixa (TD.28c): alfa 0, o clique passa
+        Assert.Equal(1, bmp.GetPixel(600, 24).Alpha); // espaço livre: alfa 1/255 (invisível, mas recebe o mouse no modo Interativo; passivo = WS_EX_TRANSPARENT)
+        Assert.NotEqual(0, bmp.GetPixel(600, 44).Alpha); // chão
+        Assert.True(HasOpaque(bmp, 0, 4, 63, 46) && HasVisible(bmp, 0, 0, 63, 14), "núcleo (sprite core, 42 DIP: passa do topo da faixa)");
+        Assert.True(HasOpaque(bmp, 1145, 4, 1200, 46) && HasVisible(bmp, 1145, 0, 1200, 14), "portal (sprite portal, 42 DIP)");
+        Assert.True(HasOpaque(bmp, 318, 20, 342, 45), "torre selecionada (sprite tower-bolt)");
         // o alcance selecionado pinta a barra fina do topo sobre a torre selecionada (x = 330)
-        Assert.NotEqual(0, bmp.GetPixel(330, 0).Alpha);
-        Assert.Equal(1, bmp.GetPixel(700, 0).Alpha);
+        Assert.NotEqual(0, bmp.GetPixel(330, 14).Alpha);
+        Assert.Equal(1, bmp.GetPixel(700, 14).Alpha);
+    }
+
+    /// <summary>Pixel visível (alfa &gt; 8) na região: a folga acima da faixa só tem arte do portal/núcleo.</summary>
+    private static bool HasVisible(SKBitmap bmp, int x0, int y0, int x1, int y1)
+    {
+        for (int y = y0; y < y1; y++)
+            for (int x = x0; x < x1; x++)
+                if (bmp.GetPixel(x, y).Alpha > 8) return true;
+        return false;
     }
 
     private static bool HasOpaque(SKBitmap bmp, int x0, int y0, int x1, int y1)
@@ -122,7 +132,7 @@ public sealed class TdStripGoldenTests
         using var typo = new SideWar.Rendering.Text.Typography();
         using var r = new SideWar.Rendering.Scene.TdBandRenderer(typo);
         r.SetDpi(96);
-        using var bmp = new SKBitmap(new SKImageInfo(1200, 32, SKColorType.Bgra8888, SKAlphaType.Premul));
+        using var bmp = new SKBitmap(new SKImageInfo(1200, 46, SKColorType.Bgra8888, SKAlphaType.Premul));
         using var canvas = new SKCanvas(bmp);
         for (int i = 0; i < 20; i++) r.Draw(canvas, match, now, view); // aquece caches
         long before = GC.GetAllocatedBytesForCurrentThread();

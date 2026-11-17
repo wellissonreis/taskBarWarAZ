@@ -44,7 +44,7 @@ public static class SceneLayout
         if (m.Dpi == 0 || m.Dpi > int.MaxValue / 2)
             throw new ArgumentOutOfRangeException(nameof(m), "DPI must be positive and fit physical pixel coordinates.");
         var scale = m.Dpi / 96.0;
-        var heightPx = (int)Math.Round(Math.Clamp(bandHeightDip, Td.TdBand.MinHeightDip, Td.TdBand.MaxHeightDip) * scale, MidpointRounding.AwayFromZero);
+        var heightPx = (int)Math.Round(Td.TdBand.SceneHeightDip(bandHeightDip) * scale, MidpointRounding.AwayFromZero);
         var hudPx = (int)Math.Round(Td.TdBand.HudAreaDip(bandHeightDip) * scale, MidpointRounding.AwayFromZero); // só valida largura mínima
         var marginPx = t.AutoHide ? 2 : 0;
         var work = m.WorkArea;

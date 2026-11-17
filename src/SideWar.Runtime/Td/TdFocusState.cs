@@ -17,7 +17,6 @@ public interface ITdPresence
 public sealed class TdFocusState : ITdPresence
 {
     public const int DefaultFadePercent = 50;
-    public const int AbsentFps = 8;
 
     private volatile bool _absent;
     private bool _modalOpen;

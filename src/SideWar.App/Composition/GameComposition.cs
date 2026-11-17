@@ -86,7 +86,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     private TdRenderDriver? tdDriver;
     private TdUiPresenter? tdUi;
     private TdFocusState? tdFocus;
-    private int tdBandHeight = TdBand.DefaultHeightDip; // TD.14: lido das configurações ao iniciar (mudar vale ao reiniciar o SideWar)
+    private int tdBandHeight = TdBand.DefaultHeightDip; // TD.14/TD.28c: lido das configurações; mudar aplica ao vivo (ApplyBandHeight)
     private SceneLayoutWatcher? tdWatcher;
     private int crateSeen;
 
@@ -269,8 +269,12 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         game.Mode.Surface = surface;
         if (td is not null) {
             // TD.14: a janela está em DIP reais; o hit-test e o Core trabalham no espaço de desenho de 32 DIP (÷ k).
-            float k = TdBand.Scale(tdBandHeight);
-            game.Mode.TdHitTest = (x, y) => TdHitTester.Test(td.Host.Match, x / k, y / k);
+            // TD.28c: k e a folga acima da faixa são lidos a cada teste (a altura muda ao vivo); a janela tem folga acima do espaço de 32.
+            game.Mode.TdHitTest = (x, y) =>
+            {
+                float k = TdBand.Scale(tdBandHeight);
+                return TdHitTester.Test(td.Host.Match, x / k, y / k - TdBand.EdgeHeadroomDip);
+            };
         }
         game.Mode.TargetClicked += OnTargetClicked;
         game.Mode.ModeChanged += OnModeChanged;
@@ -356,6 +360,26 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     private void ApplyOpacityLevels(OpacitySettings o) =>
         game.Mode.SetOpacityLevels((byte)o.Peek, o.FadeWhenAbsent ? (byte)o.Absent : OverlayModeController.PresentAlpha);
 
+    /// <summary>
+    /// TD.28c: altura da faixa TD AO VIVO. Recria renderer (sprites/escala), superfície e janela da cena (dock), layout lógico (largura/k),
+    /// hit-test (lê tdBandHeight), HUD/painel/cards/âncoras (presenter) e redesenha; nada reinicia.
+    /// </summary>
+    private void ApplyBandHeight(int requested)
+    {
+        int height = Math.Clamp(requested, TdBand.MinHeightDip, TdBand.MaxHeightDip);
+        if (tdRenderer is null || height == tdBandHeight) return;
+        tdBandHeight = height;
+        tdRenderer.SetBandHeight(height);
+        game.Dock.TdBandHeightDip = height;
+        if (game.Dock.Current is not null) game.Dock.Relayout(); // reposiciona/redimensiona a cena e a superfície; dispara LayoutApplied
+        tdSink?.Invalidate();
+        tdUi?.SetBandHeight(height);
+        ObserveLayout();
+        tdDriver?.MarkDirty();
+        tdDriver?.ForceDraw();
+        log($"td.bandHeightDip {height} aplicado ao vivo.");
+    }
+
     /// <summary>Novas configurações salvas pela janela WPF (T-UI → T-Game).</summary>
     public void ApplySettings(AppSettings value)
     {
@@ -364,8 +388,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         tdFocus?.Configure(value.Td.FadeWhenUnfocused, value.Td.FadeOpacityPercent);
         tdUi?.SetBonusQuestions(value.Td.BonusQuestions);
         tdUi?.LoadGameOptions(value);
-        if (td is not null && Math.Clamp(value.Td.BandHeightDip, TdBand.MinHeightDip, TdBand.MaxHeightDip) != tdBandHeight)
-            log($"td.bandHeightDip {value.Td.BandHeightDip} salvo; vale ao reiniciar o SideWar (atual {tdBandHeight}).");
+        if (td is not null) ApplyBandHeight(value.Td.BandHeightDip);
         runtime.ApplySettings(value.Performance.PresentFps, value.Performance.AbsentFps, value.Accessibility.ReducedMotion, value.AutoScale);
         game.Mode.SetPeekEnabled(value.Behavior.PeekOnHover);
         ApplyOpacityLevels(value.Opacity);

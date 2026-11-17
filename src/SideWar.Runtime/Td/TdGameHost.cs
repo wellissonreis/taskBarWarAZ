@@ -60,6 +60,12 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
     /// <summary>TD.17: portão do pedido "Iniciar onda" em Preparo (ex.: fase 1 do tutorial espera a 1ª torre). Falso ⇒ o pedido é descartado e não entra no log.</summary>
     public Func<bool>? WaveGate { get; set; }
 
+    /// <summary>
+    /// TD.28c: velocidade do jogo (1x, 2x, 3x): cada tick de 30 Hz executa N Steps. Determinístico (o Core só vê Steps e comandos entre eles;
+    /// o log guarda o Frame de cada comando, então o replay reproduz igual) e independente da pausa da modal (a pausa zera os ticks).
+    /// </summary>
+    public int GameSpeed { get; set; } = 1;
+
     public TdMatchState Match { get; private set; }
     public bool IsShutdown { get; private set; }
 
@@ -151,7 +157,8 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
 
         bool running = Running;
         int ticks = _stepper.Advance(now, running);
-        for (int i = 0; i < ticks && NeedsSteps; i++)
+        int steps = ticks * Math.Clamp(GameSpeed, 1, 3);
+        for (int i = 0; i < steps && NeedsSteps; i++)
         {
             Match.Step();
             StepsExecuted++;

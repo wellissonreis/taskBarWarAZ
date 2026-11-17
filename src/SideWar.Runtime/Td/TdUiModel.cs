@@ -86,7 +86,7 @@ public sealed record TdHudView(TdUiItem[] Items, float Width, float Height, bool
     public const float DefaultWidth = TdBand.HudBaseWidthDip, DefaultHeight = TdBand.HudBaseHeightDip;
 
     /// <summary>TD.28b: largura do HUD com o botão Iniciar onda (chip + painel + iniciar + caixa); a janela ancora a borda esquerda nesta largura.</summary>
-    public const float FullWidth = 580f;
+    public const float FullWidth = 614f;
     public const float ChipWidth = 190f, ChipHeight = 28f;
 
     /// <summary>Índice do item sob o ponto (qualquer item com texto/dica, inclusive não clicável) ou -1: base do tooltip.</summary>
@@ -127,9 +127,10 @@ public sealed record TdTooltipView(string Text, float AnchorX, float AnchorTop);
 
 /// <summary>Visão do perfil/meta para o Mapa e a árvore (implementada no App sobre o perfil TD; o Runtime não conhece a Persistência).</summary>
 /// <param name="Continuous">TD.28b: ondas contínuas (corrida infinita); desligado = modo clássico. Vale na próxima corrida.</param>
+/// <param name="GameSpeed">TD.28c: velocidade do jogo 1, 2 ou 3 (Steps por tick no host).</param>
 /// <param name="PanelPinned">TD.28b: painel rápido de torres sempre aberto junto ao chip.</param>
 public sealed record TdGameOptions(int BandHeight = 64, bool AutoStart = false, bool Sound = false, int Volume = 60, bool Questions = true, bool Fade = true,
-    bool Continuous = true, bool PanelPinned = false);
+    bool Continuous = true, bool PanelPinned = false, int GameSpeed = 1);
 
 public interface ITdUiHost
 {

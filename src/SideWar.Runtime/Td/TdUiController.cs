@@ -243,6 +243,7 @@ public sealed partial class TdUiController
                     5 => o with { Fade = !o.Fade },
                     6 => o with { Continuous = !o.Continuous },
                     7 => o with { PanelPinned = !o.PanelPinned },
+                    8 => o with { GameSpeed = o.GameSpeed % 3 + 1 },
                     _ => o,
                 };
                 _host.SetGameOptions(next);
@@ -508,14 +509,18 @@ public sealed partial class TdUiController
             TdUiAction.HudRestore, Icon: TdIcon.Heart, Tone: integTone, Tip: coreTip, RightIcon: TdIcon.Expand, Highlight: (needed || m.CrateActive) && PulseOn));
         items.Add(new TdUiItem(new DipRect(304, 0, 26, 28), TdUiKind.Button, "", TdUiAction.QuickTowers,
             Enabled: !ModalOpen, Icon: TdIcon.Menu, Tip: PanelPinned ? "Painel de torres fixo (Jogo ou Configurações)" : "Torres", Selected: QuickTowersOpen));
-        float crateX = 334;
+        // TD.28c: velocidade do jogo (1x/2x/3x): um clique alterna; não muda com a pausa da modal.
+        int speed = Math.Clamp(_host.GameOptions.GameSpeed, 1, 3);
+        items.Add(new TdUiItem(new DipRect(334, 0, 30, 28), TdUiKind.Button, $"{speed}x", TdUiAction.GameOption, 8,
+            Enabled: !ModalOpen, Tone: speed > 1 ? TdTone.Accent : TdTone.Normal, Tip: $"Velocidade do jogo: {speed}x (clique para alternar 1x/2x/3x)."));
+        float crateX = 368;
         // TD.28b: com ondas contínuas o botão Iniciar onda só existe no Preparo inicial; depois as ondas seguem sozinhas.
         if (!m.Options.ContinuousWaves || m.Phase == MatchPhase.Preparo)
         {
             var (text, right, enabled, tone, tip) = StartButton(m);
-            items.Add(new TdUiItem(new DipRect(334, 0, 126, 28), TdUiKind.Button, text, TdUiAction.StartWave,
+            items.Add(new TdUiItem(new DipRect(368, 0, 126, 28), TdUiKind.Button, text, TdUiAction.StartWave,
                 Right: right, Enabled: enabled && !StartBlockedFor(m) && !ModalOpen, Tone: tone, Tip: StartBlockedFor(m) ? "Coloque 1 torre primeiro" : tip, Icon: m.Phase == MatchPhase.Onda ? TdIcon.FastForward : TdIcon.Play, RightCoin: right is not null));
-            crateX = 464;
+            crateX = 498;
         }
         items.Add(new TdUiItem(new DipRect(crateX, 0, 116, 28), TdUiKind.Button, "Coletar caixa", TdUiAction.CollectCrate,
             Enabled: m.CrateActive && !ModalOpen, Icon: TdIcon.Box, Highlight: m.CrateActive && PulseOn, Tip: "Coletar caixa: Ctrl+Alt+C"));
@@ -893,7 +898,7 @@ public sealed partial class TdUiController
             var d = m.Content.Towers[t.DefIndex];
             long refund = m.SellValue(t.Id);
             s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, PopoverWidth - 3 * Pad - sellW, RowH + 2), TdUiKind.Button,
-                $"{d.Name} x{m.TowerCount(t.DefIndex)}", TdUiAction.OpenTower, t.Id, Tone: t.Placed ? TdTone.Normal : TdTone.Warn));
+                $"{d.Name} x{m.TowerCount(t.DefIndex)}", TdUiAction.OpenTower, t.Id, SArg: d.Id, Tone: t.Placed ? TdTone.Normal : TdTone.Warn));
             s.Items.Add(new TdUiItem(new DipRect(PopoverWidth - Pad - sellW, s.Y, sellW, RowH + 2), TdUiKind.Button,
                 "Vender", TdUiAction.Sell, t.Id, Right: $"+${refund}", Tone: TdTone.Bad));
             s.Y += RowH + 4;
@@ -930,7 +935,8 @@ public sealed partial class TdUiController
         s.Add(TdUiKind.Button, "Mapa de fases e selos", RowH, TdUiAction.MapOpen);
 
         var options = _host.GameOptions;
-        s.Add(TdUiKind.Button, $"Faixa: {options.BandHeight} DIP", RowH, TdUiAction.GameOption, 0, right: "Ao reiniciar");
+        s.Add(TdUiKind.Button, $"Faixa: {options.BandHeight} DIP", RowH, TdUiAction.GameOption, 0);
+        s.Add(TdUiKind.Button, $"Velocidade: {Math.Clamp(options.GameSpeed, 1, 3)}x", RowH, TdUiAction.GameOption, 8);
         s.Add(TdUiKind.Button, options.AutoStart ? "Auto-início: ligado" : "Auto-início: desligado", RowH, TdUiAction.GameOption, 1);
         s.Add(TdUiKind.Button, options.Sound ? "Som: ligado" : "Som: desligado", RowH, TdUiAction.GameOption, 2);
         s.Add(TdUiKind.Button, $"Volume: {options.Volume}%", RowH, TdUiAction.GameOption, 3);

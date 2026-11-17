@@ -120,13 +120,13 @@ public sealed record TdSettings
     public const int MinFadePercent = 10;
     public const int MaxFadePercent = 90;
 
-    /// <summary>Altura da faixa TD em DIP (32 a 96; presets Pequeno 40, Médio 64, Grande 88). Aplica ao reiniciar o SideWar.</summary>
+    /// <summary>Altura da faixa TD em DIP (32 a 96; presets Pequeno 40, Médio 64, Grande 88). Aplica NA HORA (TD.28c: recria cena, layout, hit-test e janelas sem reiniciar).</summary>
     public int BandHeightDip { get; init; } = DefaultBandHeightDip;
 
     /// <summary>HUD recolhido a um chip no canto da faixa (lembrado entre sessões). TD.17: nasce recolhido na 1ª execução (o tutorial ensina a abrir).</summary>
     public bool HudMinimized { get; init; } = true;
 
-    /// <summary>Esmaecer faixa e HUD quando o usuário ativa outro app (ausente: 8 fps e caixa-bomba sem presença).</summary>
+    /// <summary>Esmaecer faixa e HUD quando o usuário ativa outro app (ausente: só o esmaecer e a caixa-bomba sem presença; o fps não muda, TD.28c).</summary>
     public bool FadeWhenUnfocused { get; init; } = true;
 
     /// <summary>Opacidade (10 a 90 %) da faixa e do HUD enquanto esmaecidos.</summary>
@@ -149,6 +149,12 @@ public sealed record TdSettings
 
     /// <summary>TD.28b: painel rápido de torres (botão ≡ do chip) fica aberto o tempo todo junto ao chip; fecha ao desligar ou ao minimizar pelo atalho.</summary>
     public bool TowerPanelPinned { get; init; }
+
+    public const int MinGameSpeed = 1;
+    public const int MaxGameSpeed = 3;
+
+    /// <summary>TD.28c: velocidade do jogo (1x, 2x ou 3x): o host executa 1/2/3 Steps por tick de 30 Hz (determinístico: o replay não muda). Não muda com a pausa da modal.</summary>
+    public int GameSpeed { get; init; } = MinGameSpeed;
 
     /// <summary>Ids das afirmações do banco já sorteadas (<c>q01;q02</c>…): não repetem até esgotar o banco (TD.17).</summary>
     public string QuestionsSeen { get; init; } = "";

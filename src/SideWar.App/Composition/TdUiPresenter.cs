@@ -35,8 +35,8 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     private readonly TdUiController controller;
     private readonly SkiaFrameCanvas tipCanvas = new();
     private readonly TdFocusState focus;
-    private readonly int bandHeight;
-    private readonly float k, hudScale;
+    private int bandHeight;
+    private float k, hudScale;
     private readonly Action menuChanged;
     private volatile bool hudMinimized;
     private volatile TdGameOptions gameOptions = new();
@@ -44,12 +44,13 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     public void SetGameOptions(TdGameOptions options)
     {
         gameOptions = options;
+        td.Host.GameSpeed = options.GameSpeed; // TD.28c: vale já no próximo tick (o salvamento é assíncrono)
         ui(UiRequest.SaveTdOptions);
     }
     public void LoadGameOptions(SideWar.Persistence.Settings.AppSettings settings)
     {
         gameOptions = new(settings.Td.BandHeightDip, settings.Td.AutoStartEnabled, settings.Audio.Enabled, (int)Math.Round(settings.Audio.Volume * 100), settings.Td.BonusQuestions, settings.Td.FadeWhenUnfocused,
-            settings.Td.ContinuousWaves, settings.Td.TowerPanelPinned);
+            settings.Td.ContinuousWaves, settings.Td.TowerPanelPinned, settings.Td.GameSpeed);
         bossHotkey = settings.Hotkeys.ToggleVisibility;
         Kick();
     }
@@ -243,7 +244,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         {
             Present();
             runtime.NotifyInteraction();
-            controller.SceneLeftClick(x / k, y / k, target);
+            controller.SceneLeftClick(x / k, y / k - TdBand.EdgeHeadroomDip, target);
             Kick();
         };
         Relayout();
@@ -302,6 +303,24 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     /// <summary>Ocultação da cena (tela cheia, sessão bloqueada, atalho): cancela o modo construção/popover (RF-28.20 passo 5).</summary>
     public void OnSceneHidden() => controller.Cancel();
 
+    /// <summary>
+    /// TD.28c: nova altura da faixa AO VIVO: refaz escalas, o renderer do HUD/cartões e as janelas. A cena, o dock e o hit-test são
+    /// atualizados pela composição (que chama isto depois do <c>Relayout</c> do dock).
+    /// </summary>
+    public void SetBandHeight(int newHeight)
+    {
+        newHeight = Math.Clamp(newHeight, TdBand.MinHeightDip, TdBand.MaxHeightDip);
+        if (newHeight == bandHeight) return;
+        bandHeight = newHeight;
+        k = TdBand.Scale(newHeight);
+        hudScale = TdBand.HudScale(newHeight);
+        renderer?.Dispose();
+        renderer = null; // Relayout recria com o novo hudScale
+        tipIndex = -1; hudHover = popHover = -1;
+        Relayout();
+        Kick();
+    }
+
     public void Relayout()
     {
         if (disposed || game.Dock.Current is not { } c) return;
@@ -324,7 +343,9 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         // TD.16: HUD (ou chip recolhido) flutua logo ACIMA da faixa, alinhado à direita, sem cobri-la.
         // TD.28b: a borda esquerda é fixa (largura cheia do HUD); sem o botão Iniciar onda a janela só encolhe pela direita e o chip não pula.
         int full = (int)MathF.Round(TdHudView.FullWidth * UiScale);
-        int bottom = Math.Max(c.Monitor.WorkArea.Top + h, c.Scene.Top - (int)MathF.Round(2 * Scale));
+        // TD.28c: a janela da cena tem folga acima da faixa (portal/núcleo); o HUD fica logo acima da FAIXA, não da folga.
+        int bandTop = c.Scene.Top + (int)MathF.Round(TdBand.HeadroomRealDip(bandHeight) * Scale);
+        int bottom = Math.Max(c.Monitor.WorkArea.Top + h, bandTop - (int)MathF.Round(2 * Scale));
         int left = c.Scene.Right - full;
         return new PixelRect(left, bottom - h, left + w, bottom);
     }

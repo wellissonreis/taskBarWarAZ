@@ -25,7 +25,7 @@
           <CheckBox Content="Iniciar as ondas automaticamente (Tower Defense)" IsChecked="{Binding TdAutoStart}" Margin="0,0,0,4" />
           <TextBlock Text="Segundos de contagem do auto-início (5–60)" />
           <TextBox Text="{Binding TdAutoStartSeconds, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding TdAutoStart}" Width="80" HorizontalAlignment="Left" Margin="0,2,0,8" />
-          <TextBlock Text="Tamanho da faixa Tower Defense (DIP, 32–96; vale ao reiniciar o SideWar)" />
+          <TextBlock Text="Tamanho da faixa Tower Defense (DIP, 32–96; aplica ao salvar, sem reiniciar)" />
           <StackPanel Orientation="Horizontal" Margin="0,2,0,2">
             <Button Content="Pequeno (40)" Width="100" Margin="0,0,6,0" Click="OnBandSmall" />
             <Button Content="Médio (64)" Width="100" Margin="0,0,6,0" Click="OnBandMedium" />
@@ -33,6 +33,13 @@
           </StackPanel>
           <Slider Minimum="32" Maximum="96" Value="{Binding TdBandHeight}" IsSnapToTickEnabled="True" TickFrequency="1" Margin="0,2,0,0" />
           <TextBlock Text="{Binding TdBandHeight}" Margin="0,0,0,8" />
+          <TextBlock Text="Velocidade do jogo (Tower Defense)" />
+          <StackPanel Orientation="Horizontal" Margin="0,2,0,8">
+            <Button Content="1x" Width="60" Margin="0,0,6,0" Click="OnSpeed1" />
+            <Button Content="2x" Width="60" Margin="0,0,6,0" Click="OnSpeed2" />
+            <Button Content="3x" Width="60" Margin="0,0,6,0" Click="OnSpeed3" />
+            <TextBlock Text="{Binding TdGameSpeed, StringFormat={}{0}x}" VerticalAlignment="Center" />
+          </StackPanel>
           <TextBlock x:Name="PresenceText" TextWrapping="Wrap" Foreground="Gray" />
         </StackPanel>
       </TabItem>

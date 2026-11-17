@@ -28,7 +28,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     private string toggleInteractive = "", toggleVisibility = "", togglePause = "", startWave = "", collectCrate = "";
     private GameMode gameMode;
     private bool tdAutoStart;
-    private int tdAutoStartSeconds, tdBandHeight, tdFadePercent;
+    private int tdAutoStartSeconds, tdBandHeight, tdFadePercent, tdGameSpeed = 1;
     private bool tdFadeWhenUnfocused;
     private bool tdBonusQuestions, tdContinuousWaves, tdTowerPanelPinned;
     private string? saveError;
@@ -72,6 +72,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     public int TdBandHeight { get => tdBandHeight; set { if (Set(ref tdBandHeight, value)) Check(nameof(TdBandHeight), value is >= TdSettings.MinBandHeightDip and <= TdSettings.MaxBandHeightDip ? null : "Altura entre 32 e 96 DIP."); } }
     /// <summary>Esmaecer faixa e HUD ao ativar outro app (TD.14).</summary>
     public bool TdBonusQuestions { get => tdBonusQuestions; set => Set(ref tdBonusQuestions, value); }
+    public int TdGameSpeed { get => tdGameSpeed; set { if (Set(ref tdGameSpeed, value)) Check(nameof(TdGameSpeed), value is >= TdSettings.MinGameSpeed and <= TdSettings.MaxGameSpeed ? null : "Velocidade 1x, 2x ou 3x."); } }
     public bool TdContinuousWaves { get => tdContinuousWaves; set => Set(ref tdContinuousWaves, value); }
     public bool TdTowerPanelPinned { get => tdTowerPanelPinned; set => Set(ref tdTowerPanelPinned, value); }
     public bool TdFadeWhenUnfocused { get => tdFadeWhenUnfocused; set => Set(ref tdFadeWhenUnfocused, value); }
@@ -142,7 +143,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         {
             AutoStartEnabled = tdAutoStart, AutoStartSeconds = tdAutoStartSeconds, BandHeightDip = tdBandHeight,
             FadeWhenUnfocused = tdFadeWhenUnfocused, FadeOpacityPercent = tdFadePercent, BonusQuestions = tdBonusQuestions,
-            ContinuousWaves = tdContinuousWaves, TowerPanelPinned = tdTowerPanelPinned,
+            ContinuousWaves = tdContinuousWaves, TowerPanelPinned = tdTowerPanelPinned, GameSpeed = tdGameSpeed,
         },
     };
 
@@ -198,6 +199,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         tdBonusQuestions = s.Td.BonusQuestions;
         tdContinuousWaves = s.Td.ContinuousWaves;
         tdTowerPanelPinned = s.Td.TowerPanelPinned;
+        tdGameSpeed = s.Td.GameSpeed;
     }
 
     private void Check(string property, string? error)

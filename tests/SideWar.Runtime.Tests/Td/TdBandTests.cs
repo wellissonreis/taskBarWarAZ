@@ -45,7 +45,7 @@ public sealed class TdBandTests
         var m = Monitor(width, 1032, dpi);
         var r = SceneLayout.ComputeTdBand(m, Bar(), bandDip);
         double scale = dpi / 96.0;
-        int heightPx = (int)Math.Round(bandDip * scale, MidpointRounding.AwayFromZero);
+        int heightPx = (int)Math.Round(TdBand.SceneHeightDip(bandDip) * scale, MidpointRounding.AwayFromZero); // faixa + folga do portal/núcleo (TD.28c)
         Assert.Equal(new PixelRect(0, 1032 - heightPx, width, 1032), r);
     }
 
@@ -53,7 +53,7 @@ public sealed class TdBandTests
     public void Default_band_is_64_dip_and_the_hud_scales_with_the_band()
     {
         Assert.Equal(64, TdBand.DefaultHeightDip);
-        Assert.Equal(64, SceneLayout.ComputeTdBand(Monitor(), Bar()).Height);
+        Assert.Equal(92, SceneLayout.ComputeTdBand(Monitor(), Bar()).Height); // 64 + folga 28 (14 × k)
         Assert.Equal(1f, TdBand.HudScale(64));
         Assert.True(TdBand.HudScale(88) > TdBand.HudScale(64));
         Assert.Equal(0.75f, TdBand.HudScale(32)); // piso de legibilidade
@@ -71,7 +71,7 @@ public sealed class TdBandTests
         var sink = new FakeClockSink();
         var w = new SceneLayoutWatcher(sink, null, l => new LayoutChangedTd(l));
         var u = w.Observe(Monitor(), Bar(), new BuildZoneOptions { TdBand = true, TdBandHeightDip = bandDip })!.Value;
-        Assert.Equal(bandDip, u.Scene.Height);
+        Assert.Equal((int)Math.Round(TdBand.SceneHeightDip(bandDip), MidpointRounding.AwayFromZero), u.Scene.Height);
         int realWidth = u.Scene.Width;
         Assert.Equal((int)Math.Round(realWidth / TdBand.Scale(bandDip), MidpointRounding.AwayFromZero), u.Layout.Width);
     }
@@ -105,7 +105,7 @@ public sealed class TdBandTests
         Assert.NotNull(first);
         Assert.True(first!.Value.LayoutPosted);
         Assert.Equal(1920 / 2, first.Value.Layout.Width); // 64 DIP reais = 2 × espaço de desenho
-        Assert.Equal(TdBand.DefaultHeightDip, first.Value.Scene.Height);
+        Assert.Equal((int)Math.Round(TdBand.SceneHeightDip(TdBand.DefaultHeightDip), MidpointRounding.AwayFromZero), first.Value.Scene.Height);
         Assert.IsType<LayoutChangedTd>(Assert.Single(sink.Posted));
 
         Assert.Null(w.Observe(Monitor(), Bar(), Td)); // nada mudou
@@ -181,7 +181,7 @@ public sealed class TdBandTests
     }
 
     [Fact]
-    public void Render_driver_drops_to_8_fps_while_the_player_is_absent_and_keeps_explicit_redraws()
+    public void Render_driver_keeps_the_same_fps_while_the_player_is_absent_and_keeps_explicit_redraws()
     {
         var (match, host, clock, app) = Rig();
         var sink = new CountingSink();
@@ -197,7 +197,7 @@ public sealed class TdBandTests
         int normal = sink.Frames;
         driver.Absent = true;
         Tick(60); // 2 s ausente
-        Assert.InRange(sink.Frames - normal, 14, 18); // ~8 fps
+        Assert.InRange(sink.Frames - normal, 58, 61); // TD.28c: mesmo fps (30) com ou sem foco
         Assert.True(match.Frame > 0);
         int before = sink.Frames;
         driver.MarkDirty(); // mouse/seleção: desenha na hora

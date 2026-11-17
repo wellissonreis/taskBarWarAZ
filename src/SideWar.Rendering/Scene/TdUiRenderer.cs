@@ -210,7 +210,9 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             RoundBox(c, r, it.Selected ? Palette.Td.Amber : Palette.Td.BorderStrong, hover && it.Enabled ? Palette.Td.BorderStrong : Palette.Td.Surface, 8);
             float size = Math.Min(44, r.H - 8);
             RoundBox(c, new DipRect(r.X + 7, r.Y + (r.H - size) / 2, size, size), Palette.Td.BorderStrong, col.WithAlpha(40), 6);
-            DrawIcon(c, it.Enabled ? it.SArg switch { "bolt" => TdIcon.Bolt, "frost" => TdIcon.Frost, _ => TdIcon.Target } : TdIcon.Lock, r.X + 7 + (size - 22) / 2, r.Y + (r.H - 22) / 2, 22, col);
+            // TD.28c: foto da torre (sprite do design) no tile, no lugar do ícone vetorial; apagada se bloqueada/sem crédito
+            float photo = size - 8f;
+            DrawTowerIcon(c, it.SArg ?? "", r.X + 7 + (size - photo) / 2, r.Y + (r.H - photo) / 2, photo, it.Enabled ? (byte)255 : (byte)110);
             _p.Text(c, it.Text, PanelFont.JetBrainsMono, 12, new DipRect(r.X + 60, r.Y + 8, 150, 16), it.Enabled ? Palette.Td.Text : Palette.Td.Muted);
             if (it.Sub is not null) DrawWrapped(c, it.Sub, new DipRect(r.X + 210, r.Y + 9, Math.Max(20, r.W - 290), r.H - 12), Palette.Td.Muted);
             if (it.Right is not null) _p.Text(c, it.Right, PanelFont.JetBrainsMono, 12, new DipRect(r.X + r.W - 78, r.Y + 10, 66, 16), it.Enabled ? Palette.Td.Amber : Palette.Td.Dim, TextAlign.Right);
@@ -224,7 +226,15 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             RoundBox(c, r, border, back, 6);
             var fg = !it.Enabled ? Palette.Td.Dim : it.SArg == "primary" ? Palette.Td.Background : tint != default ? tint : Palette.Td.Text;
             float tx = r.X + 10;
-            if (it.Icon != TdIcon.None) { DrawIcon(c, it.Icon, tx, r.Y + (r.H - 14) / 2, 14, fg); tx += 22; }
+            if (it.Action == TdUiAction.OpenTower && it.SArg is not null && r.H >= 30f)
+            {
+                // TD.28c: aba Torres: foto da torre em campo à esquerda do nome
+                float photo = Math.Min(r.H - 8f, 34f);
+                RoundBox(c, new DipRect(r.X + 6, r.Y + (r.H - photo - 2) / 2, photo + 2, photo + 2), Palette.Td.BorderStrong, Palette.Td.Background, 5);
+                DrawTowerIcon(c, it.SArg, r.X + 7, r.Y + (r.H - photo) / 2, photo, 255);
+                tx = r.X + photo + 16;
+            }
+            else if (it.Icon != TdIcon.None) { DrawIcon(c, it.Icon, tx, r.Y + (r.H - 14) / 2, 14, fg); tx += 22; }
             _p.Text(c, it.Text, PanelFont.JetBrainsMono, r.H >= 34 ? 12 : 10, new DipRect(tx, r.Y + Math.Max(2, (r.H - 13) / 2), r.W - (tx - r.X) - 10, 13), fg);
             if (it.Right is not null) _p.Text(c, it.Right, PanelFont.JetBrainsMono, 10, new DipRect(r.X + 10, r.Y + Math.Max(2, (r.H - 13) / 2), r.W - 20, 13), Palette.Td.Amber, TextAlign.Right);
             return;
@@ -294,7 +304,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
                 if (!it.Enabled) col = col.WithAlpha(115);
                 RoundBox(c, r, it.Selected ? Palette.Td.Amber : Palette.Td.BorderStrong, Palette.Td.Surface, 6);
                 RoundBox(c, new DipRect(r.X + 22, r.Y + 6, 32, 32), Palette.Td.BorderStrong, col.WithAlpha(35), 5);
-                DrawIcon(c, it.SArg switch { "bolt" => TdIcon.Bolt, "frost" => TdIcon.Frost, _ => TdIcon.Target }, r.X + 29, r.Y + 13, 18, col);
+                DrawTowerIcon(c, it.SArg ?? "", r.X + 25, r.Y + 9, 26f, it.Enabled ? (byte)255 : (byte)110); // TD.28c: sprite real da torre
                 _p.Text(c, it.Text, PanelFont.JetBrainsMono, 8, new DipRect(r.X + 2, r.Y + 46, r.W - 4, 12), it.Enabled ? Palette.Td.Text : Palette.Td.Dim, TextAlign.Center);
                 _p.Text(c, it.Right ?? "", PanelFont.JetBrainsMono, 10, new DipRect(r.X + 2, r.Y + 64, r.W - 4, 12), it.Enabled ? Palette.Td.Amber : Palette.Td.Dim, TextAlign.Center);
             }

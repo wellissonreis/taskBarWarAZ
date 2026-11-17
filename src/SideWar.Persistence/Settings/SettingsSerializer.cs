@@ -74,6 +74,7 @@ public static class SettingsSerializer
         w.WriteBoolean("bonusQuestions", s.Td.BonusQuestions);
         w.WriteBoolean("continuousWaves", s.Td.ContinuousWaves);
         w.WriteBoolean("towerPanelPinned", s.Td.TowerPanelPinned);
+        w.WriteNumber("gameSpeed", s.Td.GameSpeed);
         w.WriteString("questionsSeen", s.Td.QuestionsSeen);
         w.WriteEndObject();
         w.WriteEndObject();
@@ -156,6 +157,7 @@ public static class SettingsSerializer
                 BonusQuestions = Bool(td, "bonusQuestions", d.Td.BonusQuestions),
                 ContinuousWaves = Bool(td, "continuousWaves", d.Td.ContinuousWaves),
                 TowerPanelPinned = Bool(td, "towerPanelPinned", d.Td.TowerPanelPinned),
+                GameSpeed = IntRange(td, "gameSpeed", TdSettings.MinGameSpeed, TdSettings.MaxGameSpeed, d.Td.GameSpeed),
                 QuestionsSeen = Str(td, "questionsSeen", 1024) ?? d.Td.QuestionsSeen,
             },
         };
