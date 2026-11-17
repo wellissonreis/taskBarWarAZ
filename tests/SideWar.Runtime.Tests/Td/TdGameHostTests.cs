@@ -285,7 +285,7 @@ public sealed class TdGameHostTests
     public void Presence_log_replays_to_the_same_hash_and_RequestCollectCrate_collects()
     {
         var bc = Content.Stages.Rules.BombCrate with { Chance = 1.0, MinDropSeconds = 1 };
-        var stages = Content.Stages.Stages.Select(s => s with { StartingCredits = 1_000_000, MaxTowers = 12 }).ToArray();
+        var stages = Content.Stages.Stages.Select(s => s with { StartingCredits = 1_000_000 }).ToArray();
         var content = Content with { Stages = Content.Stages with { Rules = Content.Stages.Rules with { BombCrate = bc, CoreIntegrity = 100_000 }, Stages = stages } };
         var match = TdMatchState.Create(content, 2, Rng.Seed(42, 54));
         var input = new FakeInput { Present = true };

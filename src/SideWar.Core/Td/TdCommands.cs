@@ -12,17 +12,11 @@ public sealed record CallNextWave : IGameCommand;
 /// <summary>Constrói uma torre (<c>TowerId</c> do td-towers.json) na posição lógica X, em Preparo ou Onda.</summary>
 public sealed record BuildTower(string TowerId, int X) : IGameCommand;
 
-/// <summary>Vende a torre devolvendo <c>sellRefund</c> do total investido, a qualquer momento (RF-28.4).</summary>
+/// <summary>Vende a torre a qualquer momento (SDD-29 §5.2): devolve <c>taxa × custo(tipo, n−1)</c>, fungível entre torres do mesmo tipo.</summary>
 public sealed record SellTower(int TowerId) : IGameCommand;
-
-/// <summary>Melhora a torre: níveis 1 a 3 lineares e capstone (4 → 5). O ramo (3 → 4) é escolhido por <see cref="ChooseBranch"/>.</summary>
-public sealed record UpgradeTower(int TowerId) : IGameCommand;
 
 /// <summary>Configura o auto-início (<c>match.autoStart</c>); <c>CountdownSeconds</c> é limitado ao intervalo do conteúdo.</summary>
 public sealed record SetAutoStart(AutoStartMode Mode, double CountdownSeconds) : IGameCommand;
-
-/// <summary>Escolhe o ramo (<c>"A"</c> ou <c>"B"</c>) de uma torre no nível 3: sobe para o nível 4 pagando o custo do ramo (RF-28.5). Sem volta.</summary>
-public sealed record ChooseBranch(int TowerId, string Branch) : IGameCommand;
 
 /// <summary>Troca o modo de mira de uma torre de ataque, a qualquer momento (RF-28.6).</summary>
 public sealed record SetTargeting(int TowerId, TdTargeting Mode) : IGameCommand;
@@ -39,7 +33,7 @@ public sealed record LayoutChanged(SideWar.Core.Simulation.StripLayout Layout) :
 /// <summary>Posiciona, sem custo, uma torre SEM POSIÇÃO em X lógico (snap de 44 DIP, RF-28.20); torre já posicionada é rejeitada.</summary>
 public sealed record PlaceTower(int TowerId, int X) : IGameCommand;
 
-/// <summary>Reposiciona, sem custo, uma torre SEM POSIÇÃO em X lógico (snap de 44 DIP); mantém nível, ramo e recarga. Torre posicionada é rejeitada (NotUnpositioned).</summary>
+/// <summary>Reposiciona, sem custo, uma torre SEM POSIÇÃO em X lógico (snap de 44 DIP); mantém a recarga. Torre posicionada é rejeitada (NotUnpositioned).</summary>
 public sealed record MoveTower(int TowerId, int X) : IGameCommand;
 
 /// <summary>Sinal "presente agora" do hospedeiro (RF-28.19): enviado ao log só quando muda; o Core nunca lê relógio nem entrada.</summary>

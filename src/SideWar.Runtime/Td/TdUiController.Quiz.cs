@@ -110,7 +110,7 @@ public sealed partial class TdUiController
         if (m.Towers.Count == 0)
         {
             long min = long.MaxValue;
-            foreach (var d in m.Content.Towers) if (m.StageId >= d.UnlockStage && d.Cost < min) min = d.Cost;
+            for (int i = 0; i < m.Content.Towers.Length; i++) if (m.StageId >= m.Content.Towers[i].UnlockStage && m.NextTowerCost(i) < min) min = m.NextTowerCost(i);
             return m.Credits >= min;
         }
         return _now() - _prepSince >= HudHintSeconds;

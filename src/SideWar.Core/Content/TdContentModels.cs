@@ -3,25 +3,11 @@ namespace SideWar.Core.Content.Td;
 // Conteúdo TD v2 (SDD-28 RF-28.4 a RF-28.13), lado a lado com o conteúdo idle (SDD-12/27): namespace e arquivos
 // `td-*.json` novos, hash próprio. Distâncias em unidades lógicas (mundo de 1.200 unidades), tempos em segundos.
 
-// LEGADO (SDD-29): TdTowerLevelDef, TdCapstoneDef, TdBranchDef, TdTowerDef.Levels/Branches e TdStageDef.MaxTowers
-// serão removidos na TD.20/TD.21; seguem aqui só porque Runtime/Rendering ainda os consomem.
-
-/// <summary>Nível linear 1 a 3 (RF-28.5): <c>CostFactor</c> é múltiplo do custo base da torre.</summary>
-public sealed record TdTowerLevelDef(int Level, double CostFactor, double DamageMultiplier);
-
-/// <summary>Capstone (nível 5) do ramo escolhido; herda a fraqueza do ramo.</summary>
-public sealed record TdCapstoneDef(string Name, double CostFactor, string Effect, Dictionary<string, double> Stats);
-
-/// <summary>Ramo A/B do nível 4. <c>Weakness</c> (texto) e <c>WeakAgainst</c> (traços) são obrigatórios.</summary>
-public sealed record TdBranchDef(
-    string Id, string Name, double CostFactor, string Gain, string Weakness, string[] WeakAgainst,
-    Dictionary<string, double> Stats, TdCapstoneDef Capstone);
-
 /// <summary>Torre (td-towers.json). <c>Kind</c>: attack | blocker | support. <c>Targets</c>: ground | both | none.</summary>
 public sealed record TdTowerDef(
     string Id, string Name, string Flavor, string Role, string Kind, string Targets, string? DefaultTargeting,
     long Cost, double Range, double Damage, double Interval, int UnlockStage, Dictionary<string, double> Stats,
-    TdTowerLevelDef[] Levels, string[] Strong, string[] Weak, string WeaknessText, TdBranchDef[] Branches);
+    string[] Strong, string[] Weak, string WeaknessText);
 
 /// <summary>Inimigo comum (RF-28.7). <c>Counters</c>: torres ("bolt") ou ramos ("bolt.A") que o contra-atacam.</summary>
 public sealed record TdEnemyDef(
@@ -70,7 +56,7 @@ public sealed record TdMatchRulesDef(
     TdChallengeDef[] Challenges, TdBombCrateDef BombCrate, TdBonusQuestionDef BonusQuestion);
 
 public sealed record TdStageDef(
-    int Id, string Title, string Region, string Concept, int Waves, long StartingCredits, int MaxTowers, string Challenge);
+    int Id, string Title, string Region, string Concept, int Waves, long StartingCredits, string Challenge);
 
 public sealed record TdStagesDef(TdMatchRulesDef Rules, TdStageDef[] Stages);
 

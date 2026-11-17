@@ -15,7 +15,7 @@ namespace SideWar.Rendering.Scene;
 /// inteiros (nítidas a 100/150%): torres de 28 DIP, núcleo/portal de 32 DIP de largura, inimigos de 11 a 28 DIP, caixa-bomba de 26 DIP.
 /// Tudo apoiado no chão (base da faixa); inimigos à frente das torres. Legibilidade por cima das sprites: tipo de inimigo por <b>tinta +
 /// pino de traço</b> (voador losango, blindado quadrado, regenera triângulo, drena cruz, chefe quadrado vermelho), barra de vida só para
-/// chefe e elite danificado, torre com pontos de nível e ponto de cor do ramo, alcance como barra no topo, nós do balanceador, caixa-bomba
+/// chefe e elite danificado, alcance como barra no topo, nós do balanceador, caixa-bomba
 /// com contagem e destaque de perigo, torre em risco marcada, torres SEM POSIÇÃO como chips tracejados. Paints/paths/imagens pré-criados;
 /// sem alocação por frame em regime. Não thread-safe (T-Game).
 /// </summary>
@@ -464,23 +464,6 @@ public sealed class TdBandRenderer : IDisposable
             _stroke.StrokeWidth = 1f;
         }
 
-        // pontos de nível (1 a 5) na base, sobre um fundo escuro para não se perderem na sprite
-        int level = Math.Clamp(t.Level, 1, 5);
-        float pw = level * 3f + 1f;
-        _fill.Color = Palette.BgAbismo.WithAlpha(215);
-        c.DrawRoundRect(cx - pw / 2f - 0.5f, Ground - 5f, pw + 1f, 4.5f, 1.5f, 1.5f, _fill);
-        float px = cx - (level * 3f - 1f) / 2f;
-        _fill.Color = t.Level >= 5 ? Palette.Ambar : Palette.TxtPrincipal;
-        for (int i = 0; i < level; i++) c.DrawRect(px + i * 3f, Ground - 3.75f, 2f, 2f, _fill);
-
-        // ponto de cor do ramo (A âmbar, B violeta)
-        if (t.Branch != 0)
-        {
-            _fill.Color = Palette.BgAbismo;
-            c.DrawCircle(left + sw - 2f, top + 3.5f, 3.5f, _fill);
-            _fill.Color = t.Branch == 1 ? Palette.Ambar : Palette.Prestigio;
-            c.DrawCircle(left + sw - 2f, top + 3.5f, 2.2f, _fill);
-        }
         if (disabled)
         {
             _stroke.Color = Palette.Perigo;
@@ -531,10 +514,7 @@ public sealed class TdBandRenderer : IDisposable
             if (!t.Placed || t.DisabledTicks > 0) continue;
             var def = _content!.Towers[t.DefIndex];
             if (def.Kind != "attack" || def.Interval <= 0) continue;
-            double mult = 1.0;
-            if (t.Branch is 1 or 2 && t.Branch <= def.Branches.Length &&
-                def.Branches[t.Branch - 1].Stats.TryGetValue("intervalMultiplier", out var im)) mult = im;
-            int intervalTicks = Math.Max(1, (int)Math.Round(def.Interval * mult * TdWorld.TicksPerSecond));
+            int intervalTicks = Math.Max(1, (int)Math.Round(def.Interval * TdWorld.TicksPerSecond));
             if (t.CooldownTicks < intervalTicks - 2) continue;
 
             float cx = TdBand.TowerCenterDip(m, t, w);

@@ -40,22 +40,19 @@ public sealed class TdContentTests
         Assert.Equal(2, c.Towers.Single(t => t.Id == "balancer").UnlockStage);
     }
 
-    [Fact(DisplayName = "TD.1 / CA-28.4 Every tower has 3 linear levels, branches A/B and a capstone with declared weakness")]
-    public void Towers_HaveBranchesCapstonesAndWeakness()
+    [Fact(DisplayName = "TD.20 / CA-29.1 Towers have no levels, branches or capstones, and every tower declares a weakness")]
+    public void Towers_HaveNoLevelsBranchesAndDeclareWeakness()
     {
         var c = TdContentLoader.LoadEmbedded();
+        var text = Encoding.UTF8.GetString(TdContentLoader.ReadEmbedded()["td-towers.json"]);
+        Assert.DoesNotContain("\"levels\"", text);
+        Assert.DoesNotContain("\"branches\"", text);
+        Assert.DoesNotContain("\"capstone\"", text);
+        Assert.DoesNotContain("\"maxTowers\"", Encoding.UTF8.GetString(TdContentLoader.ReadEmbedded()["td-stages.json"]).Split("\"challenges\"")[0]);
         foreach (var t in c.Towers)
         {
-            Assert.Equal(3, t.Levels.Length);
-            Assert.Equal(["A", "B"], t.Branches.Select(b => b.Id));
             Assert.False(string.IsNullOrWhiteSpace(t.WeaknessText));
             Assert.NotEmpty(t.Weak);
-            Assert.All(t.Branches, b =>
-            {
-                Assert.False(string.IsNullOrWhiteSpace(b.Weakness));
-                Assert.NotEmpty(b.WeakAgainst);
-                Assert.False(string.IsNullOrWhiteSpace(b.Capstone.Effect));
-            });
         }
     }
 
@@ -63,7 +60,7 @@ public sealed class TdContentTests
     public void Enemies_HaveCountersAndSufferers()
     {
         var c = TdContentLoader.LoadEmbedded();
-        var suffered = c.Towers.SelectMany(t => t.Weak.Concat(t.Branches.SelectMany(b => b.WeakAgainst))).ToHashSet();
+        var suffered = c.Towers.SelectMany(t => t.Weak).ToHashSet();
         foreach (var x in c.Enemies.Enemies)
         {
             Assert.NotEmpty(x.Counters);
@@ -89,13 +86,6 @@ public sealed class TdContentTests
         Assert.All(c.Waves.Stages, s => Assert.Contains(s.Waves, w => w.Rest));
     }
 
-    [Fact(DisplayName = "TD.1 / CA-28.4 Validator rejects a branch without declared weakness")]
-    public void Validator_RejectsBranchWithoutWeakness()
-    {
-        AssertError(With("td-towers.json", "\"weakness\": \"Chefes são imunes à paralisia.\"", "\"weakness\": \" \""), "td-towers.frost.A.weakness");
-        AssertError(With("td-towers.json", "\"weakAgainst\": [\"armored\"]", "\"weakAgainst\": []"), "td-towers.bolt.B.weakAgainst");
-    }
-
     [Fact(DisplayName = "TD.1 Validator rejects a tower without declared weakness or with an unknown trait")]
     public void Validator_RejectsTowerWithoutWeakness()
     {
@@ -107,7 +97,7 @@ public sealed class TdContentTests
     [Fact(DisplayName = "TD.1 Validator rejects an enemy without counter or with an unknown counter reference")]
     public void Validator_RejectsEnemyWithoutCounter()
     {
-        AssertError(With("td-enemies.json", "\"counters\": [\"bolt\", \"bolt.A\"]", "\"counters\": []"), "td-enemies.leech.counters");
+        AssertError(With("td-enemies.json", "\"counters\": [\"bolt\"]", "\"counters\": []"), "td-enemies.leech.counters");
         AssertError(With("td-enemies.json", "\"counters\": [\"bolt\", \"frost\"]", "\"counters\": [\"laser\"]"), "'laser' não existe");
     }
 

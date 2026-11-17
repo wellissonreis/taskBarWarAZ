@@ -90,16 +90,60 @@ public sealed partial class TdMatchState
     public int IntegrityMax { get; }
     public int IntegrityLost => IntegrityMax - Integrity;
     public long Credits { get; private set; }
-    /// <summary>Limite de torres: o da fase + 1 por Scale Set com o capstone "Capacidade reservada" (RF-28.5). Hook da TD.5: bônus de meta.</summary>
-    public int MaxTowers
+    /// <summary>Teto técnico de segurança (SDD-29 §5.3): 48 torres no total, contando as SEM POSIÇÃO. Não é teto de design: o custo crescente limita antes.</summary>
+    public const int TechnicalTowerLimit = 48;
+
+    /// <summary>Quantas torres do tipo <paramref name="defIndex"/> existem agora (inclui as SEM POSIÇÃO, que ainda ocupam a quota).</summary>
+    public int TowerCount(int defIndex)
     {
-        get
-        {
-            int n = _stage.MaxTowers;
-            foreach (var t in _towers)
-                if (t.Placed && t.Level >= 5 && Stat(t, _content.Towers[t.DefIndex], "maxTowersBonus", 0) > 0) n++;
-            return n;
-        }
+        int n = 0;
+        for (int i = 0; i < _towers.Count; i++)
+            if (_towers[i].DefIndex == defIndex) n++;
+        return n;
+    }
+
+    /// <summary>
+    /// Preço da próxima torre do tipo (SDD-29 §5.1): <c>round(base × F[n] / 100)</c> com <c>n</c> = <see cref="TowerCount"/>.
+    /// Arredondamento: <b>metade para o par</b> (half-to-even), em inteiros, o mesmo da tabela do SDD (90×1,25 = 112,5 → 112; 90×1,95 = 175,5 → 176).
+    /// </summary>
+    public long NextTowerCost(int defIndex) => TowerCostAt(defIndex, TowerCount(defIndex));
+
+    /// <summary>Preço da torre do tipo quando já existem <paramref name="n"/> do mesmo tipo (n &gt;= 0; acima da tabela usa a última entrada).</summary>
+    public long TowerCostAt(int defIndex, int n) => TowerCost(_content, defIndex, n);
+
+    /// <summary>Tabela de custo vigente (a normal; a <c>towerCostTableLow</c> da runa "Cota folgada" entra na TD.21).</summary>
+    internal static long TowerCost(TdContent content, int defIndex, int n)
+    {
+        var table = content.Stages.Rules.TowerCostTable;
+        long f = table[Math.Clamp(n, 0, table.Length - 1)];
+        return DivRoundHalfEven(content.Towers[defIndex].Cost * f, 100);
+    }
+
+    /// <summary>Divisão inteira com arredondamento metade-para-o-par (valores não negativos).</summary>
+    internal static long DivRoundHalfEven(long num, long den)
+    {
+        long q = num / den, r = num % den, twice = r * 2;
+        if (twice > den || (twice == den && (q & 1) == 1)) q++;
+        return q;
+    }
+
+    /// <summary>
+    /// Valor devolvido ao vender uma torre do tipo com <paramref name="countBefore"/> torres do tipo (SDD-29 §5.2):
+    /// <c>floor(custo(tipo, n−1) × taxa)</c>, com a taxa em pontos-base limitada por <c>sellRefundCapBp</c> (85%). Piso (nunca arredonda para cima): comprar e vender sempre perde ≥ 15%.
+    /// </summary>
+    public long SellValueAt(int defIndex, int countBefore)
+    {
+        var rules = _content.Stages.Rules;
+        long bp = (long)Math.Round(rules.SellRefund * 10000.0, MidpointRounding.ToEven);
+        bp = Math.Min(bp, _content.Runes.SellRefundCapBp);
+        return TowerCostAt(defIndex, Math.Max(0, countBefore - 1)) * bp / 10000;
+    }
+
+    /// <summary>Quanto a torre <paramref name="towerId"/> devolveria se vendida agora (0 se não existir).</summary>
+    public long SellValue(int towerId)
+    {
+        int i = FindTower(towerId);
+        return i < 0 ? 0 : SellValueAt(_towers[i].DefIndex, TowerCount(_towers[i].DefIndex));
     }
 
     /// <summary>Estrelas ganhas (0 até a Vitória; 0 na Derrota). ★1 concluir, ★2 perder ≤ 6, ★3 perder ≤ 2 (DP-28.8).</summary>
@@ -196,9 +240,7 @@ public sealed partial class TdMatchState
             PlaceTower p => DoPlace(p),
             MoveTower m => DoMove(m),
             SellTower s => DoSell(s),
-            UpgradeTower u => DoUpgrade(u),
             SetAutoStart a => DoSetAutoStart(a),
-            ChooseBranch c => DoChooseBranch(c),
             SetTargeting g => DoSetTargeting(g),
             UseAbility u => DoUseAbility(u),
             SetPresence sp => DoSetPresence(sp),
@@ -303,13 +345,14 @@ public sealed partial class TdMatchState
         if (_stage.Id < def.UnlockStage) return Reject(CommandReason.TowerLocked);
         var reason = ResolvePlacement(cmd.X, 0, out int px);
         if (reason != CommandReason.None) return Reject(reason);
-        if (_towers.Count >= MaxTowers) return Reject(CommandReason.TowerLimit);
-        if (Credits < def.Cost) return Reject(CommandReason.InsufficientCredits, def.Cost - Credits);
-        Credits -= def.Cost;
-        var t = new TdTower { Id = _nextTowerId++, DefIndex = di, X = px, Placed = true, Level = 1, Invested = def.Cost, Targeting = (byte)ParseTargeting(def.DefaultTargeting) };
+        if (_towers.Count >= TechnicalTowerLimit) return Reject(CommandReason.TowerLimit);
+        long cost = NextTowerCost(di);
+        if (Credits < cost) return Reject(CommandReason.InsufficientCredits, cost - Credits);
+        Credits -= cost;
+        var t = new TdTower { Id = _nextTowerId++, DefIndex = di, X = px, Placed = true, Targeting = (byte)ParseTargeting(def.DefaultTargeting) };
         _towers.Add(t);
         if (_towers.Count > _peakTowers) _peakTowers = _towers.Count;
-        Emit(TdEventType.TowerBuilt, t.Id, def.Cost);
+        Emit(TdEventType.TowerBuilt, t.Id, cost);
         return CommandResult.Ok;
     }
 
@@ -318,55 +361,12 @@ public sealed partial class TdMatchState
         if (!Running) return Reject(CommandReason.InvalidPhase);
         int i = FindTower(cmd.TowerId);
         if (i < 0) return Reject(CommandReason.TowerNotFound);
-        long refund = (long)Math.Floor(_towers[i].Invested * _content.Stages.Rules.SellRefund + 1e-9);
+        long refund = SellValueAt(_towers[i].DefIndex, TowerCount(_towers[i].DefIndex));
         Credits = Sat.Add(Credits, refund);
         _sold = true;
         Emit(TdEventType.TowerSold, _towers[i].Id, refund);
         _nodes.RemoveAll(n => n.TowerId == _towers[i].Id);
         _towers.RemoveAt(i);
-        return CommandResult.Ok;
-    }
-
-    private CommandResult DoUpgrade(UpgradeTower cmd)
-    {
-        if (!Running) return Reject(CommandReason.InvalidPhase);
-        int i = FindTower(cmd.TowerId);
-        if (i < 0) return Reject(CommandReason.TowerNotFound);
-        var t = _towers[i];
-        var def = _content.Towers[t.DefIndex];
-        // Níveis lineares 1..N (N = def.Levels.Length = 3); o ramo (3 → 4) é ChooseBranch; aqui só o capstone (4 → 5).
-        long cost;
-        if (t.Level < def.Levels.Length) cost = CeilEps(def.Cost * def.Levels[t.Level].CostFactor);
-        else if (t.Level == def.Levels.Length + 1 && t.Branch > 0) cost = CeilEps(def.Cost * def.Branches[t.Branch - 1].Capstone.CostFactor);
-        else return Reject(CommandReason.MaxLevel);
-        if (Credits < cost) return Reject(CommandReason.InsufficientCredits, cost - Credits);
-        Credits -= cost;
-        t.Level++;
-        t.Invested += cost;
-        _towers[i] = t;
-        Emit(TdEventType.TowerUpgraded, t.Id, cost);
-        return CommandResult.Ok;
-    }
-
-    private CommandResult DoChooseBranch(ChooseBranch cmd)
-    {
-        if (!Running) return Reject(CommandReason.InvalidPhase);
-        int i = FindTower(cmd.TowerId);
-        if (i < 0) return Reject(CommandReason.TowerNotFound);
-        var t = _towers[i];
-        var def = _content.Towers[t.DefIndex];
-        if (t.Branch != 0) return Reject(CommandReason.AlreadyUsed);
-        if (t.Level != def.Levels.Length) return Reject(CommandReason.NotAvailable);
-        int bi = cmd.Branch is null ? -1 : Array.FindIndex(def.Branches, b => b.Id == cmd.Branch);
-        if (bi < 0) return Reject(CommandReason.NotAvailable);
-        long cost = CeilEps(def.Cost * def.Branches[bi].CostFactor);
-        if (Credits < cost) return Reject(CommandReason.InsufficientCredits, cost - Credits);
-        Credits -= cost;
-        t.Level = def.Levels.Length + 1;
-        t.Branch = (byte)(bi + 1);
-        t.Invested += cost;
-        _towers[i] = t;
-        Emit(TdEventType.TowerBranched, t.Id, bi + 1);
         return CommandResult.Ok;
     }
 

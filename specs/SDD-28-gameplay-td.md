@@ -96,6 +96,8 @@ Onda(última) concluída ──▶ Vitória ──▶ Resultado (estrelas, selos
 
 ### RF-28.4: Economia da partida
 
+> **SUBSTITUÍDO PARCIALMENTE POR SDD-29 (TD.20, 2026-11-17):** o custo de construir **cresce por torre do mesmo tipo** (`round(base × F[n] / 100)`, `rules.towerCostTable`, metade-para-o-par), vender devolve `taxa × custo(tipo, n−1)` (fungível, teto 85%) e **não existe mais melhoria** ("total investido" e `maxTowers` por fase saíram; só o teto técnico de 48 torres). Os parágrafos abaixo sobre custo fixo, venda do total investido e `maxTowers` ficam como histórico.
+
 - **Créditos** (`long`, sem carry fracionário: valores inteiros de tabela, sem multiplicadores de presença nem de Reservas). Fonte: morte de inimigo (`ouro` do tipo, RF-28.7), **bônus de onda** (`20 + 4 × w`, pago quando a onda termina), bônus de chamada antecipada (RF-28.3). Sem juros (DP-28.7).
 - **Créditos iniciais** por fase: `rules` da fase (padrão 150; fases posteriores 220 a 300, ver RF-28.12).
 - **Construir:** custo fixo por tipo (sem `1,5^n` por torre existente: o custo crescente por quantidade do idle punia expansão e não é padrão de TD). Tabela em RF-28.5.
@@ -104,6 +106,8 @@ Onda(última) concluída ──▶ Vitória ──▶ Resultado (estrelas, selos
 - **Formatação:** `CreditFormatter` (SDD-27 RF-27.2) é reaproveitado como está (valores raramente passam de 10⁴; o sufixo K ainda pode aparecer).
 
 ### RF-28.5: Catálogo inicial de torres e árvore de melhoria
+
+> **SUBSTITUÍDO POR SDD-29 (TD.20, 2026-11-17):** níveis 1 a 3, ramos A/B, capstones, o botão "Melhorar" e os comandos `UpgradeTower`/`ChooseBranch` **foram removidos** do Core, do conteúdo (`td-towers.json` só tem stats base) e da UI; as torres ficam no stat base. Os efeitos dos ramos/capstones voltam como **runas por tipo** na TD.21. O texto abaixo é histórico.
 
 Estrutura comum (`towers.json` v2): níveis **1 → 2 → 3 lineares**; no **nível 4 o jogador escolhe o ramo A ou B** (sem voltar); o **nível 5 é o capstone** do ramo escolhido (inspiração: Kingdom Rush e a "especialização única" do BTD6). Cada ramo traz **um ganho e uma fraqueza declarada** (legibilidade: tudo no inspetor). Alcance em **unidades lógicas** (RF-28.15) e cadência em segundos.
 
@@ -251,7 +255,7 @@ MVP: **6 fases** ("regiões" Azure como flavor: Brazil South, East US, West Euro
 
 ### RF-28.16: Determinismo e replay (ADR-026, mantido)
 
-- Toda ação do jogador é **comando** no log: `StartWave`, `CallNextWave`, `BuildTower(type, x)`, `SellTower(id)` (**volta**, antes removido), `UpgradeTower(id)`, `ChooseBranch(id, A|B)`, `SetTargeting(id, mode)`, `UseAbility(id)`, `CollectCrate(id)` (RF-28.19), `SetPresence(present)` (RF-28.19; entrada do host), `PlaceTower` e `LayoutChanged` (entre ticks). `StateHash` inclui integridade, créditos, torres (ramo, nível, cooldowns), inimigos (traços, regeneração, timers), habilidades (recargas), pads lógicos e o `Rng` (PCG32 semeado por **seed da partida**, não por perfil).
+- Toda ação do jogador é **comando** no log: `StartWave`, `CallNextWave`, `BuildTower(type, x)`, `SellTower(id)` (**volta**, antes removido), `UpgradeTower(id)`, `ChooseBranch(id, A|B)` *(removidos pelo SDD-29/TD.20)*, `SetTargeting(id, mode)`, `UseAbility(id)`, `CollectCrate(id)` (RF-28.19), `SetPresence(present)` (RF-28.19; entrada do host), `PlaceTower` e `LayoutChanged` (entre ticks). `StateHash` inclui integridade, créditos, torres (ramo, nível, cooldowns), inimigos (traços, regeneração, timers), habilidades (recargas), pads lógicos e o `Rng` (PCG32 semeado por **seed da partida**, não por perfil).
 - Proibido no tick: `Math.Pow/Sin/Cos/Exp/Log`, `DateTime`, `Random` (SDD-11 RF-11.1). Regeneração, paralisia, nós e auras usam inteiros/`float` com operações permitidas.
 - `ReplayRunner` e `SanityBot` são **reescritos** para o novo loop (TD.3, TD.10) e continuam rodando no Linux.
 
@@ -378,7 +382,7 @@ SDD-21 (mantido), SDD-22 RF-22.8 (hotspots, mantido), SDD-10/11 (a revisar), SDD
 - **CA-28.1:** Uma partida da fase 1 só inicia ondas por `StartWave` (ou auto-início se habilitado); em Preparo nenhum inimigo se move nem nenhuma torre recarrega (teste de Core, T-28.1).
 - **CA-28.2:** Construir, vender, melhorar e usar habilidade funcionam durante a Onda e entram no log; o replay reproduz o mesmo `StateHash` (T-28.2).
 - **CA-28.3:** `CallNextWave` paga `bônus = ceil(ETA × (0,6 + 0,05·w))` e é rejeitado antes de os spawns acabarem (T-28.3).
-- **CA-28.4:** Cada torre tem 5 níveis, ramo A/B no 4 e capstone no 5, com custos e fraquezas lidos do JSON; o `ContentValidator` rejeita ramo sem fraqueza declarada (T-28.4).
+- **CA-28.4:** *(substituído pelo CA-29.1: sem níveis/ramos; cada torre declara só a fraqueza)* Cada torre tem 5 níveis, ramo A/B no 4 e capstone no 5, com custos e fraquezas lidos do JSON; o `ContentValidator` rejeita ramo sem fraqueza declarada (T-28.4).
 - **CA-28.5:** Cada tipo de inimigo da RF-28.7 tem pelo menos uma torre/ramo que o contra-ataca e uma que sofre (matriz de teste de Core, T-28.5).
 - **CA-28.6:** As 6 fases são concluíveis pelo `SanityBot` com seed fixa na curva esperada (fase 1 a 3 com ★2; fase 6 com derrota possível); resultado registrado na evidência (T-28.6).
 - **CA-28.7:** Dois monitores/DPIs com a mesma seed e os mesmos comandos produzem o mesmo `StateHash` (mundo lógico; T-28.7).

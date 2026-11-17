@@ -2,7 +2,6 @@ using SideWar.Core;
 using SideWar.Core.Content.Td;
 using SideWar.Core.Simulation;
 using BuildTower = SideWar.Core.Td.BuildTower;
-using UpgradeTower = SideWar.Core.Td.UpgradeTower;
 using SetTargeting = SideWar.Core.Td.SetTargeting;
 using SideWar.Core.Td;
 using SideWar.Runtime.Geometry;
@@ -182,8 +181,6 @@ public sealed partial class TdUiController
             case TdUiAction.Menu: Toggle(TdUiMode.Menu); break;
             case TdUiAction.HudMinimize: Close(); _host.SetHudMinimized(true); Changed?.Invoke(); break;
             case TdUiAction.HudRestore: _host.SetHudMinimized(false); Changed?.Invoke(); break;
-            case TdUiAction.Upgrade: _send(new UpgradeTower(item.Arg)); Changed?.Invoke(); break;
-            case TdUiAction.Branch when item.SArg is not null: _send(new ChooseBranch(item.Arg, item.SArg)); Changed?.Invoke(); break;
             case TdUiAction.Targeting when Enum.TryParse<TdTargeting>(item.SArg, out var mode):
                 _send(new SetTargeting(item.Arg, mode));
                 Changed?.Invoke();
@@ -252,7 +249,7 @@ public sealed partial class TdUiController
             {
                 // Posição ficou inválida (LayoutChanged, torre nova): volta ao passo do ponto com aviso (RF-28.20 passo 6).
                 var reason = m.ValidatePlacement(_chosenX, 0, out _);
-                if (reason != CommandReason.None || m.Towers.Count >= m.MaxTowers)
+                if (reason != CommandReason.None || m.Towers.Count >= TdMatchState.TechnicalTowerLimit)
                 {
                     _chosenX = -1;
                     _notice = "Posicao ficou invalida: escolha outro ponto";
@@ -323,12 +320,12 @@ public sealed partial class TdUiController
         int w = TdBand.WidthDip(m);
         int logical = TdPlacement.ToLogical((int)MathF.Round(Math.Clamp(xDip, 0f, w)), w);
         var reason = m.ValidatePlacement(logical, _moveTowerId, out int snapped);
-        bool room = _moveTowerId > 0 || m.Towers.Count < m.MaxTowers;
+        bool room = _moveTowerId > 0 || m.Towers.Count < TdMatchState.TechnicalTowerLimit;
         _ghostValid = reason == CommandReason.None && room;
         _ghostX = reason == CommandReason.None ? snapped : logical;
         _notice = reason switch
         {
-            CommandReason.None when !room => "Limite de torres atingido",
+            CommandReason.None when !room => "Limite tecnico de torres",
             CommandReason.None => null,
             CommandReason.Overlap => "Ponto ocupado por outra torre",
             _ => "Fora da zona livre",
@@ -366,7 +363,7 @@ public sealed partial class TdUiController
 
         items.Add(new TdUiItem(new DipRect(4, 3, 104, 26), TdUiKind.Label, $"Núcleo {integ}/{max}", Icon: TdIcon.Heart, Tone: integTone, Tip: coreTip));
         items.Add(new TdUiItem(new DipRect(112, 3, 92, 26), TdUiKind.Label, $"Créditos {m.Credits}", Icon: TdIcon.Coin, Tone: TdTone.Accent,
-            Tip: "Créditos: moeda da partida. Use para construir e melhorar torres; vender devolve parte. Cada onda concluída rende bônus."));
+            Tip: "Créditos: moeda da partida. Use para construir torres (cada igual custa mais); vender devolve parte. Cada onda concluída rende bônus."));
         items.Add(new TdUiItem(new DipRect(208, 3, 100, 26), TdUiKind.Label, $"Onda {shown} de {m.TotalWaves}", Icon: TdIcon.Wave,
             Tip: $"Onda atual: {shown} de {m.TotalWaves}. Sobreviva a todas as ondas da fase para vencer."));
         bool crate = m.CrateActive;
@@ -542,16 +539,18 @@ public sealed partial class TdUiController
             if (_notice is not null) s.Add(TdUiKind.Label, _notice, RowH - 4, tone: TdTone.Warn);
             return Finish(title, s, _anchorX);
         }
-        s.Add(TdUiKind.Label, $"Torres {m.Towers.Count}/{m.MaxTowers}   Creditos {m.Credits}", RowH - 4, tone: TdTone.Dim);
+        s.Add(TdUiKind.Label, $"Torres {m.Towers.Count}   Creditos {m.Credits}", RowH - 4, tone: TdTone.Dim);
         var towers = m.Content.Towers;
         for (int i = 0; i < towers.Length; i++)
         {
             var d = towers[i];
             bool locked = m.StageId < d.UnlockStage;
-            bool poor = m.Credits < d.Cost;
-            string right = locked ? $"fase {d.UnlockStage}" : $"${d.Cost}";
+            int owned = m.TowerCount(i);
+            long price = m.NextTowerCost(i); // custo crescente por tipo (SDD-29 §5.1)
+            bool poor = m.Credits < price;
+            string right = locked ? $"fase {d.UnlockStage}" : $"${price}";
             string sub = locked ? $"Desbloqueia na fase {d.UnlockStage}" : $"alc {d.Range:0}  |  Fraqueza: {d.WeaknessText}";
-            s.Add(TdUiKind.Button, d.Name, 44f, TdUiAction.ChooseTower, sarg: d.Id, right: right, sub: sub, enabled: !locked && !poor,
+            s.Add(TdUiKind.Button, owned > 0 ? $"{d.Name}  x{owned}" : d.Name, 44f, TdUiAction.ChooseTower, sarg: d.Id, right: right, sub: sub, enabled: !locked && !poor,
                 tone: locked ? TdTone.Dim : poor ? TdTone.Bad : TdTone.Normal);
         }
         if (_notice is not null) s.Add(TdUiKind.Label, _notice, RowH - 4, tone: TdTone.Warn);
@@ -565,37 +564,11 @@ public sealed partial class TdUiController
         if (ti < 0) return Finish("Torre", s, _anchorX);
         var t = m.Towers[ti];
         var d = m.Content.Towers[t.DefIndex];
-        string branch = t.Branch > 0 ? $" ramo {d.Branches[t.Branch - 1].Id}" : "";
-        string title = $"{d.Name} nivel {t.Level}{branch}";
+        string title = $"{d.Name} x{m.TowerCount(t.DefIndex)}";
         s.Add(TdUiKind.Label, $"Alcance {d.Range:0}", RowH - 4, tone: TdTone.Dim);
         s.Add(TdUiKind.Label, $"Fraqueza: {d.WeaknessText}", TwoLineH - 8, tone: TdTone.Warn);
         if (!t.Placed)
             s.Add(TdUiKind.Button, "SEM POSICAO: reposicionar", RowH, TdUiAction.Reposition, arg: t.Id, tone: TdTone.Warn);
-
-        // Evolução: níveis lineares, ramo A/B no nível 3 e capstone no 4.
-        int linear = d.Levels.Length;
-        if (t.Level < linear)
-        {
-            long cost = Ceil(d.Cost * d.Levels[t.Level].CostFactor);
-            s.Add(TdUiKind.Button, $"Melhorar para nivel {t.Level + 1}", RowH + 4, TdUiAction.Upgrade, arg: t.Id, right: $"${cost}", enabled: m.Credits >= cost && m.Phase is MatchPhase.Preparo or MatchPhase.Onda);
-        }
-        else if (t.Branch == 0 && t.Level == linear)
-        {
-            for (int b = 0; b < d.Branches.Length; b++)
-            {
-                var br = d.Branches[b];
-                long cost = Ceil(d.Cost * br.CostFactor);
-                s.Add(TdUiKind.Button, $"Ramo {br.Id}: {br.Name}", 44f, TdUiAction.Branch, arg: t.Id, sarg: br.Id, right: $"${cost}",
-                    sub: $"{br.Gain}  Fraqueza: {br.Weakness}", enabled: m.Credits >= cost);
-            }
-        }
-        else if (t.Branch > 0 && t.Level == linear + 1)
-        {
-            var cap = d.Branches[t.Branch - 1].Capstone;
-            long cost = Ceil(d.Cost * cap.CostFactor);
-            s.Add(TdUiKind.Button, $"Capstone: {cap.Name}", 44f, TdUiAction.Upgrade, arg: t.Id, right: $"${cost}", sub: cap.Effect, enabled: m.Credits >= cost);
-        }
-        else s.Add(TdUiKind.Label, "Nivel maximo.", RowH - 4, tone: TdTone.Good);
 
         if (d.Kind == "attack")
         {
@@ -609,7 +582,7 @@ public sealed partial class TdUiController
             }
             s.Y += RowH + 2;
         }
-        long refund = (long)Math.Floor(t.Invested * m.Content.Stages.Rules.SellRefund + 1e-9);
+        long refund = m.SellValue(t.Id); // fungivel: taxa x custo(tipo, n-1) (SDD-29 §5.2)
         s.Add(TdUiKind.Button, $"Vender ({Math.Round(m.Content.Stages.Rules.SellRefund * 100):0}%)", RowH, TdUiAction.Sell, arg: t.Id, right: $"+${refund}", tone: TdTone.Bad);
         return Finish(title, s, t.Placed ? m.TowerDip(t) : _anchorX, d.Id);
     }
@@ -647,16 +620,16 @@ public sealed partial class TdUiController
     private static TdPopoverView BuildTowers(TdMatchState m)
     {
         var s = new Stack(PopoverWidth);
-        s.Add(TdUiKind.Label, $"Torres {m.Towers.Count}/{m.MaxTowers}", RowH - 4, tone: TdTone.Dim);
+        s.Add(TdUiKind.Label, $"Torres {m.Towers.Count}", RowH - 4, tone: TdTone.Dim);
         if (m.Towers.Count == 0) s.Add(TdUiKind.Label, "Nenhuma torre. Use Construir.", RowH, tone: TdTone.Dim);
         float sellW = 98f;
         for (int i = 0; i < m.Towers.Count; i++)
         {
             var t = m.Towers[i];
             var d = m.Content.Towers[t.DefIndex];
-            long refund = (long)Math.Floor(t.Invested * m.Content.Stages.Rules.SellRefund + 1e-9);
+            long refund = m.SellValue(t.Id);
             s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, PopoverWidth - 3 * Pad - sellW, RowH + 2), TdUiKind.Button,
-                $"{d.Name} nivel {t.Level}", TdUiAction.OpenTower, t.Id, Tone: t.Placed ? TdTone.Normal : TdTone.Warn));
+                $"{d.Name} x{m.TowerCount(t.DefIndex)}", TdUiAction.OpenTower, t.Id, Tone: t.Placed ? TdTone.Normal : TdTone.Warn));
             s.Items.Add(new TdUiItem(new DipRect(PopoverWidth - Pad - sellW, s.Y, sellW, RowH + 2), TdUiKind.Button,
                 "Vender", TdUiAction.Sell, t.Id, Right: $"+${refund}", Tone: TdTone.Bad));
             s.Y += RowH + 4;

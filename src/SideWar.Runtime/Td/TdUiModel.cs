@@ -15,7 +15,7 @@ public enum TdTone : byte { Normal, Good, Warn, Bad, Accent, Dim }
 /// <summary>Ação disparada por um botão do HUD/popover.</summary>
 public enum TdUiAction : byte
 {
-    None, Close, BuildToggle, ChooseTower, StartWave, Ability, Menu, Upgrade, Branch, Targeting, Sell, Reposition,
+    None, Close, BuildToggle, ChooseTower, StartWave, Ability, Menu, Targeting, Sell, Reposition,
     Preview, MapOpen, MapTab, SelectStage, BuyNode, Pause, Settings, Exit, Restart, NextStage, HudMinimize, HudRestore,
     /// <summary>TD.15: pular o tutorial, abrir "Como jogar" e refazer o tutorial.</summary>
     TutorialSkip, HowTo, RedoTutorial,

@@ -16,7 +16,7 @@ public sealed class TdPauseTests
     private static TdContent Rich()
     {
         var rules = Base.Stages.Rules with { CoreIntegrity = 100_000, BombCrate = Base.Stages.Rules.BombCrate with { Chance = 1.0 } };
-        var stages = Base.Stages.Stages.Select(s => s with { StartingCredits = 1_000_000, MaxTowers = 12 }).ToArray();
+        var stages = Base.Stages.Stages.Select(s => s with { StartingCredits = 1_000_000 }).ToArray();
         return Base with { Stages = Base.Stages with { Rules = rules, Stages = stages } };
     }
 

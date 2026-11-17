@@ -5,13 +5,12 @@ using Rng = SideWar.Core.Simulation.Rng;
 using CommandReason = SideWar.Core.Simulation.CommandReason;
 using StartWave = SideWar.Core.Td.StartWave;
 using BuildTower = SideWar.Core.Td.BuildTower;
-using UpgradeTower = SideWar.Core.Td.UpgradeTower;
 using SetTargeting = SideWar.Core.Td.SetTargeting;
 using SetAutoStart = SideWar.Core.Td.SetAutoStart;
 
 namespace SideWar.Core.Tests;
 
-/// <summary>TD.3: traços, ramos/capstones, mira, controle (slow/paralisia), habilidades, chefes e determinismo do combate.</summary>
+/// <summary>TD.3: traços, mira, controle (slow/paralisia), habilidades, chefes e determinismo do combate.</summary>
 public sealed class TdCombatTests
 {
     private static readonly TdContent Content = TdMechanicsContent.Load();
@@ -23,7 +22,7 @@ public sealed class TdCombatTests
     {
         var defs = waves.Select((w, i) => new TdWaveDef(i + 1, false, 1.0,
             w.Select(g => new TdWaveGroupDef(g.Enemy, g.Count, g.Offset, g.Interval)).ToArray())).ToArray();
-        var stage = Content.Stages.Stages[5] with { Waves = waves.Length, StartingCredits = 1_000_000, MaxTowers = 12 };
+        var stage = Content.Stages.Stages[5] with { Waves = waves.Length, StartingCredits = 1_000_000_000 };
         return Content with
         {
             Waves = new TdWavesDef([.. Content.Waves.Stages.Take(5), new TdStageWavesDef(6, defs)]),
@@ -50,14 +49,6 @@ public sealed class TdCombatTests
     private static TdTower Tw(TdMatchState s, int id) => s.Towers.First(t => t.Id == id);
 
     private static TdEnemy FirstEnemy(TdMatchState s) => s.Enemies[0];
-
-    private static void Branch(TdMatchState s, int id, string branch, bool capstone = false)
-    {
-        Assert.True(s.Apply(new UpgradeTower(id)).IsOk);
-        Assert.True(s.Apply(new UpgradeTower(id)).IsOk);
-        Assert.True(s.Apply(new ChooseBranch(id, branch)).IsOk);
-        if (capstone) Assert.True(s.Apply(new UpgradeTower(id)).IsOk);
-    }
 
     private static void Go(TdMatchState s)
     {
@@ -102,7 +93,7 @@ public sealed class TdCombatTests
         return list;
     }
 
-    // ---------------------------------------------------------------- ordem do dano e ramos
+    // ---------------------------------------------------------------- ordem do dano
 
     [Fact(DisplayName = "T-28.5 Damage order: level damage minus armor, max(1, floor)")]
     public void Damage_Basic()
@@ -116,60 +107,6 @@ public sealed class TdCombatTests
         var t = New(Arena([new G("armored", 1)]));
         Build(t, "frost", 1100);
         Assert.Equal(1.0, FirstHit(t)); // max(1, floor(5 - 6))
-    }
-
-    [Fact(DisplayName = "T-28.5 bolt branch A: x2.6 damage, 50% armor penetration, 1.5x slower cadence")]
-    public void Bolt_BranchA()
-    {
-        var s = New(Arena([new G("armored", 1)]));
-        int id = Build(s, "bolt", 1100);
-        Branch(s, id, "A");
-        Assert.Equal(77.0, FirstHit(s)); // floor(14*2.2*2.6 - 6*0.5)
-        Assert.Equal(27, Tw(s, id).CooldownTicks); // ceil(0.6*1.5*30)
-    }
-
-    [Fact(DisplayName = "T-28.5 bolt branch A capstone: every 5th shot deals 6x")]
-    public void Bolt_CapstoneA_SuperHit()
-    {
-        var s = New(WithHp(Arena([new G("tank", 1)]), "tank", 5000));
-        int id = Build(s, "bolt", 1100);
-        Branch(s, id, "A", capstone: true);
-        var shots = Shots(s, 5);
-        Assert.Equal(5, shots.Count);
-        Assert.Equal(79.0, shots[0]); // floor(80.08 - 2*0.5)
-        Assert.Equal(479.0, shots[4]); // floor(480.48 - 1)
-    }
-
-    [Fact(DisplayName = "T-28.5 bolt branch B: focus stacks +8% per consecutive hit; capstone keeps it between targets")]
-    public void Bolt_BranchB_Focus()
-    {
-        var s = New(Arena([new G("tank", 1)]));
-        int id = Build(s, "bolt", 1100);
-        Branch(s, id, "B");
-        var shots = Shots(s, 3);
-        Assert.Equal([28.0, 31.0, 33.0], shots); // floor(30.8*(1+.08k) - 2)
-
-        var arena = Arena([new G("grunt", 3, 0.3)]);
-        var a = New(arena);
-        int ia = Build(a, "bolt", 1100);
-        Branch(a, ia, "B");
-        var b = New(arena);
-        int ib = Build(b, "bolt", 1100);
-        Branch(b, ib, "B", capstone: true);
-        Go(a); Go(b);
-        Until(a, () => a.Phase != MatchPhase.Onda); Until(b, () => b.Phase != MatchPhase.Onda);
-        Assert.True(Tw(a, ia).FocusHits < Tw(a, ia).ShotCount);   // trocou de alvo: zerou
-        Assert.Equal(Tw(b, ib).ShotCount, Tw(b, ib).FocusHits);   // Sobrecarga: nunca zera
-    }
-
-    [Fact(DisplayName = "T-28.5 bolt branch B has a weak per-shot damage against armored (weakness is real)")]
-    public void Bolt_BranchB_WeakVsArmored()
-    {
-        var a = New(Arena([new G("armored", 1)]));
-        int ia = Build(a, "bolt", 1100); Branch(a, ia, "A");
-        var b = New(Arena([new G("armored", 1)]));
-        int ib = Build(b, "bolt", 1100); Branch(b, ib, "B");
-        Assert.True(FirstHit(a) > FirstHit(b) * 2);
     }
 
     [Fact(DisplayName = "T-28.5 cannon: splash hits neighbours (ground only), cannot target flyers; bolt can")]
@@ -191,122 +128,7 @@ public sealed class TdCombatTests
         Assert.True(FirstHit(bolt) > 0);
     }
 
-    [Fact(DisplayName = "T-28.5 cannon branch B: x2.2 vs armored, no splash; capstone ignores 100% armor")]
-    public void Cannon_BranchB()
-    {
-        var arena = WithHp(Arena([new G("armored", 3, 0.2)]), "armored", 10000);
-        var b = New(arena);
-        Go(b);
-        Until(b, () => b.Enemies.Count == 3);
-        int id = Build(b, "cannon", 1100);
-        Branch(b, id, "B");
-        b.Step();
-        Assert.Equal(211.0, b.Enemies.Max(e => e.MaxHp - e.Hp)); // floor(45*2.2*2.2 - 6)
-        Assert.Equal(1, b.Enemies.Count(e => e.Hp < e.MaxHp)); // sem área
-        var c = New(arena);
-        int ic = Build(c, "cannon", 1100);
-        Branch(c, ic, "B", capstone: true);
-        Assert.Equal(217.0, FirstHit(c)); // perfuração total
-    }
-
-    [Fact(DisplayName = "T-28.5 cannon branch A: barrage splash 0.7 with larger radius; capstone leaves a burn zone")]
-    public void Cannon_BranchA()
-    {
-        var s = New(Arena([new G("swarm", 8, 0.1)]));
-        int id = Build(s, "cannon", 1100);
-        Branch(s, id, "A", capstone: true);
-        Go(s);
-        Until(s, () => s.Zones.Count > 0);
-        Assert.Equal(64.0, s.Zones[0].Radius); // 40 x 1,6
-        Steps(s, 3);
-        Assert.Contains(s.Enemies, e => e.Hp < e.MaxHp);
-    }
-
     // ---------------------------------------------------------------- gelo: lentidão, paralisia, corrosão
-
-    [Fact(DisplayName = "T-28.5 frost slows (0.7) and branch B corrodes armor, marks vulnerable (+25% / capstone +40%)")]
-    public void Frost_SlowCorrodeVulnerable()
-    {
-        var s = New(Arena([new G("armored", 1)]));
-        Build(s, "frost", 1100);
-        FirstHit(s);
-        Assert.Equal(0.7, s.Enemies[0].SlowMult);
-        Assert.True(s.Enemies[0].SlowTicks > 0);
-
-        var b = New(Arena([new G("armored", 1)]));
-        int id = Build(b, "frost", 1100);
-        Branch(b, id, "B");
-        // dano: 5*2.2 = 11 - (6-... armadura ainda cheia no primeiro golpe) = 5
-        Assert.Equal(5.0, FirstHit(b));
-        var e = b.Enemies[0];
-        Assert.Equal(6.0, e.CorrodeAmount);
-        Assert.Equal(0.25, e.VulnBonus);
-        Assert.Equal(0.85, e.SlowMult);
-
-        var c = New(Arena([new G("armored", 1)]));
-        int ic = Build(c, "frost", 1100);
-        Branch(c, ic, "B", capstone: true);
-        FirstHit(c);
-        Assert.Equal(0.4, c.Enemies[0].VulnBonus);
-    }
-
-    [Fact(DisplayName = "T-28.5 vulnerable mark raises damage of ALL towers (step 3 of the damage order)")]
-    public void Vulnerable_AffectsOtherTowers()
-    {
-        var s = New(WithHp(Arena([new G("tank", 1)]), "tank", 5000));
-        int f = Build(s, "frost", 1100);
-        Branch(s, f, "B", capstone: true);
-        Build(s, "bolt", 1100);
-        var shots = Shots(s, 4);
-        // sem a marca o bolt nível 1 daria floor(14 - 2) = 12; marcado (+40%) e com a armadura corroída: floor(14 * 1,4) = 19
-        Assert.Contains(19.0, shots);
-        Assert.DoesNotContain(12.0, shots.Skip(1));
-    }
-
-    [Fact(DisplayName = "T-28.5 frost branch A paralyzes (1.2 s); bosses are immune; grace window after paralysis (cap)")]
-    public void Frost_Paralysis()
-    {
-        var s = New(Arena([new G("grunt", 1)]));
-        int id = Build(s, "frost", 1100);
-        Branch(s, id, "A");
-        FirstHit(s);
-        Assert.Equal(36, s.Enemies[0].ParalyzeTicks);
-        double x = s.Enemies[0].X;
-        Steps(s, 10);
-        Assert.Equal(x, s.Enemies[0].X); // parado
-
-        var boss = New(Arena([new G("ransomware", 1)]));
-        int ib = Build(boss, "frost", 1100);
-        Branch(boss, ib, "A");
-        FirstHit(boss);
-        Assert.Equal(0, boss.Enemies[0].ParalyzeTicks);
-    }
-
-    [Fact(DisplayName = "T-28.5 paralysis cap: a second source cannot re-paralyze during the grace window")]
-    public void Frost_ParalysisGrace()
-    {
-        var s = New(Arena([new G("tank", 1)]));
-        int a = Build(s, "frost", 1100);
-        Branch(s, a, "A");
-        Go(s);
-        Until(s, () => s.Enemies.Count > 0 && s.Enemies[0].ParalyzeTicks > 0);
-        Until(s, () => s.Enemies[0].ParalyzeTicks == 0);
-        Assert.True(s.Enemies[0].ParalyzeGraceTicks > 0);
-        int b = Build(s, "frost", 1100);
-        Branch(s, b, "A");
-        Steps(s, 3);
-        Assert.Equal(0, s.Enemies[0].ParalyzeTicks); // segunda fonte barrada pela janela
-    }
-
-    [Fact(DisplayName = "T-28.5 frost capstone A: paralysis in area")]
-    public void Frost_CapstoneArea()
-    {
-        var s = New(Arena([new G("tank", 3, 0.5)]));
-        int id = Build(s, "frost", 1100);
-        Branch(s, id, "A", capstone: true);
-        Go(s);
-        Until(s, () => s.Enemies.Count(e => e.ParalyzeTicks > 0) >= 3, 600);
-    }
 
     // ---------------------------------------------------------------- mira
 
@@ -351,51 +173,6 @@ public sealed class TdCombatTests
         Assert.Equal(CommandReason.TowerNotFound, s.Apply(new SetTargeting(99, TdTargeting.Last)).Reason);
     }
 
-    // ---------------------------------------------------------------- upgrades e ramos (comandos)
-
-    [Fact(DisplayName = "RF-28.5 ChooseBranch / capstone: costs, rejections and sell refund")]
-    public void Branch_CostsAndRejections()
-    {
-        var s = New(Arena([new G("grunt", 1)]), 1);
-        int id = Build(s, "bolt", 500);
-        Assert.Equal(CommandReason.NotAvailable, s.Apply(new ChooseBranch(id, "A")).Reason); // nível 1
-        Assert.True(s.Apply(new UpgradeTower(id)).IsOk);
-        Assert.True(s.Apply(new UpgradeTower(id)).IsOk);
-        Assert.Equal(CommandReason.MaxLevel, s.Apply(new UpgradeTower(id)).Reason); // nível 3 exige o ramo
-        Assert.Equal(CommandReason.NotAvailable, s.Apply(new ChooseBranch(id, "Z")).Reason);
-        long before = s.Credits;
-        Assert.True(s.Apply(new ChooseBranch(id, "B")).IsOk);
-        Assert.Equal(168, before - s.Credits); // 2,4 x 70
-        Assert.Equal(4, Tw(s, id).Level);
-        Assert.Equal(2, Tw(s, id).Branch);
-        Assert.Equal(CommandReason.AlreadyUsed, s.Apply(new ChooseBranch(id, "A")).Reason);
-        before = s.Credits;
-        Assert.True(s.Apply(new UpgradeTower(id)).IsOk);
-        Assert.Equal(252, before - s.Credits); // 3,6 x 70
-        Assert.Equal(5, Tw(s, id).Level);
-        Assert.Equal(CommandReason.MaxLevel, s.Apply(new UpgradeTower(id)).Reason);
-        long invested = 70 + 63 + 112 + 168 + 252;
-        Assert.Equal(invested, Tw(s, id).Invested);
-        long c0 = s.Credits;
-        Assert.True(s.Apply(new SellTower(id)).IsOk);
-        Assert.Equal((long)Math.Floor(invested * 0.7 + 1e-9), s.Credits - c0);
-    }
-
-    [Fact(DisplayName = "RF-28.5 ChooseBranch rejects insufficient credits without changing state")]
-    public void Branch_InsufficientCredits()
-    {
-        var c = Arena([new G("grunt", 1)]);
-        c = c with { Stages = c.Stages with { Stages = [.. c.Stages.Stages.Take(5), c.Stages.Stages[5] with { StartingCredits = 70 + 63 + 112 + 100 }] } };
-        var s = New(c);
-        int id = Build(s, "bolt", 500);
-        s.Apply(new UpgradeTower(id)); s.Apply(new UpgradeTower(id));
-        ulong h = s.ComputeStateHash();
-        var r = s.Apply(new ChooseBranch(id, "A"));
-        Assert.Equal(CommandReason.InsufficientCredits, r.Reason);
-        Assert.Equal(68, r.Missing);
-        Assert.Equal(h, s.ComputeStateHash());
-    }
-
     // ---------------------------------------------------------------- balanceador
 
     [Fact(DisplayName = "T-28.5 balancer: node holds a ground enemy and damages it; node breaks and goes on cooldown")]
@@ -425,53 +202,6 @@ public sealed class TdCombatTests
         Assert.True(s.Enemies[0].X < 1200 - 55.0 / 30 * 90);
     }
 
-    [Fact(DisplayName = "T-28.5 balancer branch A: 3 nodes holding 2 each; capstone Anycast spawns at the front edge")]
-    public void Balancer_BranchA()
-    {
-        var s = New(Arena([new G("swarm", 12, 0.15)]));
-        int id = Build(s, "balancer", 1100);
-        Branch(s, id, "A");
-        Go(s);
-        Until(s, () => s.Nodes.Count == 3, 600);
-        Assert.All(s.Nodes, n => Assert.Equal(2, n.Holds));
-
-        var c = New(Arena([new G("tank", 1)]));
-        int ic = Build(c, "balancer", 1100);
-        Branch(c, ic, "A", capstone: true);
-        Go(c);
-        Until(c, () => c.Nodes.Count == 1);
-        Assert.Equal(1010.0, c.Nodes[0].X); // X da torre − alcance (90)
-    }
-
-    [Fact(DisplayName = "T-28.5 balancer branch B: nodes explode at the end; capstone Blue/green renews a broken node at once")]
-    public void Balancer_BranchB()
-    {
-        var plain = New(Arena([new G("grunt", 1)]));
-        int ip = Build(plain, "balancer", 1100);
-        Go(plain);
-        Until(plain, () => plain.Events.Any(e => e.Type == TdEventType.NodeEnded));
-        Assert.Contains(plain.Enemies, e => e.Hp > 0);   // 4 dano/s por 3 s: ainda vivo
-        Assert.Contains(plain.Towers, t => t.Id == ip);
-
-        var s = New(Arena([new G("grunt", 1)]));
-        int id = Build(s, "balancer", 1100);
-        Branch(s, id, "B");
-        Go(s);
-        Until(s, () => s.Events.Any(e => e.Type == TdEventType.EnemyKilled)); // a explosão mata o grunt
-        Assert.Contains(s.Events, e => e.Type == TdEventType.NodeEnded);
-
-        var bg = New(Arena([new G("tank", 1)]));
-        int ib = Build(bg, "balancer", 1100);
-        Branch(bg, ib, "B", capstone: true);
-        Go(bg);
-        Until(bg, () => bg.Nodes.Count == 1);
-        int nodeId = bg.Nodes[0].Id;
-        Until(bg, () => bg.Events.Any(e => e.Type == TdEventType.NodeEnded));
-        Assert.Single(bg.Nodes);                       // renasceu na hora
-        Assert.Equal(nodeId, bg.Nodes[0].Id);
-        Assert.Equal(0, Tw(bg, ib).NodeCdTicks);
-    }
-
     [Fact(DisplayName = "T-28.5 selling a balancer removes its nodes")]
     public void Balancer_SellRemovesNodes()
     {
@@ -485,60 +215,27 @@ public sealed class TdCombatTests
 
     // ---------------------------------------------------------------- scaleset
 
-    [Fact(DisplayName = "T-28.5 scaleset A: +25% cadence nearby; B: +25% damage; capacity capstone: +1 maxTowers; elasticity during Escalar")]
-    public void Scaleset_Auras()
+    [Fact(DisplayName = "T-28.5 scaleset: base aura +5% cadence per nearby support tower; out of range gives nothing (branch/capstone effects move to runes, TD.21)")]
+    public void Scaleset_BaseAura()
     {
         var plain = New(Arena([new G("grunt", 1)]));
         int ip = Build(plain, "bolt", 1100);
         FirstHit(plain);
         Assert.Equal(18, Tw(plain, ip).CooldownTicks);
 
-        var a = New(Arena([new G("grunt", 1)]));
-        int ia = Build(a, "bolt", 1100);
-        int sa = Build(a, "scaleset", 1150);
-        Branch(a, sa, "A");
-        FirstHit(a);
-        Assert.Equal(15, Tw(a, ia).CooldownTicks); // ceil(0,6/1,25*30)
-
-        var b = New(Arena([new G("grunt", 1)]));
-        Build(b, "bolt", 1100);
-        int sb = Build(b, "scaleset", 1150);
-        Branch(b, sb, "B");
-        Assert.Equal(17.0, FirstHit(b)); // floor(14*1,25)
+        var near = New(Arena([new G("grunt", 1)]));
+        int inr = Build(near, "bolt", 1100);
+        Build(near, "scaleset", 1150);
+        Build(near, "scaleset", 1160);
+        FirstHit(near);
+        Assert.Equal(17, Tw(near, inr).CooldownTicks); // ceil(0,6/1,10*30) = 17
 
         var far = New(Arena([new G("grunt", 1)]));
         int iff = Build(far, "bolt", 1100);
-        int sf = Build(far, "scaleset", 900);
-        Branch(far, sf, "A");
+        Build(far, "scaleset", 900);
+        Build(far, "scaleset", 880);
         FirstHit(far);
         Assert.Equal(18, Tw(far, iff).CooldownTicks); // fora da aura
-
-        var cap = New(Arena([new G("grunt", 1)]));
-        int sc = Build(cap, "scaleset", 800);
-        int max0 = cap.MaxTowers;
-        Branch(cap, sc, "B", capstone: true);
-        Assert.Equal(max0 + 1, cap.MaxTowers);
-
-        var el = New(Arena([new G("grunt", 1)]));
-        int ie = Build(el, "bolt", 1100);
-        int se = Build(el, "scaleset", 1150);
-        Branch(el, se, "A", capstone: true);
-        Go(el);
-        Assert.True(el.Apply(new UseAbility("scale")).IsOk);
-        Until(el, () => Tw(el, ie).CooldownTicks > 0);
-        Assert.Equal(10, Tw(el, ie).CooldownTicks); // 0,6/(1+0,5+0,25*1,5)*30 = 9,6 → 10
-    }
-
-    [Fact(DisplayName = "T-28.5 a disabled scaleset loses its aura")]
-    public void Scaleset_DisabledNoAura()
-    {
-        var s = New(Arena([new G("leech", 1)]));
-        int ib = Build(s, "bolt", 1100);
-        int ss = Build(s, "scaleset", 1150);
-        Branch(s, ss, "A");
-        Go(s);
-        Until(s, () => Tw(s, ss).DisabledTicks > 0 && Tw(s, ib).CooldownTicks > 0, 200);
-        Assert.Equal(18, Tw(s, ib).CooldownTicks);
     }
 
     // ---------------------------------------------------------------- traços
@@ -705,8 +402,7 @@ public sealed class TdCombatTests
     {
         var c = WithBoss(Arena([new G("botnet", 1)]), "botnet", b => b with { Hp = 400 });
         var s = New(c);
-        int id = Build(s, "bolt", 1100);
-        Branch(s, id, "A", capstone: true);
+        Build(s, "bolt", 1100);
         Build(s, "cannon", 1100);
         Go(s);
         Until(s, () => s.Events.Any(e => e.Type == TdEventType.BossSplit));
@@ -723,8 +419,7 @@ public sealed class TdCombatTests
     public void Boss_ZeroDay()
     {
         var s = New(Arena([new G("zeroday", 1)]));
-        int f = Build(s, "frost", 640);
-        Branch(s, f, "A");
+        Build(s, "frost", 640);
         int b = Build(s, "bolt", 600);
         Go(s);
         Until(s, () => s.Enemies.Count > 0 && s.Enemies[0].Hp < s.Enemies[0].MaxHp);
@@ -750,7 +445,7 @@ public sealed class TdCombatTests
 
     // ---------------------------------------------------------------- determinismo
 
-    private const ulong GoldenStage3 = 6829842889198948226UL;
+    private const ulong GoldenStage3 = 14218406681746317761UL;
 
     private static List<TdLogEntry> ScriptLog() => new List<TdLogEntry>
         {
@@ -758,12 +453,6 @@ public sealed class TdCombatTests
             new(0, new BuildTower("frost", 1050)),
             new(0, new BuildTower("cannon", 900)),
             new(0, new BuildTower("balancer", 800)),
-            new(0, new UpgradeTower(1)),
-            new(0, new UpgradeTower(1)),
-            new(0, new ChooseBranch(1, "A")),
-            new(0, new UpgradeTower(3)),
-            new(0, new UpgradeTower(3)),
-            new(0, new ChooseBranch(3, "A")),
             new(0, new SetTargeting(2, TdTargeting.Last)),
             new(0, new SetAutoStart(AutoStartMode.Countdown, 5)),
             new(400, new UseAbility("scale")),
@@ -781,7 +470,7 @@ public sealed class TdCombatTests
         {
             Stages = Content.Stages with
             {
-                Stages = Content.Stages.Stages.Select(x => x.Id == stage ? x with { StartingCredits = 5000, MaxTowers = 8 } : x).ToArray(),
+                Stages = Content.Stages.Stages.Select(x => x.Id == stage ? x with { StartingCredits = 5000 } : x).ToArray(),
             },
         };
         return TdReplayRunner.Run(c, new TdReplayScript(stage, seed, 54, log, 12000));
@@ -797,7 +486,7 @@ public sealed class TdCombatTests
         Assert.Equal(GoldenStage3, first.StateHash);
     }
 
-    [Fact(DisplayName = "RNF-28.1 Combat state hash reacts to branch, targeting, node and ability state")]
+    [Fact(DisplayName = "RNF-28.1 Combat state hash reacts to targeting, node and ability state")]
     public void Hash_ReactsToCombatState()
     {
         var s = New(Arena([new G("tank", 1)]));
@@ -806,8 +495,6 @@ public sealed class TdCombatTests
         s.Apply(new SetTargeting(id, TdTargeting.Weak));
         ulong h1 = s.ComputeStateHash();
         Assert.NotEqual(h0, h1);
-        Branch(s, id, "A");
-        Assert.NotEqual(h1, s.ComputeStateHash());
         Go(s);
         ulong h2 = s.ComputeStateHash();
         s.Apply(new UseAbility("scale"));

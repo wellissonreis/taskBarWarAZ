@@ -372,13 +372,16 @@ Ficha TD.19 anterior (conteúdo) fica; a **modal central e a pausa viram fichas 
 
 | Ficha | Descrição | Depende de | Ambiente |
 |---|---|---|---|
-| **TD.19** | Conteúdo: `td-runes.json` + modelos/validador (grafo conexo, custos em créditos, regra anti-exploit); remover `levels/branches` e `maxTowers` das fases; `towerCostTable`/`towerCostTableLow`; fontes de crédito da §6 | TD.18b aprovada | 🟢 |
+| **TD.19** ✅ | Conteúdo: `td-runes.json` + modelos/validador (grafo conexo, custos em créditos, regra anti-exploit); remover `levels/branches` e `maxTowers` das fases; `towerCostTable`/`towerCostTableLow`; fontes de crédito da §6 | TD.18b aprovada | 🟢 |
 
 **TD.19b concluída (2026-11-17):** pausa no Core entregue (`Pause`/`Resume`, `Paused` no hash só quando verdadeiro, recusa `PausedCommand`, `Step` congelado, log `(Frame, Seq)`); evidência em `specs/evidencias/TD.19b.md`.
 
 **TD.19 concluída (2026-11-17):** conteúdo e validador entregues (`td-runes.json`, `towerCostTable`/`towerCostTableLow`); evidência em `specs/evidencias/TD.19.md`. Remoção de `levels/branches/maxTowers` e ligação das fontes de crédito §6 ficam para a TD.20/TD.21 (consumidores ainda usam o legado).
-| **TD.19b** | **Pausa no Core:** `Paused` no hash, comandos `Pause`/`Resume`, recusa de comandos de tempo, log `(tick, seq)`, caixa-bomba e temporizadores congelados; testes de determinismo e replay | TD.19 | 🟢 |
-| **TD.20** | Core economia: custo crescente por tipo (tabela inteira), venda (§5.2), remover `UpgradeTower`/`ChooseBranch`, teto técnico 48, espaço | TD.19 | 🟢 |
+
+**TD.20 concluída (2026-11-17):** economia no Core entregue. Custo da n-ésima torre do tipo = `round(base × F[n] / 100)` pela `rules.towerCostTable` (**arredondamento metade-para-o-par, em inteiros**, o da tabela da §5.1: 90×1,25 = 112 e 90×1,95 = 176); venda = `floor(custo(tipo, n−1) × taxa)` com a taxa em pontos-base limitada por `sellRefundCapBp` (85%), fungível entre torres do tipo (piso: comprar e vender perde sempre ≥ 15%); `UpgradeTower`/`ChooseBranch` e `levels/branches/capstone/maxTowers` removidos do Core, do conteúdo, do Runtime e do Rendering; teto técnico `TdMatchState.TechnicalTowerLimit = 48` (conta as SEM POSIÇÃO; o espaço continua limitado pelo snap de 44 DIP). Torres no stat base (efeitos de ramos/capstones voltam como runas na TD.21). O bot ficou sem passos de melhoria e a curva está desequilibrada até a TD.22 (testes de balanceamento marcados `Skip: recalibra na TD.22`). Os modificadores de runa que mexem em custo/venda (`towerCostTableLow`, `sellRefundBp`) entram na TD.21. Evidência em `specs/evidencias/TD.20.md`.
+
+| **TD.19b** ✅ | **Pausa no Core:** `Paused` no hash, comandos `Pause`/`Resume`, recusa de comandos de tempo, log `(tick, seq)`, caixa-bomba e temporizadores congelados; testes de determinismo e replay | TD.19 | 🟢 |
+| **TD.20** ✅ | Core economia: custo crescente por tipo (tabela inteira), venda (§5.2), remover `UpgradeTower`/`ChooseBranch`, teto técnico 48, espaço | TD.19 | 🟢 |
 | **TD.21** | Core runas: `BuyRune`/`RefundRune` (créditos, cascata), modificadores por tipo, mover efeitos de ramos/capstones para runas, sinergias ◇, `StateHash`, replay; regenerar goldens TD | TD.19, TD.19b, TD.20 | 🟢 |
 | **TD.22** | Bot e balanceamento: `rune`/`runeSector`/`sell`, `TdRuneGraph.PathTo`, recalibrar curva `F[n]`, créditos/renda e patente; evidência `TD.22.md` | TD.21 | 🟢 |
 | **TD.23** | Perfil v2 → v3 e árvore de selos ("Créditos iniciais I a III") | TD.19, TD.21 | 🟢 |

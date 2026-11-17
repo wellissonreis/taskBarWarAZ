@@ -35,7 +35,7 @@ public sealed class TdUiGoldenTests
         public bool PurchaseNode(string nodeId) => true;
     }
 
-    public enum UiScene { HudPrep, HudWave, HudMin, HudTip, Chooser, ChooserPoint, Inspector, Branches, Preview, Map, Seals, Victory, Menu, HudCrate, HudPlacing, Towers }
+    public enum UiScene { HudPrep, HudWave, HudMin, HudTip, Chooser, ChooserPoint, Inspector, Preview, Map, Seals, Victory, Menu, HudCrate, HudPlacing, Towers }
 
     public static TheoryData<UiScene, int> Cases()
     {
@@ -48,7 +48,7 @@ public sealed class TdUiGoldenTests
     private static (TdUiController Ui, TdMatchState Match) Setup(UiScene scene)
     {
         var (match, _, _) = TdStripScenes.Build(TdStripScene.PrepRange);
-        typeof(TdMatchState).GetProperty("Credits")!.SetValue(match, scene is UiScene.Branches ? 900L : 240L);
+        typeof(TdMatchState).GetProperty("Credits")!.SetValue(match, 240L);
         var ui = new TdUiController(() => match, c => match.Apply(c), new Host(), () => 0);
         ui.Sync();
         var item = (TdUiAction a, int arg) => new TdUiItem(default, TdUiKind.Button, "", a, arg);
@@ -63,11 +63,6 @@ public sealed class TdUiGoldenTests
             case UiScene.ChooserPoint: ui.Activate(item(TdUiAction.BuildToggle, 0)); ui.PointerMoved(1100); break;
             case UiScene.Chooser: ui.ClickPoint(700); break;
             case UiScene.Inspector: ui.OpenTowerFromList(match.Towers[0].Id); break;
-            case UiScene.Branches:
-                match.Apply(new UpgradeTower(match.Towers[2].Id));
-                match.Apply(new UpgradeTower(match.Towers[2].Id));
-                ui.OpenTowerFromList(match.Towers[2].Id);
-                break;
             case UiScene.Preview: ui.Activate(item(TdUiAction.Preview, 0)); break;
             case UiScene.Menu: ui.Activate(item(TdUiAction.Menu, 0)); break;
             case UiScene.Towers: ui.Activate(item(TdUiAction.TowersOpen, 0)); break;

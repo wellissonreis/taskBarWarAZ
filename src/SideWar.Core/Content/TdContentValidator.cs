@@ -16,7 +16,6 @@ public static class TdContentValidator
     private static readonly string[] TowerKinds = ["attack", "blocker", "support"];
     private static readonly string[] TowerTargets = ["ground", "both", "none"];
     private static readonly string[] Targetings = ["first", "last", "strong", "weak", "close"];
-    private static readonly string[] BranchIds = ["A", "B"];
     private static readonly string[] AutoStartModes = ["off", "countdown"];
     private static readonly string[] EffectKinds =
         ["startingCredits", "sellRefund", "maxTowers", "damagePercent", "rangePercent", "integrity", "abilityCooldownPercent", "unlockAbility", "autoStartBonusPercent"];
@@ -136,7 +135,6 @@ public static class TdContentValidator
             Req(e, s.Id == i + 1, $"td-stages: id da posição {i} deve ser {i + 1} (encontrado {s.Id})");
             Req(e, s.Waves >= 1, $"td-stages.{s.Id}.waves deve ser >= 1");
             Req(e, s.StartingCredits > 0, $"td-stages.{s.Id}.startingCredits deve ser > 0");
-            Req(e, s.MaxTowers >= 1, $"td-stages.{s.Id}.maxTowers deve ser >= 1");
             Req(e, Text(s.Title) && Text(s.Region) && Text(s.Concept), $"td-stages.{s.Id}: title, region e concept não podem ser vazios");
             Req(e, regions.Add(s.Region), $"td-stages.{s.Id}.region duplicada '{s.Region}'");
             Req(e, challenges.Contains(s.Challenge), $"td-stages.{s.Id}.challenge referencia desafio inexistente '{s.Challenge}'");
@@ -238,34 +236,11 @@ public static class TdContentValidator
             }
             Req(e, (t.Kind == "support") == (t.Targets == "none"), $"{o}: targets 'none' é exclusivo de suporte");
 
-            // Níveis 1 a 3 lineares.
-            Req(e, t.Levels.Length == 3, $"{o}.levels deve ter exatamente 3 níveis lineares");
-            for (var i = 0; i < t.Levels.Length; i++)
-            {
-                var l = t.Levels[i];
-                Req(e, l.Level == i + 1, $"{o}.levels: nível da posição {i} deve ser {i + 1}");
-                Req(e, l.CostFactor > 0 && l.DamageMultiplier > 0, $"{o}.levels.{l.Level}: costFactor e damageMultiplier devem ser > 0");
-                Req(e, i == 0 || l.DamageMultiplier >= t.Levels[i - 1].DamageMultiplier, $"{o}.levels.{l.Level}.damageMultiplier não pode diminuir");
-            }
-
             // Fraqueza declarada da torre (CA-28.4).
             Req(e, Text(t.WeaknessText), $"{o}.weaknessText: toda torre declara sua fraqueza");
             CheckTraits(e, o, t.Weak, "weak", true);
             CheckTraits(e, o, t.Strong, "strong", true);
             Req(e, !t.Strong.Intersect(t.Weak).Any(), $"{o}: um traço não pode ser forte e fraco ao mesmo tempo");
-
-            // Ramo A/B no nível 4, capstone no 5, ambos com fraqueza declarada.
-            Req(e, t.Branches.Length == 2 && t.Branches.Select(b => b.Id).SequenceEqual(BranchIds), $"{o}.branches deve ser exatamente [A, B]");
-            foreach (var b in t.Branches)
-            {
-                var bo = $"{o}.{b.Id}";
-                Req(e, Text(b.Name) && Text(b.Gain), $"{bo}: name e gain não podem ser vazios");
-                Req(e, b.CostFactor > 0, $"{bo}.costFactor deve ser > 0");
-                Req(e, Text(b.Weakness), $"{bo}.weakness: todo ramo declara uma fraqueza");
-                CheckTraits(e, bo, b.WeakAgainst, "weakAgainst", true);
-                Req(e, Text(b.Capstone.Name) && Text(b.Capstone.Effect), $"{bo}.capstone: name e effect não podem ser vazios");
-                Req(e, b.Capstone.CostFactor > 0, $"{bo}.capstone.costFactor deve ser > 0");
-            }
         }
         var set = towers.FirstOrDefault(t => t.Id == "scaleset");
         Req(e, set is null || set.Kind == "support", "td-towers.scaleset deve ser do tipo support");
@@ -281,11 +256,9 @@ public static class TdContentValidator
         foreach (var t in towers)
         {
             refs.Add(t.Id);
-            foreach (var b in t.Branches)
-                refs.Add($"{t.Id}.{b.Id}");
         }
         // Traços que alguma torre ou ramo declara como fraqueza (o "sofre" da matriz).
-        var suffered = towers.SelectMany(t => t.Weak.Concat(t.Branches.SelectMany(b => b.WeakAgainst))).ToHashSet(StringComparer.Ordinal);
+        var suffered = towers.SelectMany(t => t.Weak).ToHashSet(StringComparer.Ordinal);
 
         void Check(string id, string[] traits, string[] counters)
         {

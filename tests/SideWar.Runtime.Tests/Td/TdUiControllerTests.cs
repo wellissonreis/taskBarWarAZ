@@ -8,7 +8,6 @@ using Xunit;
 using BuildTower = SideWar.Core.Td.BuildTower;
 using LayoutChanged = SideWar.Core.Td.LayoutChanged;
 using SetTargeting = SideWar.Core.Td.SetTargeting;
-using UpgradeTower = SideWar.Core.Td.UpgradeTower;
 using StartWave = SideWar.Core.Td.StartWave;
 
 namespace SideWar.Runtime.Tests.Td;
@@ -124,15 +123,16 @@ public sealed class TdUiControllerTests
     }
 
     [Fact]
-    public void Tower_limit_makes_the_ghost_invalid()
+    public void Chooser_shows_growing_price_per_tower_type()
     {
         var r = new Rig();
         typeof(TdMatchState).GetProperty("Credits")!.SetValue(r.Match, 5000L);
-        for (int i = 0; i < r.Match.MaxTowers; i++) r.Match.Apply(new BuildTower("bolt", 100 + i * 140));
-        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "TORRE", TdUiAction.BuildToggle));
-        r.Ui.PointerMoved(950);
-        Assert.False(r.Ui.View.GhostValid);
-        Assert.Equal("Limite de torres atingido", r.Ui.Notice);
+        r.Match.Apply(new BuildTower("bolt", 100));
+        r.Ui.ClickPoint(300);
+        var pop = r.Ui.BuildPopover()!;
+        Assert.Equal("$112", Find(pop, TdUiAction.ChooseTower, "bolt").Right);  // 2ª torre do tipo: 90 x 1,25 = 112,5 -> 112
+        Assert.Equal("$90", Find(pop, TdUiAction.ChooseTower, "frost").Right);  // outro tipo: preço base
+        Assert.Contains("x1", Find(pop, TdUiAction.ChooseTower, "bolt").Text);
     }
 
     [Fact]
@@ -150,7 +150,7 @@ public sealed class TdUiControllerTests
     }
 
     [Fact]
-    public void Inspector_upgrade_branch_target_and_sell()
+    public void Inspector_has_target_and_sell_but_no_upgrade_or_branch()
     {
         var r = new Rig();
         r.Match.Apply(new BuildTower("bolt", 600));
@@ -160,22 +160,15 @@ public sealed class TdUiControllerTests
         Assert.Equal(id, r.Ui.View.SelectedTowerId);
         var v = r.Ui.BuildPopover()!;
         Assert.Contains(v.Items, i => i.Action == TdUiAction.Targeting && i.SArg == "Strong");
+        Assert.DoesNotContain(v.Items, i => i.Text.Contains("Melhorar", StringComparison.OrdinalIgnoreCase) || i.Text.StartsWith("Ramo", StringComparison.Ordinal));
         r.Match.Apply(new SetPresence(false));
-        // dinheiro para dois níveis
-        typeof(TdMatchState).GetProperty("Credits")!.SetValue(r.Match, 5000L);
-        r.Ui.Activate(Find(v, TdUiAction.Upgrade));
-        r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.Upgrade));
-        Assert.Equal(3, r.Match.Towers[0].Level);
-        var branches = r.Ui.BuildPopover()!;
-        Assert.Equal(2, branches.Items.Count(i => i.Action == TdUiAction.Branch));
-        r.Ui.Activate(Find(branches, TdUiAction.Branch, "A"));
-        Assert.Equal(4, r.Match.Towers[0].Level);
         r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.Targeting, "Weak"));
         Assert.Equal((byte)TdTargeting.Weak, r.Match.Towers[0].Targeting);
-        long before = r.Match.Credits;
+        long before = r.Match.Credits, refund = r.Match.SellValue(id);
+        Assert.Equal(63, refund); // floor(90 x 0,7)
         r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.Sell));
         Assert.Empty(r.Match.Towers);
-        Assert.True(r.Match.Credits > before);
+        Assert.Equal(before + refund, r.Match.Credits);
         Assert.Equal(TdUiMode.None, r.Ui.Mode);
     }
 

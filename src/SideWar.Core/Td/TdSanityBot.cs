@@ -6,11 +6,11 @@ namespace SideWar.Core.Td;
 /// <summary>Perfis do jogador simulado (SDD-28 RF-28.12, DP-28.10).</summary>
 public enum TdBotProfile : byte
 {
-    /// <summary>Só o básico (Raio e Canhão), sem ramos, sem habilidades, ignora a caixa-bomba.</summary>
+    /// <summary>Só o básico (Raio e Canhão), sem habilidades, ignora a caixa-bomba.</summary>
     Novato = 0,
-    /// <summary>Usa o contra óbvio da fase, ramos básicos, habilidades; não chama ondas antes.</summary>
+    /// <summary>Usa o contra óbvio da fase, habilidades; não chama ondas antes.</summary>
     Medio,
-    /// <summary>Contra do conceito, ramos e capstones certos, mira, habilidades, chamada antecipada e caixa-bomba.</summary>
+    /// <summary>Contra do conceito, mira, habilidades, chamada antecipada e caixa-bomba.</summary>
     Otimizado,
     /// <summary>Como o médio, mas SEM o contra do conceito da fase (deve perder).</summary>
     SemContra,
@@ -32,8 +32,8 @@ public sealed record TdBotResult(
 /// </summary>
 /// <remarks>
 /// DSL do roteiro (passos separados por espaço, executados em ordem; o passo atual espera os créditos):
-/// <c>+tipo@X</c> constrói (X lógico preferido; busca o mais próximo livre), <c>uN</c> melhora a torre N (N = ordem de construção),
-/// <c>bNA|bNB</c> escolhe ramo, <c>cN</c> capstone, <c>tN=modo</c> mira (first/last/strong/weak/close).
+/// <c>+tipo@X</c> constrói (X lógico preferido; busca o mais próximo livre; preço crescente por tipo, SDD-29 §5.1),
+/// <c>tN=modo</c> mira da torre N (N = ordem de construção; first/last/strong/weak/close). Sem passos de melhoria (TD.20); runas entram na TD.22.
 /// </remarks>
 public static class TdSanityBot
 {
@@ -69,13 +69,6 @@ public static class TdSanityBot
         public Runner(TdMatchState s, Step[] plan, TdBotProfile profile)
         {
             _s = s; _plan = plan; _profile = profile;
-            var tm = new Dictionary<int, string>();
-            int n = 0;
-            foreach (var st in plan)
-            {
-                if (st.Kind == 'b') tm[++n] = st.Tower;
-                else if (st.Kind == 'r' && tm.TryGetValue(st.N, out var ty)) _branchChoice[ty] = st.Arg;
-            }
         }
 
         /// <summary>Tempo de reação à caixa-bomba (a contagem é de 8 s): o novato demora, o otimizado clica quase na hora.</summary>
@@ -151,16 +144,22 @@ public static class TdSanityBot
                 while (Fallback()) { }
         }
 
+        /// <summary>
+        /// Teto INTERNO do bot (não é regra do jogo): os antigos <c>maxTowers</c> por fase (6, 7, 8, 8, 8, 8) preservam o comportamento do bot
+        /// após o SDD-29 remover o teto de design. A TD.22 recalibra com custo crescente e runas (meta: 12 a 16 torres).
+        /// </summary>
+        private static int BotTowerCap(int stage) => stage switch { 1 => 6, 2 => 7, _ => 8 };
+
         private static readonly int[] FallbackX = [1000, 780, 520, 350, 900, 640, 250, 1100];
         private int _fallbackBuilt;
 
-        /// <summary>Depois do roteiro: gasta o que sobra como um jogador comum (completa vagas, depois melhora a torre mais fraca).</summary>
+        /// <summary>Depois do roteiro: gasta o que sobra como um jogador comum (completa vagas com o tipo do primeiro passo de construção, a preço crescente).</summary>
         private bool Fallback()
         {
             int towers = _s.Towers.Count;
             string kind = _plan.FirstOrDefault(p => p.Kind == 'b').Tower ?? "bolt";
             int di = Array.FindIndex(_s.Content.Towers, t => t.Id == kind);
-            if (towers < _s.MaxTowers && _fallbackBuilt < 4 && _s.Credits >= _s.Content.Towers[di].Cost)
+            if (towers < BotTowerCap(_s.StageId) && _fallbackBuilt < 4 && _s.Credits >= _s.NextTowerCost(di))
                 foreach (int x in Candidates(FallbackX[_fallbackBuilt % FallbackX.Length]))
                     if (_s.Apply(new BuildTower(kind, x)).IsOk)
                     {
@@ -169,28 +168,8 @@ public static class TdSanityBot
                         _fallbackBuilt++;
                         return true;
                     }
-            int best = -1, bestLevel = int.MaxValue;
-            for (int i = 0; i < _s.Towers.Count; i++)
-            {
-                var t = _s.Towers[i];
-                var def = _s.Content.Towers[t.DefIndex];
-                if (def.Kind == "support" && t.Level >= 3 && !Expert) continue;
-                int cap = _profile == TdBotProfile.Novato || _profile == TdBotProfile.SemContra ? 3 : Expert ? 5 : 4;
-                if (t.Level >= cap) continue;
-                if (t.Level < bestLevel) { best = i; bestLevel = t.Level; }
-            }
-            if (best < 0) return false;
-            var tw = _s.Towers[best];
-            var d = _s.Content.Towers[tw.DefIndex];
-            if (tw.Level == d.Levels.Length)
-            {
-                string br = _branchChoice.TryGetValue(d.Id, out var b) ? b : "A";
-                return _s.Apply(new ChooseBranch(tw.Id, br)).IsOk;
-            }
-            return _s.Apply(new UpgradeTower(tw.Id)).IsOk;
+            return false;
         }
-
-        private Dictionary<string, string> _branchChoice = [];
 
         private enum StepResult { Done, Wait }
 
@@ -201,8 +180,8 @@ public static class TdSanityBot
                 case 'b': // build
                 {
                     int def = Array.FindIndex(_s.Content.Towers, t => t.Id == st.Tower);
-                    if (_s.Credits < _s.Content.Towers[def].Cost) return StepResult.Wait;
-                    if (_s.Towers.Count >= _s.MaxTowers) return StepResult.Done; // sem vaga: pula
+                    if (_s.Credits < _s.NextTowerCost(def)) return StepResult.Wait;
+                    if (_s.Towers.Count >= BotTowerCap(_s.StageId)) return StepResult.Done; // sem vaga (teto interno do bot): pula
                     foreach (int x in Candidates(st.X))
                     {
                         var r = _s.Apply(new BuildTower(st.Tower, x));
@@ -219,14 +198,6 @@ public static class TdSanityBot
                     _rejected++;
                     return StepResult.Done;
                 }
-                case 'u':
-                case 'c':
-                {
-                    var r = _s.Apply(new UpgradeTower(st.N));
-                    return Settle(r);
-                }
-                case 'r':
-                    return Settle(_s.Apply(new ChooseBranch(st.N, st.Arg)));
                 case 't':
                 {
                     var r = _s.Apply(new SetTargeting(st.N, Enum.Parse<TdTargeting>(st.Arg, true)));

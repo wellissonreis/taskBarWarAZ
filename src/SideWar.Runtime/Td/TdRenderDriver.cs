@@ -23,7 +23,7 @@ public readonly record struct TdView(int SelectedTowerId, int HoverTowerId, bool
     /// <summary>Tutorial (TD.15): contorno pulsante em toda a faixa de torres (passo "clique num ponto da faixa").</summary>
     public bool BandHint { get; init; }
 
-    /// <summary>Tutorial (TD.15): X (DIP do espaço de desenho) de um alvo a destacar com anel âmbar (torre a melhorar, caixa-bomba); -1 = nenhum.</summary>
+    /// <summary>Tutorial (TD.15): X (DIP do espaço de desenho) de um alvo a destacar com anel âmbar (caixa-bomba); -1 = nenhum.</summary>
     public float HintX { get; init; } = -1f;
 }
 
@@ -117,7 +117,7 @@ public sealed class TdRenderDriver : ILoopParticipant
         Presents++;
     }
 
-    /// <summary>Resumo barato do que o Preparo/pausa pode mudar (comandos: construir, vender, melhorar, posicionar, layout, contagem).</summary>
+    /// <summary>Resumo barato do que o Preparo/pausa pode mudar (comandos: construir, vender, posicionar, layout, contagem).</summary>
     private static long Signature(TdMatchState match)
     {
         var h = new HashCode();
@@ -137,8 +137,6 @@ public sealed class TdRenderDriver : ILoopParticipant
             h.Add(t.Id);
             h.Add(t.X);
             h.Add(t.Placed);
-            h.Add(t.Level);
-            h.Add(t.Branch);
         }
         return h.ToHashCode();
     }

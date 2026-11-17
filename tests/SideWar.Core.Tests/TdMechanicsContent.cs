@@ -41,35 +41,35 @@ internal static class TdMechanicsContent
     private const string Enemies = """
 {
   "enemies": [
-    { "id": "grunt",   "name": "Requisição",      "flavor": "O tráfego básico de qualquer serviço.", "hp": 40,  "speed": 40, "armor": 0, "gold": 6,  "coreDamage": 1, "introStage": 1, "traits": ["basic"],   "counters": ["bolt", "cannon", "cannon.A"], "params": {} },
-    { "id": "runner",  "name": "Ping",            "flavor": "Rápido demais para defesas lentas.", "hp": 22,  "speed": 78, "armor": 0, "gold": 6,  "coreDamage": 1, "introStage": 1, "traits": ["fast"],    "counters": ["balancer", "frost", "bolt.B"], "params": {} },
-    { "id": "swarm",   "name": "Rajada",          "flavor": "Dezenas de pacotes minúsculos de uma vez.", "hp": 14,  "speed": 46, "armor": 0, "gold": 3,  "coreDamage": 1, "introStage": 3, "traits": ["swarm"],   "counters": ["cannon.A", "balancer.A", "bolt.B"], "params": {} },
-    { "id": "armored", "name": "Pacote blindado", "flavor": "Dano fraco por tiro some na armadura.", "hp": 110, "speed": 32, "armor": 6, "gold": 12, "coreDamage": 2, "introStage": 2, "traits": ["armored"], "counters": ["cannon.B", "bolt.A", "frost.B"], "params": {} },
-    { "id": "tank",    "name": "Tráfego pesado",  "flavor": "Testa o DPS total da defesa.", "hp": 380, "speed": 24, "armor": 2, "gold": 20, "coreDamage": 3, "introStage": 3, "traits": ["durable"], "counters": ["bolt.A", "cannon.B", "scaleset"], "params": {} },
+    { "id": "grunt",   "name": "Requisição",      "flavor": "O tráfego básico de qualquer serviço.", "hp": 40,  "speed": 40, "armor": 0, "gold": 6,  "coreDamage": 1, "introStage": 1, "traits": ["basic"],   "counters": ["bolt", "cannon"], "params": {} },
+    { "id": "runner",  "name": "Ping",            "flavor": "Rápido demais para defesas lentas.", "hp": 22,  "speed": 78, "armor": 0, "gold": 6,  "coreDamage": 1, "introStage": 1, "traits": ["fast"],    "counters": ["balancer", "frost", "bolt"], "params": {} },
+    { "id": "swarm",   "name": "Rajada",          "flavor": "Dezenas de pacotes minúsculos de uma vez.", "hp": 14,  "speed": 46, "armor": 0, "gold": 3,  "coreDamage": 1, "introStage": 3, "traits": ["swarm"],   "counters": ["cannon", "balancer", "bolt"], "params": {} },
+    { "id": "armored", "name": "Pacote blindado", "flavor": "Dano fraco por tiro some na armadura.", "hp": 110, "speed": 32, "armor": 6, "gold": 12, "coreDamage": 2, "introStage": 2, "traits": ["armored"], "counters": ["cannon", "bolt", "frost"], "params": {} },
+    { "id": "tank",    "name": "Tráfego pesado",  "flavor": "Testa o DPS total da defesa.", "hp": 380, "speed": 24, "armor": 2, "gold": 20, "coreDamage": 3, "introStage": 3, "traits": ["durable"], "counters": ["bolt", "cannon", "scaleset"], "params": {} },
     { "id": "flyer",   "name": "Bot aéreo",       "flavor": "Ignora balanceador e canhão.", "hp": 60,  "speed": 55, "armor": 0, "gold": 10, "coreDamage": 1, "introStage": 4, "traits": ["flying"],  "counters": ["bolt", "frost"], "params": {} },
-    { "id": "regen",   "name": "Verme",           "flavor": "Regenera quando fica sem receber dano.", "hp": 120, "speed": 36, "armor": 0, "gold": 14, "coreDamage": 2, "introStage": 5, "traits": ["regen"],   "counters": ["bolt.A", "frost.A", "cannon"], "params": { "regenPctPerSecond": 0.04, "regenDelaySeconds": 2 } },
-    { "id": "leech",   "name": "Parasita",        "flavor": "Drena torres: desativa a que estiver ao alcance.", "hp": 90,  "speed": 38, "armor": 0, "gold": 14, "coreDamage": 2, "introStage": 5, "traits": ["drain"],   "counters": ["bolt", "bolt.A"], "params": { "drainRangeUnits": 80, "disableSeconds": 3 } }
+    { "id": "regen",   "name": "Verme",           "flavor": "Regenera quando fica sem receber dano.", "hp": 120, "speed": 36, "armor": 0, "gold": 14, "coreDamage": 2, "introStage": 5, "traits": ["regen"],   "counters": ["bolt", "frost", "cannon"], "params": { "regenPctPerSecond": 0.04, "regenDelaySeconds": 2 } },
+    { "id": "leech",   "name": "Parasita",        "flavor": "Drena torres: desativa a que estiver ao alcance.", "hp": 90,  "speed": 38, "armor": 0, "gold": 14, "coreDamage": 2, "introStage": 5, "traits": ["drain"],   "counters": ["bolt"], "params": { "drainRangeUnits": 80, "disableSeconds": 3 } }
   ],
   "bosses": [
     {
       "id": "ransomware", "name": "Ransomware", "flavor": "Sequestra o que está por perto até o resgate.", "stage": 3,
       "hp": 1500, "speed": 20, "armor": 3, "gold": 150, "coreDamage": 5, "paralysisImmune": true, "slowCap": 0.2,
       "mechanic": "A cada 10 s criptografa a torre mais próxima por 4 s; recebe 30% menos dano de torres bloqueadas.",
-      "traits": ["boss", "durable", "drain"], "counters": ["balancer", "frost", "bolt.A"],
+      "traits": ["boss", "durable", "drain"], "counters": ["balancer", "frost", "bolt"],
       "params": { "encryptIntervalSeconds": 10, "encryptSeconds": 4, "encryptRangeUnits": 120, "blockedTowerDamageReduction": 0.3 }
     },
     {
       "id": "botnet", "name": "Botnet (Hidra DDoS)", "flavor": "Corte uma cabeça e nascem seis.", "stage": 5,
       "hp": 2200, "speed": 20, "armor": 2, "gold": 200, "coreDamage": 6, "paralysisImmune": true, "slowCap": 0.2,
       "mechanic": "Ao cair para 66% e 33% do HP divide-se em 6 enxames.",
-      "traits": ["boss", "swarm"], "counters": ["cannon.A", "balancer.A"],
+      "traits": ["boss", "swarm"], "counters": ["cannon", "balancer"],
       "params": { "splitAtHpFraction1": 0.66, "splitAtHpFraction2": 0.33, "splitCount": 6 }
     },
     {
       "id": "zeroday", "name": "Zero-day", "flavor": "Ninguém tem patch para isto.", "stage": 6,
       "hp": 3000, "speed": 20, "armor": 4, "gold": 300, "coreDamage": 8, "paralysisImmune": true, "slowCap": 0.0,
       "mechanic": "Imune a lentidão e paralisia; regenera 2%/s; fica invulnerável por 3 s ao entrar em cada nova metade do caminho.",
-      "traits": ["boss", "regen"], "counters": ["cannon.B", "scaleset.A", "bolt.A"],
+      "traits": ["boss", "regen"], "counters": ["cannon", "scaleset", "bolt"],
       "params": { "regenPctPerSecond": 0.02, "regenDelaySeconds": 0, "invulnerableSeconds": 3, "invulnerableAtPathFraction1": 0.5, "invulnerableAtPathFraction2": 0.75 }
     }
   ]
@@ -128,93 +128,23 @@ internal static class TdMechanicsContent
     ]
   },
   "stages": [
-    { "id": 1, "title": "Brazil South",    "region": "brazilsouth",   "concept": "Tutorial: construir e iniciar a onda", "waves": 10, "startingCredits": 150, "maxTowers": 6, "challenge": "frugal" },
-    { "id": 2, "title": "East US",         "region": "eastus",        "concept": "Blindados e mira", "waves": 12, "startingCredits": 180, "maxTowers": 7, "challenge": "purist" },
-    { "id": 3, "title": "West Europe",     "region": "westeurope",    "concept": "Controle, habilidade e o primeiro chefe", "waves": 12, "startingCredits": 200, "maxTowers": 8, "challenge": "marathon" },
-    { "id": 4, "title": "Japan East",      "region": "japaneast",     "concept": "Voadores e suporte (respiro)", "waves": 14, "startingCredits": 240, "maxTowers": 8, "challenge": "frugal" },
-    { "id": 5, "title": "UK South",        "region": "uksouth",       "concept": "Regeneração e drenagem", "waves": 14, "startingCredits": 260, "maxTowers": 8, "challenge": "purist" },
-    { "id": 6, "title": "Australia East",  "region": "australiaeast", "concept": "Prova final", "waves": 15, "startingCredits": 300, "maxTowers": 8, "challenge": "marathon" }
+    { "id": 1, "title": "Brazil South",    "region": "brazilsouth",   "concept": "Tutorial: construir e iniciar a onda", "waves": 10, "startingCredits": 150, "challenge": "frugal" },
+    { "id": 2, "title": "East US",         "region": "eastus",        "concept": "Blindados e mira", "waves": 12, "startingCredits": 180, "challenge": "purist" },
+    { "id": 3, "title": "West Europe",     "region": "westeurope",    "concept": "Controle, habilidade e o primeiro chefe", "waves": 12, "startingCredits": 200, "challenge": "marathon" },
+    { "id": 4, "title": "Japan East",      "region": "japaneast",     "concept": "Voadores e suporte (respiro)", "waves": 14, "startingCredits": 240, "challenge": "frugal" },
+    { "id": 5, "title": "UK South",        "region": "uksouth",       "concept": "Regeneração e drenagem", "waves": 14, "startingCredits": 260, "challenge": "purist" },
+    { "id": 6, "title": "Australia East",  "region": "australiaeast", "concept": "Prova final", "waves": 15, "startingCredits": 300, "challenge": "marathon" }
   ]
 }
 """;
 
     private const string Towers = """
 [
-  {
-    "id": "bolt", "name": "Raio", "flavor": "Como uma Azure VM: capacidade bruta sob demanda.",
-    "role": "Alvo único, longo alcance, polivalente", "kind": "attack", "targets": "both", "defaultTargeting": "first",
-    "cost": 70, "range": 150, "damage": 14, "interval": 0.6, "unlockStage": 1, "stats": {},
-    "levels": [ { "level": 1, "costFactor": 1.0, "damageMultiplier": 1.0 }, { "level": 2, "costFactor": 0.9, "damageMultiplier": 1.5 }, { "level": 3, "costFactor": 1.6, "damageMultiplier": 2.2 } ],
-    "strong": ["flying", "drain", "durable"], "weak": ["swarm"], "weaknessText": "Dano por tiro baixo contra enxames e blindados.",
-    "branches": [
-      { "id": "A", "name": "Atirador (GPU)", "costFactor": 2.4, "gain": "Dano x2,6, ignora 50% da armadura.", "weakness": "Cadência 1,5x mais lenta: ruim contra enxames.", "weakAgainst": ["swarm"],
-        "stats": { "damageMultiplier": 2.6, "intervalMultiplier": 1.5, "armorPenetration": 0.5 },
-        "capstone": { "name": "Desligamento", "costFactor": 3.6, "effect": "A cada 5º tiro causa 6x de dano.", "stats": { "superHitEvery": 5, "superHitMultiplier": 6 } } },
-      { "id": "B", "name": "Rajada (série B)", "costFactor": 2.4, "gain": "Cadência x0,55; +8% de dano por acerto seguido no mesmo alvo (até +64%).", "weakness": "Dano por tiro baixo: ruim contra blindados.", "weakAgainst": ["armored"],
-        "stats": { "intervalMultiplier": 0.55, "focusBonusPerHit": 0.08, "focusBonusCap": 0.64 },
-        "capstone": { "name": "Sobrecarga", "costFactor": 3.6, "effect": "O bônus de foco passa a durar entre alvos.", "stats": { "focusKeepsBetweenTargets": 1 } } }
-    ]
-  },
-  {
-    "id": "frost", "name": "Gelo", "flavor": "Como um WAF: filtra e retarda o que chega.",
-    "role": "Controle: lentidão e marca", "kind": "attack", "targets": "both", "defaultTargeting": "first",
-    "cost": 90, "range": 100, "damage": 5, "interval": 0.9, "unlockStage": 1, "stats": { "slowFactor": 0.7 },
-    "levels": [ { "level": 1, "costFactor": 1.0, "damageMultiplier": 1.0 }, { "level": 2, "costFactor": 0.9, "damageMultiplier": 1.5 }, { "level": 3, "costFactor": 1.6, "damageMultiplier": 2.2 } ],
-    "strong": ["fast", "flying"], "weak": ["regen", "armored", "boss"], "weaknessText": "Dano quase nulo: não mata sozinha; chefes resistem ao controle.",
-    "branches": [
-      { "id": "A", "name": "Congelar (limite de taxa)", "costFactor": 2.4, "gain": "A cada 4 s paralisa o alvo por 1,2 s.", "weakness": "Chefes são imunes à paralisia.", "weakAgainst": ["boss"],
-        "stats": { "paralyzeEverySeconds": 4, "paralyzeSeconds": 1.2 },
-        "capstone": { "name": "Zero absoluto", "costFactor": 3.6, "effect": "Paralisia em área.", "stats": { "paralyzeArea": 1 } } },
-      { "id": "B", "name": "Corrosão (inspeção profunda)", "costFactor": 2.4, "gain": "Reduz 6 de armadura do alvo e o marca como vulnerável (+25% de dano de todas as torres).", "weakness": "Lentidão fraca (x0,85).", "weakAgainst": ["fast"],
-        "stats": { "armorReduction": 6, "vulnerableBonus": 0.25, "slowFactor": 0.85 },
-        "capstone": { "name": "Auditoria total", "costFactor": 3.6, "effect": "Vulnerável vira +40% de dano.", "stats": { "vulnerableBonus": 0.4 } } }
-    ]
-  },
-  {
-    "id": "cannon", "name": "Canhão", "flavor": "Como a proteção contra DDoS: absorve o grosso do ataque.",
-    "role": "Área e dano pesado, só solo", "kind": "attack", "targets": "ground", "defaultTargeting": "strong",
-    "cost": 120, "range": 110, "damage": 45, "interval": 1.9, "unlockStage": 1, "stats": { "splashRadius": 40, "splashFactor": 0.5 },
-    "levels": [ { "level": 1, "costFactor": 1.0, "damageMultiplier": 1.0 }, { "level": 2, "costFactor": 0.9, "damageMultiplier": 1.5 }, { "level": 3, "costFactor": 1.6, "damageMultiplier": 2.2 } ],
-    "strong": ["swarm", "armored", "basic"], "weak": ["flying", "fast"], "weaknessText": "Não acerta voadores e erra os muito rápidos.",
-    "branches": [
-      { "id": "A", "name": "Barragem", "costFactor": 2.4, "gain": "Raio de área x1,6 e dano em área 0,7.", "weakness": "Dano em alvo único menor: ruim contra duráveis e chefes.", "weakAgainst": ["durable", "boss"],
-        "stats": { "splashRadiusMultiplier": 1.6, "splashFactor": 0.7 },
-        "capstone": { "name": "Saturação", "costFactor": 3.6, "effect": "Deixa zona de queimadura por 3 s.", "stats": { "burnZoneSeconds": 3 } } },
-      { "id": "B", "name": "Penetrador", "costFactor": 2.4, "gain": "Dano x2,2 contra blindados e chefes, sem área.", "weakness": "Sem área: ruim contra enxames.", "weakAgainst": ["swarm"],
-        "stats": { "damageMultiplierVsArmoredAndBoss": 2.2, "splashFactor": 0 },
-        "capstone": { "name": "Perfuração total", "costFactor": 3.6, "effect": "Ignora 100% da armadura.", "stats": { "armorPenetration": 1 } } }
-    ]
-  },
-  {
-    "id": "balancer", "name": "Balanceador", "flavor": "Como um Load Balancer: segura e distribui a carga.",
-    "role": "Retém inimigos de solo com nós bloqueadores", "kind": "blocker", "targets": "ground", "defaultTargeting": null,
-    "cost": 100, "range": 90, "damage": 0, "interval": 0, "unlockStage": 2, "stats": { "nodeDamagePerSecond": 4, "nodeCooldownSeconds": 6, "nodes": 1, "nodeHolds": 1 },
-    "levels": [ { "level": 1, "costFactor": 1.0, "damageMultiplier": 1.0 }, { "level": 2, "costFactor": 0.9, "damageMultiplier": 1.5 }, { "level": 3, "costFactor": 1.6, "damageMultiplier": 2.2 } ],
-    "strong": ["fast", "swarm", "basic"], "weak": ["flying"], "weaknessText": "Não segura voadores nem chefes por muito tempo.",
-    "branches": [
-      { "id": "A", "name": "Pool amplo", "costFactor": 2.4, "gain": "3 nós simultâneos retendo 2 inimigos cada.", "weakness": "Nós frágeis: caem rápido sob chefes e duráveis.", "weakAgainst": ["durable"],
-        "stats": { "nodes": 3, "nodeHolds": 2 },
-        "capstone": { "name": "Anycast", "costFactor": 3.6, "effect": "Nós nascem no ponto mais avançado do alcance.", "stats": { "spawnAtFront": 1 } } },
-      { "id": "B", "name": "Failover", "costFactor": 2.4, "gain": "Nós explodem ao fim, causando dano em área.", "weakness": "Apenas 1 nó por vez.", "weakAgainst": ["swarm"],
-        "stats": { "nodes": 1, "explodeOnEnd": 1 },
-        "capstone": { "name": "Blue/green", "costFactor": 3.6, "effect": "Novo nó imediato ao romper.", "stats": { "instantRespawn": 1 } } }
-    ]
-  },
-  {
-    "id": "scaleset", "name": "Scale Set", "flavor": "Como VM Scale Sets: mais instâncias quando a demanda sobe.",
-    "role": "Suporte: bônus às torres vizinhas (não ataca)", "kind": "support", "targets": "none", "defaultTargeting": null,
-    "cost": 150, "range": 120, "damage": 0, "interval": 0, "unlockStage": 4, "stats": {},
-    "levels": [ { "level": 1, "costFactor": 1.0, "damageMultiplier": 1.0 }, { "level": 2, "costFactor": 0.9, "damageMultiplier": 1.5 }, { "level": 3, "costFactor": 1.6, "damageMultiplier": 2.2 } ],
-    "strong": ["durable"], "weak": ["drain"], "weaknessText": "Não ataca e perde o efeito quando desativado por drenagem.",
-    "branches": [
-      { "id": "A", "name": "Autoscale", "costFactor": 2.4, "gain": "+25% de cadência nas torres vizinhas no alcance.", "weakness": "Não dá dano extra.", "weakAgainst": ["boss"],
-        "stats": { "neighborCadenceBonus": 0.25 },
-        "capstone": { "name": "Elasticidade", "costFactor": 3.6, "effect": "Bônus x1,5 durante a habilidade Escalar.", "stats": { "bonusMultiplierDuringScale": 1.5 } } },
-      { "id": "B", "name": "Réplica", "costFactor": 2.4, "gain": "+25% de dano nas torres vizinhas e +1 de alcance no Raio.", "weakness": "Não dá cadência.", "weakAgainst": ["swarm"],
-        "stats": { "neighborDamageBonus": 0.25, "boltRangeBonus": 1 },
-        "capstone": { "name": "Capacidade reservada", "costFactor": 3.6, "effect": "+1 em maxTowers.", "stats": { "maxTowersBonus": 1 } } }
-    ]
-  }
+  {"id": "bolt", "name": "Raio", "flavor": "Como uma Azure VM: capacidade bruta sob demanda.", "role": "Alvo único, longo alcance, polivalente", "kind": "attack", "targets": "both", "defaultTargeting": "first", "cost": 70, "range": 150, "damage": 14, "interval": 0.6, "unlockStage": 1, "stats": {}, "strong": ["flying", "drain", "durable"], "weak": ["swarm"], "weaknessText": "Dano por tiro baixo contra enxames e blindados."},
+  {"id": "frost", "name": "Gelo", "flavor": "Como um WAF: filtra e retarda o que chega.", "role": "Controle: lentidão e marca", "kind": "attack", "targets": "both", "defaultTargeting": "first", "cost": 90, "range": 100, "damage": 5, "interval": 0.9, "unlockStage": 1, "stats": {"slowFactor": 0.7}, "strong": ["fast", "flying"], "weak": ["regen", "armored", "boss"], "weaknessText": "Dano quase nulo: não mata sozinha; chefes resistem ao controle."},
+  {"id": "cannon", "name": "Canhão", "flavor": "Como a proteção contra DDoS: absorve o grosso do ataque.", "role": "Área e dano pesado, só solo", "kind": "attack", "targets": "ground", "defaultTargeting": "strong", "cost": 120, "range": 110, "damage": 45, "interval": 1.9, "unlockStage": 1, "stats": {"splashRadius": 40, "splashFactor": 0.5}, "strong": ["swarm", "armored", "basic"], "weak": ["flying", "fast", "durable"], "weaknessText": "Sem voadores nem rápidos; fraco contra duráveis."},
+  {"id": "balancer", "name": "Balanceador", "flavor": "Como um Load Balancer: segura e distribui a carga.", "role": "Retém inimigos de solo com nós bloqueadores", "kind": "blocker", "targets": "ground", "defaultTargeting": null, "cost": 100, "range": 90, "damage": 0, "interval": 0, "unlockStage": 2, "stats": {"nodeDamagePerSecond": 4, "nodeCooldownSeconds": 6, "nodes": 1, "nodeHolds": 1}, "strong": ["fast", "swarm", "basic"], "weak": ["flying"], "weaknessText": "Não segura voadores nem chefes por muito tempo."},
+  {"id": "scaleset", "name": "Scale Set", "flavor": "Como VM Scale Sets: mais instâncias quando a demanda sobe.", "role": "Suporte: bônus às torres vizinhas (não ataca)", "kind": "support", "targets": "none", "defaultTargeting": null, "cost": 150, "range": 120, "damage": 0, "interval": 0, "unlockStage": 4, "stats": {}, "strong": ["durable"], "weak": ["drain"], "weaknessText": "Não ataca e perde o efeito quando desativado por drenagem."}
 ]
 """;
 

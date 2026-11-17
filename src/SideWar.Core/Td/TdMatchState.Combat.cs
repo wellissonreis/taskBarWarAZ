@@ -20,7 +20,7 @@ public sealed partial class TdMatchState
     private const double NodeExplosionDpsFactor = 10.0; // dano da explosão = 10 × dano/s do nó
     private const double BurnDpsFactor = 0.2;          // Saturação: 20% do dano base do tiro por segundo
     private const int MaxZones = 64;
-    private const double BaseAura = 0.05;              // Scale Set sem ramo: +5% de cadência × multiplicador do nível
+    private const double BaseAura = 0.05;              // Scale Set: +5% de cadência nas vizinhas (sem nível/ramo)
     private const int ResetFocusCap = 1000;
 
     private double[] _auraCadence = new double[8];
@@ -33,22 +33,14 @@ public sealed partial class TdMatchState
     private double[] _auraDamage = new double[8];
     private double[] _auraRange = new double[8];
 
-    // ---- estatísticas por torre/nível/ramo/capstone --------------------------------------------------------------
+    // ---- estatísticas por torre ----------------------------------------------------------------------------------
 
-    /// <summary>Estatística efetiva: capstone (nível 5) sobrepõe o ramo (nível 4+), que sobrepõe a torre-base.</summary>
+    /// <summary>
+    /// Estatística efetiva: só a torre-base (<c>stats</c> do td-torres.json). Níveis, ramos e capstones saíram (SDD-29, TD.20);
+    /// a TD.21 passa a somar aqui os modificadores por tipo vindos das runas.
+    /// </summary>
     internal static double Stat(in TdTower t, TdTowerDef def, string key, double fallback)
-    {
-        if (t.Branch > 0)
-        {
-            var br = def.Branches[t.Branch - 1];
-            if (t.Level >= 5 && br.Capstone.Stats.TryGetValue(key, out var c)) return c;
-            if (t.Level >= 4 && br.Stats.TryGetValue(key, out var b)) return b;
-        }
-        return def.Stats.TryGetValue(key, out var v) ? v : fallback;
-    }
-
-    /// <summary>Multiplicador do nível; níveis 4 e 5 herdam o do nível 3 (o ramo multiplica por cima).</summary>
-    private static double LevelMult(in TdTower t, TdTowerDef def) => def.Levels[Math.Min(t.Level, def.Levels.Length) - 1].DamageMultiplier;
+        => def.Stats.TryGetValue(key, out var v) ? v : fallback;
 
     private static int Ticks(double seconds) => (int)Math.Round(seconds * TdWorld.TicksPerSecond, MidpointRounding.ToEven);
 
@@ -123,7 +115,7 @@ public sealed partial class TdMatchState
                 var s = _towers[j];
                 var sd = _content.Towers[s.DefIndex];
                 if (sd.Kind != "support" || s.DisabledTicks > 0 || !s.Placed || Dist(s.X, t.X) > sd.Range) continue;
-                double c = s.Branch == 0 ? BaseAura * LevelMult(s, sd) : Stat(s, sd, "neighborCadenceBonus", 0);
+                double c = BaseAura;
                 if (c > 0 && scale) c *= Stat(s, sd, "bonusMultiplierDuringScale", 1.0);
                 cad += c;
                 dmg += Stat(s, sd, "neighborDamageBonus", 0);
@@ -201,7 +193,7 @@ public sealed partial class TdMatchState
         }
         double burn = Stat(t, def, "burnZoneSeconds", 0);
         if (burn > 0 && radius > 0 && _zones.Count < MaxZones)
-            _zones.Add(new TdZone { X = e.X, Radius = radius, TicksLeft = Ticks(burn), DamagePerTick = def.Damage * LevelMult(t, def) * BurnDpsFactor / TdWorld.TicksPerSecond });
+            _zones.Add(new TdZone { X = e.X, Radius = radius, TicksLeft = Ticks(burn), DamagePerTick = def.Damage * BurnDpsFactor / TdWorld.TicksPerSecond });
 
         double interval = def.Interval * Stat(t, def, "intervalMultiplier", 1.0);
         double cadence = 1.0 + _auraCadence[ti] + (scale ? AbilityStat("scale", "cadenceBonus") : 0.0);
@@ -268,7 +260,7 @@ public sealed partial class TdMatchState
     /// </summary>
     private double ComputeDamage(in TdTower tower, TdTowerDef def, in TdEnemy target, TdEnemyStats st, int towerIndex, double factor, double burst)
     {
-        double raw = def.Damage * LevelMult(tower, def) * Stat(tower, def, "damageMultiplier", 1.0) * factor;
+        double raw = def.Damage * Stat(tower, def, "damageMultiplier", 1.0) * factor;
         if (st.Armored || st.IsBoss) raw *= Stat(tower, def, "damageMultiplierVsArmoredAndBoss", 1.0);
         raw *= burst;
         if (target.VulnTicks > 0) raw *= 1.0 + target.VulnBonus;
@@ -340,7 +332,7 @@ public sealed partial class TdMatchState
             {
                 Id = _nextNodeId++, TowerId = t.Id, X = x, Hp = NodeHp, LifeTicks = NodeLifeTicks,
                 Holds = (int)Stat(t, def, "nodeHolds", 1),
-                Dps = Stat(t, def, "nodeDamagePerSecond", 0) * LevelMult(t, def), Flags = flags,
+                Dps = Stat(t, def, "nodeDamagePerSecond", 0), Flags = flags,
             });
             Emit(TdEventType.NodeSpawned, t.Id, (long)x);
             active++;

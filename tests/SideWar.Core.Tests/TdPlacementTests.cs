@@ -15,18 +15,18 @@ public sealed class TdPlacementTests
 {
     private static readonly TdContent Content = TdMechanicsContent.Load();
 
-    private static TdContent Rich(int maxTowers = 12)
+    private static TdContent Rich()
     {
-        var stage1 = Content.Stages.Stages[0] with { StartingCredits = 1_000_000, MaxTowers = maxTowers };
+        var stage1 = Content.Stages.Stages[0] with { StartingCredits = 1_000_000 };
         return Content with { Stages = Content.Stages with { Stages = [stage1, .. Content.Stages.Stages.Skip(1)] } };
     }
 
     private static StripLayout L(int width, params (int X0, int X1)[] zones) =>
         StripLayout.Create(width, width, 0f, 0f, width, TowerHost.Taskbar, zones.Select(z => new FreeZone(z.X0, z.X1)).ToArray());
 
-    private static TdMatchState New(StripLayout? layout, int maxTowers = 12, ulong seed = 7)
+    private static TdMatchState New(StripLayout? layout, ulong seed = 7)
     {
-        var s = TdMatchState.Create(Rich(maxTowers), 1, Rng.Seed(seed, 54));
+        var s = TdMatchState.Create(Rich(), 1, Rng.Seed(seed, 54));
         if (layout is not null) Assert.True(s.Apply(new LayoutChanged(layout)).IsOk);
         return s;
     }
@@ -99,15 +99,19 @@ public sealed class TdPlacementTests
         Assert.Equal(666, Tw(s, Build(s, 650)).X);   // (650-600)/44 = 1 → 600 + 22 + 44
     }
 
-    [Fact(DisplayName = "RF-28.4 maxTowers still applies (and unplaced towers count against it)")]
-    public void MaxTowers_CountsUnplaced()
+    [Fact(DisplayName = "SDD-29 §5.3 technical cap of 48 towers applies, and unplaced towers count against it")]
+    public void TechnicalLimit_CountsUnplaced()
     {
-        var s = New(L(1200, (0, 1200)), maxTowers: 2);
-        Build(s, 100); Build(s, 300);
-        Assert.Equal(CommandReason.TowerLimit, s.Apply(new BuildTower("bolt", 500)).Reason);
-        Assert.True(s.Apply(new LayoutChanged(L(1200, (900, 1200)))).IsOk);
-        Assert.Equal(2, s.UnplacedCount);
-        Assert.Equal(CommandReason.TowerLimit, s.Apply(new BuildTower("bolt", 950)).Reason);
+        var rich = Rich();
+        rich = rich with { Stages = rich.Stages with { Stages = [rich.Stages.Stages[0] with { StartingCredits = 4_000_000_000L }, .. rich.Stages.Stages.Skip(1)] } };
+        var s = TdMatchState.Create(rich, 1, Rng.Seed(7, 54));
+        Assert.True(s.Apply(new LayoutChanged(L(7680, (0, 7680)))).IsOk);
+        for (int x = 4; s.Towers.Count < TdMatchState.TechnicalTowerLimit && x < 1200; x += 8) s.Apply(new BuildTower("bolt", x));
+        Assert.Equal(TdMatchState.TechnicalTowerLimit, s.Towers.Count);
+        Assert.Equal(CommandReason.TowerLimit, s.Apply(new BuildTower("bolt", 1100)).Reason);
+        Assert.True(s.Apply(new LayoutChanged(L(7680, (7000, 7680)))).IsOk);
+        Assert.Equal(TdMatchState.TechnicalTowerLimit, s.UnplacedCount);
+        Assert.Equal(CommandReason.TowerLimit, s.Apply(new BuildTower("bolt", 1150)).Reason);
     }
 
     [Fact(DisplayName = "RF-28.15 / T-28.9 LayoutChanged: towers whose zone vanished become SEM POSIÇÃO, in Id order; the rest keep their logical X")]
@@ -159,7 +163,6 @@ public sealed class TdPlacementTests
         Assert.Equal(CommandReason.NotUnpositioned, s.Apply(new MoveTower(a, 20)).Reason); // TD.3b: só torre SEM POSIÇÃO
         Assert.Equal(CommandReason.NotUnpositioned, s.Apply(new MoveTower(b, 20)).Reason); // b acabou de ser posicionada
         Assert.Equal(credits, s.Credits);
-        Assert.Equal(1, Tw(s, a).Level);
 
         Assert.True(s.Apply(new LayoutChanged(L(1200, (900, 1200)))).IsOk);
         Assert.Equal(2, s.UnplacedCount);
@@ -212,11 +215,11 @@ public sealed class TdPlacementTests
     [Fact(DisplayName = "RNF-28.1 / ADR-026 Layout and placement commands in the log: same log + seed → same StateHash in 5 runs (golden)")]
     public void Replay_Deterministic5Runs()
     {
-        var first = TdReplayRunner.Run(Content, Script());
-        for (int i = 0; i < 4; i++) Assert.Equal(first.StateHash, TdReplayRunner.Run(Content, Script()).StateHash);
+        var first = TdReplayRunner.Run(Rich(), Script());
+        for (int i = 0; i < 4; i++) Assert.Equal(first.StateHash, TdReplayRunner.Run(Rich(), Script()).StateHash);
         Assert.Equal(3, first.CommandsRejected); // build sobreposto, build fora da zona e MoveTower de torre posicionada (TD.3b)
-        Assert.Equal(Golden, first.StateHash);
+        Assert.Equal(Golden, first.StateHash); // TD.20: preço crescente + torre sem Level/Invested/Branch no hash
     }
 
-    private const ulong Golden = 3575971896055893931UL;
+    private const ulong Golden = 7658827911200447953UL;
 }

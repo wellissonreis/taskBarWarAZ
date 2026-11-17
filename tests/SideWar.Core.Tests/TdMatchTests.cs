@@ -4,7 +4,6 @@ using SideWar.Core.Td;
 using Xunit;
 using StartWave = SideWar.Core.Td.StartWave;
 using BuildTower = SideWar.Core.Td.BuildTower;
-using UpgradeTower = SideWar.Core.Td.UpgradeTower;
 
 namespace SideWar.Core.Tests;
 
@@ -23,10 +22,10 @@ public sealed class TdMatchTests
     }
 
     /// <summary>Conteúdo com a fase 1 trocada por ondas simples sem torres: <paramref name="counts"/> grunts por onda.</summary>
-    private static TdContent Variant(int[] counts, long credits = 150, int maxTowers = 6, double interval = 1.1)
+    private static TdContent Variant(int[] counts, long credits = 150, double interval = 1.1)
     {
         var waves = counts.Select((c, i) => new TdWaveDef(i + 1, false, 1.0, [new TdWaveGroupDef("grunt", c, 0.0, interval)])).ToArray();
-        var stage1 = Content.Stages.Stages[0] with { Waves = counts.Length, StartingCredits = credits, MaxTowers = maxTowers };
+        var stage1 = Content.Stages.Stages[0] with { Waves = counts.Length, StartingCredits = credits };
         return Content with
         {
             Waves = new TdWavesDef([new TdStageWavesDef(1, waves), .. Content.Waves.Stages.Skip(1)]),
@@ -162,8 +161,8 @@ public sealed class TdMatchTests
         Assert.Equal(frame + 1000, s.Frame);
     }
 
-    [Fact(DisplayName = "CA-28.2 / T-28.2 Build, upgrade and sell work during the wave (sell refunds 70% of the total invested)")]
-    public void BuildUpgradeSell_DuringWave()
+    [Fact(DisplayName = "CA-28.2 / T-28.2 Build and sell work during the wave (sell refunds 70% of the price paid for the last tower of the type)")]
+    public void BuildSell_DuringWave()
     {
         var s = New();
         s.Apply(new StartWave());
@@ -171,34 +170,91 @@ public sealed class TdMatchTests
         Assert.True(s.Apply(new BuildTower("bolt", 300)).IsOk);
         Assert.Equal(150 - 70, s.Credits);
         int id = s.Towers[0].Id;
-        Assert.True(s.Apply(new UpgradeTower(id)).IsOk);
-        Assert.Equal(80 - 63, s.Credits); // 0,9 × 70
-        Assert.Equal(2, s.Towers[0].Level);
-        Assert.Equal(133, s.Towers[0].Invested);
         Assert.True(s.Apply(new SellTower(id)).IsOk);
-        Assert.Equal(17 + 93, s.Credits); // floor(133 × 0,7)
+        Assert.Equal(80 + 49, s.Credits); // floor(70 × 0,7)
         Assert.Empty(s.Towers);
         Assert.Equal(CommandReason.TowerNotFound, s.Apply(new SellTower(id)).Reason);
         Assert.Equal(MatchPhase.Onda, s.Phase);
     }
 
-    [Fact(DisplayName = "RF-28.4 Sell also works in Preparo and the linear upgrade stops at level 3 (branch is TD.3)")]
-    public void Sell_Preparo_And_MaxLinearLevel()
+    [Fact(DisplayName = "TD.20 / CA-29.2 Cost grows per tower of the same type (integer table, half-to-even); other types are unaffected")]
+    public void Build_CostGrowsPerType()
+    {
+        var s = New(content: Variant([2], credits: 10_000));
+        Assert.Equal(70, s.NextTowerCost(0));
+        Assert.True(s.Apply(new BuildTower("bolt", 100)).IsOk);
+        Assert.Equal(10_000 - 70, s.Credits);
+        Assert.Equal(88, s.NextTowerCost(0));            // 70 × 1,25 = 87,5 → 88 (par)
+        Assert.True(s.Apply(new BuildTower("bolt", 300)).IsOk);
+        Assert.Equal(10_000 - 70 - 88, s.Credits);
+        Assert.Equal(109, s.NextTowerCost(0));           // 70 × 1,56 = 109,2
+        Assert.Equal(90, s.NextTowerCost(1));            // Gelo ainda em n = 0
+        Assert.True(s.Apply(new BuildTower("frost", 500)).IsOk);
+        Assert.Equal(10_000 - 70 - 88 - 90, s.Credits);
+    }
+
+    [Fact(DisplayName = "TD.20 / CA-29.2 Sell is fungible: refunds rate × cost(type, n−1) whichever tower is sold, and lowers the next price")]
+    public void Sell_IsFungibleAndLowersNextCost()
+    {
+        long Run(int sellIndex)
+        {
+            var s = New(content: Variant([2], credits: 10_000));
+            for (int i = 0; i < 3; i++) Assert.True(s.Apply(new BuildTower("bolt", 100 + 200 * i)).IsOk);
+            long before = s.Credits;
+            Assert.Equal(136, s.NextTowerCost(0));            // n = 3: 70 × 1,95 = 136,5 → 136 (par)
+            Assert.Equal(76, s.SellValue(s.Towers[sellIndex].Id)); // floor(109 × 0,7) = 76
+            Assert.True(s.Apply(new SellTower(s.Towers[sellIndex].Id)).IsOk);
+            Assert.Equal(before + 76, s.Credits);
+            Assert.Equal(109, s.NextTowerCost(0)); // n voltou a 2
+            return s.Credits;
+        }
+        Assert.Equal(Run(0), Run(2));
+    }
+
+    [Fact(DisplayName = "TD.20 / CA-29.2 Prices follow the SDD-29 §5.1 table with half-to-even rounding")]
+    public void Prices_MatchSddTable()
+    {
+        var c = TdContentLoader.LoadEmbedded();
+        var s = TdMatchState.Create(c, 6, Rng.Seed(1, 54));
+        int bolt = Array.FindIndex(c.Towers, t => t.Id == "bolt"), cannon = Array.FindIndex(c.Towers, t => t.Id == "cannon");
+        int bal = Array.FindIndex(c.Towers, t => t.Id == "balancer"), set = Array.FindIndex(c.Towers, t => t.Id == "scaleset");
+        Assert.Equal([90L, 112, 140, 176, 220, 274, 343, 429, 536, 670, 838], Enumerable.Range(0, 11).Select(n => s.TowerCostAt(bolt, n)));
+        Assert.Equal([120L, 150, 187, 234, 293, 366, 457, 572, 715, 894, 1117], Enumerable.Range(0, 11).Select(n => s.TowerCostAt(cannon, n)));
+        Assert.Equal([100L, 125, 156, 195, 244, 305, 381, 477, 596, 745, 931], Enumerable.Range(0, 11).Select(n => s.TowerCostAt(bal, n)));
+        Assert.Equal([150L, 188, 234, 292, 366, 458, 572, 716, 894, 1118, 1396], Enumerable.Range(0, 11).Select(n => s.TowerCostAt(set, n)));
+    }
+
+    [Fact(DisplayName = "TD.20 / CA-29.2 Buying then selling always loses at least 15% (cap 85%), even with a higher sellRefund")]
+    public void BuyThenSell_NeverProfits()
+    {
+        var c = TdContentLoader.LoadEmbedded();
+        foreach (double rate in new[] { 0.7, 0.85, 0.95, 1.0 })
+        {
+            var rich = c with { Stages = c.Stages with { Rules = c.Stages.Rules with { SellRefund = rate } } };
+            var s = TdMatchState.Create(rich, 6, Rng.Seed(1, 54));
+            for (int d = 0; d < c.Towers.Length; d++)
+                for (int n = 0; n < 48; n++)
+                {
+                    long paid = s.TowerCostAt(d, n);
+                    long back = s.SellValueAt(d, n + 1);
+                    Assert.True(back * 100 <= paid * 85, $"{c.Towers[d].Id} n={n} rate={rate}: {back} de {paid}");
+                    if (rate <= 0.85) Assert.True(back * 100 >= paid * rate * 100 - 100 * 1, $"{c.Towers[d].Id} n={n}");
+                }
+        }
+    }
+
+    [Fact(DisplayName = "RF-28.4 Sell also works in Preparo")]
+    public void Sell_Preparo()
     {
         var s = New(content: Variant([2], credits: 10_000));
         s.Apply(new BuildTower("bolt", 100));
         int id = s.Towers[0].Id;
-        Assert.True(s.Apply(new UpgradeTower(id)).IsOk);
-        Assert.True(s.Apply(new UpgradeTower(id)).IsOk);
-        Assert.Equal(3, s.Towers[0].Level);
-        Assert.Equal(70 + 63 + 112, s.Towers[0].Invested); // 1,6 × 70 = 112
-        Assert.Equal(CommandReason.MaxLevel, s.Apply(new UpgradeTower(id)).Reason);
         long before = s.Credits;
         Assert.True(s.Apply(new SellTower(id)).IsOk);
-        Assert.Equal(before + (long)Math.Floor(245 * 0.7), s.Credits);
+        Assert.Equal(before + 49, s.Credits);
     }
 
-    [Fact(DisplayName = "RF-28.4 Build/upgrade rejections: locked tower, credits, limit, out of range, unknown; state unchanged")]
+    [Fact(DisplayName = "RF-28.4 Build rejections: locked tower, credits, out of range, unknown; state unchanged")]
     public void Build_Rejections()
     {
         var s = New();
@@ -208,19 +264,14 @@ public sealed class TdMatchTests
         Assert.Equal(CommandReason.OutOfZone, s.Apply(new BuildTower("bolt", -1)).Reason);
         Assert.Equal(CommandReason.OutOfZone, s.Apply(new BuildTower("bolt", 1201)).Reason);
         Assert.Equal(CommandReason.UnknownCommand, s.Apply(null).Reason);
-        Assert.Equal(CommandReason.TowerNotFound, s.Apply(new UpgradeTower(99)).Reason);
+        Assert.Equal(CommandReason.TowerNotFound, s.Apply(new SellTower(99)).Reason);
         Assert.Equal(hash, s.ComputeStateHash());
         s.Apply(new BuildTower("bolt", 100));
         s.Apply(new BuildTower("bolt", 200));
-        var r = s.Apply(new BuildTower("bolt", 300)); // 150 - 140 = 10 créditos
+        var r = s.Apply(new BuildTower("bolt", 300)); // 150 - 70 = 80; a 2ª custa 88 (custo cresce por tipo)
         Assert.Equal(CommandReason.InsufficientCredits, r.Reason);
-        Assert.Equal(60, r.Missing);
-        Assert.Equal(CommandReason.InsufficientCredits, s.Apply(new UpgradeTower(s.Towers[0].Id)).Reason);
-
-        var rich = New(content: Variant([1], credits: 100_000, maxTowers: 2));
-        rich.Apply(new BuildTower("bolt", 1));
-        rich.Apply(new BuildTower("bolt", 2));
-        Assert.Equal(CommandReason.TowerLimit, rich.Apply(new BuildTower("bolt", 3)).Reason);
+        Assert.Equal(8, r.Missing);
+        Assert.Single(s.Towers);
     }
 
     [Fact(DisplayName = "CA-28.3 / T-28.3 CallNextWave is rejected before spawns end, then pays a capped bonus and overlaps waves")]
@@ -372,8 +423,7 @@ public sealed class TdMatchTests
             if (s.Phase == MatchPhase.Preparo) s.Apply(new StartWave());
             if (s.Frame % 30 == 0)
             {
-                for (int i = 0; i < s.Towers.Count; i++) s.Apply(new UpgradeTower(s.Towers[i].Id));
-                if (s.Towers.Count < 6 && s.Credits >= 70) s.Apply(new BuildTower("bolt", 60 + s.Towers.Count * 120));
+                if (s.Towers.Count < 6 && s.Credits >= s.NextTowerCost(0)) s.Apply(new BuildTower("bolt", 60 + s.Towers.Count * 120));
             }
             s.Step();
         }
@@ -390,7 +440,7 @@ public sealed class TdMatchTests
         Assert.Equal(GoldenReplay, first);
     }
 
-    [Fact(DisplayName = "CA-28.2 Replay applies build/upgrade/sell/call during the wave and rejects nothing in the script")]
+    [Fact(DisplayName = "CA-28.2 Replay applies build/sell/call during the wave and rejects nothing in the script")]
     public void Replay_ScriptOutcome()
     {
         var r = RunScript(42);
@@ -398,7 +448,7 @@ public sealed class TdMatchTests
         Assert.True(r.Ticks > 0);
     }
 
-    private const ulong GoldenReplay = 6662276505330487579UL;
+    private const ulong GoldenReplay = 16774011634538135045UL;
 
     private static TdReplayResult RunScript(ulong seed)
     {
@@ -409,9 +459,8 @@ public sealed class TdMatchTests
             new(0, new StartWave()),
             new(30, new BuildTower("frost", 900)),
             new(190, new CallNextWave()),
-            new(200, new UpgradeTower(1)),
             new(210, new SellTower(3)),
-            new(900, new UpgradeTower(2)),
+            new(900, new BuildTower("bolt", 1000)),
         };
         return TdReplayRunner.Run(Variant([6, 6, 6], credits: 1000), new TdReplayScript(1, seed, 54, log, 3000));
     }

@@ -7,7 +7,6 @@ using SideWar.Rendering.Text;
 using SideWar.Runtime.Td;
 using SkiaSharp;
 using BuildTower = SideWar.Core.Td.BuildTower;
-using UpgradeTower = SideWar.Core.Td.UpgradeTower;
 using LayoutChanged = SideWar.Core.Td.LayoutChanged;
 using FreeZone = SideWar.Core.Simulation.FreeZone;
 using TowerHost = SideWar.Core.Simulation.TowerHost;
@@ -58,7 +57,7 @@ public static class TdStripScenes
         {
             BombCrate = Embedded.Stages.Rules.BombCrate with { Chance = 1.0, FirstEligibleWaveStage1 = 1, MinDropSeconds = 5, DropMaxSpawnFraction = 0.7 },
         };
-        var stage = Embedded.Stages.Stages.First(s => s.Id == 1) with { Waves = 1, StartingCredits = 1_000_000, MaxTowers = 20 };
+        var stage = Embedded.Stages.Stages.First(s => s.Id == 1) with { Waves = 1, StartingCredits = 1_000_000 };
         TdWaveGroupDef G(string id, int count, double offset) => new(id, count, offset, 1.5);
         var wave = new TdWaveDef(1, false, 1.0, [G("grunt", 1, 0), G("runner", 1, 1), G("flyer", 1, 2), G("armored", 1, 3), G("regen", 1, 4), G("leech", 1, 5), G("ransomware", 1, 6)]);
         var enemies = Embedded.Enemies with
@@ -81,15 +80,7 @@ public static class TdStripScenes
         if (!r.IsOk) throw new InvalidOperationException($"{c}: {r}");
     }
 
-    private static void Build(TdMatchState m, string tower, int x, int upgrades, string? branch = null, int capstone = 0)
-    {
-        int id = m.Towers.Count + 1;
-        Do(m, new BuildTower(tower, x));
-        id = m.Towers[^1].Id;
-        for (int i = 0; i < upgrades; i++) Do(m, new UpgradeTower(id));
-        if (branch is not null) Do(m, new ChooseBranch(id, branch));
-        for (int i = 0; i < capstone; i++) Do(m, new UpgradeTower(id));
-    }
+    private static void Build(TdMatchState m, string tower, int x) => Do(m, new BuildTower(tower, x));
 
     private static TdMatchState NewMatch(int width = WidthDip)
     {
@@ -110,28 +101,28 @@ public static class TdStripScenes
         switch (scene)
         {
             case TdStripScene.Wave:
-                Build(m, "bolt", 150, 2, "A");
-                Build(m, "frost", 260, 1);
-                Build(m, "cannon", 370, 2, "B", 1);
-                Build(m, "balancer", 480, 0);
-                Build(m, "scaleset", 590, 1);
-                Build(m, "bolt", 700, 0);
+                Build(m, "bolt", 150);
+                Build(m, "frost", 260);
+                Build(m, "cannon", 370);
+                Build(m, "balancer", 480);
+                Build(m, "scaleset", 590);
+                Build(m, "bolt", 700);
                 Do(m, new StartWave());
                 Steps(m, 30 * 14);
                 return (m, TdView.None, 100.0);
             case TdStripScene.Placing:
-                Build(m, "bolt", 330, 2, "B");
-                Build(m, "frost", 440, 2);
+                Build(m, "bolt", 330);
+                Build(m, "frost", 440);
                 return (m, new TdView(0, 0, false) { PlacingMode = true, GhostX = 650, GhostValid = true, GhostDef = 0 }, 100.0);
             case TdStripScene.PrepRange:
-                Build(m, "bolt", 330, 2, "B");
-                Build(m, "frost", 440, 2);
-                Build(m, "cannon", 880, 1);
+                Build(m, "bolt", 330);
+                Build(m, "frost", 440);
+                Build(m, "cannon", 880);
                 return (m, new TdView(m.Towers[0].Id, 0, false), 100.0);
             case TdStripScene.Crate:
-                Build(m, "bolt", 330, 1);
-                Build(m, "cannon", 620, 2, "A");
-                Build(m, "frost", 900, 0);
+                Build(m, "bolt", 330);
+                Build(m, "cannon", 620);
+                Build(m, "frost", 900);
                 Do(m, new SetPresence(true));
                 Do(m, new StartWave());
                 for (int i = 0; i < 30 * 40 && !m.CrateActive; i++) Steps(m, 1);
@@ -139,9 +130,9 @@ public static class TdStripScenes
                 Steps(m, 30 * 6); // 2 s restantes: piscando
                 return (m, new TdView(0, 0, false), 100.0);
             default:
-                Build(m, "bolt", 150, 1);
-                Build(m, "frost", 260, 0);
-                Build(m, "cannon", 700, 1);
+                Build(m, "bolt", 150);
+                Build(m, "frost", 260);
+                Build(m, "cannon", 700);
                 // a zona esquerda some: as duas primeiras ficam SEM POSIÇÃO
                 Do(m, new LayoutChanged(StripLayout.Create(WidthDip, WidthDip - 46, 88, 4, WidthDip - 80, TowerHost.Band, [new FreeZone(600, WidthDip - 32)])));
                 return (m, TdView.None, 100.0);

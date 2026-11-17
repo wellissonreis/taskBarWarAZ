@@ -17,7 +17,7 @@ public sealed class TdBombCrateTests
     private static TdContent Cfg(Func<TdBombCrateDef, TdBombCrateDef>? bc = null, int stageId = 1)
     {
         var rules = Base.Stages.Rules with { CoreIntegrity = 100_000, BombCrate = (bc ?? (x => x))(Base.Stages.Rules.BombCrate with { Chance = 1.0 }) };
-        var stages = Base.Stages.Stages.Select(s => s with { StartingCredits = 1_000_000, MaxTowers = 12 }).ToArray();
+        var stages = Base.Stages.Stages.Select(s => s with { StartingCredits = 1_000_000 }).ToArray();
         return Base with { Stages = Base.Stages with { Rules = rules, Stages = stages } };
     }
 
@@ -252,5 +252,5 @@ public sealed class TdBombCrateTests
         Assert.Equal(Golden, first.StateHash);
     }
 
-    private const ulong Golden = 7842923145937331451UL;
+    private const ulong Golden = 6138761065689756581UL;
 }

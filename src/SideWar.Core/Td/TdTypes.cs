@@ -21,7 +21,7 @@ public enum TdTargeting : byte { First = 0, Last, Strong, Weak, Close }
 
 /// <summary>
 /// Torre da partida (<c>Id</c> sequencial próprio, independente do dos inimigos, para os comandos do log serem previsíveis).
-/// <c>Invested</c> = compra + melhorias (base da venda, RF-28.4). <c>Branch</c>: 0 = sem ramo, 1 = A, 2 = B (nível 4+); nível 5 = capstone.
+/// Sem nível, ramo nem valor investido (SDD-29): o preço de venda deriva da contagem do tipo.
 /// </summary>
 public struct TdTower
 {
@@ -29,12 +29,9 @@ public struct TdTower
     public int DefIndex { get; set; }
     /// <summary>Posição em unidades lógicas (mundo fixo 1.200, RF-28.15). Vale também para torre sem posição (posição gravada).</summary>
     public int X { get; set; }
-    /// <summary>false = SEM POSIÇÃO (ADR-034): a zona sumiu após <c>LayoutChanged</c>; não atira, não dá aura, não conta no bônus de maxTowers.</summary>
+    /// <summary>false = SEM POSIÇÃO (ADR-034): a zona sumiu após <c>LayoutChanged</c>; não atira, não dá aura.</summary>
     public bool Placed { get; set; }
-    public int Level { get; set; }
     public int CooldownTicks { get; set; }
-    public long Invested { get; set; }
-    public byte Branch { get; set; }
     public byte Targeting { get; set; }
     /// <summary>Ticks restantes desativada (drenagem do parasita / criptografia do Ransomware, RF-28.7/28.8).</summary>
     public int DisabledTicks { get; set; }
@@ -134,10 +131,10 @@ public sealed class TdActiveWave
 
 public enum TdEventType : byte
 {
-    WaveStarted, WaveCompleted, EnemyKilled, EnemyLeaked, TowerBuilt, TowerSold, TowerUpgraded, WaveBonus,
+    WaveStarted, WaveCompleted, EnemyKilled, EnemyLeaked, TowerBuilt, TowerSold, TowerUpgraded /* obsoleto (SDD-29): não é mais emitido */, WaveBonus,
     CallNextBonus, Victory, Defeat,
     // TD.3 (anexados ao fim: valores anteriores não mudam).
-    TowerBranched, TowerTargeting, AbilityUsed, TowerDisabled, BossSplit, NodeSpawned, NodeEnded,
+    TowerBranched /* obsoleto (SDD-29): não é mais emitido */, TowerTargeting, AbilityUsed, TowerDisabled, BossSplit, NodeSpawned, NodeEnded,
     // TD.4 (anexados ao fim). A = id da torre; LayoutApplied: A = largura em DIP, B = torres sem posição.
     TowerPlaced, TowerUnplaced, LayoutApplied,
     // TD.3b (anexados ao fim). Caixa-bomba: A = id da caixa; CrateSpawned B = X lógico; CrateCollected B = créditos; CrateExploded B = id da torre destruída (0 = nenhuma).
