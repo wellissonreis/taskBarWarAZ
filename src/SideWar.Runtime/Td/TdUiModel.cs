@@ -22,7 +22,7 @@ public enum TdUiAction : byte
     /// <summary>TD.17: avançar passo informativo do tutorial (OK) e pergunta-bônus (V, F, ignorar).</summary>
     TutorialNext, QuizTrue, QuizFalse, QuizClose,
     /// <summary>TD.16b: coletar a caixa-bomba pelo HUD, abrir a lista de torres (vender/reposicionar) e abrir uma torre da lista.</summary>
-    CollectCrate, TowersOpen, OpenTower, ModalTab, TowerPage, AutoStartToggle, GameOption, ResumeAbility,
+    CollectCrate, TowersOpen, OpenTower, ModalTab, TowerPage, AutoStartToggle, GameOption, ResumeAbility, RestartPrompt, RestartCancel,
 }
 
 /// <summary>Ícone do HUD desenhado por código (TD.14); o renderer mapeia para caminhos vetoriais.</summary>

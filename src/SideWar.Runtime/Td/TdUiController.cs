@@ -32,6 +32,7 @@ public sealed partial class TdUiController
     private TdMatchState? _lastMatch;
     private bool _endShown;
     private bool _winGuide;
+    private bool _confirmRestart;
     private int _chosenX = -1;       // X lógico já escolhido (passo "escolher a torre"); -1 = ainda no passo do ponto
     private int _moveTowerId;        // > 0: reposicionando uma torre SEM POSIÇÃO (sem escolha de tipo)
     private int _ghostX = -1;
@@ -191,7 +192,7 @@ public sealed partial class TdUiController
                 break;
             case TdUiAction.Menu: Toggle(TdUiMode.Menu); break;
             case TdUiAction.HudMinimize: Close(); _host.SetHudMinimized(true); Changed?.Invoke(); break;
-            case TdUiAction.HudRestore: SetMode(TdUiMode.Build); break;
+            case TdUiAction.HudRestore: SetMode(_match().Phase is MatchPhase.Vitoria or MatchPhase.Derrota ? TdUiMode.End : TdUiMode.Build); break;
             case TdUiAction.ModalTab: SetMode((TdUiMode)item.Arg); break;
             case TdUiAction.Targeting when Enum.TryParse<TdTargeting>(item.SArg, out var mode):
                 _send(new SetTargeting(item.Arg, mode));
@@ -236,13 +237,15 @@ public sealed partial class TdUiController
             case TdUiAction.Preview: Toggle(TdUiMode.Preview); break;
             case TdUiAction.MapOpen: SetMode(TdUiMode.Map); break;
             case TdUiAction.MapTab: _mapSeals = item.Arg == 1; Changed?.Invoke(); break;
-            case TdUiAction.SelectStage: _host.StartStage(item.Arg); Close(); break;
+            case TdUiAction.SelectStage: Close(); _host.StartStage(item.Arg); break;
             case TdUiAction.BuyNode when item.SArg is not null: _host.PurchaseNode(item.SArg); Changed?.Invoke(); break;
             case TdUiAction.Pause: _host.TogglePause(); Close(); break;
             case TdUiAction.Settings: _host.OpenSettings(); break;
             case TdUiAction.Exit: _host.RequestExit(); break;
-            case TdUiAction.Restart: _host.StartStage(_match().StageId); Close(); break;
-            case TdUiAction.NextStage: _host.StartStage(_match().StageId + 1); Close(); break;
+            case TdUiAction.RestartPrompt: _confirmRestart = true; Changed?.Invoke(); break;
+            case TdUiAction.RestartCancel: _confirmRestart = false; Changed?.Invoke(); break;
+            case TdUiAction.Restart: { int stage = _match().StageId; Close(); _host.StartStage(stage); break; }
+            case TdUiAction.NextStage: { int stage = _match().StageId + 1; Close(); _host.StartStage(stage); break; }
         }
     }
 
@@ -328,6 +331,7 @@ public sealed partial class TdUiController
     private void Close()
     {
         ResetBuild();
+        _confirmRestart = false;
         Mode = TdUiMode.None;
         if (QuizActive) CloseQuiz();
         UpdateModalPause();
@@ -338,6 +342,7 @@ public sealed partial class TdUiController
     private void SetMode(TdUiMode mode)
     {
         ResetBuild();
+        _confirmRestart = false;
         Mode = mode;
         UpdateModalPause();
         if (mode != TdUiMode.Inspector) _selectedTowerId = 0;
@@ -686,6 +691,13 @@ public sealed partial class TdUiController
             s.Add(TdUiKind.Button, AbilityShort(ability.Id), RowH, TdUiAction.ResumeAbility, sarg: ability.Id,
                 enabled: ready, right: ready ? "Usar e fechar" : "Pausado");
         }
+        if (_confirmRestart)
+        {
+            s.Add(TdUiKind.Label, "Reiniciar?", RowH, tone: TdTone.Warn);
+            s.Add(TdUiKind.Button, "Sim", RowH, TdUiAction.Restart, tone: TdTone.Bad);
+            s.Add(TdUiKind.Button, "Nao", RowH, TdUiAction.RestartCancel);
+        }
+        else s.Add(TdUiKind.Button, "Reiniciar fase", RowH, TdUiAction.RestartPrompt);
         s.Add(TdUiKind.Button, "Como jogar", RowH, TdUiAction.HowTo, tone: TdTone.Accent);
         s.Add(TdUiKind.Button, "Torres (vender)", RowH, TdUiAction.TowersOpen);
         s.Add(TdUiKind.Button, "Proxima onda", RowH, TdUiAction.Preview);
@@ -774,10 +786,10 @@ public sealed partial class TdUiController
             s.Add(TdUiKind.Label, reason, 16f, tone: TdTone.Bad, icon: ri);
             s.Add(TdUiKind.Label, tip, 16f, tone: TdTone.Accent, icon: ti);
         }
-        s.Add(TdUiKind.Button, "Repetir fase", RowH + 2, TdUiAction.Restart);
         if (won && m.StageId < _host.StageCount && _host.StageUnlocked(m.StageId + 1))
-            s.Add(TdUiKind.Button, "Proxima fase", RowH + 2, TdUiAction.NextStage, tone: TdTone.Good);
-        s.Add(TdUiKind.Button, "Mapa e selos", RowH + 2, TdUiAction.MapOpen);
+            s.Add(TdUiKind.Button, "Proxima fase", 38, TdUiAction.NextStage, tone: TdTone.Good);
+        s.Add(TdUiKind.Button, won ? "Jogar de novo" : "Reiniciar fase", 38, TdUiAction.Restart);
+        s.Add(TdUiKind.Button, "Mapa", 38, TdUiAction.MapOpen);
         return Finish(title, s, 0);
     }
 }

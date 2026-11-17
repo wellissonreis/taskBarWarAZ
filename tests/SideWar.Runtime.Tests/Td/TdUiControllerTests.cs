@@ -29,7 +29,8 @@ public sealed class TdUiControllerTests
         public void RequestExit() => Calls.Add("exit");
         public bool HudMinimized { get; set; }
         public void SetHudMinimized(bool minimized) { HudMinimized = minimized; Calls.Add("hud:" + minimized); }
-        public void StartStage(int stageId) => Calls.Add($"stage{stageId}");
+        public Action<int>? OnStartStage { get; set; }
+        public void StartStage(int stageId) { Calls.Add($"stage{stageId}"); OnStartStage?.Invoke(stageId); }
         public int StageCount => 6;
         public bool StageUnlocked(int stageId) => stageId <= 2;
         public int StageStars(int stageId) => stageId == 1 ? 2 : 0;
@@ -102,6 +103,24 @@ public sealed class TdUiControllerTests
         Assert.Single(r.Sent.OfType<Pause>());
         Assert.Empty(r.Sent.OfType<Resume>());
         Assert.True(r.Match.Paused);
+    }
+
+    [Fact]
+    public void Restart_in_game_tab_requires_confirmation_and_cancel_keeps_match()
+    {
+        var r = new Rig();
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
+        r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.RestartPrompt));
+        Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Text == "Reiniciar?");
+        r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.RestartCancel));
+        Assert.Empty(r.Host.Calls);
+        r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.RestartPrompt));
+        r.Host.OnStartStage = stage => r.Match = Create(stage);
+        r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.Restart));
+        r.Ui.Sync();
+        Assert.Equal("stage1", Assert.Single(r.Host.Calls));
+        Assert.False(r.Match.Paused);
+        Assert.Equal(MatchPhase.Preparo, r.Match.Phase);
     }
 
     [Fact]
@@ -307,12 +326,21 @@ public sealed class TdUiControllerTests
         var card = r.Ui.BuildPopover()!;
         Assert.StartsWith("DERROTA", card.Title, StringComparison.Ordinal);
         Assert.DoesNotContain(card.Items, i => i.Action == TdUiAction.NextStage);
+        Assert.Contains(card.Items, i => i.Action == TdUiAction.MapOpen);
+        r.Ui.Cancel();
+        r.Ui.Activate(r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.HudRestore));
+        Assert.Equal(TdUiMode.End, r.Ui.Mode);
+        card = r.Ui.BuildPopover()!;
+        r.Host.OnStartStage = stage => r.Match = Create(stage);
         r.Ui.Activate(Find(card, TdUiAction.Restart));
         Assert.Equal("stage1", r.Host.Calls.Single());
         // nova partida: o card some
-        r.Match = Create(1);
         r.Ui.Sync();
         Assert.Equal(TdUiMode.None, r.Ui.Mode);
+        Assert.Equal(MatchPhase.Preparo, r.Match.Phase);
+        Assert.False(r.Match.Paused);
+        r.Ui.Activate(r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.StartWave));
+        Assert.Equal(MatchPhase.Onda, r.Match.Phase);
     }
 
     [Fact]
@@ -339,6 +367,14 @@ public sealed class TdUiControllerTests
         Assert.Contains(card.Items, i => i.Text.StartsWith("Pontuacao: ", StringComparison.Ordinal) && i.Right == "NOVO RECORDE");
         Assert.Contains(card.Items, i => i.Text == "Selos bonus: +3");
         Assert.Contains(card.Items, i => i.Kind == TdUiKind.Bar && i.Text.StartsWith("Patente: ", StringComparison.Ordinal));
+        Assert.Contains(card.Items, i => i.Action == TdUiAction.Restart && i.Text == "Jogar de novo");
+        Assert.Contains(card.Items, i => i.Action == TdUiAction.MapOpen);
+        r.Host.OnStartStage = stage => r.Match = Create(stage);
+        r.Ui.Activate(Find(card, TdUiAction.NextStage));
+        r.Ui.Sync();
+        Assert.Equal(2, r.Match.StageId);
+        Assert.Equal(MatchPhase.Preparo, r.Match.Phase);
+        Assert.False(r.Match.Paused);
     }
 
     [Fact]
