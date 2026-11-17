@@ -162,4 +162,15 @@ public sealed class NativeMenuTests
         Assert.False(td[0].Grayed);
         Assert.True(MenuModel.Build(new MenuState(TdMode: true, OverlayHidden: true))[0].Grayed);
     }
+
+    [Fact]
+    public void Td_mode_adds_how_to_play_item_and_idle_mode_does_not()
+    {
+        Assert.DoesNotContain(MenuModel.Build(new MenuState()), e => e.Command?.Kind == MenuCommandKind.HowToPlay);
+        var td = MenuModel.Build(new MenuState(TdMode: true));
+        var how = Assert.Single(td, e => e.Command?.Kind == MenuCommandKind.HowToPlay);
+        Assert.Equal("Como jogar", how.Text);
+        Assert.False(how.Grayed);
+        Assert.True(Assert.Single(MenuModel.Build(new MenuState(TdMode: true, OverlayHidden: true)), e => e.Command?.Kind == MenuCommandKind.HowToPlay).Grayed);
+    }
 }

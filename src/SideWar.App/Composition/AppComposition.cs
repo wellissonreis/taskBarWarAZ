@@ -174,6 +174,7 @@ internal sealed class AppComposition : IDisposable
             case MenuCommandKind.ToggleInteractive: PostGame(new AppCommand(AppCommandKind.ToggleInteractive)); break;
             case MenuCommandKind.StartWave: PostGame(new AppCommand(AppCommandKind.StartWave)); break;
             case MenuCommandKind.ToggleHud: PostGame(new AppCommand(AppCommandKind.ToggleHud)); break;
+            case MenuCommandKind.HowToPlay: PostGame(new AppCommand(AppCommandKind.HowToPlay)); break;
             case MenuCommandKind.TogglePause: PostGame(new AppCommand(AppCommandKind.TogglePause)); break;
             case MenuCommandKind.ToggleVisibility: PostGame(new AppCommand(AppCommandKind.ToggleVisibility)); break;
             case MenuCommandKind.SelectMonitor: PostGame(new AppCommand(AppCommandKind.SelectMonitor, command.MonitorIndex)); break;
@@ -193,6 +194,7 @@ internal sealed class AppComposition : IDisposable
             case UiRequest.OpenAbout: OpenAbout(previous); break;
             case UiRequest.Exit: RequestExit(); break;
             case UiRequest.SaveHudState: SaveHudState(); break;
+            case UiRequest.SaveOnboarding: SaveOnboarding(); break;
         }
     });
 
@@ -228,6 +230,16 @@ internal sealed class AppComposition : IDisposable
         bool minimized = gameSide.HudMinimized;
         if (settings.Td.HudMinimized == minimized) return;
         var value = settings with { Td = settings.Td with { HudMinimized = minimized } };
+        if (settingsStore.Save(value)) settings = value;
+    }
+
+    /// <summary>TD.15: lembra tutorial concluído e dicas de 1ª vez (alterados na T-Game) nas configurações, sem reaplicar o resto.</summary>
+    private void SaveOnboarding()
+    {
+        bool done = gameSide.TutorialDone;
+        string tips = gameSide.TipsSeen;
+        if (settings.Td.TutorialDone == done && settings.Td.TipsSeen == tips) return;
+        var value = settings with { Td = settings.Td with { TutorialDone = done, TipsSeen = tips } };
         if (settingsStore.Save(value)) settings = value;
     }
 

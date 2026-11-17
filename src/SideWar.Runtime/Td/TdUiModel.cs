@@ -4,7 +4,7 @@ using SideWar.Runtime.Geometry;
 namespace SideWar.Runtime.Td;
 
 /// <summary>Modo do popover/UI da partida TD (TD.8, SDD-28 RF-28.14/28.20). Estado de UI: nunca vai ao log nem ao hash.</summary>
-public enum TdUiMode : byte { None, Build, Inspector, Preview, Menu, Map, End }
+public enum TdUiMode : byte { None, Build, Inspector, Preview, Menu, Map, End, Help }
 
 /// <summary>Tipo de item de UI: rótulo, botão, cabeçalho de seção ou separador.</summary>
 public enum TdUiKind : byte { Label, Button, Header, Separator, Badges, Bar }
@@ -17,6 +17,8 @@ public enum TdUiAction : byte
 {
     None, Close, BuildToggle, ChooseTower, StartWave, Ability, Menu, Upgrade, Branch, Targeting, Sell, Reposition,
     Preview, MapOpen, MapTab, SelectStage, BuyNode, Pause, Settings, Exit, Restart, NextStage, HudMinimize, HudRestore,
+    /// <summary>TD.15: pular o tutorial, abrir "Como jogar" e refazer o tutorial.</summary>
+    TutorialSkip, HowTo, RedoTutorial,
 }
 
 /// <summary>Ícone do HUD desenhado por código (TD.14); o renderer mapeia para caminhos vetoriais.</summary>
@@ -32,14 +34,20 @@ public enum TdIcon : byte
 public readonly record struct TdUiItem(
     DipRect Rect, TdUiKind Kind, string Text, TdUiAction Action = TdUiAction.None, int Arg = 0, string? SArg = null,
     string? Right = null, string? Sub = null, bool Enabled = true, bool Selected = false, TdTone Tone = TdTone.Normal, float Fill = 0f,
-    TdIcon Icon = TdIcon.None, string? Tip = null, bool RightCoin = false)
+    TdIcon Icon = TdIcon.None, string? Tip = null, bool RightCoin = false, bool Highlight = false)
 {
     public bool Clickable => Kind == TdUiKind.Button && Enabled && Action != TdUiAction.None;
 }
 
 /// <summary>Popover (acima da faixa): título, itens (o item 0, quando botão de fechar, fica no canto) e âncora em X (DIP da faixa).</summary>
-public sealed record TdPopoverView(string Title, TdUiItem[] Items, float Width, float Height, float AnchorX, string? IconTower = null)
+public sealed record TdPopoverView(string Title, TdUiItem[] Items, float Width, float Height, float AnchorX, string? IconTower = null,
+    float ArrowX = -1f, float TargetHudX = -1f)
 {
+    /// <summary>Altura (DIP) da seta do balão do tutorial (TD.15), somada ao fim da janela quando <see cref="ArrowX"/> &gt;= 0.</summary>
+    public const float ArrowH = 7f;
+
+    public bool HasArrow => ArrowX >= 0f;
+
     public int HitTest(float x, float y)
     {
         for (int i = Items.Length - 1; i >= 0; i--)
@@ -54,10 +62,10 @@ public sealed record TdPopoverView(string Title, TdUiItem[] Items, float Width, 
     public long Signature()
     {
         var h = new HashCode();
-        h.Add(Title); h.Add(IconTower);
+        h.Add(Title); h.Add(IconTower); h.Add((int)(ArrowX * 10)); h.Add((int)(TargetHudX * 10));
         foreach (var it in Items)
         {
-            h.Add(it.Text); h.Add(it.Right); h.Add(it.Sub); h.Add(it.Arg); h.Add(it.Enabled); h.Add(it.Selected); h.Add((int)it.Tone); h.Add((int)(it.Fill * 100));
+            h.Add(it.Text); h.Add(it.Right); h.Add(it.Sub); h.Add(it.Arg); h.Add(it.Highlight); h.Add(it.Enabled); h.Add(it.Selected); h.Add((int)it.Tone); h.Add((int)(it.Fill * 100));
         }
         return h.ToHashCode();
     }
@@ -98,7 +106,7 @@ public sealed record TdHudView(TdUiItem[] Items, float Width, float Height, bool
         var h = new HashCode();
         foreach (var it in Items)
         {
-            h.Add(it.Text); h.Add(it.Right); h.Add(it.Enabled); h.Add(it.Selected); h.Add((int)it.Tone); h.Add((int)(it.Fill * 100)); h.Add((int)it.Icon);
+            h.Add(it.Text); h.Add(it.Right); h.Add(it.Enabled); h.Add(it.Selected); h.Add(it.Highlight); h.Add((int)it.Tone); h.Add((int)(it.Fill * 100)); h.Add((int)it.Icon);
         }
         h.Add(Minimized);
         return h.ToHashCode();

@@ -68,6 +68,8 @@ public static class SettingsSerializer
         w.WriteBoolean("hudMinimized", s.Td.HudMinimized);
         w.WriteBoolean("fadeWhenUnfocused", s.Td.FadeWhenUnfocused);
         w.WriteNumber("fadeOpacityPercent", s.Td.FadeOpacityPercent);
+        w.WriteBoolean("tutorialDone", s.Td.TutorialDone);
+        w.WriteString("tipsSeen", s.Td.TipsSeen);
         w.WriteEndObject();
         w.WriteEndObject();
     }
@@ -143,6 +145,8 @@ public static class SettingsSerializer
                 HudMinimized = Bool(td, "hudMinimized", d.Td.HudMinimized),
                 FadeWhenUnfocused = Bool(td, "fadeWhenUnfocused", d.Td.FadeWhenUnfocused),
                 FadeOpacityPercent = IntRange(td, "fadeOpacityPercent", TdSettings.MinFadePercent, TdSettings.MaxFadePercent, d.Td.FadeOpacityPercent),
+                TutorialDone = Bool(td, "tutorialDone", d.Td.TutorialDone),
+                TipsSeen = Str(td, "tipsSeen", 1024) ?? d.Td.TipsSeen,
             },
         };
     }

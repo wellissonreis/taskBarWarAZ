@@ -128,6 +128,10 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     /// <summary>HUD TD recolhido (lido pela T-UI ao gravar as configurações).</summary>
     public bool HudMinimized => tdUi?.HudMinimized ?? settings.Td.HudMinimized;
 
+    /// <summary>Onboarding TD (TD.15), lido pela T-UI ao gravar as configurações.</summary>
+    public bool TutorialDone => tdUi?.TutorialDone ?? settings.Td.TutorialDone;
+    public string TipsSeen => tdUi?.TipsSeen ?? settings.Td.TipsSeen;
+
     /// <summary>Barra usada pela cena (altura em DIP); a cena padrão (Band) usa 48.</summary>
     public float BarHeightDip => barHeightDip;
 
@@ -291,7 +295,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         {
             // TD.8: HUD, popover, modo construção (ESC temporário) e Interativo ao passar o mouse sobre a faixa.
             tdUi = new TdUiPresenter(game, runtime, td, tdDriver, typography!, clock, ui, () => hotkeys, tdFocus!, tdBandHeight,
-                settings.Td.HudMinimized, PublishMenu, atlas);
+                settings.Td.HudMinimized, PublishMenu, atlas, settings.Td.TutorialDone, settings.Td.TipsSeen);
             game.Mode.EnableTdHover(1.5);
             tdUi.Setup();
             loop.AddAfter(new LoopParticipant(() => tdUi.NextDeadline, _ => tdUi.OnWake()));
@@ -455,6 +459,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             case AppCommandKind.TogglePause: runtime.TogglePause(); break;
             case AppCommandKind.StartWave: td?.Host.RequestWave(); break;
             case AppCommandKind.ToggleHud: tdUi?.ToggleHud(); break;
+            case AppCommandKind.HowToPlay: tdUi?.OpenHowTo(); break;
             case AppCommandKind.CancelBuild: tdUi?.Controller.Cancel(); break;
             case AppCommandKind.SelectMonitor: SelectMonitor(monitorIndex); break;
             case AppCommandKind.ShowAndInteract:

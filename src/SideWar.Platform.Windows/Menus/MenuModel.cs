@@ -7,6 +7,8 @@ public enum MenuCommandKind
     StartWave,
     /// <summary>"Mostrar HUD" / "Recolher HUD" (modo TD, TD.14).</summary>
     ToggleHud,
+    /// <summary>"Como jogar" (modo TD, TD.15): abre o cartão de regras com a opção de refazer o tutorial.</summary>
+    HowToPlay,
     TogglePause,
     ToggleVisibility,
     SelectMonitor,
@@ -49,6 +51,7 @@ public static class MenuModel
         var items = new List<MenuEntry>();
         if (state.TdMode) items.Add(new($"Iniciar onda\t{state.StartWaveHotkey ?? "Ctrl+Alt+Space"}", new(MenuCommandKind.StartWave), Grayed: state.OverlayHidden));
         if (state.TdMode) items.Add(new(state.HudMinimized ? "Mostrar HUD" : "Recolher HUD", new(MenuCommandKind.ToggleHud), Grayed: state.OverlayHidden));
+        if (state.TdMode) items.Add(new("Como jogar", new(MenuCommandKind.HowToPlay), Grayed: state.OverlayHidden));
         items.AddRange(
         [
             new("Modo interativo", new(MenuCommandKind.ToggleInteractive), Checked: state.InteractiveActive, Grayed: state.OverlayHidden),

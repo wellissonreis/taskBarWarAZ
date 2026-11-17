@@ -114,6 +114,7 @@ public sealed class TdBandRenderer : IDisposable
         DrawGhost(canvas, match, view, w);
         DrawFire(canvas, match, w);
         DrawCrate(canvas, match, view, now, w);
+        DrawHint(canvas, view, now, w);
         canvas.Restore();
     }
 
@@ -415,6 +416,23 @@ public sealed class TdBandRenderer : IDisposable
         _stroke.PathEffect = _dash;
         c.DrawRoundRect(x + 0.5f, TdBand.TowerTop + 0.5f, TdBand.TowerWidth - 1, TdBand.TowerHeight - 1, 3, 3, _stroke);
         _stroke.PathEffect = null;
+    }
+
+    // Destaque do tutorial (TD.15): contorno âmbar pulsante na zona de torres ou anel no alvo (torre/caixa). Alfa pela fase do relógio.
+    private void DrawHint(SKCanvas c, in TdView view, double now, int w)
+    {
+        if (!view.BandHint && view.HintX < 0f) return;
+        byte alpha = (byte)(150 + 100 * (0.5 + 0.5 * Math.Sin(now * 5.0)));
+        _stroke.Color = Palette.Ambar.WithAlpha(alpha);
+        _stroke.StrokeWidth = 1.5f;
+        if (view.BandHint)
+            c.DrawRoundRect(TdBand.EdgeClearDip, 1f, w - 2 * TdBand.EdgeClearDip, TdBand.HeightDip - 2f, 3, 3, _stroke);
+        else
+        {
+            const float r = 13f;
+            c.DrawRoundRect(view.HintX - r, 1f, 2 * r, TdBand.HeightDip - 2f, 4, 4, _stroke);
+        }
+        _stroke.StrokeWidth = 1f;
     }
 
     private void DrawTower(SKCanvas c, float cx, in TdTower t, bool selected, bool hover, bool atRisk)

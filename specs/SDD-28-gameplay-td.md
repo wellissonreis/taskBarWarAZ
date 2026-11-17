@@ -302,6 +302,21 @@ Pedido após jogar: premiar quem joga bem, **sem internet** (ADR-014; nada de ra
 
 **Critérios:** CA-28.16 e CA-28.17 (§9). **Testes:** T-28.16 a T-28.18 (§10).
 
+### RF-28.22: Onboarding: tutorial da 1ª partida, "Como jogar" e dicas de 1ª vez (pedido do usuário, 2026-11-17; TD.15)
+
+Tudo é **estado de UI** (como o modo construção, RF-28.20.7): **nenhum comando novo no log, nenhuma pausa de preparo nova e nenhuma mudança no `StateHash`**. Os goldens TD (replay, fase 3, colocação, caixa, bot) seguem **antigo = novo**, os goldens idle ficam intactos. "Sem pressa" já é garantido: Preparo roda a 0 fps e só avança com o auto-início ligado (padrão desligado); a caixa-bomba só pode cair na fase 1 a partir da onda 3 (`firstEligibleWaveStage1`) e nunca em Preparo. Não se pune quem lê: o tutorial não pausa a Onda, mas todos os passos de Preparo esperam a ação real.
+
+- **Tutorial (fase 1, só se `td.tutorialDone` = falso).** Balão de texto curto (PT-BR) com **seta** e **destaque** (moldura âmbar de 2 DIP) no alvo real: botão do HUD, item do popover ou a faixa/torre/caixa. Cada passo avança pela **ação real** do jogador (nunca por tempo) e é derivado do estado da partida e da UI:
+  1. "Clique em Construir e escolha uma torre" (destaca **Construir**); 2. "Clique num ponto da faixa para posicionar" (contorno pulsante na faixa); 3. "Agora escolha uma torre da lista" (destaca a 1ª torre comprável); 4. "Clique em Iniciar onda" (destaca **Iniciar onda**); 5. "Clique numa torre para melhorar" (quando há créditos para melhorar; no inspetor destaca **Melhorar**); 6. "Use uma habilidade" (quando há habilidade liberada e pronta, em Onda); 7. "Clique na caixa antes que exploda" (na 1ª caixa; anel na caixa). O passo "Construir e escolher" da ficha virou 3 micro-passos (1 a 3) porque o fluxo real é botão → ponto → torre; clicar direto num ponto da faixa pula para o passo 3. Os passos 5 a 7 são **dicas condicionais** que não bloqueiam a partida e podem vir em qualquer ordem.
+  - **"Pular tutorial"** sempre visível (balão e popovers decorados). O tutorial termina ao concluir 5, 6 e 7, ao pular, ou quando a 1ª partida termina (vitória ou derrota) depois de iniciada a 1ª onda; só então grava `td.tutorialDone = true`.
+  - O HUD recolhido é expandido uma vez quando o tutorial começa (os alvos estão no HUD completo).
+- **Persistência (decisão registrada):** `td.tutorialDone` (bool) e `td.tipsSeen` (string `id;id`) ficam em **settings.json** (`TdSettings`), no mesmo caminho do `td.hudMinimized`: é preferência de onboarding do aparelho, não progresso de jogo, e evita migrar o perfil TD (schema/`ContentHash` intactos). Campos ausentes = tutorial por fazer, nenhuma dica vista. A gravação sai da T-Game para a T-UI (`UiRequest.SaveOnboarding`).
+- **Como jogar:** item **"Como jogar"** no menu do HUD (1º item) e na bandeja (modo Td, abaixo de "Recolher HUD"). Abre um cartão com regras resumidas (objetivo, torres, ondas, habilidades, caixa-bomba, coroa/medalhas/patente) e o botão **"Refazer tutorial"**, que marca o tutorial como não concluído e recomeça a fase 1 com partida limpa.
+- **Dicas de 1ª vez:** uma linha curta (borda âmbar, janela do tooltip) na primeira vez que cada **tipo de torre** (construída) e cada **inimigo/chefe** (em campo) aparece: torre = nome e papel; inimigo = nome, traço e torres que o contra-atacam (do `td-enemies.json`; ex.: "Dica: Ping: rápido, pouca vida. Use Balanceador ou Gelo."). Persistida ao exibir (nunca repete), não bloqueia o jogo, some sozinha em **6 s** ou ao clicar, e espera enquanto houver balão do tutorial ou popover aberto (o tooltip de hover tem prioridade).
+- **Escala e foco:** balão, dica e destaques usam a escala do HUD da TD.14 (`TdBand.HudScale`) e esmaecem com o foco como o resto da UI.
+
+**Critérios:** CA-28.18 (§9). **Testes:** T-28.19 a T-28.21 (§10).
+
 ## 6. Requisitos não funcionais
 
 - **RNF-28.1 (determinismo):** mesma seed, conteúdo e comandos geram o mesmo `StateHash` entre execuções e SOs (Linux e Windows). Verificado por replay de partidas scriptadas das 6 fases.
@@ -341,6 +356,7 @@ SDD-21 (mantido), SDD-22 RF-22.8 (hotspots, mantido), SDD-10/11 (a revisar), SDD
 - **CA-28.15:** Modo construção: clique ou arraste até um ponto livre mostra fantasma com alcance, abre o popover de torres, `BuildTower` é emitido ao escolher; ESC, clique direito, ocultação e 30 s cancelam sem alterar o log; construir durante a Onda não pausa a simulação; fora do modo a cena não bloqueia ícones (T-28.15 no Core/UI lógico; MTC-28.5 no Windows isolado e **com autorização do usuário**).
 - **CA-28.16:** Vitória sem perda de integridade dá coroa; medalhas (Sem vender, Sem habilidades, Pressa, Desafio) seguem os feitos; derrota não dá nada; a pontuação segue a fórmula da RF-28.21 e coroa/medalhas/recorde não entram no `StateHash` (goldens TD antigos = novos) (T-28.16, T-28.17).
 - **CA-28.17:** O perfil guarda coroas, medalhas e recorde por fase, concede os selos bônus só na primeira vez, migra do v1 sem perda, e a patente local deriva da soma dos recordes: o bot Otimizado chega a MVP, o Médio fica em Pleno/Sênior, o SemContra em Estagiário (T-28.17, T-28.18).
+- **CA-28.18:** O tutorial da 1ª partida guia os 7 passos por ação real (sem tempo), com seta/destaque no alvo e "Pular tutorial" sempre visível, grava `td.tutorialDone`; "Como jogar" (menu e bandeja) abre o cartão com "Refazer tutorial"; cada dica de 1ª vez aparece uma vez, some em 6 s ou ao clicar e não bloqueia; nada disso altera o log nem o `StateHash` (T-28.19 a T-28.21).
 
 ## 10. Cenários de teste
 
@@ -364,6 +380,9 @@ SDD-21 (mantido), SDD-22 RF-22.8 (hotspots, mantido), SDD-10/11 (a revisar), SDD
 | T-28.16 | Coroa, medalhas e pontuação: fórmula, monotonicidade, vender/habilidade/chamada/desafio, derrota sem prêmio, fora do hash (`TdScoreTests`) |
 | T-28.17 | Perfil: selos bônus uma vez, recorde só sobe, migração v1 → v2, saneamento, soma dos recordes (`TdProfileStoreTests`) |
 | T-28.18 | Patente: limiares, progresso, calibração com o bot por perfil; UI: card de Vitória, Mapa e Menu (`TdScoreTests`, `TdUiControllerTests`, goldens `td-ui-*`) |
+| T-28.19 | Tutorial: passos por ação real (não por tempo), destaque/seta no alvo, pular persiste, só fase 1, termina com a partida, HUD recolhido expande, hash e log intactos (`TdOnboardingTests`) |
+| T-28.20 | Como jogar: item no menu/bandeja, cartão com os 6 tópicos, Refazer tutorial (`TdOnboardingTests`, `MenuModelTests`) |
+| T-28.21 | Dicas de 1ª vez: uma vez por tipo, 6 s/clique, não bloqueia, espera o balão; settings `tutorialDone`/`tipsSeen`; goldens `td-tut-*` e `td-ui-menu-*` (`TdOnboardingGoldenTests`, `SettingsTdTests`) |
 
 ## 11. Riscos técnicos e decisões pendentes
 
@@ -420,6 +439,7 @@ Legenda: 🟢 WSL puro, 🟡 WSL + Windows, 🔴 só Windows. Todas dependem da 
 | TD.10 | `SanityBot` novo e curva de balanceamento das 6 fases; evidência E-TD | TD.3 | 🟢 |
 | TD.11 | Pós-MVP: modo infinito, desafio do dia, políticas (DP-28.9) | TD.8, TD.10 | 🟡 |
 | TD.13 ✅ | Recompensas por perfeição e patente local (RF-28.21): coroa, medalhas, pontuação, recorde e patente; perfil v2; UI | TD.8, TD.10 | 🟡 |
+| TD.15 ✅ | Onboarding (RF-28.22): tutorial guiado da 1ª partida, "Como jogar" no menu e na bandeja, dicas de 1ª vez; sem comando novo no log | TD.8, TD.14 | 🟡 |
 | TD.12 | Limpeza e documentação: arquivar SDD-25/26/27, marcar substituições, `PLANO.md`, `README.md`, MTC-28 | todas | 🟢 |
 
 **Ordem sugerida:** TD.0 → (TD.1 → TD.2 → TD.3 ‖ TD.4 ‖ TD.10) → TD.5 e TD.6 → TD.3b → TD.7 (gate TA.1) → TD.8 → TD.9 → TD.12; TD.11 por último.

@@ -129,4 +129,13 @@ public sealed record TdSettings
 
     /// <summary>Opacidade (10 a 90 %) da faixa e do HUD enquanto esmaecidos.</summary>
     public int FadeOpacityPercent { get; init; } = 50;
+
+    /// <summary>
+    /// Tutorial da 1ª partida concluído ou pulado (TD.15). Decisão: fica nas configurações (não no perfil TD) por ser preferência de
+    /// onboarding do aparelho, no mesmo caminho do <see cref="HudMinimized"/> (sem migração de schema do perfil nem mudança do ContentHash).
+    /// </summary>
+    public bool TutorialDone { get; init; }
+
+    /// <summary>Dicas de 1ª vez já mostradas (ids <c>tower:bolt</c>, <c>enemy:runner</c>…), separadas por ';'. String única para a igualdade de records.</summary>
+    public string TipsSeen { get; init; } = "";
 }

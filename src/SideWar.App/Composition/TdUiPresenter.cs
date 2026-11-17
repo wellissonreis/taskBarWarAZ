@@ -19,7 +19,7 @@ namespace SideWar.App.Composition;
 /// fim de partida) acima da faixa, ESC temporário e modo Interativo durante a construção. A lógica é do <see cref="TdUiController"/>
 /// (Runtime); aqui só janelas, renderer e fiação. Só na T-Game.
 /// </summary>
-internal sealed class TdUiPresenter : ITdUiHost, IDisposable
+internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
 {
     private const double TickSeconds = 0.1, KickSeconds = 0.03;
 
@@ -39,9 +39,13 @@ internal sealed class TdUiPresenter : ITdUiHost, IDisposable
     private readonly float k, hudScale;
     private readonly Action menuChanged;
     private volatile bool hudMinimized;
+    private volatile bool tutorialDone;
+    private volatile string tipsSeenText;
+    private readonly HashSet<string> tipsSeen;
     private TdUiWindow? hudWindow, popWindow, tipWindow;
     private int tipIndex = -1;
     private string? tipText;
+    private bool tipFirstTime;
     private readonly SideWar.Rendering.Sprites.SpriteAtlas? atlas;
     private TdUiRenderer? renderer;
     private int dpi;
@@ -55,15 +59,19 @@ internal sealed class TdUiPresenter : ITdUiHost, IDisposable
 
     public TdUiPresenter(GameThread game, GameRuntime runtime, TdComposition td, TdRenderDriver driver, Typography typography,
         IClock clock, Action<UiRequest> ui, Func<HotkeyService?> hotkeys,
-        TdFocusState focus, int bandHeight, bool hudMinimized, Action menuChanged, SideWar.Rendering.Sprites.SpriteAtlas? atlas = null)
+        TdFocusState focus, int bandHeight, bool hudMinimized, Action menuChanged, SideWar.Rendering.Sprites.SpriteAtlas? atlas = null,
+        bool tutorialDone = false, string tipsSeen = "")
     {
+        this.tutorialDone = tutorialDone;
+        tipsSeenText = tipsSeen ?? "";
+        this.tipsSeen = new HashSet<string>(tipsSeenText.Split(';', StringSplitOptions.RemoveEmptyEntries), StringComparer.Ordinal);
         this.focus = focus; this.bandHeight = bandHeight; this.hudMinimized = hudMinimized; this.menuChanged = menuChanged;
         k = TdBand.Scale(bandHeight);
         hudScale = TdBand.HudScale(bandHeight);
         this.atlas = atlas;
         this.game = game; this.runtime = runtime; this.td = td; this.driver = driver; this.typography = typography;
         this.clock = clock; this.ui = ui; this.hotkeys = hotkeys;
-        controller = new TdUiController(() => td.Host.Match, Send, this, () => clock.NowTicks / (double)clock.TicksPerSecond);
+        controller = new TdUiController(() => td.Host.Match, Send, this, () => clock.NowTicks / (double)clock.TicksPerSecond, this);
         controller.Changed += () => { Refresh(false); Kick(); };
         focus.Changed += ApplyFade;
     }
@@ -73,6 +81,30 @@ internal sealed class TdUiPresenter : ITdUiHost, IDisposable
 
     /// <summary>Item "Mostrar HUD/Recolher HUD" da bandeja.</summary>
     public void ToggleHud() => SetHudMinimized(!hudMinimized);
+
+    /// <summary>"Como jogar" da bandeja (TD.15).</summary>
+    public void OpenHowTo() { controller.OpenHowTo(); Kick(); }
+
+    public string TipsSeen => tipsSeenText;
+
+    // ITdOnboardingStore (T-Game): grava nas configurações pela T-UI.
+    public bool TutorialDone => tutorialDone;
+
+    public void SetTutorialDone(bool done)
+    {
+        if (tutorialDone == done) return;
+        tutorialDone = done;
+        ui(UiRequest.SaveOnboarding);
+    }
+
+    public bool TipSeen(string id) => tipsSeen.Contains(id);
+
+    public void MarkTipSeen(string id)
+    {
+        if (!tipsSeen.Add(id)) return;
+        tipsSeenText = string.Join(';', tipsSeen.Order(StringComparer.Ordinal));
+        ui(UiRequest.SaveOnboarding);
+    }
 
     /// <summary>TD.14: aplica a opacidade de ausência (faixa, HUD, popover e dica) e o teto de 8 fps do render.</summary>
     private void ApplyFade()
@@ -120,6 +152,7 @@ internal sealed class TdUiPresenter : ITdUiHost, IDisposable
         popWindow.Left += () => { if (popHover != -1) { popHover = -1; controller.Hover(null); Refresh(true); } };
         popWindow.LeftUp += (x, y) => Click(pop?.Items, pop?.HitTest(x / UiScale, y / UiScale) ?? -1);
         popWindow.RightUp += (_, _) => controller.Cancel();
+        tipWindow.LeftUp += (_, _) => { Present(); controller.DismissTip(); };
 
         game.Mode.TdHoverDetected += Present;
         game.Mode.TdPointerMoved += (x, _) => { Present(); controller.PointerMoved(x / k); };
@@ -193,7 +226,7 @@ internal sealed class TdUiPresenter : ITdUiHost, IDisposable
         controller.Sync();
         Refresh(false);
         var m = td.Host.Match;
-        bool busy = runtime.App.IsVisible && (m.Phase == MatchPhase.Onda || controller.PopoverOpen || m.CountdownRemainingSeconds > 0 || m.CrateActive);
+        bool busy = runtime.App.IsVisible && (m.Phase == MatchPhase.Onda || controller.PopoverOpen || controller.CurrentTip is not null || m.CountdownRemainingSeconds > 0 || m.CrateActive);
         deadline = busy ? clock.NowTicks + (long)(TickSeconds * clock.TicksPerSecond) : null;
     }
 
@@ -229,12 +262,24 @@ internal sealed class TdUiPresenter : ITdUiHost, IDisposable
                 left = c.Scene.Left + (int)MathF.Round(pop.AnchorX * k * ds) - w / 2;
                 bottom = c.Scene.Top - (int)MathF.Round(2 * ds);
             }
+            else if (pop.TargetHudX >= 0)
+            {
+                // Balão do tutorial apontando para um item do HUD: centrado nele (TD.15).
+                left = hudBounds.Left + (int)MathF.Round(pop.TargetHudX * s) - w / 2;
+                bottom = hudBounds.Top - (int)MathF.Round(2 * ds);
+            }
             else
             {
                 left = hudBounds.Right - w;
                 bottom = hudBounds.Top - (int)MathF.Round(2 * ds);
             }
             left = Math.Clamp(left, work.Left, Math.Max(work.Left, work.Right - w));
+            if (pop.HasArrow)
+            {
+                // A seta aponta para o alvo mesmo quando a janela foi deslocada pelo limite da tela.
+                float targetPx = pop.AnchorX > 0 ? c.Scene.Left + pop.AnchorX * k * ds : hudBounds.Left + pop.TargetHudX * s;
+                pop = pop with { ArrowX = (targetPx - left) / s };
+            }
             int top = Math.Max(work.Top, bottom - h);
             var bounds = new PixelRect(left, top, left + w, top + h);
             long ps = pop.Signature() * 31 + popHover;
@@ -262,6 +307,9 @@ internal sealed class TdUiPresenter : ITdUiHost, IDisposable
     private void RefreshTooltip(DockLayoutResult c, PixelRect hudBounds)
     {
         var tip = hud is null || tipWindow is null ? null : TdUiController.TooltipFor(hud, tipIndex);
+        // Dica de 1ª vez (TD.15): ocupa a janela do tooltip quando não há dica de hover.
+        bool firstTime = tip is null && controller.CurrentTip is not null;
+        if (firstTime) tip = new TdTooltipView(controller.CurrentTip!, hud!.Width / 2f, 0f);
         if (tip is null)
         {
             if (tipWindow!.WantsVisible) { tipWindow.Hide(); tipCanvas.Invalidate(); }
@@ -275,13 +323,14 @@ internal sealed class TdUiPresenter : ITdUiHost, IDisposable
         int bottom = hudBounds.Top - (int)MathF.Round(2 * Scale);
         var bounds = new PixelRect(left, Math.Max(work.Top, bottom - h), left + w, Math.Max(work.Top, bottom - h) + h);
         var window = tipWindow!;
-        bool changed = tipText != tip.Text || bounds != window.Bounds || !window.WantsVisible;
+        bool changed = tipText != tip.Text || bounds != window.Bounds || !window.WantsVisible || tipFirstTime != firstTime;
         if (!changed) return;
         window.Apply(bounds);
         if (!window.WantsVisible) { window.Show(); window.Surface.SetOpacity(focus.Alpha); }
         tipCanvas.Invalidate();
         tipText = tip.Text;
-        Draw(window, tipCanvas, cv => renderer.DrawTooltip(cv, tip.Text));
+        tipFirstTime = firstTime;
+        Draw(window, tipCanvas, cv => renderer.DrawTooltip(cv, tip.Text, firstTime));
     }
 
     private static void Draw(TdUiWindow window, SkiaFrameCanvas canvas, Action<SkiaSharp.SKCanvas> draw)

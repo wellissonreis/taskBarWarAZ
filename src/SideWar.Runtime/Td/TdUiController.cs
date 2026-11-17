@@ -16,7 +16,7 @@ namespace SideWar.Runtime.Td;
 /// devolve modelos de layout (<see cref="TdHudView"/>, <see cref="TdPopoverView"/>) e envia comandos por <c>send</c>. O modo é estado de UI:
 /// não entra no log nem no hash (RF-28.20.7). Só na T-Game.
 /// </summary>
-public sealed class TdUiController
+public sealed partial class TdUiController
 {
     public const float PopoverWidth = 300f, Pad = 6f, RowH = 20f, TwoLineH = 34f, HeaderH = 22f, BadgeH = 14f;
     public const double BuildTimeoutSeconds = 30.0;
@@ -27,6 +27,7 @@ public sealed class TdUiController
     private readonly Action<IGameCommand> _send;
     private readonly ITdUiHost _host;
     private readonly Func<double> _now;
+    private readonly ITdOnboardingStore? _onb;
 
     private TdMatchState? _lastMatch;
     private bool _endShown;
@@ -41,8 +42,10 @@ public sealed class TdUiController
     private double _lastActionAt;
     private float _anchorX;
 
-    public TdUiController(Func<TdMatchState> match, Action<IGameCommand> send, ITdUiHost host, Func<double>? now = null)
+    public TdUiController(Func<TdMatchState> match, Action<IGameCommand> send, ITdUiHost host, Func<double>? now = null,
+        ITdOnboardingStore? onboarding = null)
     {
+        _onb = onboarding;
         _match = match ?? throw new ArgumentNullException(nameof(match));
         _send = send ?? throw new ArgumentNullException(nameof(send));
         _host = host ?? throw new ArgumentNullException(nameof(host));
@@ -75,6 +78,8 @@ public sealed class TdUiController
         GhostValid = _ghostValid,
         GhostDef = _hoverDef >= 0 ? _hoverDef : -1,
         ChosenX = BuildActive ? _chosenX : -1,
+        BandHint = Step == TdTutorialStep.Point,
+        HintX = HintX(),
     };
 
     /// <summary>Move o mouse sobre a faixa (X em DIP): só importa no passo do ponto.</summary>
@@ -167,8 +172,12 @@ public sealed class TdUiController
     {
         if (!item.Clickable) return;
         Touch();
+        NoteAction(item.Action);
         switch (item.Action)
         {
+            case TdUiAction.TutorialSkip: SkipTutorial(); break;
+            case TdUiAction.HowTo: Toggle(TdUiMode.Help); break;
+            case TdUiAction.RedoTutorial: RedoTutorial(); break;
             case TdUiAction.Close: Close(); break;
             case TdUiAction.BuildToggle:
                 if (BuildActive) Close(); else EnterBuild();
@@ -228,6 +237,7 @@ public sealed class TdUiController
             Changed?.Invoke();
         }
     Checked:
+        SyncOnboarding(m);
         if (m.Phase is MatchPhase.Vitoria or MatchPhase.Derrota)
         {
             if (!_endShown) { _endShown = true; ResetBuild(); SetMode(TdUiMode.End); }
@@ -253,7 +263,11 @@ public sealed class TdUiController
 
     // ================================================================ estado
 
-    private void Touch() => _lastActionAt = _now();
+    private void Touch()
+    {
+        _lastActionAt = _now();
+        DismissTip();
+    }
 
     private void EnterBuild()
     {
@@ -379,7 +393,7 @@ public sealed class TdUiController
             Tip: "Construir torre: clique num ponto livre da faixa e escolha a torre. ESC ou botão direito cancela."));
         items.Add(new TdUiItem(new DipRect(428, 33, 28, 28), TdUiKind.Button, "", TdUiAction.Menu, Icon: TdIcon.Menu, Selected: Mode == TdUiMode.Menu,
             Tip: "Menu: próxima onda, mapa de fases e selos, pausar, configurações e sair."));
-        return new TdHudView([.. items], TdHudView.DefaultWidth, TdHudView.DefaultHeight);
+        return new TdHudView(HighlightHud(items), TdHudView.DefaultWidth, TdHudView.DefaultHeight);
     }
 
     /// <summary>Dica do item do HUD sob o ponto (null = sem dica). A janela do tooltip posiciona acima do item.</summary>
@@ -427,7 +441,7 @@ public sealed class TdUiController
     public TdPopoverView? BuildPopover()
     {
         var m = _match();
-        return Mode switch
+        var view = Mode switch
         {
             TdUiMode.Build => BuildChooser(m),
             TdUiMode.Inspector => BuildInspector(m),
@@ -435,8 +449,10 @@ public sealed class TdUiController
             TdUiMode.Menu => BuildMenu(m),
             TdUiMode.Map => BuildMap(m),
             TdUiMode.End => BuildEnd(m),
+            TdUiMode.Help => BuildHelp(),
             _ => null,
         };
+        return DecoratePopover(m, view);
     }
 
     private sealed class Stack(float width)
@@ -613,6 +629,7 @@ public sealed class TdUiController
     {
         var s = new Stack(260f);
         AddRankBar(s, _host.Rank);
+        s.Add(TdUiKind.Button, "Como jogar", RowH, TdUiAction.HowTo, tone: TdTone.Accent);
         s.Add(TdUiKind.Button, "Proxima onda", RowH, TdUiAction.Preview);
         s.Add(TdUiKind.Button, "Mapa de fases e selos", RowH, TdUiAction.MapOpen);
         s.Add(TdUiKind.Button, _host.Paused ? "Retomar" : "Pausar", RowH, TdUiAction.Pause);

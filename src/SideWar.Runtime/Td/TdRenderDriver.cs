@@ -16,6 +16,12 @@ public readonly record struct TdView(int SelectedTowerId, int HoverTowerId, bool
 
     /// <summary>Ponto já escolhido no modo construção (-1 = ainda escolhendo): fica marcado enquanto o popover de torres está aberto.</summary>
     public int ChosenX { get; init; } = -1;
+
+    /// <summary>Tutorial (TD.15): contorno pulsante em toda a faixa de torres (passo "clique num ponto da faixa").</summary>
+    public bool BandHint { get; init; }
+
+    /// <summary>Tutorial (TD.15): X (DIP do espaço de desenho) de um alvo a destacar com anel âmbar (torre a melhorar, caixa-bomba); -1 = nenhum.</summary>
+    public float HintX { get; init; } = -1f;
 }
 
 /// <summary>Destino dos frames da faixa TD (SceneFrameSink no App; fake nos testes). Só na T-Game.</summary>

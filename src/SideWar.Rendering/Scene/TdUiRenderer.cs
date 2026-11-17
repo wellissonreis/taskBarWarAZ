@@ -32,7 +32,35 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     {
         c.Clear(SKColors.Transparent);
         _p.Box(c, new DipRect(0, 0, hud.Width, hud.Height), Palette.BordaForte, Palette.Td.Plate);
-        for (int i = 0; i < hud.Items.Length; i++) DrawHudItem(c, hud.Items[i], i == hover);
+        for (int i = 0; i < hud.Items.Length; i++)
+        {
+            DrawHudItem(c, hud.Items[i], i == hover);
+            if (hud.Items[i].Highlight) DrawHighlight(c, hud.Items[i].Rect);
+        }
+    }
+
+    /// <summary>Destaque do alvo do tutorial (TD.15): moldura âmbar de 2 DIP em volta do item real.</summary>
+    private void DrawHighlight(SKCanvas c, DipRect r)
+    {
+        const float t = 2f, o = 2f;
+        _p.Fill(c, new DipRect(r.X - o, r.Y - o, r.W + 2 * o, t), Palette.Ambar);
+        _p.Fill(c, new DipRect(r.X - o, r.Y + r.H + o - t, r.W + 2 * o, t), Palette.Ambar);
+        _p.Fill(c, new DipRect(r.X - o, r.Y - o, t, r.H + 2 * o), Palette.Ambar);
+        _p.Fill(c, new DipRect(r.X + r.W + o - t, r.Y - o, t, r.H + 2 * o), Palette.Ambar);
+    }
+
+    // Seta do balão do tutorial: triângulo âmbar abaixo da caixa, apontando para o alvo (HUD ou faixa).
+    private void DrawArrow(SKCanvas c, float xDip, float topDip)
+    {
+        float x = _p.Px(xDip), y = _p.Px(topDip), h = _p.Px(TdPopoverView.ArrowH - 1f), hw = _p.Px(5f);
+        using var b = new SKPathBuilder();
+        b.MoveTo(x - hw, y);
+        b.LineTo(x + hw, y);
+        b.LineTo(x, y + h);
+        b.Close();
+        using var path = b.Detach();
+        using var fill = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Fill, Color = Palette.Ambar };
+        c.DrawPath(path, fill);
     }
 
     /// <summary>Largura (DIP) da janela do tooltip; o texto quebra em linhas dentro dela.</summary>
@@ -58,11 +86,11 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     /// <summary>Altura (DIP) da janela do tooltip para o texto.</summary>
     public float TooltipHeightDip(string text) => TipLines(text).Count * TipLine + 10f;
 
-    public void DrawTooltip(SKCanvas c, string text)
+    public void DrawTooltip(SKCanvas c, string text, bool firstTimeTip = false)
     {
         c.Clear(SKColors.Transparent);
         var lines = TipLines(text);
-        _p.Box(c, new DipRect(0, 0, TooltipWidthDip, lines.Count * TipLine + 10f), Palette.AzulClaro, Palette.BgPainel);
+        _p.Box(c, new DipRect(0, 0, TooltipWidthDip, lines.Count * TipLine + 10f), firstTimeTip ? Palette.Ambar : Palette.AzulClaro, Palette.BgPainel);
         for (int i = 0; i < lines.Count; i++)
             _p.Text(c, lines[i], PanelFont.JetBrainsMono, TipFont, new DipRect(6, 5 + i * TipLine, TooltipWidthDip - 12f, TipLine), Palette.TxtPrincipal);
     }
@@ -110,7 +138,9 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     public void DrawPopover(SKCanvas c, TdPopoverView v, int hover)
     {
         c.Clear(SKColors.Transparent);
-        _p.Box(c, new DipRect(0, 0, v.Width, v.Height), Palette.BordaForte, Palette.BgPainel);
+        float boxH = v.HasArrow ? v.Height - TdPopoverView.ArrowH : v.Height;
+        _p.Box(c, new DipRect(0, 0, v.Width, boxH), v.HasArrow ? Palette.Ambar : Palette.BordaForte, Palette.BgPainel);
+        if (v.HasArrow) DrawArrow(c, Math.Clamp(v.ArrowX, 8f, v.Width - 8f), boxH);
         float titleX = TdUiController.Pad + 2;
         if (v.IconTower is not null)
         {
@@ -119,7 +149,11 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         }
         _p.Text(c, v.Title, PanelFont.JetBrainsMono, 10.5f, new DipRect(titleX, 5, v.Width - 40 - (titleX - TdUiController.Pad - 2), 14), Palette.TxtPrincipal);
         _p.Fill(c, new DipRect(1, TdUiController.HeaderH, v.Width - 2, 1), Palette.BordaPainel);
-        for (int i = 0; i < v.Items.Length; i++) DrawItem(c, v.Items[i], i == hover, v.Width, small: false);
+        for (int i = 0; i < v.Items.Length; i++)
+        {
+            DrawItem(c, v.Items[i], i == hover, v.Width, small: false);
+            if (v.Items[i].Highlight) DrawHighlight(c, v.Items[i].Rect);
+        }
     }
 
     private static SKColor ToneColor(TdTone t) => t switch

@@ -60,6 +60,23 @@ public class SettingsTdTests
     }
 
     [Fact]
+    public void Onboarding_defaults_and_roundtrip_keep_tutorial_and_tips()
+    {
+        var td = AppSettings.Default.Td;
+        Assert.False(td.TutorialDone);
+        Assert.Equal("", td.TipsSeen);
+        var old = ReadPayload("{\"td\":{\"autoStartEnabled\":true}}").Td; // JSON antigo: campos ausentes = padrão
+        Assert.False(old.TutorialDone);
+        Assert.Equal("", old.TipsSeen);
+        var fs = new FakeFileSystem();
+        var st = new SettingsStore(fs, "/data", utcNow: () => Now);
+        Assert.True(st.Save(new AppSettings { Td = new TdSettings { TutorialDone = true, TipsSeen = "tower:bolt;enemy:runner" } }));
+        var r = st.Load().Settings.Td;
+        Assert.True(r.TutorialDone);
+        Assert.Equal("tower:bolt;enemy:runner", r.TipsSeen);
+    }
+
+    [Fact]
     public void RoundTrip_keeps_band_height_hud_state_and_fade()
     {
         var fs = new FakeFileSystem();
