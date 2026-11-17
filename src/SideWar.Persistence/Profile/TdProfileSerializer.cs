@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using SideWar.Core.Content.Td;
 
 namespace SideWar.Persistence.Profile;
 
@@ -7,9 +8,15 @@ namespace SideWar.Persistence.Profile;
 [JsonSerializable(typeof(TdProfileData))]
 internal sealed partial class TdProfileJsonContext : JsonSerializerContext;
 
-/// <summary>JSON do perfil v2 (source-gen, ADR-007) e saneamento por campo (valores fora da faixa voltam ao padrão do campo).</summary>
+/// <summary>JSON do perfil v3 (source-gen, ADR-007) e saneamento por campo (valores fora da faixa voltam ao padrão do campo).</summary>
 public static class TdProfileSerializer
 {
+    private static readonly HashSet<string> KnownNodes = TdContentLoader.LoadEmbedded().Meta.Branches
+        .SelectMany(b => b.Nodes).Select(n => n.Id).ToHashSet(StringComparer.Ordinal);
+
+    internal static string[] SanitizeNodes(IReadOnlyList<string>? nodes) =>
+        Distinct(nodes).Where(KnownNodes.Contains).ToArray();
+
     public const int MaxStages = 64;
     public const int MaxListEntries = 4096;
     public const int MaxWave = 1_000_000;
@@ -50,7 +57,7 @@ public static class TdProfileSerializer
             SealsEarned = earned,
             MigratedSeals = Math.Clamp(p.MigratedSeals, 0, earned),
             Stages = stages,
-            PurchasedNodes = Distinct(p.PurchasedNodes),
+            PurchasedNodes = SanitizeNodes(p.PurchasedNodes),
             UnlockedTowers = Distinct(p.UnlockedTowers),
             InfiniteRuns = (p.InfiniteRuns ?? [])
                 .Where(r => r is not null)

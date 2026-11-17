@@ -45,7 +45,7 @@ public class TdProfileStoreTests
     {
         var (fs, st) = Make();
         Assert.True(st.Save(Full()));
-        Assert.Equal(2, SchemaVersionOnDisk(fs.Files[F]));
+        Assert.Equal(3, SchemaVersionOnDisk(fs.Files[F]));
         var r = st.Load();
         Assert.Equal(TdProfileSource.File, r.Source);
         Assert.Equal(J(TdProfileSerializer.Sanitize(Full())), J(r.Profile));
@@ -122,7 +122,7 @@ public class TdProfileStoreTests
         Assert.Equal([1, 2], p.Stages.Select(s => s.StageId));
         Assert.Equal(3, p.Stages[1].Stars);
         Assert.True(p.Stages[1].Unlocked);
-        Assert.Equal(["a"], p.PurchasedNodes);
+        Assert.Empty(p.PurchasedNodes);
         Assert.Equal(0, p.InfiniteRuns[0].MaxWave);
     }
 
@@ -148,7 +148,7 @@ public class TdProfileStoreTests
         p = TdProfileRules.TryPurchase(p, Meta, "defense.damage1");  // repetido
         Assert.Equal(["defense.damage1"], p.PurchasedNodes);
         Assert.Equal(2, TdProfileRules.SealsAvailable(p, Meta));
-        var same = TdProfileRules.TryPurchase(p, Meta, "infrastructure.slots2"); // custo 4 > 2
+        var same = TdProfileRules.TryPurchase(p, Meta, "infrastructure.startingCredits3"); // custo 4 > 2
         Assert.Equal(p, same);
         Assert.Equal(p, TdProfileRules.TryPurchase(p, Meta, "inexistente"));
     }
@@ -252,7 +252,7 @@ public class TdProfileStoreTests
         """;
 
     [Fact]
-    public void Migration_V1ToV2_KeepsEverythingAndAddsDefaults_AndWritesBackV2()
+    public void Migration_V1ToV3_KeepsEverythingAndAddsDefaults_AndWritesBackV3()
     {
         var (fs, st) = Make();
         fs.Files[F] = Envelope(V1Payload, TdProfileData.Schema, 1);
@@ -269,8 +269,59 @@ public class TdProfileStoreTests
         Assert.All(p.Stages, s => { Assert.False(s.Crown); Assert.Equal(0, s.Medals); Assert.Equal(0, s.BestScore); });
         Assert.Equal(["defense.damage1"], p.PurchasedNodes);
         Assert.Equal((ulong)7, p.InfiniteRuns.Single().Seed);
-        Assert.Equal(2, SchemaVersionOnDisk(fs.Files[F])); // gravado de volta na versão nova
+        Assert.Equal(3, SchemaVersionOnDisk(fs.Files[F])); // gravado de volta na versão nova
         Assert.Equal(J(p), J(st.Load().Profile));
+    }
+
+    [Theory]
+    [InlineData(1)]
+    [InlineData(2)]
+    public void Migration_LegacyProfile_RefundsObsoletePurchases_AndIsIdempotent(int version)
+    {
+        var (fs, store) = Make();
+        var payload = J(Full() with
+        {
+            SealsEarned = 30,
+            PurchasedNodes = ["defense.damage1", "infrastructure.credits", "infrastructure.sell75",
+                "infrastructure.slots1", "infrastructure.slots2", "infrastructure.slots2", "unknown", "bolt.damage1"],
+        });
+        fs.Files[F] = Envelope(payload, TdProfileData.Schema, version);
+        var result = store.Load();
+        Assert.Equal(TdProfileSource.File, result.Source);
+        Assert.Null(result.RejectReason);
+        var p = result.Profile;
+        Assert.Equal(30, p.SealsEarned);
+        Assert.Equal(4, p.MigratedSeals);
+        Assert.True(p.IdleImportDone);
+        Assert.Equal(J(TdProfileSerializer.Sanitize(Full() with { SealsEarned = 30, PurchasedNodes = ["defense.damage1", "infrastructure.credits"] })), J(p));
+        Assert.Equal(28, TdProfileRules.SealsAvailable(p, Meta)); // antes: 19; reembolso integral 2+3+4
+        Assert.Equal(3, SchemaVersionOnDisk(fs.Files[F]));
+        Assert.Equal(J(p), J(store.Load().Profile));
+        Assert.True(store.Save(p));
+        Assert.Equal(J(p), J(store.Load().Profile));
+        Assert.Empty(Corrupt(fs));
+        foreach (var id in new[] { "infrastructure.startingCredits1", "infrastructure.startingCredits2", "infrastructure.startingCredits3" })
+            p = TdProfileRules.TryPurchase(p, Meta, id);
+        Assert.Equal(19, TdProfileRules.SealsAvailable(p, Meta));
+        var content = TdContentLoader.LoadEmbedded();
+        var match = TdMatchState.Create(content, 1, SideWar.Core.Simulation.Rng.Seed(42, 54), p.PurchasedNodes);
+        Assert.Equal(content.Stages.Stages[0].StartingCredits + content.Runes.CreditSources.StartingCreditsBonus + 130, match.Credits);
+        Assert.Equal([content.Runes.CenterId], match.OwnedRunes);
+        Assert.True(store.Save(p));
+        Assert.Equal(J(p), J(store.Load().Profile));
+    }
+
+    [Fact]
+    public void V3_SanitizesUnknownAndObsoleteNodes_WithoutPersistingRunes()
+    {
+        var (fs, store) = Make();
+        fs.Files[F] = Envelope("""{"sealsEarned":12,"purchasedNodes":["unknown","infrastructure.sell75","infrastructure.startingCredits1","infrastructure.startingCredits1"],"ownedRunes":["bolt.damage1"]}""", TdProfileData.Schema, 3);
+        var p = store.Load().Profile;
+        Assert.Equal(["infrastructure.startingCredits1"], p.PurchasedNodes);
+        Assert.Equal(10, TdProfileRules.SealsAvailable(p, Meta));
+        Assert.True(store.Save(p));
+        Assert.DoesNotContain("ownedRunes", Encoding.UTF8.GetString(fs.Files[F]));
+        Assert.Equal(J(p), J(store.Load().Profile));
     }
 
     private static TdMatchResult Win(int stars, int lost, bool crown, TdMedals medals, int score) =>

@@ -6,8 +6,23 @@ namespace SideWar.Persistence.Profile;
 /// <summary>Migrações do schema <c>sidewar.td-profile</c> (SDD-14 RF-14.10).</summary>
 public static class TdProfileMigrations
 {
-    /// <summary>v1 → v2 (TD.13): cada fase ganha <c>crown=false</c>, <c>medals=0</c>, <c>bestScore=0</c>; nada se perde.</summary>
-    public static MigrationRegistry Default { get; } = new MigrationRegistry().Register(TdProfileData.Schema, 1, V1ToV2);
+    /// <summary>v1 → v2: resultados completos; v2 → v3: reembolso das compras obsoletas e saneamento dos nós.</summary>
+    public static MigrationRegistry Default { get; } = new MigrationRegistry()
+        .Register(TdProfileData.Schema, 1, V1ToV2)
+        .Register(TdProfileData.Schema, 2, V2ToV3);
+
+    // SealsEarned é cumulativo; remover compras obsoletas reembolsa seu custo integral
+    // por SealsAvailable, sem conceder selos novos nem comprar os substitutos automaticamente.
+    private static JsonNode V2ToV3(JsonNode root)
+    {
+        if (root["purchasedNodes"] is JsonArray nodes)
+        {
+            var ids = nodes.Select(n => n?.GetValue<string>()).Where(n => n is not null).Cast<string>().ToArray();
+            root["purchasedNodes"] = new JsonArray(TdProfileSerializer.SanitizeNodes(ids)
+                .Select(id => (JsonNode?)JsonValue.Create(id)).ToArray());
+        }
+        return root;
+    }
 
     private static JsonNode V1ToV2(JsonNode root)
     {

@@ -1,14 +1,14 @@
 namespace SideWar.Persistence.Profile;
 
 /// <summary>
-/// Payload de profile-td.json (SDD-28 RF-28.10, 28.11, 28.13; ADR-035): perfil v2 do jogo Tower Defense.
+/// Payload de profile-td.json (SDD-28 RF-28.10, 28.11, 28.13; ADR-035): perfil v3 do jogo Tower Defense.
 /// DTO puro, sem referência ao estado da simulação. Selos gastos NÃO são gravados: derivam dos nós comprados e do custo em
 /// <c>td-meta.json</c> (<see cref="TdProfileRules"/>), para o arquivo nunca divergir do conteúdo.
 /// </summary>
 public sealed record TdProfileData
 {
     public const string Schema = "sidewar.td-profile";
-    public const int SchemaVersion = 2;
+    public const int SchemaVersion = 3;
 
     /// <summary>Total de selos já ganhos (1 por estrela nova, 1 por desafio, mais os iniciais da migração do idle).</summary>
     public int SealsEarned { get; init; }

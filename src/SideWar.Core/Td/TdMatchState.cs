@@ -54,6 +54,12 @@ public sealed partial class TdMatchState
         Integrity = content.Stages.Rules.CoreIntegrity;
         IntegrityMax = Integrity;
         Credits = stage.StartingCredits + content.Runes.CreditSources.StartingCreditsBonus;
+        // Cada nó comprado conta uma vez; créditos de meta são aplicados somente na criação da partida.
+        foreach (var node in content.Meta.Branches.SelectMany(b => b.Nodes))
+            if (_metaNodes.Contains(node.Id))
+                foreach (var effect in node.Effects)
+                    if (effect.Kind == "startingCredits")
+                        Credits += (long)effect.Value;
         _ownedRunes = 1UL << Array.FindIndex(content.Runes.Nodes, n => n.Id == content.Runes.CenterId);
         AutoStart = content.Stages.Rules.AutoStart.DefaultMode == "countdown" ? AutoStartMode.Countdown : AutoStartMode.Off;
         AutoStartSeconds = content.Stages.Rules.AutoStart.DefaultCountdownSeconds;
@@ -62,7 +68,7 @@ public sealed partial class TdMatchState
 
     /// <summary>
     /// Cria a partida da fase <paramref name="stageId"/> (1 a 6) em Preparo, com créditos e integridade iniciais.
-    /// <paramref name="unlockedMetaNodes"/>: ids de nós da árvore já comprados (hook da TD.5; hoje só libera habilidades por nó, ex.: <c>operation.snapshot</c>).
+    /// <paramref name="unlockedMetaNodes"/>: ids de nós da árvore já comprados (inclui créditos iniciais e desbloqueio de habilidades, ex.: <c>operation.snapshot</c>).
     /// </summary>
     public static TdMatchState Create(TdContent content, int stageId, Rng rng, IEnumerable<string>? unlockedMetaNodes = null)
     {

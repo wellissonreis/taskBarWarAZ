@@ -3,7 +3,7 @@ using SideWar.Core.Td;
 
 namespace SideWar.Persistence.Profile;
 
-/// <summary>Regras de selos do perfil v2 (RF-28.13), derivadas do conteúdo <c>td-meta.json</c>.</summary>
+/// <summary>Regras de selos do perfil v3 (RF-28.13), derivadas do conteúdo <c>td-meta.json</c>.</summary>
 public static class TdProfileRules
 {
     /// <summary>Soma do custo dos nós comprados (id desconhecido não custa nada e é ignorado).</summary>

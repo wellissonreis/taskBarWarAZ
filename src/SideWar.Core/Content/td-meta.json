@@ -4,9 +4,9 @@
   "branches": [
     { "id": "infrastructure", "name": "Infraestrutura", "nodes": [
       { "id": "infrastructure.credits",  "name": "Orçamento inicial", "cost": 1, "effects": [ { "kind": "startingCredits", "value": 10, "target": null } ] },
-      { "id": "infrastructure.sell75",   "name": "Revenda 75%",       "cost": 2, "effects": [ { "kind": "sellRefund", "value": 0.75, "target": null } ] },
-      { "id": "infrastructure.slots1",   "name": "Mais uma posição",  "cost": 3, "effects": [ { "kind": "maxTowers", "value": 1, "target": null } ] },
-      { "id": "infrastructure.slots2",   "name": "Revenda 80% e posição extra", "cost": 4, "effects": [ { "kind": "maxTowers", "value": 2, "target": null }, { "kind": "sellRefund", "value": 0.8, "target": null } ] }
+      { "id": "infrastructure.startingCredits1", "name": "Créditos iniciais I", "cost": 2, "effects": [ { "kind": "startingCredits", "value": 40, "target": null } ] },
+      { "id": "infrastructure.startingCredits2", "name": "Créditos iniciais II", "cost": 3, "effects": [ { "kind": "startingCredits", "value": 40, "target": null } ] },
+      { "id": "infrastructure.startingCredits3", "name": "Créditos iniciais III", "cost": 4, "effects": [ { "kind": "startingCredits", "value": 40, "target": null } ] }
     ] },
     { "id": "defense", "name": "Defesa", "nodes": [
       { "id": "defense.damage1",    "name": "Dano +3%",        "cost": 1, "effects": [ { "kind": "damagePercent", "value": 3, "target": null } ] },
