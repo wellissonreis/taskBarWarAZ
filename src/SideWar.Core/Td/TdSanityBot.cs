@@ -178,7 +178,7 @@ public static class TdSanityBot
 
         private void Spend()
         {
-            while (_s.Fragments > 0 && _s.Apply(new AwakenRune()).IsOk) { } // teia: despertar sempre que houver fragmento
+            while (_s.Fragments > 0 && _s.Frontier.Count > 0 && _s.Apply(new AwakenRune(_s.Frontier[0])).IsOk) { } // teia: despertar sempre que houver fragmento
             while (_next < _plan.Length)
             {
                 var st = _plan[_next];

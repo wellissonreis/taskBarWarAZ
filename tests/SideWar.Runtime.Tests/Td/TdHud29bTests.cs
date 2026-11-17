@@ -168,7 +168,7 @@ public sealed class TdHud29bTests
         typeof(TdMatchState).GetProperty("Fragments")!.SetValue(r.Match, 2L);
         var avail = r.Ui.BuildPopover()!.Items.First(i => i.Action == TdUiAction.SelectRune && i.Fill == TdUiController.RuneAvailable);
         r.Ui.Activate(avail);
-        Assert.Contains(r.Sent, c => c is AwakenRune);
+        Assert.Contains(r.Sent, c => c is AwakenRune a && a.NodeId == avail.SArg); // o nó clicado, não um sorteado
     }
 
     [Fact]

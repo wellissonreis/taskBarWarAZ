@@ -196,7 +196,7 @@ public sealed class TdRuneUiTests
         Assert.Equal("Clique para despertar · 1 fragmento", t.Action);
         Assert.Equal(TdTone.Accent, t.ActionTone);
         r.Ui.Activate(avail);
-        Assert.Contains(r.Sent, c => c is AwakenRune);
+        Assert.Contains(r.Sent, c => c is AwakenRune a && a.NodeId == avail.SArg); // o nó clicado, não um sorteado
         var on = r.Node(i => i.Fill == TdUiController.RuneOn);
         r.Ui.Hover(on);
         t = r.Ui.BuildPopover()!.Tip!;

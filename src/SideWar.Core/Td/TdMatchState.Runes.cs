@@ -4,8 +4,8 @@ using SideWar.Core.Simulation;
 namespace SideWar.Core.Td;
 
 /// <summary>
-/// Teia de runas do design (TD.29a, SDD-29 §21): 32 nós fixos (4 anéis × 8 setores), 8 tipos de efeito. Cada FRAGMENTO desperta um nó
-/// ALEATÓRIO da fronteira (sorteio pelo <c>Rng</c> da partida). Persiste na corrida contínua; some com a partida.
+/// Teia de runas do design (TD.29a, SDD-29 §21): 32 nós fixos (4 anéis × 8 setores), 8 tipos de efeito. Cada FRAGMENTO desperta o nó
+/// ESCOLHIDO da fronteira (TD.30d: sem sorteio, sem consumo de <c>Rng</c>). Persiste na corrida contínua; some com a partida.
 /// </summary>
 public sealed partial class TdMatchState
 {
@@ -87,18 +87,17 @@ public sealed partial class TdMatchState
         }
     }
 
-    private CommandResult DoAwakenRune()
+    private CommandResult DoAwakenRune(string nodeId)
     {
         if (!Running) return Reject(CommandReason.InvalidPhase);
+        int ni = nodeId is null ? -1 : NodeIndex(nodeId);
+        if (ni < 0) return Reject(CommandReason.UnknownRuneNode);
         if (Fragments < 1) return Reject(CommandReason.NoFragments, 1 - Fragments);
         var slots = WebSlots();
-        Span<int> frontier = stackalloc int[WebRings * WebSectors];
-        int count = 0;
-        for (int r = 0; r < WebRings; r++)
-            for (int k = 0; k < WebSectors; k++)
-                if (InFrontier(r, k)) frontier[count++] = Slot(r, k);
-        if (count == 0) return Reject(CommandReason.WebComplete);
-        int pick = frontier[(int)(_rng.NextUInt() % (uint)count)];
+        var node = _content.Runes.Nodes[ni];
+        if (AwakenedCount >= WebRings * WebSectors) return Reject(CommandReason.WebComplete);
+        if (!InFrontier(node.Ring, node.Sector)) return Reject(CommandReason.RuneNotInFrontier);
+        int pick = Slot(node.Ring, node.Sector);
         Fragments--;
         _awakened |= 1u << pick;
         RebuildRuneEffects();

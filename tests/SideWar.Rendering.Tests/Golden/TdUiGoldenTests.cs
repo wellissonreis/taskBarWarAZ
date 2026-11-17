@@ -70,7 +70,7 @@ public sealed class TdUiGoldenTests
             case UiScene.RunesTipAvailable or UiScene.RunesTipAwake or UiScene.RunesTipLocked:
             {
                 typeof(TdMatchState).GetProperty("Fragments")!.SetValue(match, 5L);
-                for (int i = 0; i < 4; i++) match.Apply(new AwakenRune());
+                for (int i = 0; i < 4; i++) match.Apply(new AwakenRune(match.Frontier[0]));
                 typeof(TdMatchState).GetProperty("Fragments")!.SetValue(match, 2L);
                 ui.Sync();
                 bool modal = scene >= UiScene.RunesTipAvailable;

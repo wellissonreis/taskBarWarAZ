@@ -96,6 +96,10 @@ public enum CommandReason : byte
     NoFragments,
     /// <summary><c>AwakenRune</c> com a teia inteira despertada (TD.29a).</summary>
     WebComplete,
+    /// <summary><c>AwakenRune</c> com id de nó inexistente (TD.30d).</summary>
+    UnknownRuneNode,
+    /// <summary><c>AwakenRune</c> num nó já despertado ou fora da fronteira (TD.30d).</summary>
+    RuneNotInFrontier,
 }
 
 /// <summary>Resultado de um comando: <c>Missing</c> = créditos que faltam (só em <see cref="CommandReason.InsufficientCredits"/>).</summary>

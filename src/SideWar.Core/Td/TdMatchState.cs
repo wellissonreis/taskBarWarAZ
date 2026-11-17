@@ -263,7 +263,7 @@ public sealed partial class TdMatchState
             return Reject(CommandReason.PausedCommand); // "nada de comando de tempo enquanto pausado" (SDD-29 §11)
         return command switch
         {
-            AwakenRune => DoAwakenRune(),
+            AwakenRune a => DoAwakenRune(a.NodeId),
             Pause => DoPause(),
             Resume => DoResume(),
             StartWave => DoStartWave(),

@@ -64,7 +64,7 @@ public sealed class TdRuneTests
         Assert.Equal(0, s.AwakenedCount);
         Assert.Equal(Enumerable.Range(0, 8).Select(k => "0-" + k), s.Frontier);
         ulong h = s.ComputeStateHash();
-        var r = s.Apply(new AwakenRune());
+        var r = s.Apply(new AwakenRune("0-0"));
         Assert.Equal(CommandReason.NoFragments, r.Reason);
         Assert.Equal(h, s.ComputeStateHash());
         Assert.False(s.IsAwakened("0-0"));
@@ -88,18 +88,19 @@ public sealed class TdRuneTests
     }
 
     [Fact]
-    public void Awakening_spends_one_fragment_picks_from_the_frontier_and_grows_it()
+    public void Awakening_spends_one_fragment_on_the_clicked_frontier_node_and_grows_it()
     {
         var s = New(6);
         Earn(s, 3);
         long frags = s.Fragments;
         var before = s.Frontier;
         s.ClearEvents();
-        Assert.True(s.Apply(new AwakenRune()).IsOk);
+        Assert.True(s.Apply(new AwakenRune("0-5")).IsOk);
         Assert.Equal(frags - 1, s.Fragments);
         Assert.Equal(1, s.AwakenedCount);
         var ev = Assert.Single(s.Events, e => e.Type == TdEventType.RuneAwakened);
         var node = s.RuneWeb[(int)ev.A];
+        Assert.Equal("0-5", node.Id); // exatamente o nó pedido, sem sorteio
         Assert.Contains(node.Id, before);
         Assert.True(s.IsAwakened(node.Id));
         Assert.DoesNotContain(node.Id, s.Frontier);
@@ -109,6 +110,26 @@ public sealed class TdRuneTests
         if (node.Ring > 0) neighbors.Add($"{node.Ring - 1}-{node.Sector}");
         if (node.Ring < 3) neighbors.Add($"{node.Ring + 1}-{node.Sector}");
         Assert.All(neighbors, id => Assert.True(s.IsAwakened(id) || s.Frontier.Contains(id), id));
+    }
+
+    [Fact]
+    public void Awakening_rejects_unknown_locked_awake_and_unfunded_nodes_without_cost()
+    {
+        var s = New(6);
+        Earn(s, 3);
+        Assert.True(s.Fragments >= 1);
+        long frags = s.Fragments;
+        ulong h = s.ComputeStateHash();
+        Assert.Equal(CommandReason.UnknownRuneNode, s.Apply(new AwakenRune("nope")).Reason);
+        Assert.Equal(CommandReason.RuneNotInFrontier, s.Apply(new AwakenRune("2-3")).Reason); // fora da fronteira
+        Assert.Equal(frags, s.Fragments);
+        Assert.Equal(h, s.ComputeStateHash());
+        Assert.True(s.Apply(new AwakenRune("0-0")).IsOk);
+        h = s.ComputeStateHash();
+        Assert.Equal(CommandReason.RuneNotInFrontier, s.Apply(new AwakenRune("0-0")).Reason); // já desperto
+        Assert.Equal(h, s.ComputeStateHash());
+        var t = New(6);
+        Assert.Equal(CommandReason.NoFragments, t.Apply(new AwakenRune("0-0")).Reason);
     }
 
     [Fact]
@@ -127,24 +148,24 @@ public sealed class TdRuneTests
                     Assert.True(s.IsAwakened($"{n.Ring}-{(n.Sector + 1) % 8}") || s.IsAwakened($"{n.Ring}-{(n.Sector + 7) % 8}")
                         || s.IsAwakened($"{n.Ring - 1}-{n.Sector}") || (n.Ring < 3 && s.IsAwakened($"{n.Ring + 1}-{n.Sector}")), id);
             });
-            Assert.True(s.Apply(new AwakenRune()).IsOk);
+            Assert.True(s.Apply(new AwakenRune(frontier[0])).IsOk);
         }
     }
 
     [Fact]
     public void Awakening_is_deterministic_by_seed_and_accepted_while_paused()
     {
-        ulong Run(ulong seed)
+        ulong Run(ulong seed, int pick)
         {
             var s = New(8, seed);
             Earn(s, 4);
             Assert.True(s.Apply(new Pause()).IsOk);
-            while (s.Fragments > 0) Assert.True(s.Apply(new AwakenRune()).IsOk); // em pausa
+            while (s.Fragments > 0) Assert.True(s.Apply(new AwakenRune(s.Frontier[pick])).IsOk); // em pausa
             Assert.True(s.Paused);
             return s.ComputeStateHash();
         }
-        Assert.Equal(Run(5), Run(5));
-        Assert.NotEqual(Run(5), Run(6));
+        Assert.Equal(Run(5, 0), Run(5, 0));
+        Assert.NotEqual(Run(5, 0), Run(5, 1)); // o nó pedido decide
     }
 
     [Fact]
@@ -152,12 +173,12 @@ public sealed class TdRuneTests
     {
         var s = New(40);
         Earn(s, 32);
-        for (int i = 0; i < 32; i++) Assert.True(s.Apply(new AwakenRune()).IsOk);
+        for (int i = 0; i < 32; i++) Assert.True(s.Apply(new AwakenRune(s.Frontier[0])).IsOk);
         Assert.Equal(32, s.AwakenedCount);
         Assert.Empty(s.Frontier);
         Assert.All(s.RuneWeb, n => Assert.True(s.IsAwakened(n.Id)));
         for (int i = 0; i < 100_000 && s.Fragments == 0; i++) s.Step();
-        if (s.Fragments > 0) Assert.Equal(CommandReason.WebComplete, s.Apply(new AwakenRune()).Reason);
+        if (s.Fragments > 0) Assert.Equal(CommandReason.WebComplete, s.Apply(new AwakenRune("0-0")).Reason);
     }
 
     [Fact]
@@ -167,7 +188,7 @@ public sealed class TdRuneTests
         Earn(s, 32);
         int baseMax = s.IntegrityMax;
         int integrity = s.Integrity;
-        while (s.Fragments > 0 && s.Apply(new AwakenRune()).IsOk) { }
+        while (s.Fragments > 0 && s.Frontier.Count > 0 && s.Apply(new AwakenRune(s.Frontier[0])).IsOk) { }
         int cores = s.AwakenedOfType("core");
         Assert.True(cores > 0);
         Assert.Equal(baseMax + cores, s.IntegrityMax);

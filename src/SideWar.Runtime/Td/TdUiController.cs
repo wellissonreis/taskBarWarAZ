@@ -256,14 +256,14 @@ public sealed partial class TdUiController
                 Changed?.Invoke(); break;
             case TdUiAction.SelectRune when item.SArg is not null:
             {
-                // TD.30c: clicar num nó disponível gasta 1 fragmento (o Core sorteia entre os disponíveis); bloqueado/despertado só seleciona.
+                // TD.30c: clicar num nó disponível gasta 1 fragmento (o Core desperta exatamente esse nó); bloqueado/despertado só seleciona.
                 _selectedRune = item.SArg;
                 var rm = _match();
-                if (rm.Fragments > 0 && !rm.IsAwakened(item.SArg) && rm.Frontier.Contains(item.SArg)) _send(new AwakenRune());
+                if (rm.Fragments > 0 && !rm.IsAwakened(item.SArg) && rm.Frontier.Contains(item.SArg)) _send(new AwakenRune(item.SArg));
                 Changed?.Invoke(); break;
             }
             case TdUiAction.AwakenRune:
-                if (_match().Fragments > 0 && _match().Frontier.Count > 0) _send(new AwakenRune());
+                if (_selectedRune is not null && _match().Fragments > 0 && _match().Frontier.Contains(_selectedRune)) _send(new AwakenRune(_selectedRune));
                 Changed?.Invoke(); break;
             case TdUiAction.GameOption:
             {

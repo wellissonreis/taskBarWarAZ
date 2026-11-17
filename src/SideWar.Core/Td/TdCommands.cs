@@ -53,7 +53,7 @@ public sealed record Pause : IGameCommand;
 public sealed record Resume : IGameCommand;
 
 /// <summary>
-/// Desperta uma runa ALEATÓRIA da fronteira da teia gastando 1 fragmento (TD.29a). Sorteio pelo <c>Rng</c> da partida (replay determinístico);
-/// aceito a qualquer momento da corrida, inclusive em pausa; sem devolução.
+/// Desperta EXATAMENTE a runa <paramref name="NodeId"/> (TD.30d; antes TD.29a sorteava na fronteira) gastando 1 fragmento. Sem sorteio e sem
+/// consumo de <c>Rng</c>. Rejeitado sem custo se o nó não existe, já está desperto ou fora da fronteira, ou sem fragmento. Aceito em pausa; sem devolução.
 /// </summary>
-public sealed record AwakenRune : IGameCommand;
+public sealed record AwakenRune(string NodeId) : IGameCommand;
