@@ -3,6 +3,9 @@ namespace SideWar.Core.Content.Td;
 // Conteúdo TD v2 (SDD-28 RF-28.4 a RF-28.13), lado a lado com o conteúdo idle (SDD-12/27): namespace e arquivos
 // `td-*.json` novos, hash próprio. Distâncias em unidades lógicas (mundo de 1.200 unidades), tempos em segundos.
 
+// LEGADO (SDD-29): TdTowerLevelDef, TdCapstoneDef, TdBranchDef, TdTowerDef.Levels/Branches e TdStageDef.MaxTowers
+// serão removidos na TD.20/TD.21; seguem aqui só porque Runtime/Rendering ainda os consomem.
+
 /// <summary>Nível linear 1 a 3 (RF-28.5): <c>CostFactor</c> é múltiplo do custo base da torre.</summary>
 public sealed record TdTowerLevelDef(int Level, double CostFactor, double DamageMultiplier);
 
@@ -62,7 +65,7 @@ public sealed record TdBonusQuestionDef(int TimerSeconds, int CreditsBase, int C
 
 /// <summary>Regras de partida (RF-28.1 a RF-28.4, RF-28.10, RF-28.12).</summary>
 public sealed record TdMatchRulesDef(
-    int CoreIntegrity, double SellRefund, int WaveBonusBase, int WaveBonusPerWave, double HpWaveGrowth, double HpStageStep,
+    int CoreIntegrity, double SellRefund, int[] TowerCostTable, int[] TowerCostTableLow, int WaveBonusBase, int WaveBonusPerWave, double HpWaveGrowth, double HpStageStep,
     double SpawnJitter, int MaxEnemiesOnField, TdCallNextDef CallNext, TdAutoStartDef AutoStart, TdStarsDef Stars,
     TdChallengeDef[] Challenges, TdBombCrateDef BombCrate, TdBonusQuestionDef BonusQuestion);
 
@@ -86,7 +89,31 @@ public sealed record TdMetaBranchDef(string Id, string Name, TdMetaNodeDef[] Nod
 /// <summary>Selos e árvore de melhorias permanentes (RF-28.13): 3 ramos de 4 nós, custos 1 a 4.</summary>
 public sealed record TdMetaDef(int SealsPerStar, int SealsPerChallenge, TdMetaBranchDef[] Branches);
 
-/// <summary>Conteúdo TD completo e validado; <c>ContentHash</c> = SHA-256 hex dos 6 arquivos <c>td-*.json</c>.</summary>
+// ---------------------------------------------------------------- runas (SDD-29 §4)
+
+/// <summary>Efeito de runa em pontos-base inteiros (ou contagem/segundos). <c>Target</c>: torre afetada; nulo = a torre do setor (ou global no setor Geral).</summary>
+public sealed record TdRuneEffectDef(string Kind, int Value, string? Target);
+
+/// <summary>Nó da página. <c>Type</c>: center | small | notable | keystone | border. <c>Links</c>: arestas (não direcionadas) declaradas neste nó.</summary>
+public sealed record TdRuneNodeDef(
+    string Id, string Sector, string Type, string Name, string Icon, string Text, int Cost, string[] Links, TdRuneEffectDef[] Effects);
+
+public sealed record TdRuneSectorDef(string Id, string Name, string? Tower);
+
+/// <summary>Custos em créditos por tipo de nó (fixos, sem arbitragem; SDD-29 §4.2).</summary>
+public sealed record TdRuneCostsDef(int Small, int Notable, int Border, int Keystone);
+
+/// <summary>Valores-alvo das fontes de crédito da §6 (moeda única). Ainda não consumidos pelo Core: a TD.20/21/22 liga e calibra.</summary>
+public sealed record TdCreditSourcesDef(
+    int StartingCreditsBonus, int WaveBonusBase, int WaveBonusPerWave, int NoLeakBase, int NoLeakPerWave,
+    int CrateBase, int CratePerWave, int BonusQuestionBase, int BonusQuestionPerWave, int BossCredits);
+
+/// <summary>Página de runas (td-runes.json): grafo radial de 61 nós, 6 setores.</summary>
+public sealed record TdRunesDef(
+    string CenterId, TdRuneCostsDef Costs, int SellRefundCapBp, TdRuneSectorDef[] Sectors, TdCreditSourcesDef CreditSources,
+    TdRuneNodeDef[] Nodes);
+
+/// <summary>Conteúdo TD completo e validado; <c>ContentHash</c> = SHA-256 hex dos 7 arquivos <c>td-*.json</c> (com <c>td-runes.json</c>).</summary>
 public sealed record TdContent(
     TdTowerDef[] Towers, TdEnemiesDef Enemies, TdWavesDef Waves, TdStagesDef Stages, TdAbilityDef[] Abilities,
-    TdMetaDef Meta, string ContentHash);
+    TdMetaDef Meta, TdRunesDef Runes, string ContentHash);

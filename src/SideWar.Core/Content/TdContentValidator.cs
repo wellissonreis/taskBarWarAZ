@@ -36,6 +36,7 @@ public static class TdContentValidator
         Waves(c.Waves, c.Stages, c.Enemies, e);
         Abilities(c.Abilities, stageCount, c.Meta, e);
         Meta(c.Meta, c.Abilities, e);
+        Runes(c.Runes, c.Towers, e);
         return e;
     }
 
@@ -77,6 +78,11 @@ public static class TdContentValidator
         var r = def.Rules;
         Req(e, r.CoreIntegrity >= 1, "td-stages.rules.coreIntegrity deve ser >= 1");
         Req(e, r.SellRefund is > 0 and <= 1, "td-stages.rules.sellRefund deve estar em (0, 1]");
+        CostTable(e, r.TowerCostTable, "towerCostTable", 125);
+        CostTable(e, r.TowerCostTableLow, "towerCostTableLow", 120);
+        if (r.TowerCostTable.Length == r.TowerCostTableLow.Length)
+            for (var n = 0; n < r.TowerCostTable.Length; n++)
+                Req(e, r.TowerCostTableLow[n] <= r.TowerCostTable[n], $"td-stages.rules.towerCostTableLow[{n}] deve ser <= towerCostTable[{n}]");
         Req(e, r.WaveBonusBase >= 0 && r.WaveBonusPerWave >= 0, "td-stages.rules: bônus de onda deve ser >= 0");
         Req(e, r.HpWaveGrowth >= 1, "td-stages.rules.hpWaveGrowth deve ser >= 1");
         Req(e, r.HpStageStep >= 0, "td-stages.rules.hpStageStep deve ser >= 0");
@@ -135,6 +141,22 @@ public static class TdContentValidator
             Req(e, regions.Add(s.Region), $"td-stages.{s.Id}.region duplicada '{s.Region}'");
             Req(e, challenges.Contains(s.Challenge), $"td-stages.{s.Id}.challenge referencia desafio inexistente '{s.Challenge}'");
         }
+    }
+
+    private const int CostTableLength = 48; // n = 0..47 (teto técnico de 48 torres, SDD-29 §5.3)
+
+    private static void CostTable(List<string> e, int[] table, string name, int growthPercent)
+    {
+        Req(e, table is not null && table.Length == CostTableLength, $"td-stages.rules.{name} deve ter {CostTableLength} entradas (n = 0..{CostTableLength - 1})");
+        if (table is null || table.Length == 0)
+            return;
+        Req(e, table[0] == 100, $"td-stages.rules.{name}[0] deve ser 100");
+        for (var n = 1; n < table.Length; n++)
+            Req(e, table[n] > table[n - 1], $"td-stages.rules.{name} deve ser estritamente crescente (índice {n})");
+        // Tabela inteira pré-computada = round(100 × g^n); confere sem Math.Pow (decimal exato).
+        decimal f = 100m, g = growthPercent / 100m;
+        for (var n = 0; n < table.Length; n++, f *= g)
+            Req(e, table[n] == (int)Math.Round(f, MidpointRounding.AwayFromZero), $"td-stages.rules.{name}[{n}] deve ser {(int)Math.Round(f, MidpointRounding.AwayFromZero)} (round(100 × {g}^{n}))");
     }
 
     // ---------------------------------------------------------------- inimigos
@@ -392,5 +414,125 @@ public static class TdContentValidator
         foreach (var a in abilities.Where(a => a.UnlockMetaNode is not null))
             Req(e, unlockedByNode.TryGetValue(a.Id, out var node) && node == a.UnlockMetaNode,
                 $"td-abilities.{a.Id}: o nó '{a.UnlockMetaNode}' deve ter o efeito unlockAbility '{a.Id}'");
+    }
+
+    // ---------------------------------------------------------------- runas (SDD-29 §4, §5.2, CA-29.4)
+
+    private static readonly string[] RuneTypes = ["center", "small", "notable", "keystone", "border"];
+    private static readonly string[] RuneEffectKinds =
+    [
+        "damageBp", "cadenceBp", "rangeBp", "slowBp", "areaBp", "nodeDurationBp", "nodeDamageBp", "nodeCooldownBp", "auraBp",
+        "creditKillBp", "waveBonusBp", "abilityCooldownBp", "sellRefundBp", "integrity",
+        "armorPenetrationBp", "superHitEvery", "superHitMultiplierBp", "paralyzeEverySeconds", "paralyzeSeconds", "vulnerableBp",
+        "slowArea", "splashFactorBp", "damageVsArmoredBossBp", "burnZoneSeconds", "nodes", "explodeOnEnd", "spawnAtFront", "nodeHolds",
+        "neighborCadenceBp", "neighborDamageBp", "scaleDurationSeconds", "costGrowthLow", "callNextBonusBp", "damagePerDistinctTypeBp",
+        "damageVsSlowedBp", "damageVsHeldBp", "nodeDurationWithScaleSetBp", "towerCostDiscountBp", "damageNoLeakBp",
+    ];
+    private const int SectorCount = 6;
+    private const int NodesPerSector = 9; // 6 pequenos + 2 notáveis + 1 keystone
+    private const int MaxRuneWords = 6;
+
+    private static void Runes(TdRunesDef r, TdTowerDef[] towers, List<string> e)
+    {
+        const string f = "td-runes";
+        var towerIds = towers.Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
+        var c = r.Costs;
+        Req(e, c.Small > 0 && c.Notable > c.Small && c.Keystone > c.Notable && c.Border >= c.Small,
+            $"{f}.costs: 0 < small < notable < keystone e border >= small");
+
+        Ids(r.Sectors, x => x.Id, $"{f}.sectors", e);
+        Req(e, r.Sectors.Length == SectorCount, $"{f}.sectors: exatamente {SectorCount} setores");
+        foreach (var s in r.Sectors)
+        {
+            Req(e, Text(s.Name), $"{f}.sectors.{s.Id}.name vazio");
+            Req(e, s.Tower is null || towerIds.Contains(s.Tower), $"{f}.sectors.{s.Id}.tower referencia torre inexistente '{s.Tower}'");
+        }
+        var sectorIds = r.Sectors.Select(s => s.Id).ToHashSet(StringComparer.Ordinal);
+        Req(e, r.Sectors.Count(s => s.Tower is null) == 1, $"{f}.sectors: exatamente um setor geral (tower nula)");
+        foreach (var t in towerIds)
+            Req(e, r.Sectors.Any(s => s.Tower == t), $"{f}.sectors: falta o setor da torre '{t}'");
+
+        var ids = Ids(r.Nodes, x => x.Id, $"{f}.nodes", e);
+        Req(e, r.Nodes.Length == 1 + SectorCount * NodesPerSector + SectorCount, $"{f}.nodes: esperado {1 + SectorCount * NodesPerSector + SectorCount} nós (encontrado {r.Nodes.Length})");
+        Req(e, ids.Contains(r.CenterId), $"{f}.centerId referencia nó inexistente '{r.CenterId}'");
+        Req(e, r.Nodes.Count(n => n.Type == "center") == 1, $"{f}: exatamente um nó 'center'");
+
+        var byId = new Dictionary<string, TdRuneNodeDef>(StringComparer.Ordinal);
+        foreach (var n in r.Nodes)
+            byId.TryAdd(n.Id, n);
+        var adj = r.Nodes.ToDictionary(n => n.Id, _ => new HashSet<string>(StringComparer.Ordinal), StringComparer.Ordinal);
+        foreach (var n in r.Nodes)
+        {
+            var o = $"{f}.{n.Id}";
+            Req(e, RuneTypes.Contains(n.Type), $"{o}.type inválido '{n.Type}'");
+            Req(e, Text(n.Name) && Text(n.Icon) && Text(n.Text), $"{o}: name, icon e text não podem ser vazios");
+            if (n.Type == "center")
+            {
+                Req(e, n.Id == r.CenterId && n.Cost == 0 && n.Effects.Length == 0, $"{o}: o centro tem custo 0, sem efeitos e é o centerId");
+            }
+            else
+            {
+                var expected = n.Type switch { "small" => c.Small, "notable" => c.Notable, "keystone" => c.Keystone, _ => c.Border };
+                Req(e, n.Cost == expected, $"{o}.cost deve ser {expected} ({n.Type})");
+                Req(e, n.Effects.Length >= 1, $"{o}: ao menos um efeito");
+                Req(e, n.Id != r.CenterId, $"{o}: só o centro pode ter o centerId");
+            }
+            if (n.Type is "notable" or "keystone" or "border")
+                Req(e, n.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length <= MaxRuneWords, $"{o}.text deve ter no máximo {MaxRuneWords} palavras");
+            Req(e, n.Type == "border" ? n.Sector == "border" : n.Type == "center" || sectorIds.Contains(n.Sector), $"{o}.sector inválido '{n.Sector}'");
+            foreach (var ef in n.Effects)
+            {
+                Req(e, RuneEffectKinds.Contains(ef.Kind), $"{o}: efeito desconhecido '{ef.Kind}'");
+                Req(e, ef.Value != 0, $"{o}.{ef.Kind}.value deve ser != 0");
+                Req(e, ef.Target is null || towerIds.Contains(ef.Target), $"{o}.{ef.Kind}.target referencia torre inexistente '{ef.Target}'");
+            }
+            foreach (var l in n.Links)
+            {
+                if (!byId.ContainsKey(l))
+                {
+                    e.Add($"{o}.links referencia nó inexistente '{l}'");
+                    continue;
+                }
+                Req(e, l != n.Id, $"{o}.links: aresta para si mesmo");
+                adj[n.Id].Add(l);
+                adj[l].Add(n.Id);
+            }
+            if (n.Type == "border")
+                Req(e, n.Links.Length == 2 && n.Links.Select(l => byId.TryGetValue(l, out var x) ? x.Sector : "").Distinct().Count() == 2,
+                    $"{o}: nó de fronteira liga exatamente 2 setores diferentes");
+        }
+
+        // Estrutura por setor: 6 pequenos, 2 notáveis, 1 keystone.
+        foreach (var s in r.Sectors)
+        {
+            var mine = r.Nodes.Where(n => n.Sector == s.Id).ToArray();
+            Req(e, mine.Length == NodesPerSector && mine.Count(n => n.Type == "small") == 6 && mine.Count(n => n.Type == "notable") == 2 && mine.Count(n => n.Type == "keystone") == 1,
+                $"{f}.sectors.{s.Id}: 9 nós (6 pequenos, 2 notáveis, 1 keystone)");
+        }
+        Req(e, r.Nodes.Count(n => n.Type == "border") == SectorCount, $"{f}: {SectorCount} notáveis de fronteira");
+
+        // Grafo conexo a partir do centro (CA-29.4): cada nó alcançável; cada setor com acesso direto ao centro ou por fronteira.
+        if (byId.ContainsKey(r.CenterId))
+        {
+            var seen = new HashSet<string>(StringComparer.Ordinal) { r.CenterId };
+            var queue = new Queue<string>([r.CenterId]);
+            while (queue.Count > 0)
+                foreach (var next in adj[queue.Dequeue()])
+                    if (seen.Add(next))
+                        queue.Enqueue(next);
+            foreach (var n in r.Nodes.Where(n => !seen.Contains(n.Id)))
+                e.Add($"{f}.{n.Id}: nó inalcançável a partir do centro (grafo desconexo)");
+        }
+
+        // Regra anti-exploit (§5.2): descontoMáximoDeCompra + tetoDeVenda < 100%.
+        var maxDiscountBp = r.Nodes.SelectMany(n => n.Effects).Where(x => x.Kind == "towerCostDiscountBp").Sum(x => (long)x.Value);
+        Req(e, r.SellRefundCapBp is > 0 and < 10000, $"{f}.sellRefundCapBp deve estar em (0, 10000)");
+        Req(e, maxDiscountBp + r.SellRefundCapBp < 10000,
+            $"{f}: anti-exploit: desconto máximo de compra ({maxDiscountBp} bp) + teto de venda ({r.SellRefundCapBp} bp) deve ser < 10000 bp");
+
+        var cs = r.CreditSources;
+        Req(e, cs.StartingCreditsBonus >= 0 && cs.WaveBonusBase >= 0 && cs.WaveBonusPerWave >= 0 && cs.NoLeakBase >= 0 && cs.NoLeakPerWave >= 0
+               && cs.CrateBase >= 0 && cs.CratePerWave >= 0 && cs.BonusQuestionBase >= 0 && cs.BonusQuestionPerWave >= 0 && cs.BossCredits >= 0,
+            $"{f}.creditSources: todos os valores devem ser >= 0");
     }
 }
