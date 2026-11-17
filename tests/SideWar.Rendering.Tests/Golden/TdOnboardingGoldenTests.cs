@@ -84,13 +84,14 @@ public sealed class TdOnboardingGoldenTests
         void Bolt(int x) { m.Apply(new BuildTower("bolt", x)); ui.Sync(); }
         void Intro()
         {
-            host.HudMinimized = false; ui.Sync();
+            ui.Activate(item(TdUiAction.HudRestore, null)); ui.Sync();
             ui.Activate(item(TdUiAction.HudMinimize, null)); ui.Sync();
             ui.Activate(item(TdUiAction.HudRestore, null)); ui.Sync();
         }
         void Acks(int n) { for (int i = 0; i < n; i++) ui.Activate(item(TdUiAction.TutorialNext, null)); }
         void ToPrep2()
         {
+            ui.Cancel();
             m.Apply(new StartWave());
             for (int i = 0; i < 30 * 900 && m.Phase == MatchPhase.Onda; i++) m.Step();
             ui.Sync();
@@ -98,12 +99,12 @@ public sealed class TdOnboardingGoldenTests
         switch (scene)
         {
             case Scene.HudOpen: break;
-            case Scene.HudCollapse: host.HudMinimized = false; ui.Sync(); break;
+            case Scene.HudCollapse: ui.Activate(item(TdUiAction.HudRestore, null)); ui.Sync(); break;
             case Scene.Core: Intro(); break;
             case Scene.Credits: Intro(); Acks(1); break;
             case Scene.Portal: Intro(); Acks(2); break;
             case Scene.Build: Intro(); Acks(3); break;
-            case Scene.Point: Intro(); Acks(3); ui.Activate(item(TdUiAction.BuildToggle, null)); break;
+            case Scene.Point: Intro(); Acks(3); ui.Activate(item(TdUiAction.BuildToggle, null)); ui.Activate(item(TdUiAction.ChooseTower, "bolt")); break;
             case Scene.Tower: Intro(); Acks(3); ui.ClickPoint(600); break;
             case Scene.Range: Intro(); Acks(3); Bolt(330); break;
             case Scene.Wave: Intro(); Acks(3); Bolt(330); Acks(1); break;
@@ -246,7 +247,7 @@ public sealed class TdOnboardingGoldenTests
         Assert.True(ui.View.BandHint);
         Assert.False(with.Bytes.AsSpan().SequenceEqual(without.Bytes));
 
-        var (ui2, _) = Setup(Scene.Build);
+        var (ui2, _) = Setup(Scene.HudOpen);
         using var r = new TdUiRenderer(typo, 96) { TextEnabled = false };
         var hud = ui2.BuildHud();
         var plain = hud with { Items = [.. hud.Items.Select(i => i with { Highlight = false })] };

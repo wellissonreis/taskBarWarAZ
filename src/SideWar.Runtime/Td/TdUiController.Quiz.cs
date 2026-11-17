@@ -49,6 +49,7 @@ public sealed partial class TdUiController
     {
         if (_quizQ is null && _quizOut == QuizOutcome.None) return;
         _quizQ = null;
+        UpdateModalPause();
         _quizOut = QuizOutcome.None;
         Changed?.Invoke();
     }
@@ -64,6 +65,7 @@ public sealed partial class TdUiController
             _quizQ = _quiz!.Pick(TutorialOn(m) && !_quizExampleDone ? QuizExampleId : null);
             _quizOut = QuizOutcome.None;
             _quizStart = now;
+            UpdateModalPause();
             Changed?.Invoke();
             return;
         }
@@ -72,6 +74,7 @@ public sealed partial class TdUiController
             if (m.BonusAnswered) { ClearQuiz(); return; }
             if (now - _quizStart >= m.Content.Stages.Rules.BonusQuestion.TimerSeconds)
             {
+                _send(new AnswerBonus(QuizNumber(_quizQ.Id), false));
                 _quizOut = QuizOutcome.Expired;
                 _quizResultUntil = now + QuizWrongSeconds;
                 _quizExampleDone = true;
@@ -97,7 +100,9 @@ public sealed partial class TdUiController
     private void CloseQuiz()
     {
         _quizExampleDone = true;
+        if (_quizQ is not null && _quizOut == QuizOutcome.None) _send(new AnswerBonus(QuizNumber(_quizQ.Id), false));
         _quizQ = null;
+        UpdateModalPause();
         _quizOut = QuizOutcome.None;
         Changed?.Invoke();
     }

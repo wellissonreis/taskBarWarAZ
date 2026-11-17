@@ -94,6 +94,8 @@ public sealed class SceneWindow : IDisposable
     /// <summary>HUD and popover windows of the TD match (TD.8), created on first use.</summary>
     public TdUiWindow GetOrCreateTdHud() { CheckAccess(); return tdHud ??= new TdUiWindow(owner, this, "SideWar.TdHud"); }
     public TdUiWindow GetOrCreateTdTooltip() { CheckAccess(); return tdTooltip ??= new TdUiWindow(owner, this, "SideWar.TdTooltip"); }
+    public TdUiWindow CreateTdScrim() { CheckAccess(); return new TdUiWindow(owner, this, "SideWar.TdScrim"); }
+
     public TdUiWindow GetOrCreateTdPopover() { CheckAccess(); return tdPopover ??= new TdUiWindow(owner, this, "SideWar.TdPopover"); }
 
     /// <summary>Click-through absent-mode seal window, created on first use (RF-22.7, ADR-028).</summary>

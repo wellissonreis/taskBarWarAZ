@@ -49,6 +49,24 @@ public sealed class TdGameHostTests
     }
 
     [Fact]
+    public void Modal_pause_has_no_tick_deadline_and_logs_commands_in_frame_sequence()
+    {
+        var r = new Rig();
+        r.Host.OnCommand(new StartWave()); r.Wake();
+        r.Host.OnCommand(new Pause()); r.Wake();
+        long frame = r.Match.Frame;
+        Assert.Null(r.Host.NextDeadline);
+        r.Run(10);
+        Assert.Equal(frame, r.Match.Frame);
+        r.Host.OnCommand(new Resume()); r.Wake();
+        Assert.NotNull(r.Host.NextDeadline);
+        var log = r.Host.CommandLog.Where(e => e.Frame == frame).ToArray();
+        Assert.True(log.Zip(log.Skip(1), (a, b) => b.Seq > a.Seq).All(x => x));
+        r.Run(1);
+        Assert.True(r.Match.Frame > frame);
+    }
+
+    [Fact]
     public void Preparo_does_not_step_and_has_no_deadline()
     {
         var r = new Rig();

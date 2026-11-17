@@ -9,7 +9,7 @@ public enum TdTutorialStep : byte
     None,
     /// <summary>HUD nasce recolhido: "Clique no chip para abrir" (seta pulsante).</summary>
     HudOpen,
-    /// <summary>"Clique na seta para recolher".</summary>
+    /// <summary>"Feche a modal com Esc".</summary>
     HudCollapse,
     /// <summary>Núcleo e integridade (informativo, OK).</summary>
     Core,
@@ -89,7 +89,7 @@ public sealed partial class TdUiController
     public bool OnboardingEnabled => _onb is not null;
 
     /// <summary>Texto da dica de 1ª vez em exibição (null = nenhuma). Some sozinha em <see cref="TipSeconds"/> ou ao clicar.</summary>
-    public string? CurrentTip => _tipText;
+    public string? CurrentTip => Step == TdTutorialStep.HudOpen ? "Toque no chip para abrir" : _tipText;
 
     /// <summary>Passo atual do tutorial (None = tutorial concluído, pulado ou fora da fase 1).</summary>
     public TdTutorialStep Step => ComputeStep(_match());
@@ -122,13 +122,13 @@ public sealed partial class TdUiController
         bool started = m.WaveNumber > 0 || m.Phase == MatchPhase.Onda;
         if (!started)
         {
-            if (_hudPhase is 0 or 2) return TdTutorialStep.HudOpen;
+            if (_hudPhase == 0) return TdTutorialStep.HudOpen;
             if (_hudPhase == 1) return TdTutorialStep.HudCollapse;
             if ((_ack & Ack.Core) == 0) return TdTutorialStep.Core;
             if ((_ack & Ack.Credits) == 0) return TdTutorialStep.Credits;
             if ((_ack & Ack.Portal) == 0) return TdTutorialStep.Portal;
             if (m.Towers.Count == 0)
-                return Mode == TdUiMode.Build ? (_chosenX >= 0 && _moveTowerId == 0 ? TdTutorialStep.Tower : TdTutorialStep.Point) : TdTutorialStep.Build;
+                return BuildActive ? TdTutorialStep.Point : Mode == TdUiMode.Build ? TdTutorialStep.Tower : TdTutorialStep.Build;
             if ((_ack & Ack.Range) == 0) return TdTutorialStep.Range;
             return TdTutorialStep.Wave;
         }
@@ -222,7 +222,7 @@ public sealed partial class TdUiController
         _ack = Ack.None;
         _abilityDone = _crateDone = _crateSeen = false;
         _quizExampleDone = false;
-        _hudPhase = _host.HudMinimized ? 0 : 1;
+        _hudPhase = 0;
         _hurtUntil = _hurtNextAt = double.NegativeInfinity;
         _onb.SetTutorialDone(false);
         Close();
@@ -247,9 +247,9 @@ public sealed partial class TdUiController
         UpdateTip(m);
         SyncHurt(m);
         if (_onb.TutorialDone || m.StageId != 1) return;
-        bool min = _host.HudMinimized;
+        bool min = !ModalOpen;
         if (_hudPhase == 0 && !min) _hudPhase = 1;
-        if (_hudPhase == 1 && min) _hudPhase = 2;
+        if (_hudPhase == 1 && min) _hudPhase = 3;
         if (_hudPhase == 2 && !min) _hudPhase = 3;
         if (m.CrateActive) _crateSeen = true;
         else if (_crateSeen) _crateDone = true;
@@ -417,8 +417,8 @@ public sealed partial class TdUiController
 
     private (TdIcon Icon, string Text, string? Sub, bool Ok) StepLines(TdTutorialStep step, TdMatchState m) => step switch
     {
-        TdTutorialStep.HudOpen => (TdIcon.Expand, "Clique no chip para abrir o HUD", null, false),
-        TdTutorialStep.HudCollapse => (TdIcon.Collapse, "Clique na seta para recolher", null, false),
+        TdTutorialStep.HudOpen => (TdIcon.Expand, "Toque no chip para abrir", null, false),
+        TdTutorialStep.HudCollapse => (TdIcon.Collapse, "Feche a modal com Esc", null, false),
         TdTutorialStep.Core => (TdIcon.Heart, "Proteja o núcleo!", "Chegar a 0 = derrota.", true),
         TdTutorialStep.Credits => (TdIcon.Coin, "Créditos compram torres.", "Cada onda rende mais.", true),
         TdTutorialStep.Portal => (TdIcon.Portal, "Inimigos saem do portal.", "Eles correm até o núcleo.", true),
@@ -506,11 +506,12 @@ public sealed partial class TdUiController
         Card(TdIcon.Heart, "Proteja o núcleo: 0 = derrota.");
         Card(TdIcon.Coin, "Créditos compram torres.");
         Card(TdIcon.Portal, "Inimigos saem do portal.");
-        Card(TdIcon.Build, "Construir: depois clique num ponto.");
+        Card(TdIcon.Build, "Escolha torre; toque na faixa.");
+        Card(TdIcon.Coin, "Cada torre igual custa +25%.");
         Card(TdIcon.Target, "O círculo mostra o alcance.");
         Card(TdIcon.Play, "Inicie a onda: o preparo espera.");
         Card(TdIcon.FastForward, "Chame a próxima: ganhe bônus.");
-        Card(TdIcon.Coin, $"Venda em Menu, Torres: devolve {Math.Round(m.Content.Stages.Rules.SellRefund * 100):0}%.");
+        Card(TdIcon.Coin, $"Venda na aba Torres: devolve {Math.Round(m.Content.Stages.Rules.SellRefund * 100):0}%.");
         Card(TdIcon.Scale, "Use habilidades: recarregam sozinhas.");
         Card(TdIcon.Box, "Colete a caixa: botão ou atalho.");
         Card(TdIcon.Question, "Responda V ou F: ganhe bônus.");

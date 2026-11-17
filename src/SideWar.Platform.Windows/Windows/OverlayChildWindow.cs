@@ -119,6 +119,9 @@ public abstract unsafe class OverlayChildWindow : IDisposable
     private bool trackingLeave;
 
     /// <summary>True when the cursor over the client area should be the hand.</summary>
+    private protected virtual bool Activatable => false;
+    private protected virtual void OnKeyDown(int key) { }
+
     private protected virtual bool UsesHandCursor => false;
 
     /// <summary>True when the window must report HTTRANSPARENT to hit-testing (click-through seal).</summary>
@@ -140,7 +143,7 @@ public abstract unsafe class OverlayChildWindow : IDisposable
             if (atom == 0) throw Win32Error.LastError($"RegisterClassEx({className})");
             self = GCHandle.Alloc(this);
             // hWndParent on a WS_POPUP makes it owned: above the scene, hidden/destroyed with it.
-            handle = PInvoke.CreateWindowEx(WindowStyles.ForOverlay(clickThrough), name, null,
+            handle = PInvoke.CreateWindowEx(Activatable ? WindowStyles.ForOverlay(clickThrough) & ~WINDOW_EX_STYLE.WS_EX_NOACTIVATE : WindowStyles.ForOverlay(clickThrough), name, null,
                 WindowStyles.Popup, 0, 0, 1, 1, new HWND(scene.Handle), default, module,
                 (void*)GCHandle.ToIntPtr(self));
             if (handle.IsNull) throw Win32Error.LastError($"CreateWindowEx({className})");
@@ -211,7 +214,10 @@ public abstract unsafe class OverlayChildWindow : IDisposable
             if (pointer != 0) window = (OverlayChildWindow?)GCHandle.FromIntPtr(pointer).Target;
             switch (message)
             {
-                case PInvoke.WM_MOUSEACTIVATE: return new LRESULT((nint)PInvoke.MA_NOACTIVATE);
+                case PInvoke.WM_MOUSEACTIVATE: return new LRESULT(window?.Activatable == true ? 1 : (nint)PInvoke.MA_NOACTIVATE);
+                case PInvoke.WM_KEYDOWN:
+                    window?.OnKeyDown((int)wParam.Value);
+                    return new LRESULT(0);
                 case PInvoke.WM_NCHITTEST:
                     return new LRESULT(window?.HitTransparent == true ? PInvoke.HTTRANSPARENT : (nint)PInvoke.HTCLIENT);
                 case PInvoke.WM_SETCURSOR:

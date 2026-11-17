@@ -4,7 +4,7 @@ using SideWar.Runtime.Geometry;
 namespace SideWar.Runtime.Td;
 
 /// <summary>Modo do popover/UI da partida TD (TD.8, SDD-28 RF-28.14/28.20). Estado de UI: nunca vai ao log nem ao hash.</summary>
-public enum TdUiMode : byte { None, Build, Inspector, Preview, Menu, Map, End, Help, Towers }
+public enum TdUiMode : byte { None, Build, Inspector, Preview, Menu, Map, End, Help, Towers, Runes }
 
 /// <summary>Tipo de item de UI: rótulo, botão, cabeçalho de seção ou separador.</summary>
 public enum TdUiKind : byte { Label, Button, Header, Separator, Badges, Bar }
@@ -22,7 +22,7 @@ public enum TdUiAction : byte
     /// <summary>TD.17: avançar passo informativo do tutorial (OK) e pergunta-bônus (V, F, ignorar).</summary>
     TutorialNext, QuizTrue, QuizFalse, QuizClose,
     /// <summary>TD.16b: coletar a caixa-bomba pelo HUD, abrir a lista de torres (vender/reposicionar) e abrir uma torre da lista.</summary>
-    CollectCrate, TowersOpen, OpenTower,
+    CollectCrate, TowersOpen, OpenTower, ModalTab, TowerPage, AutoStartToggle, GameOption, ResumeAbility,
 }
 
 /// <summary>Ícone do HUD desenhado por código (TD.14); o renderer mapeia para caminhos vetoriais.</summary>
@@ -123,8 +123,13 @@ public sealed record TdHudView(TdUiItem[] Items, float Width, float Height, bool
 public sealed record TdTooltipView(string Text, float AnchorX, float AnchorTop);
 
 /// <summary>Visão do perfil/meta para o Mapa e a árvore (implementada no App sobre o perfil TD; o Runtime não conhece a Persistência).</summary>
+public sealed record TdGameOptions(int BandHeight = 64, bool AutoStart = false, bool Sound = false, int Volume = 60, bool Questions = true, bool Fade = true);
+
 public interface ITdUiHost
 {
+    TdGameOptions GameOptions => new();
+    void SetGameOptions(TdGameOptions options) { }
+
     bool Paused { get; }
     void TogglePause();
     void OpenSettings();

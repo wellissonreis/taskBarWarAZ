@@ -76,7 +76,7 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
     private bool NeedsSteps => Match.Phase == MatchPhase.Onda
         || (Match.Phase == MatchPhase.Preparo && Match.AutoStart == AutoStartMode.Countdown);
 
-    private bool Running => !IsShutdown && _app.SimulationRunning && NeedsSteps;
+    private bool Running => !IsShutdown && _app.SimulationRunning && !Match.Paused && NeedsSteps;
 
     public long? NextDeadline
     {
@@ -201,7 +201,8 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
     {
         if (applied is SideWar.Core.Td.LayoutChanged layout) _lastLayout = layout;
         var result = Match.Apply(applied);
-        _log.Add(new TdLogEntry(Match.Frame, applied));
+        int seq = _log.Count > 0 && _log[^1].Frame == Match.Frame ? _log[^1].Seq + 1 : 0;
+        _log.Add(new TdLogEntry(Match.Frame, applied, seq));
         _results.Enqueue((applied, result));
     }
 }

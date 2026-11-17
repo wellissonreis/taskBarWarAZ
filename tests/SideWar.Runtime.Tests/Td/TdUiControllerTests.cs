@@ -20,6 +20,8 @@ public sealed class TdUiControllerTests
 
     private sealed class FakeHost : ITdUiHost
     {
+        public TdGameOptions GameOptions { get; private set; } = new();
+        public void SetGameOptions(TdGameOptions options) => GameOptions = options;
         public bool Paused { get; set; }
         public List<string> Calls { get; } = [];
         public void TogglePause() => Calls.Add("pause");
@@ -73,53 +75,99 @@ public sealed class TdUiControllerTests
         v.Items.First(i => i.Action == a && (sarg is null || i.SArg == sarg));
 
     [Fact]
+    public void Ability_closes_and_resumes_before_sending_the_time_command()
+    {
+        var r = new Rig();
+        r.Match.Apply(new StartWave());
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
+        var ability = r.Ui.BuildPopover()!.Items.First(i => i.Action == TdUiAction.ResumeAbility && i.SArg == "scale");
+        Assert.True(ability.Enabled);
+        Assert.True(r.Match.Paused);
+        r.Ui.Activate(ability);
+        Assert.False(r.Ui.ModalOpen);
+        Assert.False(r.Match.Paused);
+        Assert.IsType<Resume>(r.Sent[^2]);
+        Assert.IsType<UseAbility>(r.Sent[^1]);
+    }
+
+    [Fact]
+    public void Game_tab_edits_options_without_resuming_or_sending_time_commands()
+    {
+        var r = new Rig();
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
+        Assert.Equal(6, r.Ui.BuildPopover()!.Items.Count(i => i.Action == TdUiAction.GameOption));
+        for (int i = 0; i < 6; i++)
+            r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.GameOption, i));
+        Assert.Equal(new TdGameOptions(88, true, true, 80, false, false), r.Host.GameOptions);
+        Assert.Single(r.Sent.OfType<Pause>());
+        Assert.Empty(r.Sent.OfType<Resume>());
+        Assert.True(r.Match.Paused);
+    }
+
+    [Fact]
+    public void Tabs_keep_one_pause_until_the_window_closes()
+    {
+        var r = new Rig();
+        foreach (var mode in new[] { TdUiMode.Build, TdUiMode.Runes, TdUiMode.Towers, TdUiMode.Menu, TdUiMode.Help })
+        {
+            r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.ModalTab, (int)mode));
+            Assert.Equal(1, r.Ui.ModalCount);
+            Assert.False(r.Ui.SceneLeftClick(300, 20, HitTarget.None));
+        }
+        Assert.Single(r.Sent.OfType<Pause>());
+        r.Ui.Cancel();
+        Assert.Single(r.Sent.OfType<Resume>());
+    }
+
+    [Fact]
     public void Click_on_free_point_opens_chooser_and_confirm_sends_BuildTower()
     {
         var r = new Rig();
-        r.Ui.ClickPoint(300);
-        Assert.Equal(TdUiMode.Build, r.Ui.Mode);
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.HudRestore));
+        Assert.True(r.Match.Paused);
         var pop = r.Ui.BuildPopover()!;
-        Assert.Contains(pop.Items, i => i.Action == TdUiAction.ChooseTower && i.SArg == "bolt" && i.Enabled);
-        Assert.Contains(pop.Items, i => i.SArg == "balancer" && !i.Enabled); // fase 2
+        Assert.Equal(720, pop.Width);
+        Assert.Equal(480, pop.Height);
         r.Ui.Activate(Find(pop, TdUiAction.ChooseTower, "bolt"));
-        var build = Assert.IsType<BuildTower>(r.Sent.Single());
-        Assert.Equal("bolt", build.TowerId);
-        Assert.Equal(TdUiMode.None, r.Ui.Mode);
+        Assert.True(r.Ui.BuildActive);
+        Assert.False(r.Match.Paused);
+        Assert.Null(r.Ui.BuildPopover());
+        r.Ui.SceneLeftClick(300, 20, HitTarget.None);
         Assert.Single(r.Match.Towers);
+        Assert.True(r.Match.Paused);
+        Assert.Equal(TdUiMode.Build, r.Ui.Mode);
+        Assert.Equal(1, r.Ui.ModalCount);
+        Assert.Equal(new[] { typeof(Pause), typeof(Resume), typeof(BuildTower), typeof(Pause) }, r.Sent.Select(c => c.GetType()));
     }
 
     [Fact]
     public void Click_outside_zone_does_nothing_and_cancel_sends_no_command()
     {
         var r = new Rig();
-        Assert.False(r.Ui.SceneLeftClick(300, 20, HitTarget.None)); // TD.16b: fora do modo posicionar a faixa não faz nada
-        Assert.Equal(TdUiMode.None, r.Ui.Mode);
-        r.Ui.ClickPoint(2); // fora da zona livre (32..968), já em modo posicionar
+        Assert.False(r.Ui.SceneLeftClick(300, 20, HitTarget.None));
+        r.Ui.ClickPoint(300);
+        r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.ChooseTower, "bolt"));
+        r.Ui.PointerMoved(2);
+        Assert.False(r.Ui.View.GhostValid);
+        r.Ui.SceneLeftClick(2, 20, HitTarget.None);
+        Assert.Empty(r.Match.Towers);
         Assert.True(r.Ui.BuildActive);
         r.Ui.Cancel();
-        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "TORRE", TdUiAction.BuildToggle));
-        Assert.True(r.Ui.ChoosingPoint);
-        r.Ui.PointerMoved(2);
-        Assert.False(r.Ui.View.GhostX < 0);
-        Assert.False(r.Ui.View.GhostValid);
-        r.Ui.ClickPoint(2);
-        Assert.True(r.Ui.ChoosingPoint); // clique inválido não avança
-        r.Ui.Cancel();
-        Assert.Equal(TdUiMode.None, r.Ui.Mode);
-        Assert.Empty(r.Sent);
+        Assert.False(r.Match.Paused);
+        Assert.False(r.Ui.BuildActive);
     }
 
     [Fact]
     public void Build_mode_times_out_after_15_seconds()
     {
         var r = new Rig();
-        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "TORRE", TdUiAction.BuildToggle));
-        r.Now = 10;
-        r.Ui.Sync();
+        r.Ui.ClickPoint(300);
+        r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.ChooseTower, "bolt"));
+        r.Now = 10; r.Ui.Sync();
         Assert.True(r.Ui.BuildActive);
-        r.Now = 16;
-        r.Ui.Sync();
+        r.Now = 16; r.Ui.Sync();
         Assert.Equal(TdUiMode.None, r.Ui.Mode);
+        Assert.False(r.Match.Paused);
     }
 
     [Fact]
@@ -140,13 +188,9 @@ public sealed class TdUiControllerTests
     {
         var r = new Rig();
         r.Ui.ClickPoint(300);
-        var pop = r.Ui.BuildPopover()!;
-        Assert.All(pop.Items.Where(i => i.Action == TdUiAction.ChooseTower && i.Enabled), i => Assert.Contains(i.SArg, Affordable));
-        // outra torre ocupa o ponto: volta ao passo do ponto com aviso
-        r.Match.Apply(new BuildTower("bolt", r.Ui.View.ChosenX));
-        r.Ui.Sync();
-        Assert.True(r.Ui.ChoosingPoint);
-        Assert.NotNull(r.Ui.Notice);
+        typeof(TdMatchState).GetProperty("Credits")!.SetValue(r.Match, 0L);
+        Assert.All(r.Ui.BuildPopover()!.Items.Where(i => i.Action == TdUiAction.ChooseTower), i => Assert.False(i.Enabled));
+        Assert.True(r.Match.Paused);
     }
 
     [Fact]
@@ -176,20 +220,14 @@ public sealed class TdUiControllerTests
     public void Hud_start_button_sends_wave_request_and_ability_gates_on_wave()
     {
         var r = new Rig();
-        var hud = r.Ui.BuildHud();
-        var start = hud.Items.First(i => i.Action == TdUiAction.StartWave);
+        var start = r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.StartWave);
         Assert.True(start.Enabled);
-        Assert.Equal("Iniciar onda", start.Text);
-        var ability = hud.Items.First(i => i.Action == TdUiAction.Ability);
-        Assert.False(ability.Enabled); // Preparo
         r.Ui.Activate(start);
-        Assert.IsType<TdWaveRequest>(r.Sent.Single());
         Assert.Equal(MatchPhase.Onda, r.Match.Phase);
-        hud = r.Ui.BuildHud();
-        Assert.True(hud.Items.First(i => i.Action == TdUiAction.Ability && i.SArg == "scale").Enabled);
-        Assert.Contains(hud.Items, i => i.Text.StartsWith("Onda 1 de ", StringComparison.Ordinal));
-        r.Ui.Activate(hud.Items.First(i => i.SArg == "scale"));
-        Assert.IsType<UseAbility>(r.Sent[^1]);
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
+        Assert.True(r.Match.Paused);
+        Assert.All(r.Ui.BuildPopover()!.Items.Where(i => i.Action == TdUiAction.Ability), i => Assert.False(i.Enabled));
+        Assert.False(r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.StartWave).Enabled);
     }
 
     [Fact]
@@ -197,23 +235,13 @@ public sealed class TdUiControllerTests
     {
         var r = new Rig();
         var hud = r.Ui.BuildHud();
-        Assert.Contains(hud.Items, i => i.Text == "Núcleo 20/20" && i.Icon == TdIcon.Heart && i.Tip!.Contains("se chegar a 0 você perde"));
-        Assert.Contains(hud.Items, i => i.Text.StartsWith("Créditos ", StringComparison.Ordinal) && i.Icon == TdIcon.Coin);
-        Assert.Contains(hud.Items, i => i.Text.StartsWith("Onda 1 de ", StringComparison.Ordinal));
-        Assert.Contains(hud.Items, i => i.Text == "Construir" && i.Action == TdUiAction.BuildToggle);
-        Assert.Contains(hud.Items, i => i.Action == TdUiAction.Menu && i.Tip is not null);
-        var abilities = hud.Items.Where(i => i.Action == TdUiAction.Ability || i.Icon == TdIcon.Lock).ToArray();
-        Assert.Contains(abilities, i => i.Text == "Escalar" && i.Icon == TdIcon.Scale);
-        var firewall = hud.Items.First(i => i.Sub == "Firewall");
-        Assert.Equal(TdIcon.Lock, firewall.Icon); // fase 1: bloqueada
-        Assert.Contains("fase 3", firewall.Tip, StringComparison.Ordinal);
-        var snapshot = hud.Items.First(i => i.Sub == "Snapshot");
-        Assert.Contains("árvore de selos", snapshot.Tip, StringComparison.Ordinal);
-        foreach (var it in hud.Items.Where(i => i.Kind != TdUiKind.Separator))
-            Assert.False(string.IsNullOrEmpty(it.Tip), it.Text + "/" + it.Icon);
-        int core = Array.FindIndex(hud.Items, i => i.Icon == TdIcon.Heart);
-        Assert.NotNull(TdUiController.TooltipFor(hud, core));
-        Assert.Null(TdUiController.TooltipFor(hud, -1));
+        Assert.True(hud.Minimized);
+        Assert.Contains(hud.Items, i => i.Icon == TdIcon.Heart && i.Text.Contains("20/20") && i.Text.Contains('¢'));
+        Assert.DoesNotContain(hud.Items, i => i.Action == TdUiAction.Ability);
+        Assert.All(hud.Items, i => Assert.False(string.IsNullOrEmpty(i.Tip)));
+        r.Ui.Activate(hud.Items.First(i => i.Action == TdUiAction.HudRestore));
+        Assert.True(r.Ui.ModalOpen);
+        Assert.Equal(5, r.Ui.BuildPopover()!.Items.Count(i => i.Action == TdUiAction.ModalTab));
     }
 
     [Fact]
@@ -232,19 +260,14 @@ public sealed class TdUiControllerTests
     public void Minimize_collapses_the_hud_to_a_chip_with_core_and_wave_and_the_chip_restores()
     {
         var r = new Rig();
-        var full = r.Ui.BuildHud();
-        Assert.False(full.Minimized);
-        r.Ui.Activate(full.Items.First(i => i.Action == TdUiAction.HudMinimize));
-        Assert.True(r.Host.HudMinimized);
         var chip = r.Ui.BuildHud();
         Assert.True(chip.Minimized);
-        Assert.True(chip.Width < full.Width / 2);
-        var item = Assert.Single(chip.Items);
-        Assert.Contains("20/20", item.Text, StringComparison.Ordinal);
-        Assert.Contains("Onda 1/", item.Text, StringComparison.Ordinal);
-        r.Ui.Activate(item);
-        Assert.False(r.Host.HudMinimized);
-        Assert.False(r.Ui.BuildHud().Minimized);
+        r.Ui.Activate(chip.Items.First(i => i.Action == TdUiAction.HudRestore));
+        Assert.True(r.Ui.ModalOpen);
+        Assert.True(r.Ui.BuildHud().Minimized);
+        r.Ui.Cancel();
+        Assert.False(r.Ui.ModalOpen);
+        Assert.False(r.Match.Paused);
     }
 
     [Fact]
@@ -282,7 +305,7 @@ public sealed class TdUiControllerTests
         r.Ui.Sync();
         Assert.Equal(TdUiMode.End, r.Ui.Mode);
         var card = r.Ui.BuildPopover()!;
-        Assert.Equal("DERROTA", card.Title);
+        Assert.StartsWith("DERROTA", card.Title, StringComparison.Ordinal);
         Assert.DoesNotContain(card.Items, i => i.Action == TdUiAction.NextStage);
         r.Ui.Activate(Find(card, TdUiAction.Restart));
         Assert.Equal("stage1", r.Host.Calls.Single());
@@ -353,23 +376,13 @@ public sealed class TdUiControllerTests
     public void Band_ignores_clicks_outside_the_placing_mode_and_only_the_placing_mode_accepts_them()
     {
         var r = new Rig();
-        Assert.False(r.Ui.BuildActive);
-        Assert.False(r.Ui.View.PlacingMode);
         Assert.False(r.Ui.SceneLeftClick(300, 20, HitTarget.None));
-        Assert.False(r.Ui.SceneLeftClick(300, 20, HitTarget.TdTower(1)));
-        Assert.False(r.Ui.SceneLeftClick(300, 20, HitTarget.Crate(1)));
-        Assert.Equal(TdUiMode.None, r.Ui.Mode);
-        Assert.Empty(r.Sent);
-        // Construir (HUD) entra no modo posicionar; Cancelar do HUD sai e a faixa volta a ser click-through.
-        var build = r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.BuildToggle);
-        Assert.Equal("Construir", build.Text);
-        r.Ui.Activate(build);
-        Assert.True(r.Ui.BuildActive);
-        Assert.True(r.Ui.View.PlacingMode);
-        var cancel = r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.BuildToggle);
-        Assert.Equal("Cancelar", cancel.Text);
-        r.Ui.Activate(cancel);
+        r.Ui.ClickPoint(300);
         Assert.False(r.Ui.BuildActive);
+        Assert.False(r.Ui.SceneLeftClick(300, 20, HitTarget.None));
+        r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.ChooseTower, "bolt"));
+        Assert.True(r.Ui.View.PlacingMode);
+        r.Ui.Cancel();
         Assert.False(r.Ui.View.PlacingMode);
         Assert.False(r.Ui.SceneLeftClick(300, 20, HitTarget.None));
     }
@@ -378,23 +391,18 @@ public sealed class TdUiControllerTests
     public void Placing_mode_exits_on_escape_right_click_and_timeout_and_ghost_follows_the_mouse_only_inside_it()
     {
         var r = new Rig();
-        r.Ui.PointerMoved(300);
-        Assert.True(r.Ui.View.GhostX < 0); // fora do modo o mouse não move fantasma
-        r.Ui.ClickPoint(300);
-        Assert.True(r.Ui.BuildActive);
-        r.Ui.SceneRightClick();
-        Assert.False(r.Ui.BuildActive);
-        r.Ui.ClickPoint(300);
-        r.Ui.Cancel(); // ESC
-        Assert.False(r.Ui.BuildActive);
-        r.Ui.ClickPoint(300);
-        r.Now = 14;
-        r.Ui.Sync();
-        Assert.True(r.Ui.BuildActive);
-        r.Now = 16;
-        r.Ui.Sync();
-        Assert.False(r.Ui.BuildActive);
-        Assert.Empty(r.Sent);
+        for (int i = 0; i < 3; i++)
+        {
+            r.Ui.ClickPoint(300);
+            r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.ChooseTower, "bolt"));
+            r.Ui.PointerMoved(300);
+            Assert.True(r.Ui.View.GhostX >= 0);
+            if (i == 0) r.Ui.Cancel();
+            else if (i == 1) r.Ui.SceneRightClick();
+            else { r.Now += 16; r.Ui.Sync(); }
+            Assert.False(r.Ui.BuildActive);
+            Assert.False(r.Match.Paused);
+        }
     }
 
     [Fact]
@@ -403,7 +411,7 @@ public sealed class TdUiControllerTests
         var r = new Rig();
         r.Match.Apply(new BuildTower("bolt", 600));
         int id = r.Match.Towers[0].Id;
-        var menu = r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.Menu);
+        var menu = new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu);
         r.Ui.Activate(menu);
         var towersItem = Find(r.Ui.BuildPopover()!, TdUiAction.TowersOpen);
         r.Ui.Activate(towersItem);
@@ -447,13 +455,10 @@ public sealed class TdUiControllerTests
     public void Minimized_chip_blinks_and_says_Caixa_while_a_crate_is_active()
     {
         var r = new Rig();
-        r.Host.HudMinimized = true;
-        Assert.False(r.Ui.Pulsing);
         typeof(TdMatchState).GetProperty("CrateActive")!.SetValue(r.Match, true);
-        Assert.True(r.Ui.Pulsing);
         r.Now = 0;
-        var chip = r.Ui.BuildHud().Items.Single();
-        Assert.Equal("Caixa!", chip.Right);
-        Assert.True(chip.Highlight);
+        Assert.True(r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.CollectCrate).Highlight);
+        r.Now = .6;
+        Assert.False(r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.CollectCrate).Highlight);
     }
 }

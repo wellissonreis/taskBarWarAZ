@@ -381,7 +381,7 @@ Ficha TD.19 anterior (conteúdo) fica; a **modal central e a pausa viram fichas 
 | **TD.21** ✅ | Core runas: `BuyRune`/`RefundRune` (créditos, cascata), modificadores por tipo, mover efeitos de ramos/capstones para runas, sinergias ◇, `StateHash`, replay; regenerar goldens TD | TD.19, TD.19b, TD.20 | 🟢 |
 | **TD.22** ✅ | Bot e balanceamento: `rune`/`runeSector`/`sell`, `TdRuneGraph.PathTo`, recalibrar curva `F[n]`, créditos/renda e patente; evidência `TD.22.md` | TD.21 | 🟢 |
 | **TD.23** ✅ | Perfil v2 → v3 e árvore de selos ("Créditos iniciais I a III") | TD.19, TD.21 | 🟢 |
-| **TD.24a** | **Modal central + pausa na UI:** janela própria (720 × 480 DIP, DPI, monitor da barra, scrim, foco/Esc/teclado), chip mínimo na faixa, contador de modais, modo posicionar, inspetor de torre, pergunta-bônus, cartões de vitória/derrota, aba Jogo (config) e aba Como jogar migrados para a modal, esmaecer/ausência (14.7) | TD.19b, TD.14, TD.16 | 🟡 |
+| **TD.24a** ✅ | **Modal central + pausa na UI:** janela própria (720 × 480 DIP, DPI, monitor da barra, scrim, foco/Esc/teclado), chip mínimo na faixa, contador de modais, modo posicionar, inspetor de torre, pergunta-bônus, cartões de vitória/derrota, aba Jogo (config) e aba Como jogar migrados para a modal, esmaecer/ausência (14.7) | TD.19b, TD.14, TD.16 | 🟡 |
 | **TD.24b** | **Aba Runas:** grafo radial (estados, pan/zoom, tooltips, caminho até alvo, devolução com aviso de cascata) e aba Construir com preço crescente | TD.21, TD.24a | 🟡 |
 | **TD.25** | Tutorial/"Como jogar" e dicas: chip → abrir modal, runas (§16) (atualiza TD.17) | TD.17, TD.24a, TD.24b | 🟡 |
 | **TD.26** | Documentação: revisar SDD-28 (RF-28.4/28.5/28.13/28.22, CA/T), ADR, `PLANO.md`, MTC | TD.19 a TD.25 | 🟢 |

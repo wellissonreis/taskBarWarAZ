@@ -20,6 +20,14 @@ public sealed class TdFocusState : ITdPresence
     public const int AbsentFps = 8;
 
     private volatile bool _absent;
+    private bool _modalOpen;
+    public void SetModalOpen(bool open)
+    {
+        if (_modalOpen == open) return;
+        _modalOpen = open;
+        if (open) _absent = false;
+        Changed?.Invoke();
+    }
     private volatile bool _fadeEnabled = true;
     private int _fadePercent = DefaultFadePercent;
 
@@ -55,6 +63,7 @@ public sealed class TdFocusState : ITdPresence
 
     private void Set(bool absent)
     {
+        if (_modalOpen && absent) return;
         if (_absent == absent) return;
         _absent = absent;
         Changed?.Invoke();

@@ -35,7 +35,7 @@ public sealed class TdUiGoldenTests
         public bool PurchaseNode(string nodeId) => true;
     }
 
-    public enum UiScene { HudPrep, HudWave, HudMin, HudTip, Chooser, ChooserPoint, Inspector, Preview, Map, Seals, Victory, Menu, HudCrate, HudPlacing, Towers }
+    public enum UiScene { HudPrep, HudWave, HudMin, HudTip, Chooser, ChooserPoint, Inspector, Preview, Map, Seals, Victory, Menu, HudCrate, HudPlacing, Towers, Runes, Help, Defeat }
 
     public static TheoryData<UiScene, int> Cases()
     {
@@ -64,6 +64,10 @@ public sealed class TdUiGoldenTests
             case UiScene.Chooser: ui.ClickPoint(700); break;
             case UiScene.Inspector: ui.OpenTowerFromList(match.Towers[0].Id); break;
             case UiScene.Preview: ui.Activate(item(TdUiAction.Preview, 0)); break;
+            case UiScene.Runes: ui.Activate(item(TdUiAction.ModalTab, (int)TdUiMode.Runes)); break;
+            case UiScene.Help: ui.OpenHowTo(); break;
+            case UiScene.Defeat:
+                typeof(TdMatchState).GetProperty("Phase")!.SetValue(match, MatchPhase.Derrota); ui.Sync(); break;
             case UiScene.Menu: ui.Activate(item(TdUiAction.Menu, 0)); break;
             case UiScene.Towers: ui.Activate(item(TdUiAction.TowersOpen, 0)); break;
             case UiScene.HudPlacing: ui.Activate(item(TdUiAction.BuildToggle, 0)); break;

@@ -129,6 +129,8 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     public bool HudMinimized => tdUi?.HudMinimized ?? settings.Td.HudMinimized;
 
     /// <summary>Onboarding TD (TD.15), lido pela T-UI ao gravar as configurações.</summary>
+    public SideWar.Runtime.Td.TdGameOptions? TdOptions => tdUi?.GameOptions;
+
     public bool TutorialDone => tdUi?.TutorialDone ?? settings.Td.TutorialDone;
     public string TipsSeen => tdUi?.TipsSeen ?? settings.Td.TipsSeen;
     public string QuestionsSeen => tdUi?.QuestionsSeen ?? settings.Td.QuestionsSeen;
@@ -300,6 +302,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
                 settings.Td.HudMinimized, PublishMenu, atlas, settings.Td.TutorialDone, settings.Td.TipsSeen,
                 settings.Td.BonusQuestions, settings.Td.QuestionsSeen);
             game.Mode.EnableTdPolling(1.5);
+            tdUi.LoadGameOptions(settings);
             tdUi.Setup();
             loop.AddAfter(new LoopParticipant(() => tdUi.NextDeadline, _ => tdUi.OnWake()));
             res.Started("td-ui", () => tdUi.Dispose());
@@ -356,6 +359,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         td?.ApplySettings(value);
         tdFocus?.Configure(value.Td.FadeWhenUnfocused, value.Td.FadeOpacityPercent);
         tdUi?.SetBonusQuestions(value.Td.BonusQuestions);
+        tdUi?.LoadGameOptions(value);
         if (td is not null && Math.Clamp(value.Td.BandHeightDip, TdBand.MinHeightDip, TdBand.MaxHeightDip) != tdBandHeight)
             log($"td.bandHeightDip {value.Td.BandHeightDip} salvo; vale ao reiniciar o SideWar (atual {tdBandHeight}).");
         runtime.ApplySettings(value.Performance.PresentFps, value.Performance.AbsentFps, value.Accessibility.ReducedMotion, value.AutoScale);

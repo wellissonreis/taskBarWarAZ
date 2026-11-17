@@ -39,12 +39,23 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     private readonly float k, hudScale;
     private readonly Action menuChanged;
     private volatile bool hudMinimized;
+    private volatile TdGameOptions gameOptions = new();
+    public TdGameOptions GameOptions => gameOptions;
+    public void SetGameOptions(TdGameOptions options)
+    {
+        gameOptions = options;
+        ui(UiRequest.SaveTdOptions);
+    }
+    public void LoadGameOptions(SideWar.Persistence.Settings.AppSettings settings) => gameOptions = new(settings.Td.BandHeightDip, settings.Td.AutoStartEnabled, settings.Audio.Enabled, (int)Math.Round(settings.Audio.Volume * 100), settings.Td.BonusQuestions, settings.Td.FadeWhenUnfocused);
     private volatile bool tutorialDone;
     private volatile string tipsSeenText;
     private volatile bool bonusQuestions;
     private volatile string questionsSeenText;
     private readonly HashSet<string> tipsSeen;
-    private TdUiWindow? hudWindow, popWindow, tipWindow;
+    private TdUiWindow? hudWindow, popWindow, tipWindow, scrimWindow;
+    private readonly SkiaFrameCanvas scrimCanvas = new();
+    private TdUiRenderer? modalRenderer;
+    private int keyboardItem = -1;
     private int tipIndex = -1;
     private string? tipText;
     private bool tipFirstTime;
@@ -85,10 +96,10 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     }
 
     /// <summary>HUD recolhido a um chip (lembrado em settings; a bandeja tem "Mostrar HUD").</summary>
-    public bool HudMinimized => hudMinimized;
+    public bool HudMinimized => !controller.ModalOpen;
 
     /// <summary>Item "Mostrar HUD/Recolher HUD" da bandeja.</summary>
-    public void ToggleHud() => SetHudMinimized(!hudMinimized);
+    public void ToggleHud() { if (controller.ModalOpen) controller.Cancel(); else controller.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.HudRestore)); }
 
     /// <summary>"Como jogar" da bandeja (TD.15).</summary>
     public void OpenHowTo() { controller.OpenHowTo(); Kick(); }
@@ -144,12 +155,12 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     private void ApplyFade()
     {
         if (disposed) return;
-        byte alpha = focus.Alpha;
+        byte alpha = controller.ModalOpen ? (byte)255 : focus.Alpha;
         game.Mode.SetTdFade(alpha);
         hudWindow?.Surface.SetOpacity(alpha);
         popWindow?.Surface.SetOpacity(alpha);
         tipWindow?.Surface.SetOpacity(alpha);
-        driver.Absent = focus.Absent;
+        driver.Absent = !controller.ModalOpen && focus.Absent;
         driver.MarkDirty();
         Kick();
     }
@@ -163,7 +174,10 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     public void Setup()
     {
         hudWindow = game.Scene.GetOrCreateTdHud();
+        scrimWindow = game.Scene.CreateTdScrim();
+        scrimWindow.LeftUp += (_, _) => { Present(); controller.Cancel(); };
         popWindow = game.Scene.GetOrCreateTdPopover();
+        popWindow.KeyDown += ModalKey;
         tipWindow = game.Scene.GetOrCreateTdTooltip();
         hudWindow.Moved += (x, y) =>
         {
@@ -177,14 +191,14 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         popWindow.Moved += (x, y) =>
         {
             Present();
-            int h = pop?.HitTest(x / UiScale, y / UiScale) ?? -1;
+            int h = pop?.HitTest(x / ModalScale, y / ModalScale) ?? -1;
             if (h == popHover) return;
             popHover = h;
             controller.Hover(h >= 0 ? pop!.Items[h] : null);
             Refresh(true);
         };
         popWindow.Left += () => { if (popHover != -1) { popHover = -1; controller.Hover(null); Refresh(true); } };
-        popWindow.LeftUp += (x, y) => Click(pop?.Items, pop?.HitTest(x / UiScale, y / UiScale) ?? -1);
+        popWindow.LeftUp += (x, y) => Click(pop?.Items, pop?.HitTest(x / ModalScale, y / ModalScale) ?? -1);
         popWindow.RightUp += (_, _) => controller.Cancel();
         tipWindow.LeftUp += (_, _) => { Present(); controller.DismissTip(); };
 
@@ -209,6 +223,29 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
 
     /// <summary>Pixels por DIP de desenho do HUD/popover/dica: DPI × escala do HUD (proporcional à faixa).</summary>
     private float UiScale => Scale * hudScale;
+    private float ModalScale => game.Dock.Current is { } c ? TdModalLayout.Scale(c.Monitor.WorkArea, Scale) : Scale;
+
+    private void ModalKey(int key)
+    {
+        if (key == 27) { controller.Cancel(); return; }
+        if (key is >= 49 and <= 53)
+        {
+            TdUiMode[] modes = [TdUiMode.Build, TdUiMode.Runes, TdUiMode.Towers, TdUiMode.Menu, TdUiMode.Help];
+            controller.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.ModalTab, (int)modes[key - 49]));
+            return;
+        }
+        if (pop is null) return;
+        if (key is 9 or 37 or 38 or 39 or 40)
+        {
+            for (int i = 0; i < pop.Items.Length; i++)
+            {
+                keyboardItem = (keyboardItem + 1) % pop.Items.Length;
+                if (pop.Items[keyboardItem].Clickable) break;
+            }
+            popHover = keyboardItem; Refresh(true);
+        }
+        if (key == 13 && keyboardItem >= 0 && keyboardItem < pop.Items.Length) Click(pop.Items, keyboardItem);
+    }
 
     private void Click(TdUiItem[]? items, int index)
     {
@@ -238,6 +275,8 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
             renderer?.Dispose();
             renderer = new TdUiRenderer(typography, (int)MathF.Round(newDpi * hudScale), atlas);
             dpi = newDpi;
+            modalRenderer?.Dispose();
+            modalRenderer = new TdUiRenderer(typography, newDpi, atlas);
         }
         hudSig = popSig = long.MinValue;
         Refresh(true);
@@ -266,7 +305,6 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     private void Refresh(bool force)
     {
         if (disposed || renderer is null || hudWindow is null || popWindow is null || tipWindow is null || game.Dock.Current is not { } c) return;
-        float s = UiScale, ds = Scale;
         hud = controller.BuildHud();
         var hudBounds = HudBounds(c, hud);
         bool hudMoved = hudBounds != hudWindow.Bounds;
@@ -279,54 +317,32 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         }
         RefreshTooltip(c, hudBounds);
         pop = controller.BuildPopover();
+        focus.SetModalOpen(controller.ModalOpen);
         if (pop is null)
         {
-            if (popWindow.WantsVisible) { popWindow.Hide(); popCanvas.Invalidate(); }
+            if (popWindow.WantsVisible) { popWindow.Hide(); popWindow.RestoreFocus(); scrimWindow?.Hide(); popCanvas.Invalidate(); }
             popSig = long.MinValue;
         }
         else
         {
-            int w = (int)MathF.Round(pop.Width * s), h = (int)MathF.Round(pop.Height * s);
-            int left, bottom;
             var work = c.Monitor.WorkArea;
-            if (pop.AnchorX > 0)
+            var bounds = TdModalLayout.Bounds(work, Scale);
+            if (scrimWindow is not null && (!scrimWindow.WantsVisible || scrimWindow.Bounds != c.Monitor.Bounds))
             {
-                // AnchorX está no espaço de desenho da faixa (32 DIP de altura): × k para DIP reais.
-                left = c.Scene.Left + (int)MathF.Round(pop.AnchorX * k * ds) - w / 2;
-                bottom = c.Scene.Top - (int)MathF.Round(2 * ds);
-                // TD.16: o HUD fica acima da faixa; se o popover cair sob ele, sobe acima do HUD.
-                if (left < hudBounds.Right && left + w > hudBounds.Left) bottom = hudBounds.Top - (int)MathF.Round(2 * ds);
+                scrimWindow.Apply(c.Monitor.Bounds); scrimWindow.Show();
+                Draw(scrimWindow, scrimCanvas, cv => cv.Clear(new SkiaSharp.SKColor(0, 0, 0, 120)));
             }
-            else if (pop.TargetHudX >= 0)
-            {
-                // Balão do tutorial apontando para um item do HUD: centrado nele (TD.15).
-                left = hudBounds.Left + (int)MathF.Round(pop.TargetHudX * s) - w / 2;
-                bottom = hudBounds.Top - (int)MathF.Round(2 * ds);
-            }
-            else
-            {
-                left = hudBounds.Right - w;
-                bottom = hudBounds.Top - (int)MathF.Round(2 * ds);
-            }
-            left = Math.Clamp(left, work.Left, Math.Max(work.Left, work.Right - w));
-            if (pop.HasArrow)
-            {
-                // A seta aponta para o alvo mesmo quando a janela foi deslocada pelo limite da tela.
-                float targetPx = pop.AnchorX > 0 ? c.Scene.Left + pop.AnchorX * k * ds : hudBounds.Left + pop.TargetHudX * s;
-                pop = pop with { ArrowX = (targetPx - left) / s };
-            }
-            int top = Math.Max(work.Top, bottom - h);
-            var bounds = new PixelRect(left, top, left + w, top + h);
             long ps = pop.Signature() * 31 + popHover;
             bool moved = bounds != popBounds || !popWindow.WantsVisible;
-            if (moved) { popWindow.Apply(bounds); popBounds = bounds; }
-            if (!popWindow.WantsVisible) { popWindow.Show(); popWindow.Surface.SetOpacity(focus.Alpha); }
+            if (moved) { popWindow.Apply(bounds); popBounds = bounds; popCanvas.Invalidate(); }
+            if (!popWindow.WantsVisible) { popWindow.Show(); popWindow.Surface.SetOpacity(255); popWindow.ActivateModal(); }
             if (force || moved || ps != popSig)
             {
                 popSig = ps;
-                Draw(popWindow, popCanvas, cv => renderer.DrawPopover(cv, pop, popHover));
+                Draw(popWindow, popCanvas, cv => { cv.Save(); cv.Scale(ModalScale / Scale); modalRenderer!.DrawPopover(cv, pop, popHover); cv.Restore(); });
             }
         }
+        if (controller.ModalOpen) { Present(); game.Mode.SetTdFade(255); driver.Absent = false; }
         var view = controller.View;
         if (view != driver.View)
         {
@@ -413,6 +429,9 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         if (disposed) return;
         disposed = true;
         renderer?.Dispose();
+        modalRenderer?.Dispose();
+        scrimWindow?.Dispose();
+        scrimCanvas.Dispose();
         hudCanvas.Dispose();
         popCanvas.Dispose();
         tipCanvas.Dispose();

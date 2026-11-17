@@ -195,6 +195,14 @@ internal sealed class AppComposition : IDisposable
             case UiRequest.Exit: RequestExit(); break;
             case UiRequest.SaveHudState: SaveHudState(); break;
             case UiRequest.SaveOnboarding: SaveOnboarding(); break;
+            case UiRequest.SaveTdOptions:
+                if (gameSide.TdOptions is { } o)
+                    SaveSettings(settings with
+                    {
+                        Td = settings.Td with { BandHeightDip = o.BandHeight, AutoStartEnabled = o.AutoStart, BonusQuestions = o.Questions, FadeWhenUnfocused = o.Fade },
+                        Audio = settings.Audio with { Enabled = o.Sound, Volume = o.Volume / 100.0 },
+                    });
+                break;
         }
     });
 

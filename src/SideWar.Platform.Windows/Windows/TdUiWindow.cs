@@ -11,6 +11,24 @@ public sealed class TdUiWindow : OverlayChildWindow
 {
     internal TdUiWindow(GameThread owner, SceneWindow scene, string className) : base(owner, scene, className, clickThrough: false) { }
 
+    private protected override bool Activatable => classIsModal;
+    private bool classIsModal;
+    private nint previousFocus;
+    public event Action<int>? KeyDown;
+    private protected override void OnKeyDown(int key) => KeyDown?.Invoke(key);
+    public void ActivateModal()
+    {
+        classIsModal = true;
+        previousFocus = NativeFocus.Foreground();
+        NativeFocus.AllowActivation(Handle);
+        NativeFocus.Activate(Handle);
+    }
+    public void RestoreFocus()
+    {
+        if (previousFocus != 0) NativeFocus.Activate(previousFocus);
+        previousFocus = 0;
+    }
+
     public event Action<int, int>? Moved;
     public event Action? Left;
     public event Action<int, int>? LeftUp;
@@ -21,4 +39,21 @@ public sealed class TdUiWindow : OverlayChildWindow
     private protected override void OnLeftButtonUp(int x, int y) { if (IsVisible) LeftUp?.Invoke(x, y); }
     private protected override void OnRightButtonUp(int x, int y) { if (IsVisible) RightUp?.Invoke(x, y); }
     private protected override bool UsesHandCursor => false;
+}
+
+
+internal static class NativeFocus
+{
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern nint GetForegroundWindow();
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+    private static extern bool SetForegroundWindow(nint window);
+    [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "GetWindowLongW")]
+    private static extern int GetWindowLong(nint window, int index);
+    [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "SetWindowLongW")]
+    private static extern int SetWindowLong(nint window, int index, int value);
+    internal static nint Foreground() => GetForegroundWindow();
+    internal static void AllowActivation(nint window) => _ = SetWindowLong(window, -20, GetWindowLong(window, -20) & ~0x08000000);
+    internal static void Activate(nint window) => _ = SetForegroundWindow(window);
 }

@@ -76,6 +76,25 @@ public sealed class TdQuizTests
     }
 
     [Fact]
+    public void Quiz_and_tab_share_pause_until_the_last_modal_closes()
+    {
+        var r = new Rig();
+        r.ToSecondPrep();
+        Assert.Equal(1, r.Ui.ModalCount);
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.ModalTab, (int)TdUiMode.Runes));
+        Assert.Equal(2, r.Ui.ModalCount);
+        Assert.Single(r.Sent.OfType<Pause>());
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.QuizClose));
+        Assert.Equal(1, r.Ui.ModalCount);
+        Assert.True(r.Match.Paused);
+        Assert.Empty(r.Sent.OfType<Resume>());
+        r.Ui.Cancel();
+        Assert.Equal(0, r.Ui.ModalCount);
+        Assert.Single(r.Sent.OfType<Resume>());
+        Assert.False(r.Match.Paused);
+    }
+
+    [Fact]
     public void Question_appears_only_in_prep_after_the_first_wave_and_never_blocks_start()
     {
         var r = new Rig();
@@ -83,13 +102,13 @@ public sealed class TdQuizTests
         r.ToSecondPrep();
         Assert.True(r.Ui.QuizActive);
         var pop = r.Ui.BuildPopover()!;
-        Assert.Equal("Pergunta-bônus", pop.Title);
+        Assert.StartsWith("Pergunta-bônus", pop.Title, StringComparison.Ordinal);
         Assert.True(r.Ui.QuizQuestion!.Text.Length <= TdQuestionBank.MaxTextLength);
         Assert.Contains(pop.Items, i => i.Action == TdUiAction.QuizTrue && i.Rect.H >= 30f);
         Assert.Contains(pop.Items, i => i.Action == TdUiAction.QuizFalse && i.Rect.H >= 30f);
         Assert.Contains(pop.Items, i => i.Kind == TdUiKind.Bar && i.Right == "10 s");
         var start = r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.StartWave);
-        Assert.True(start.Enabled); // nunca impede Iniciar onda
+        Assert.False(start.Enabled); // modal pausa a simulação
     }
 
     [Fact]
@@ -109,7 +128,7 @@ public sealed class TdQuizTests
         var q = r.Ui.QuizQuestion!;
         long before = r.Match.Credits;
         r.Ui.Activate(r.Pop(q.Answer ? TdUiAction.QuizTrue : TdUiAction.QuizFalse));
-        var cmd = Assert.IsType<AnswerBonus>(Assert.Single(r.Sent));
+        var cmd = Assert.IsType<AnswerBonus>(Assert.Single(r.Sent.OfType<AnswerBonus>()));
         Assert.True(cmd.Correct);
         Assert.Equal(r.Match.BonusCreditsFor(2) , r.Match.Credits - before);
         var pop = r.Ui.BuildPopover()!;
@@ -127,7 +146,7 @@ public sealed class TdQuizTests
         var q = r.Ui.QuizQuestion!;
         long before = r.Match.Credits;
         r.Ui.Activate(r.Pop(q.Answer ? TdUiAction.QuizFalse : TdUiAction.QuizTrue));
-        Assert.False(Assert.IsType<AnswerBonus>(r.Sent.Single()).Correct);
+        Assert.False(Assert.IsType<AnswerBonus>(r.Sent.OfType<AnswerBonus>().Single()).Correct);
         Assert.Equal(before, r.Match.Credits);
         var line = r.Ui.BuildPopover()!.Items.First(i => i.Icon == TdIcon.Cross);
         Assert.Equal(q.Answer ? "Era VERDADEIRO." : "Era FALSO.", line.Text);
@@ -141,17 +160,18 @@ public sealed class TdQuizTests
         var r = new Rig();
         r.ToSecondPrep();
         r.Now += 10.1; r.Ui.Sync();
-        Assert.Empty(r.Sent);
+        Assert.Single(r.Sent.OfType<AnswerBonus>());
         Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Icon == TdIcon.Clock && i.Text.StartsWith("Tempo!", StringComparison.Ordinal));
         r.Now += TdUiController.QuizWrongSeconds + 0.1; r.Ui.Sync();
         Assert.False(r.Ui.QuizActive);
-        Assert.False(r.Match.BonusAnswered);
+        Assert.True(r.Match.BonusAnswered);
 
         var r2 = new Rig();
         r2.ToSecondPrep();
         r2.Ui.Activate(r2.Pop(TdUiAction.QuizClose));
         Assert.False(r2.Ui.QuizActive);
-        Assert.Empty(r2.Sent);
+        Assert.Single(r2.Sent.OfType<AnswerBonus>());
+        Assert.False(r2.Match.Paused);
     }
 
     [Fact]
