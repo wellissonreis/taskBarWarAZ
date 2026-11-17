@@ -47,6 +47,24 @@ public class SettingsTdTests
     }
 
     [Fact]
+    public void Continuous_waves_default_on_and_tower_panel_pinned_default_off_roundtrip_and_old_files_get_defaults()
+    {
+        Assert.True(AppSettings.Default.Td.ContinuousWaves);
+        Assert.False(AppSettings.Default.Td.TowerPanelPinned);
+        Assert.Equal("Ctrl+Alt+H", AppSettings.Default.Hotkeys.ToggleVisibility); // atalho de minimizar tudo (TD.28b)
+        var old = ReadPayload("{\"td\":{\"autoStartEnabled\":true}}");
+        Assert.True(old.Td.ContinuousWaves);
+        Assert.False(old.Td.TowerPanelPinned);
+
+        var fs = new FakeFileSystem();
+        var st = new SettingsStore(fs, "/data", utcNow: () => Now);
+        Assert.True(st.Save(new AppSettings { Td = new TdSettings { ContinuousWaves = false, TowerPanelPinned = true } }));
+        var r = st.Load().Settings;
+        Assert.False(r.Td.ContinuousWaves);
+        Assert.True(r.Td.TowerPanelPinned);
+    }
+
+    [Fact]
     public void Collect_crate_hotkey_defaults_to_ctrl_alt_c_roundtrips_and_towers_in_bar_stays_off()
     {
         Assert.Equal("Ctrl+Alt+C", AppSettings.Default.Hotkeys.CollectCrate);

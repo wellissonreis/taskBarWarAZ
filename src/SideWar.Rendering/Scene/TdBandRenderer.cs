@@ -12,7 +12,7 @@ namespace SideWar.Rendering.Scene;
 /// Faixa TD de 32 DIP (TD.7, SDD-28 RF-28.15 com o fallback Band de RF-28.18): trilho dos inimigos no topo (núcleo à esquerda, portal à
 /// direita), torres embaixo. Lê o <see cref="TdMatchState"/> (só leitura) e desenha num <see cref="SKCanvas"/> transparente.
 /// TD.9: usa as SPRITES do design (<see cref="TdArtMap"/>), pré-escaladas por DPI (<see cref="TdSpriteBaker"/>) e desenhadas em pixels
-/// inteiros (nítidas a 100/150%): torres de 28 DIP, núcleo/portal de 32 DIP de largura, inimigos de 11 a 28 DIP, caixa-bomba de 26 DIP.
+/// inteiros (nítidas a 100/150%): torres de 21 DIP, núcleo/portal de 32 DIP (~1,5× a torre), inimigos de 11 a 28 DIP, caixa-bomba de 26 DIP.
 /// Tudo apoiado no chão (base da faixa); inimigos à frente das torres. Legibilidade por cima das sprites: tipo de inimigo por <b>tinta +
 /// pino de traço</b> (voador losango, blindado quadrado, regenera triângulo, drena cruz, chefe quadrado vermelho), barra de vida só para
 /// chefe e elite danificado, alcance como barra no topo, nós do balanceador, caixa-bomba

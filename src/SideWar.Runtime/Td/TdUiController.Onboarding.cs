@@ -509,8 +509,16 @@ public sealed partial class TdUiController
         Card(TdIcon.Build, "Escolha torre; toque na faixa.");
         Card(TdIcon.Coin, "Cada torre igual custa +25%.");
         Card(TdIcon.Target, "O círculo mostra o alcance.");
-        Card(TdIcon.Play, "Inicie a onda: o preparo espera.");
-        Card(TdIcon.FastForward, "Chame a próxima: ganhe bônus.");
+        if (m.Options.ContinuousWaves)
+        {
+            Card(TdIcon.Play, "Inicie só a 1ª onda; o resto flui.");
+            Card(TdIcon.Minus, $"Esconder tudo: {_host.BossHotkey}.", TdTone.Accent);
+        }
+        else
+        {
+            Card(TdIcon.Play, "Inicie a onda: o preparo espera.");
+            Card(TdIcon.FastForward, "Chame a próxima: ganhe bônus.");
+        }
         Card(TdIcon.Coin, $"Venda na aba Torres: devolve {Math.Round(m.Content.Stages.Rules.SellRefund * 100):0}%.");
         Card(TdIcon.Scale, "Use habilidades: recarregam sozinhas.");
         Card(TdIcon.Box, "Colete a caixa: botão ou atalho.");

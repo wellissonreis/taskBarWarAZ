@@ -69,6 +69,10 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
     /// <summary>Comandos aplicados, na ordem, com o <c>Frame</c> da partida no momento (replay: <see cref="TdReplayScript"/>).</summary>
     public IReadOnlyList<TdLogEntry> CommandLog => _log;
 
+    /// <summary>TD.28b: script de replay da partida/corrida atual; <c>Options</c> do Core vai junto (sem elas o replay seria jogado no modo clássico).</summary>
+    public TdReplayScript BuildReplay(int startStage, ulong seedState, ulong seedStream) =>
+        new(startStage, seedState, seedStream, [.. _log], Match.Frame, Match.Options);
+
     /// <summary>Verdadeiro quando a partida está viva (Preparo/Onda) e nada pausa a simulação.</summary>
     public bool SimulationActive => !IsShutdown && _app.SimulationRunning && Match.Phase is MatchPhase.Preparo or MatchPhase.Onda;
 

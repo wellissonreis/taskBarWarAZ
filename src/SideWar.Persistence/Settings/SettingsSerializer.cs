@@ -72,6 +72,8 @@ public static class SettingsSerializer
         w.WriteBoolean("tutorialDone", s.Td.TutorialDone);
         w.WriteString("tipsSeen", s.Td.TipsSeen);
         w.WriteBoolean("bonusQuestions", s.Td.BonusQuestions);
+        w.WriteBoolean("continuousWaves", s.Td.ContinuousWaves);
+        w.WriteBoolean("towerPanelPinned", s.Td.TowerPanelPinned);
         w.WriteString("questionsSeen", s.Td.QuestionsSeen);
         w.WriteEndObject();
         w.WriteEndObject();
@@ -152,6 +154,8 @@ public static class SettingsSerializer
                 TutorialDone = Bool(td, "tutorialDone", d.Td.TutorialDone),
                 TipsSeen = Str(td, "tipsSeen", 1024) ?? d.Td.TipsSeen,
                 BonusQuestions = Bool(td, "bonusQuestions", d.Td.BonusQuestions),
+                ContinuousWaves = Bool(td, "continuousWaves", d.Td.ContinuousWaves),
+                TowerPanelPinned = Bool(td, "towerPanelPinned", d.Td.TowerPanelPinned),
                 QuestionsSeen = Str(td, "questionsSeen", 1024) ?? d.Td.QuestionsSeen,
             },
         };

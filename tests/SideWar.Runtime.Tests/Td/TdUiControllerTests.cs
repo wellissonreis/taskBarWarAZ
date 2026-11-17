@@ -114,10 +114,10 @@ public sealed class TdUiControllerTests
     {
         var r = new Rig();
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
-        Assert.Equal(6, r.Ui.BuildPopover()!.Items.Count(i => i.Action == TdUiAction.GameOption));
-        for (int i = 0; i < 6; i++)
+        Assert.Equal(8, r.Ui.BuildPopover()!.Items.Count(i => i.Action == TdUiAction.GameOption));
+        for (int i = 0; i < 8; i++)
             r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.GameOption, i));
-        Assert.Equal(new TdGameOptions(88, true, true, 80, false, false), r.Host.GameOptions);
+        Assert.Equal(new TdGameOptions(88, true, true, 80, false, false, false, true), r.Host.GameOptions);
         Assert.Single(r.Sent.OfType<Pause>());
         Assert.Empty(r.Sent.OfType<Resume>());
         Assert.True(r.Match.Paused);

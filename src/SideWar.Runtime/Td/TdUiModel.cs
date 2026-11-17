@@ -84,6 +84,9 @@ public sealed record TdPopoverView(string Title, TdUiItem[] Items, float Width, 
 public sealed record TdHudView(TdUiItem[] Items, float Width, float Height, bool Minimized = false, int Wave = 0, int TotalWaves = 0)
 {
     public const float DefaultWidth = TdBand.HudBaseWidthDip, DefaultHeight = TdBand.HudBaseHeightDip;
+
+    /// <summary>TD.28b: largura do HUD com o botão Iniciar onda (chip + painel + iniciar + caixa); a janela ancora a borda esquerda nesta largura.</summary>
+    public const float FullWidth = 580f;
     public const float ChipWidth = 190f, ChipHeight = 28f;
 
     /// <summary>Índice do item sob o ponto (qualquer item com texto/dica, inclusive não clicável) ou -1: base do tooltip.</summary>
@@ -123,12 +126,21 @@ public sealed record TdHudView(TdUiItem[] Items, float Width, float Height, bool
 public sealed record TdTooltipView(string Text, float AnchorX, float AnchorTop);
 
 /// <summary>Visão do perfil/meta para o Mapa e a árvore (implementada no App sobre o perfil TD; o Runtime não conhece a Persistência).</summary>
-public sealed record TdGameOptions(int BandHeight = 64, bool AutoStart = false, bool Sound = false, int Volume = 60, bool Questions = true, bool Fade = true);
+/// <param name="Continuous">TD.28b: ondas contínuas (corrida infinita); desligado = modo clássico. Vale na próxima corrida.</param>
+/// <param name="PanelPinned">TD.28b: painel rápido de torres sempre aberto junto ao chip.</param>
+public sealed record TdGameOptions(int BandHeight = 64, bool AutoStart = false, bool Sound = false, int Volume = 60, bool Questions = true, bool Fade = true,
+    bool Continuous = true, bool PanelPinned = false);
 
 public interface ITdUiHost
 {
     TdGameOptions GameOptions => new();
     void SetGameOptions(TdGameOptions options) { }
+
+    /// <summary>TD.28b: texto do atalho global de minimizar tudo (boss key), mostrado na dica do chip e em Como jogar.</summary>
+    string BossHotkey => "Ctrl+Alt+H";
+
+    /// <summary>TD.28b: fase em que a corrida atual começou (Reiniciar começa uma corrida nova daqui; o Mapa muda).</summary>
+    int RunStartStage => 1;
 
     bool Paused { get; }
     void TogglePause();

@@ -144,6 +144,12 @@ public sealed record TdSettings
     /// <summary>Pergunta-bônus Verdadeiro/Falso no Preparo (TD.17, RF-28.23); ligada por padrão.</summary>
     public bool BonusQuestions { get; init; } = true;
 
+    /// <summary>TD.28b: ondas contínuas (corrida infinita, sem Preparo entre ondas e fases). Desligado = modo clássico (Preparo entre ondas, uma fase por partida). Vale a partir da próxima corrida.</summary>
+    public bool ContinuousWaves { get; init; } = true;
+
+    /// <summary>TD.28b: painel rápido de torres (botão ≡ do chip) fica aberto o tempo todo junto ao chip; fecha ao desligar ou ao minimizar pelo atalho.</summary>
+    public bool TowerPanelPinned { get; init; }
+
     /// <summary>Ids das afirmações do banco já sorteadas (<c>q01;q02</c>…): não repetem até esgotar o banco (TD.17).</summary>
     public string QuestionsSeen { get; init; } = "";
 }

@@ -14,13 +14,16 @@ public readonly record struct TdArtEntry(string Id, SpriteId Sprite, float Heigh
 /// </summary>
 public static class TdArtMap
 {
-    /// <summary>Altura alvo das torres (DIP) numa faixa de 32 DIP.</summary>
-    public const float TowerHeightDip = 28f;
+    /// <summary>
+    /// Altura alvo das torres (DIP do espaço de desenho de 32). TD.28b: 21 (era 28): o núcleo e o portal (32 = faixa inteira, o limite do espaço de
+    /// desenho) ficam ~1,5× a torre (32/21 ≈ 1,52; 42 vs 64 DIP reais na faixa de 64; escala junto com 40/88 porque tudo é multiplicado por altura/32).
+    /// </summary>
+    public const float TowerHeightDip = 21f;
 
     /// <summary>Largura (DIP) do núcleo e do portal: cabem na folga de 32 DIP às pontas.</summary>
     public const float EdgeWidthDip = 32f;
 
-    /// <summary>Altura (DIP) do núcleo e do portal: ocupam a faixa inteira (32), maiores que as torres (28) — o limite do espaço de desenho.</summary>
+    /// <summary>Altura (DIP) do núcleo e do portal: ocupam a faixa inteira (32), ~1,5× a torre (21) — o limite do espaço de desenho.</summary>
     public const float EdgeHeightDip = 32f;
 
     /// <summary>Largura (DIP) da caixa-bomba (a área de clique tem 24 DIP de largura).</summary>

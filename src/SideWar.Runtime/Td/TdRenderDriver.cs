@@ -70,6 +70,14 @@ public sealed class TdRenderDriver : ILoopParticipant
     /// </summary>
     public bool Absent { get; set; }
 
+    /// <summary>TD.28b (atalho de minimizar tudo): nada é desenhado nem agendado enquanto a cena está escondida; a partida segue rodando. Ao voltar, um redesenho é pedido.</summary>
+    public bool Suspended
+    {
+        get => _suspended;
+        set { if (_suspended == value) return; _suspended = value; if (!value) _dirty = true; }
+    }
+    private bool _suspended;
+
     /// <summary>Pedido de redesenho (DPI, monitor, layout, seleção, passar do mouse, Show).</summary>
     public void MarkDirty() => _dirty = true;
 
@@ -83,11 +91,11 @@ public sealed class TdRenderDriver : ILoopParticipant
     /// <summary>Desenha já (Show após Hide: um frame completo antes de mostrar a janela).</summary>
     public void ForceDraw() => Draw();
 
-    public long? NextDeadline => _dirty && _app.IsVisible ? _clock.NowTicks : null;
+    public long? NextDeadline => _dirty && _app.IsVisible && !_suspended ? _clock.NowTicks : null;
 
     public void OnWake(IClock clock)
     {
-        if (!_app.IsVisible || _host.IsShutdown) return;
+        if (!_app.IsVisible || _host.IsShutdown || _suspended) return;
         var match = _host.Match;
         bool animate = match.Phase == MatchPhase.Onda && _app.SimulationRunning && match.Frame != _lastFrame;
         if (animate && !_dirty && Absent && clock.NowTicks / (double)clock.TicksPerSecond - _lastDrawAt < 1.0 / TdFocusState.AbsentFps) return;

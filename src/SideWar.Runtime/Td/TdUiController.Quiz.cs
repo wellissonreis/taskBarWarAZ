@@ -27,6 +27,15 @@ public sealed partial class TdUiController
     private double _prepSince;
     private long _phaseKey = -1;
 
+    private int _quizKey;
+
+    /// <summary>Pergunta vale no Preparo; com ondas contínuas (TD.28b) também durante a onda (1 por onda, no cartão do cantinho).</summary>
+    private static bool QuizPhaseOk(TdMatchState m) => m.Phase == MatchPhase.Preparo || (m.Options.ContinuousWaves && m.Phase == MatchPhase.Onda);
+
+    private static int QuizKey(TdMatchState m) => m.Options.ContinuousWaves ? m.StageNumber * 1000 + m.WaveNumber : m.NextWaveNumber;
+
+    private static int QuizPayWave(TdMatchState m) => m.Phase == MatchPhase.Preparo ? m.NextWaveNumber : m.WaveNumber;
+
     private bool QuizEnabled => _quiz is not null && _onb is { BonusQuestions: true };
 
     /// <summary>Pergunta-bônus na tela (aguardando resposta ou mostrando o resultado).</summary>
@@ -56,12 +65,15 @@ public sealed partial class TdUiController
 
     private void SyncQuiz(TdMatchState m)
     {
-        if (m.Phase != MatchPhase.Preparo) { ClearQuiz(); return; }
+        if (!QuizPhaseOk(m)) { ClearQuiz(); return; }
         double now = _now();
+        int key = QuizKey(m);
         if (_quizQ is null)
         {
-            if (!QuizEnabled || m.WaveNumber < 1 || m.BonusAnswered || m.NextWaveNumber == 0 || _quizWave == m.NextWaveNumber || Mode != TdUiMode.None) return;
-            _quizWave = m.NextWaveNumber;
+            if (BossHidden || !QuizEnabled || m.WaveNumber < 1 || m.BonusAnswered || (!m.Options.ContinuousWaves && m.NextWaveNumber == 0) || _quizWave == key
+                || (Mode != TdUiMode.None && !QuickTowersOpen)) return;
+            _quizWave = key;
+            _quizKey = key;
             _quizQ = _quiz!.Pick(TutorialOn(m) && !_quizExampleDone ? QuizExampleId : null);
             _quizOut = QuizOutcome.None;
             _quizStart = now;
@@ -71,7 +83,7 @@ public sealed partial class TdUiController
         }
         if (_quizOut == QuizOutcome.None)
         {
-            if (m.BonusAnswered) { ClearQuiz(); return; }
+            if (m.BonusAnswered || key != _quizKey) { ClearQuiz(); return; }
             if (now - _quizStart >= m.Content.Stages.Rules.BonusQuestion.TimerSeconds)
             {
                 _send(new AnswerBonus(QuizNumber(_quizQ.Id), false));
@@ -87,9 +99,9 @@ public sealed partial class TdUiController
     private void AnswerQuiz(bool answer)
     {
         var m = _match();
-        if (_quizQ is null || _quizOut != QuizOutcome.None || m.Phase != MatchPhase.Preparo) return;
+        if (_quizQ is null || _quizOut != QuizOutcome.None || !QuizPhaseOk(m)) return;
         bool ok = answer == _quizQ.Answer;
-        _quizPaid = ok ? m.BonusCreditsFor(m.NextWaveNumber) : 0;
+        _quizPaid = ok ? m.BonusCreditsFor(QuizPayWave(m)) : 0;
         _send(new AnswerBonus(QuizNumber(_quizQ.Id), ok));
         _quizOut = ok ? QuizOutcome.Correct : QuizOutcome.Wrong;
         _quizResultUntil = _now() + (ok ? QuizResultSeconds : QuizWrongSeconds);
@@ -165,7 +177,7 @@ public sealed partial class TdUiController
                 s.Items.Add(new TdUiItem(new DipRect(Pad + half + 2f, s.Y, half, 34f), TdUiKind.Button, "F  Falso", TdUiAction.QuizFalse, Tone: TdTone.Bad,
                     Highlight: tutorial && !q.Answer));
                 s.Y += 36f;
-                s.Add(TdUiKind.Label, $"Acerte: +{m.BonusCreditsFor(m.NextWaveNumber)} créditos", 14f, tone: TdTone.Dim, icon: TdIcon.Coin);
+                s.Add(TdUiKind.Label, $"Acerte: +{m.BonusCreditsFor(QuizPayWave(m))} créditos", 14f, tone: TdTone.Dim, icon: TdIcon.Coin);
                 if (tutorial)
                     s.Items.Add(new TdUiItem(new DipRect(s.Width - Pad - 96f, s.Y, 96f, 16f), TdUiKind.Button, "Pular", TdUiAction.TutorialSkip, Tone: TdTone.Dim, Icon: TdIcon.Cross));
                 if (tutorial) s.Y += 18f;

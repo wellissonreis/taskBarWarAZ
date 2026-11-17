@@ -128,6 +128,9 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     /// <summary>HUD TD recolhido (lido pela T-UI ao gravar as configurações).</summary>
     public bool HudMinimized => tdUi?.HudMinimized ?? settings.Td.HudMinimized;
 
+    private TdBossKey? boss;
+    private bool bossHidden => boss?.Hidden ?? false;
+
     /// <summary>Onboarding TD (TD.15), lido pela T-UI ao gravar as configurações.</summary>
     public SideWar.Runtime.Td.TdGameOptions? TdOptions => tdUi?.GameOptions;
 
@@ -304,6 +307,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             game.Mode.EnableTdPolling(1.5);
             tdUi.LoadGameOptions(settings);
             tdUi.Setup();
+            boss = new TdBossKey(tdUi.SetBossHidden, show => { if (show) game.Scene.Show(); else game.Scene.Hide(); }, tdFocus!, () => runtime.App.IsVisible, tdDriver.ForceDraw);
             loop.AddAfter(new LoopParticipant(() => tdUi.NextDeadline, _ => tdUi.OnWake()));
             res.Started("td-ui", () => tdUi.Dispose());
         }
@@ -383,7 +387,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         if (tdDriver is not null) tdDriver.ForceDraw();
         else sink.Present(runtime.State, runtime.Host.PresentationSeconds);
         if (td is null) game.Scene.Widget?.Show();
-        game.Scene.Show();
+        if (!bossHidden) game.Scene.Show(); // TD.28b: com o atalho de minimizar ativo a cena continua escondida
         taskbar?.SetVisible(true);
         InstallWatcher();
         ScheduleWidget(now: true);
@@ -471,7 +475,9 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         switch (kind)
         {
             case AppCommandKind.ToggleInteractive: if (td is null) game.Mode.ToggleInteractive(); break; // TD.16b: faixa TD só interativa no modo posicionar
-            case AppCommandKind.ToggleVisibility: runtime.ToggleVisibilityByUser(); break;
+            case AppCommandKind.ToggleVisibility:
+                if (td is not null) ToggleBoss(); else runtime.ToggleVisibilityByUser();
+                break;
             case AppCommandKind.TogglePause: runtime.TogglePause(); break;
             case AppCommandKind.StartWave: td?.Host.RequestWave(); break;
             case AppCommandKind.ToggleHud: tdUi?.ToggleHud(); break;
@@ -480,12 +486,19 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             case AppCommandKind.CollectCrate: tdUi?.CollectCrate(); break;
             case AppCommandKind.SelectMonitor: SelectMonitor(monitorIndex); break;
             case AppCommandKind.ShowAndInteract:
+                boss?.Show();
                 runtime.ShowByUser();
                 if (runtime.App.IsVisible && td is null) game.Mode.SetMode(OverlayMode.Interactive);
                 break;
         }
         PublishMenu();
     }
+
+    /// <summary>
+    /// TD.28b: atalho global de minimizar tudo (padrão Ctrl+Alt+H = <c>hotkeys.ToggleVisibility</c>; o item da bandeja "Minimizar (ocultar)" / "Mostrar SideWar"
+    /// faz o mesmo). A lógica está em <see cref="TdBossKey"/>: a partida continua rodando, conta como ausente e o render para. Não é lembrado entre execuções.
+    /// </summary>
+    private void ToggleBoss() => boss?.Toggle();
 
     private void SelectMonitor(int index)
     {
@@ -681,7 +694,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             : 0;
         var app = runtime.App;
         Volatile.Write(ref menu, new MenuSnapshot(game.Mode.Mode == OverlayMode.Interactive,
-            (app.PauseReasons & Runtime.Timing.PauseReason.User) != 0, !app.IsVisible, labels, selected,
+            (app.PauseReasons & Runtime.Timing.PauseReason.User) != 0, !app.IsVisible || bossHidden, labels, selected,
             td is not null, td is null ? null : settings.Hotkeys.StartWave, HudMinimized));
         if (!app.SimulationRunning && app.IsVisible) ScheduleWidget(now: true); // pausa/retomada atualiza o widget uma vez
         else if (app.IsVisible && widgetAt is null) ScheduleWidget(now: true);

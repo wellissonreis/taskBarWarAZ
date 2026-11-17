@@ -18,6 +18,8 @@ namespace SideWar.App.Composition;
 internal sealed class TdComposition
 {
     private readonly TdContent _content;
+    private TdMatchOptions _options = TdMatchOptions.Default;
+    private ulong _runSeed;
 
     private TdComposition(TdGameHost host, TdProfileRecorder recorder, TdContent content)
     {
@@ -29,6 +31,15 @@ internal sealed class TdComposition
     public TdGameHost Host { get; }
     public TdProfileRecorder Recorder { get; }
 
+    /// <summary>TD.28b: fase em que a corrida atual começou (Reiniciar volta para ela; o Mapa troca).</summary>
+    public int RunStartStage { get; private set; } = 1;
+
+    /// <summary>Regras das próximas corridas (<c>td.continuousWaves</c>: ligado = <see cref="TdMatchOptions.Default"/>, desligado = <see cref="TdMatchOptions.Classic"/>).</summary>
+    public TdMatchOptions Options => _options;
+
+    /// <summary>TD.28b: script de replay da corrida atual com as <c>Options</c> persistidas (fase inicial, seed, log de comandos e frame atual).</summary>
+    public TdReplayScript BuildReplay() => Host.BuildReplay(RunStartStage, _runSeed, 54UL);
+
     public static TdComposition Create(string dataDirectory, string version, AppStateMachine app, IClock clock, AppSettings settings,
         Action<string> log, IFileSystem? fileSystem = null, ulong? seed = null, ITdPresence? presence = null)
     {
@@ -37,24 +48,32 @@ internal sealed class TdComposition
         var tdStore = new TdProfileStore(fs, dataDirectory, version, log: log);
         var idle = new ProfileStore(fs, dataDirectory, version, log: log);
         var recorder = TdProfileRecorder.Load(tdStore, () => idle.Load(), content.Meta, content.Stages.Stages.Length, log);
-        var rng = Rng.Seed(seed ?? (ulong)DateTime.UtcNow.Ticks, 54UL);
-        var match = TdMatchState.Create(content, recorder.SuggestedStage(), rng, recorder.Profile.PurchasedNodes);
+        ulong runSeed = seed ?? (ulong)DateTime.UtcNow.Ticks;
+        var rng = Rng.Seed(runSeed, 54UL);
+        var options = settings.Td.ContinuousWaves ? TdMatchOptions.Default : TdMatchOptions.Classic;
+        int stage = recorder.SuggestedStage();
+        var match = TdMatchState.Create(content, stage, rng, recorder.Profile.PurchasedNodes, options);
         var host = new TdGameHost(clock, app, match, recorder, presence);
-        var td = new TdComposition(host, recorder, content);
+        var td = new TdComposition(host, recorder, content) { _options = options, _runSeed = runSeed, RunStartStage = stage };
         td.ApplySettings(settings);
         return td;
     }
 
     public int StageCount => _content.Stages.Stages.Length;
 
-    /// <summary>Cria uma partida nova na fase (nós comprados incluídos) e a entrega ao host (reaplica o layout da barra).</summary>
+    /// <summary>Cria uma corrida nova começando na fase (nós comprados incluídos) e a entrega ao host (reaplica o layout da barra).</summary>
     public void StartStage(int stageId)
     {
         stageId = Math.Clamp(stageId, 1, StageCount);
-        var rng = Rng.Seed((ulong)DateTime.UtcNow.Ticks, 54UL);
-        Host.Restart(TdMatchState.Create(_content, stageId, rng, Recorder.Profile.PurchasedNodes));
+        _runSeed = (ulong)DateTime.UtcNow.Ticks;
+        RunStartStage = stageId;
+        Host.Restart(TdMatchState.Create(_content, stageId, Rng.Seed(_runSeed, 54UL), Recorder.Profile.PurchasedNodes, _options));
     }
 
-    /// <summary>Auto-início: padrão desligado; segundos 5 a 60.</summary>
-    public void ApplySettings(AppSettings settings) => Host.ApplyAutoStart(settings.Td.AutoStartEnabled, settings.Td.AutoStartSeconds);
+    /// <summary>Auto-início (padrão desligado; 5 a 60 s) e ondas contínuas (valem a partir da próxima corrida).</summary>
+    public void ApplySettings(AppSettings settings)
+    {
+        _options = settings.Td.ContinuousWaves ? TdMatchOptions.Default : TdMatchOptions.Classic;
+        Host.ApplyAutoStart(settings.Td.AutoStartEnabled, settings.Td.AutoStartSeconds);
+    }
 }

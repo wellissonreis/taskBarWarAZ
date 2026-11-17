@@ -183,23 +183,25 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         }
         if (it.Action == TdUiAction.GameOption)
         {
-            if (it.Arg == 0) RoundBox(c, new DipRect(r.X, r.Y, r.W, 240), Palette.Td.BorderStrong, Palette.Td.Surface, 8);
+            if (it.Arg == 0) RoundBox(c, new DipRect(r.X, r.Y, r.W, 272), Palette.Td.BorderStrong, Palette.Td.Surface, 8);
             if (hover) _p.Fill(c, new DipRect(r.X + 1, r.Y + 1, r.W - 2, r.H - 2), Palette.Td.BorderStrong.WithAlpha((byte)90));
             int colon = it.Text.IndexOf(':');
             string name = colon > 0 ? it.Text[..colon] : it.Text, val = colon > 0 ? it.Text[(colon + 1)..].Trim() : "";
-            _p.Text(c, name, PanelFont.JetBrainsMono, 12, new DipRect(r.X + 12, r.Y + 12, 150, 16), Palette.Td.Text);
-            if (it.Arg is 1 or 2 or 4 or 5)
+            float dy = (r.H - 40) / 2f; // linhas de 32 (TD.28b) ou 40
+            _p.Text(c, name, PanelFont.JetBrainsMono, 12, new DipRect(r.X + 12, r.Y + 12 + dy, 170, 16), Palette.Td.Text);
+            if (it.Arg is 1 or 2 or 4 or 5 or 6 or 7)
             {
                 bool on = val.StartsWith("lig", StringComparison.Ordinal);
-                RoundBox(c, new DipRect(r.X + r.W - 52, r.Y + 11, 38, 18), on ? Palette.Td.Amber : Palette.Td.BorderStrong, on ? Palette.Td.Amber : Palette.Td.Background, 9);
-                _p.Fill(c, new DipRect(r.X + r.W - (on ? 32 : 48), r.Y + 14, 12, 12), on ? Palette.Td.Background : Palette.Td.Muted);
+                if (it.Right is not null) _p.Text(c, it.Right, PanelFont.JetBrainsMono, 9, new DipRect(r.X + r.W - 160, r.Y + 13 + dy, 100, 14), Palette.Td.Amber, TextAlign.Right);
+                RoundBox(c, new DipRect(r.X + r.W - 52, r.Y + 11 + dy, 38, 18), on ? Palette.Td.Amber : Palette.Td.BorderStrong, on ? Palette.Td.Amber : Palette.Td.Background, 9);
+                _p.Fill(c, new DipRect(r.X + r.W - (on ? 32 : 48), r.Y + 14 + dy, 12, 12), on ? Palette.Td.Background : Palette.Td.Muted);
             }
             else
             {
-                if (it.Right is not null) _p.Text(c, it.Right, PanelFont.JetBrainsMono, 9, new DipRect(r.X + r.W - 160, r.Y + 13, 90, 14), Palette.Td.Amber, TextAlign.Right);
-                _p.Text(c, val, PanelFont.JetBrainsMono, 12, new DipRect(r.X + r.W - 68, r.Y + 12, 56, 16), Palette.Td.Text, TextAlign.Right);
+                if (it.Right is not null) _p.Text(c, it.Right, PanelFont.JetBrainsMono, 9, new DipRect(r.X + r.W - 160, r.Y + 13 + dy, 90, 14), Palette.Td.Amber, TextAlign.Right);
+                _p.Text(c, val, PanelFont.JetBrainsMono, 12, new DipRect(r.X + r.W - 68, r.Y + 12 + dy, 56, 16), Palette.Td.Text, TextAlign.Right);
             }
-            if (it.Arg < 5) _p.Fill(c, new DipRect(r.X + 1, r.Y + r.H - 1, r.W - 2, 1), Palette.Td.Border);
+            if (it.Arg < 7) _p.Fill(c, new DipRect(r.X + 1, r.Y + r.H - 1, r.W - 2, 1), Palette.Td.Border);
             return;
         }
         if (it.Action == TdUiAction.ChooseTower)

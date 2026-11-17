@@ -46,7 +46,42 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         gameOptions = options;
         ui(UiRequest.SaveTdOptions);
     }
-    public void LoadGameOptions(SideWar.Persistence.Settings.AppSettings settings) => gameOptions = new(settings.Td.BandHeightDip, settings.Td.AutoStartEnabled, settings.Audio.Enabled, (int)Math.Round(settings.Audio.Volume * 100), settings.Td.BonusQuestions, settings.Td.FadeWhenUnfocused);
+    public void LoadGameOptions(SideWar.Persistence.Settings.AppSettings settings)
+    {
+        gameOptions = new(settings.Td.BandHeightDip, settings.Td.AutoStartEnabled, settings.Audio.Enabled, (int)Math.Round(settings.Audio.Volume * 100), settings.Td.BonusQuestions, settings.Td.FadeWhenUnfocused,
+            settings.Td.ContinuousWaves, settings.Td.TowerPanelPinned);
+        bossHotkey = settings.Hotkeys.ToggleVisibility;
+        Kick();
+    }
+
+    private volatile string bossHotkey = "Ctrl+Alt+H";
+    private volatile bool bossHidden;
+    /// <summary>TD.28b: atalho global de minimizar tudo (configurável em Configurações &gt; Atalhos).</summary>
+    public string BossHotkey => bossHotkey;
+    public int RunStartStage => td.RunStartStage;
+
+    /// <summary>TD.28b: esconde/mostra a UI TD (HUD, painel, cartões, modal, dica); a partida continua rodando. A cena (faixa) é escondida pela composição.</summary>
+    public void SetBossHidden(bool hidden)
+    {
+        if (bossHidden == hidden) return;
+        if (hidden)
+        {
+            controller.SetBossHidden(true); // fecha modal/painel/cartões e atualiza as janelas antes de congelar o desenho
+            bossHidden = true;
+            driver.Suspended = true;
+            hudHover = popHover = tipIndex = -1;
+            deadline = null;
+        }
+        else
+        {
+            bossHidden = false;
+            driver.Suspended = false;
+            controller.SetBossHidden(false);
+            hudSig = popSig = long.MinValue;
+            Refresh(true);
+            Kick();
+        }
+    }
     private volatile bool tutorialDone;
     private volatile string tipsSeenText;
     private volatile bool bonusQuestions;
@@ -287,8 +322,11 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     {
         int w = (int)MathF.Round(model.Width * UiScale), h = (int)MathF.Round(model.Height * UiScale);
         // TD.16: HUD (ou chip recolhido) flutua logo ACIMA da faixa, alinhado à direita, sem cobri-la.
+        // TD.28b: a borda esquerda é fixa (largura cheia do HUD); sem o botão Iniciar onda a janela só encolhe pela direita e o chip não pula.
+        int full = (int)MathF.Round(TdHudView.FullWidth * UiScale);
         int bottom = Math.Max(c.Monitor.WorkArea.Top + h, c.Scene.Top - (int)MathF.Round(2 * Scale));
-        return new PixelRect(c.Scene.Right - w, bottom - h, c.Scene.Right, bottom);
+        int left = c.Scene.Right - full;
+        return new PixelRect(left, bottom - h, left + w, bottom);
     }
 
     public void Kick() => deadline = clock.NowTicks + (long)(KickSeconds * clock.TicksPerSecond);
@@ -296,16 +334,17 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     public void OnWake()
     {
         if (disposed) return;
+        if (bossHidden) { deadline = null; return; }
         controller.Sync();
         Refresh(false);
         var m = td.Host.Match;
-        bool busy = runtime.App.IsVisible && (m.Phase == MatchPhase.Onda || controller.PopoverOpen || controller.CurrentTip is not null || m.CountdownRemainingSeconds > 0 || m.CrateActive || controller.QuizActive || controller.Pulsing);
+        bool busy = runtime.App.IsVisible && (m.Phase == MatchPhase.Onda || controller.PopoverOpen || controller.CurrentTip is not null || m.CountdownRemainingSeconds > 0 || m.CrateActive || controller.QuizActive || controller.Pulsing || controller.NoticeOpen);
         deadline = busy ? clock.NowTicks + (long)(TickSeconds * clock.TicksPerSecond) : null;
     }
 
     private void Refresh(bool force)
     {
-        if (disposed || renderer is null || hudWindow is null || popWindow is null || tipWindow is null || game.Dock.Current is not { } c) return;
+        if (disposed || bossHidden || renderer is null || hudWindow is null || popWindow is null || tipWindow is null || game.Dock.Current is not { } c) return;
         hud = controller.BuildHud();
         var hudBounds = HudBounds(c, hud);
         bool hudMoved = hudBounds != hudWindow.Bounds;
@@ -403,6 +442,9 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     }
 
     // ---------------------------------------------------------------- ITdUiHost
+
+    string ITdUiHost.BossHotkey => bossHotkey;
+    int ITdUiHost.RunStartStage => td.RunStartStage;
 
     public bool Paused => (runtime.App.PauseReasons & Runtime.Timing.PauseReason.User) != 0;
     public void TogglePause() => runtime.TogglePause();

@@ -30,7 +30,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     private bool tdAutoStart;
     private int tdAutoStartSeconds, tdBandHeight, tdFadePercent;
     private bool tdFadeWhenUnfocused;
-    private bool tdBonusQuestions;
+    private bool tdBonusQuestions, tdContinuousWaves, tdTowerPanelPinned;
     private string? saveError;
 
     public SettingsViewModel(AppSettings current, Func<AppSettings, bool> save)
@@ -72,6 +72,8 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     public int TdBandHeight { get => tdBandHeight; set { if (Set(ref tdBandHeight, value)) Check(nameof(TdBandHeight), value is >= TdSettings.MinBandHeightDip and <= TdSettings.MaxBandHeightDip ? null : "Altura entre 32 e 96 DIP."); } }
     /// <summary>Esmaecer faixa e HUD ao ativar outro app (TD.14).</summary>
     public bool TdBonusQuestions { get => tdBonusQuestions; set => Set(ref tdBonusQuestions, value); }
+    public bool TdContinuousWaves { get => tdContinuousWaves; set => Set(ref tdContinuousWaves, value); }
+    public bool TdTowerPanelPinned { get => tdTowerPanelPinned; set => Set(ref tdTowerPanelPinned, value); }
     public bool TdFadeWhenUnfocused { get => tdFadeWhenUnfocused; set => Set(ref tdFadeWhenUnfocused, value); }
     public int TdFadePercent { get => tdFadePercent; set { if (Set(ref tdFadePercent, value)) Check(nameof(TdFadePercent), value is >= TdSettings.MinFadePercent and <= TdSettings.MaxFadePercent ? null : "Opacidade entre 10 e 90%."); } }
     public string TogglePause { get => togglePause; set { if (Set(ref togglePause, value)) Check(nameof(TogglePause), ValidateHotkey(value)); } }
@@ -140,6 +142,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         {
             AutoStartEnabled = tdAutoStart, AutoStartSeconds = tdAutoStartSeconds, BandHeightDip = tdBandHeight,
             FadeWhenUnfocused = tdFadeWhenUnfocused, FadeOpacityPercent = tdFadePercent, BonusQuestions = tdBonusQuestions,
+            ContinuousWaves = tdContinuousWaves, TowerPanelPinned = tdTowerPanelPinned,
         },
     };
 
@@ -193,6 +196,8 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         tdFadeWhenUnfocused = s.Td.FadeWhenUnfocused;
         tdFadePercent = s.Td.FadeOpacityPercent;
         tdBonusQuestions = s.Td.BonusQuestions;
+        tdContinuousWaves = s.Td.ContinuousWaves;
+        tdTowerPanelPinned = s.Td.TowerPanelPinned;
     }
 
     private void Check(string property, string? error)

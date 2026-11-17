@@ -104,4 +104,47 @@ public sealed class TdCompositionTests : IDisposable
         }
         finally { try { Directory.Delete(dir2, true); } catch (IOException) { } }
     }
+
+    [Fact]
+    public void Continuous_setting_picks_match_options_for_new_runs_and_replays_carry_them()
+    {
+        Directory.CreateDirectory(dir);
+        var clock = new ManualClock();
+        var td = TdComposition.Create(dir, "0.1.0", VisibleApp(), clock, new AppSettings(), _ => { }, seed: 7);
+        Assert.True(td.Host.Match.Options.ContinuousWaves);
+        Assert.True(td.BuildReplay().Options!.PersistentRun);
+        td.ApplySettings(new AppSettings { Td = new TdSettings { ContinuousWaves = false } });
+        Assert.True(td.Host.Match.Options.ContinuousWaves); // a corrida atual não muda
+        td.StartStage(3);
+        Assert.True(td.Host.Match.Options.IsClassic);
+        Assert.Equal(3, td.RunStartStage);
+        Assert.Equal(3, td.BuildReplay().Stage);
+        Assert.True(td.BuildReplay().Options!.IsClassic);
+    }
+
+    [Fact]
+    public void Stage_cleared_event_records_score_crown_and_unlock_by_stage_id()
+    {
+        Directory.CreateDirectory(dir);
+        var content = SideWar.Core.Content.Td.TdContentLoader.LoadEmbedded();
+        var defs = new[] { new SideWar.Core.Content.Td.TdWaveDef(1, false, 1.0, [new SideWar.Core.Content.Td.TdWaveGroupDef("grunt", 1, 0.0, 1.0)]) };
+        var stages = content.Stages.Stages.Select(s => s.Id == 1 ? s with { Waves = 1, StartingCredits = 5000 } : s).ToArray();
+        var waves = content.Waves.Stages.Select(s => s.Stage == 1 ? new SideWar.Core.Content.Td.TdStageWavesDef(1, defs) : s).ToArray();
+        var tiny = content with { Waves = new SideWar.Core.Content.Td.TdWavesDef(waves), Stages = content.Stages with { Stages = stages } };
+        var recorder = TdProfileRecorder.Load(new TdProfileStore(RealFileSystem.Instance, dir, "0.1.0"), () => null, tiny.Meta, 6);
+        var match = TdMatchState.Create(tiny, 1, SideWar.Core.Simulation.Rng.Seed(7, 54), null, TdMatchOptions.Default);
+        Assert.True(match.Apply(new SideWar.Core.Td.LayoutChanged(TdSanityBot.TypicalLayout())).IsOk);
+        Assert.True(match.Apply(new SetPresence(false)).IsOk);
+        Assert.True(match.Apply(new SideWar.Core.Td.StartWave()).IsOk);
+        for (int i = 0; i < 100_000 && match.StageResults.Count == 0; i++) match.Step();
+        Assert.Single(match.StageResults);
+        recorder.OnEvents(match, match.Events);
+        Assert.True(recorder.StageBestScore(1) > 0);
+        Assert.True(recorder.StageStars(1) >= 1);
+        Assert.True(recorder.StageUnlocked(2));
+        Assert.True(recorder.LastOutcome.NewRecord);
+        Assert.Equal(0, recorder.SaveFailures);
+        var saved = new TdProfileStore(RealFileSystem.Instance, dir).Load();
+        Assert.Contains(saved.Profile.Stages, s => s.StageId == 1 && s.BestScore > 0);
+    }
 }

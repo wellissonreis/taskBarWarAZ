@@ -80,16 +80,37 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
         return true;
     }
 
-    public void OnEvents(TdMatchState match, IReadOnlyList<TdEvent> events) { }
+    /// <summary>
+    /// TD.28b: fase concluída na corrida contínua (<see cref="TdEventType.StageCleared"/>) grava score, coroa, medalhas e recorde por <c>StageId</c>
+    /// (1 a 6; o ciclo infinito reaproveita o mesmo registro). A derrota encerra a corrida e continua em <see cref="OnMatchEnded"/>.
+    /// </summary>
+    public void OnEvents(TdMatchState match, IReadOnlyList<TdEvent> events)
+    {
+        for (int i = 0; i < events.Count; i++)
+        {
+            if (events[i].Type != TdEventType.StageCleared) continue;
+            TdStageSummary? found = null;
+            for (int j = match.StageResults.Count - 1; j >= 0; j--)
+                if (match.StageResults[j].StageNumber == events[i].A) { found = match.StageResults[j]; break; }
+            if (found is not { } sr) continue;
+            var result = new TdMatchResult(MatchPhase.Vitoria, sr.Stars, sr.IntegrityLost, sr.Crown, sr.Medals, sr.Score);
+            Profile = TdProfileRules.RecordMatch(Profile, _meta, sr.StageId, result, _stageCount, out var outcome);
+            LastOutcome = outcome;
+            Save();
+        }
+    }
+
+    private void Save()
+    {
+        if (_store.Save(Profile)) return;
+        SaveFailures++;
+        _log("falha ao gravar profile-td.json");
+    }
 
     public void OnMatchEnded(TdMatchState match, TdMatchResult result)
     {
         Profile = TdProfileRules.RecordMatch(Profile, _meta, match.StageId, result, _stageCount, out var outcome);
         LastOutcome = outcome;
-        if (!_store.Save(Profile))
-        {
-            SaveFailures++;
-            _log("falha ao gravar profile-td.json");
-        }
+        Save();
     }
 }
