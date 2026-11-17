@@ -39,7 +39,7 @@ public sealed record MoveTower(int TowerId, int X) : IGameCommand;
 /// <summary>Sinal "presente agora" do hospedeiro (RF-28.19): enviado ao log só quando muda; o Core nunca lê relógio nem entrada.</summary>
 public sealed record SetPresence(bool Present) : IGameCommand;
 
-/// <summary>Coleta a caixa-bomba ativa a tempo (RF-28.19): créditos de um bônus de onda e redução de recarga de habilidade.</summary>
+/// <summary>Coleta a caixa-bomba ativa a tempo (RF-28.19): créditos de creditSources.crateBase/PerWave e redução de recarga de habilidade.</summary>
 public sealed record CollectCrate(int CrateId) : IGameCommand;
 
 /// <summary>
@@ -54,3 +54,9 @@ public sealed record Pause : IGameCommand;
 /// <summary>Retoma a simulação pausada por <see cref="Pause"/>.</summary>
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1716", Justification = "Nome fixado por SDD-29 §11.")]
 public sealed record Resume : IGameCommand;
+
+/// <summary>Compra uma runa adjacente com créditos, inclusive em pausa.</summary>
+public sealed record BuyRune(string RuneId) : IGameCommand;
+
+/// <summary>Devolve uma runa e os nós desconectados do Núcleo por 100% dos créditos.</summary>
+public sealed record RefundRune(string RuneId) : IGameCommand;

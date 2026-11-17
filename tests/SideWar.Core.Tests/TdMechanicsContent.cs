@@ -21,7 +21,7 @@ internal static class TdMechanicsContent
             ["td-abilities.json"] = Encoding.UTF8.GetBytes(Abilities + "\n"),
             ["td-enemies.json"] = Encoding.UTF8.GetBytes(Enemies + "\n"),
             ["td-meta.json"] = Encoding.UTF8.GetBytes(Meta + "\n"),
-            ["td-runes.json"] = TdContentLoader.ReadEmbedded()["td-runes.json"], // página de runas: não afeta a mecânica congelada
+            ["td-runes.json"] = TdContentLoader.ReadEmbedded()["td-runes.json"], // regras e efeitos das runas atuais (TD.21)
             ["td-stages.json"] = Encoding.UTF8.GetBytes(Stages + "\n"),
             ["td-towers.json"] = Encoding.UTF8.GetBytes(Towers + "\n"),
             ["td-waves.json"] = Encoding.UTF8.GetBytes(Waves + "\n"),

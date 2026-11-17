@@ -90,6 +90,8 @@ public sealed partial class TdMatchState
             _enemies.RemoveAt(i);
             WaveOf(e.Wave).Alive--;
             Integrity = Math.Max(0, Integrity - e.CoreDamage);
+            _hasLeaked = true;
+            WaveOf(e.Wave).Leaked = true;
             RecordLeak(e);
             Emit(TdEventType.EnemyLeaked, e.Id, e.CoreDamage);
             if (Integrity == 0)
@@ -124,6 +126,7 @@ public sealed partial class TdMatchState
             }
             _active.RemoveAt(i);
             long bonus = WaveBonusFor(w.Number);
+            if (!w.Leaked) bonus += _content.Runes.CreditSources.NoLeakBase + (long)_content.Runes.CreditSources.NoLeakPerWave * w.Number;
             Credits = Simulation.Sat.Add(Credits, bonus);
             Emit(TdEventType.WaveCompleted, w.Number, bonus);
         }

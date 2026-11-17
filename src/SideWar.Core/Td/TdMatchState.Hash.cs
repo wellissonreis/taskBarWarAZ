@@ -52,7 +52,7 @@ public sealed partial class TdMatchState
         h.AddInt32(_active.Count);
         foreach (var w in _active)
         {
-            h.AddInt32(w.Number); h.AddInt64(w.StartTick); h.AddInt32(w.NextSpawn); h.AddInt32(w.Alive);
+            h.AddInt32(w.Number); h.AddInt64(w.StartTick); h.AddInt32(w.NextSpawn); h.AddInt32(w.Alive); h.AddBool(w.Leaked);
             h.AddInt32(w.Spawns.Length);
             foreach (var s in w.Spawns) { h.AddInt64(s.DueTick); h.AddInt32(s.EnemyIndex); }
         }
@@ -70,6 +70,8 @@ public sealed partial class TdMatchState
         h.AddInt32(_cratePendingWave); h.AddInt64(_crateDropTick); h.AddUInt64(_crateXRaw); h.AddInt32(_nextCrateId);
         h.AddBool(_bonusAnswered);
         if (Paused) h.AddBool(true); // só quando verdadeiro: o hash de partidas sem pausa não muda
+        h.AddUInt64(_ownedRunes);
+        h.AddBool(_hasLeaked);
         h.AddUInt64(_rng.State);
         h.AddUInt64(_rng.Inc);
         return h.Value;

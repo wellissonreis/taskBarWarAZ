@@ -103,7 +103,7 @@ public sealed class TdBombCrateTests
         Assert.DoesNotContain(s.Events, e => e.Type is TdEventType.CrateSpawned or TdEventType.CrateExploded);
     }
 
-    [Fact(DisplayName = "RF-28.19 Collect pays one wave bonus and cuts the longest ability cooldown by 20 s; wrong id is rejected")]
+    [Fact(DisplayName = "RF-28.19 Collect pays crate credits (SDD-29) and cuts the longest ability cooldown by 20 s; wrong id is rejected")]
     public void Collect_PaysCreditsAndReducesCooldown()
     {
         var s = New(Cfg(), stage: 2, towerX: [100, 300, 500, 700]);
@@ -117,7 +117,7 @@ public sealed class TdBombCrateTests
         int id = s.CrateId;
         Assert.True(s.Apply(new CollectCrate(id)).IsOk);
         Assert.False(s.CrateActive);
-        Assert.Equal(credits + s.WaveBonusFor(s.WaveNumber), s.Credits);
+        Assert.Equal(credits + s.Content.Runes.CreditSources.CrateBase + s.Content.Runes.CreditSources.CratePerWave * s.WaveNumber, s.Credits);
         Assert.Equal(Math.Max(0, cdBefore - 20 * 30), s.AbilityStatuses.First(a => a.Id == "scale").CooldownTicks);
         Assert.Contains(s.Events, e => e.Type == TdEventType.CrateCollected && e.A == id);
         Assert.Equal(CommandReason.NotAvailable, s.Apply(new CollectCrate(id)).Reason);
@@ -133,7 +133,7 @@ public sealed class TdBombCrateTests
         Assert.True(StepUntil(s, () => s.CrateActive));
         long credits = s.Credits;
         Assert.True(s.Apply(new CollectCrate(s.CrateId)).IsOk);
-        Assert.Equal(credits + s.WaveBonusFor(s.WaveNumber), s.Credits);
+        Assert.Equal(credits + s.Content.Runes.CreditSources.CrateBase + s.Content.Runes.CreditSources.CratePerWave * s.WaveNumber, s.Credits);
     }
 
     [Fact(DisplayName = "RF-28.19 Expiry explodes and destroys the nearest PLACED tower (ties: lowest id), with no refund; unplaced towers are ignored")]
@@ -252,5 +252,5 @@ public sealed class TdBombCrateTests
         Assert.Equal(Golden, first.StateHash);
     }
 
-    private const ulong Golden = 6138761065689756581UL;
+    private const ulong Golden = 588953149544461392UL;
 }

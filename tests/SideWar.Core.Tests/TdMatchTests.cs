@@ -48,7 +48,7 @@ public sealed class TdMatchTests
     {
         var s = New(3);
         Assert.Equal(MatchPhase.Preparo, s.Phase);
-        Assert.Equal(200, s.Credits);
+        Assert.Equal(280, s.Credits);
         Assert.Equal(20, s.Integrity);
         Assert.Equal(0, s.WaveNumber);
         Assert.Equal(12, s.TotalWaves);
@@ -119,7 +119,7 @@ public sealed class TdMatchTests
         s.Step();
         Assert.Equal(MatchPhase.Onda, s.Phase);
         Assert.Equal(1, s.WaveNumber);
-        Assert.Equal(150, s.Credits); // contagem esgotada: sem bônus
+        Assert.Equal(230, s.Credits); // contagem esgotada: sem bônus
 
         s.Apply(new SetAutoStart(AutoStartMode.Countdown, 1));
         Assert.Equal(5, s.AutoStartSeconds);
@@ -137,7 +137,7 @@ public sealed class TdMatchTests
         Steps(s, 30);
         Assert.Equal(14.0, s.CountdownRemainingSeconds);
         Assert.True(s.Apply(new StartWave()).IsOk);
-        Assert.Equal(150 + 10, s.Credits); // ceil(14 × 0.65) = 10
+        Assert.Equal(230 + 10, s.Credits); // ceil(14 × 0.65) = 10
     }
 
     [Fact(DisplayName = "RF-28.3 After a wave ends the countdown restarts, and Vitória/Derrota never auto-restart")]
@@ -168,10 +168,10 @@ public sealed class TdMatchTests
         s.Apply(new StartWave());
         Steps(s, 10);
         Assert.True(s.Apply(new BuildTower("bolt", 300)).IsOk);
-        Assert.Equal(150 - 70, s.Credits);
+        Assert.Equal(230 - 70, s.Credits);
         int id = s.Towers[0].Id;
         Assert.True(s.Apply(new SellTower(id)).IsOk);
-        Assert.Equal(80 + 49, s.Credits); // floor(70 × 0,7)
+        Assert.Equal(160 + 49, s.Credits); // floor(70 × 0,7)
         Assert.Empty(s.Towers);
         Assert.Equal(CommandReason.TowerNotFound, s.Apply(new SellTower(id)).Reason);
         Assert.Equal(MatchPhase.Onda, s.Phase);
@@ -183,14 +183,14 @@ public sealed class TdMatchTests
         var s = New(content: Variant([2], credits: 10_000));
         Assert.Equal(70, s.NextTowerCost(0));
         Assert.True(s.Apply(new BuildTower("bolt", 100)).IsOk);
-        Assert.Equal(10_000 - 70, s.Credits);
+        Assert.Equal(10_080 - 70, s.Credits);
         Assert.Equal(88, s.NextTowerCost(0));            // 70 × 1,25 = 87,5 → 88 (par)
         Assert.True(s.Apply(new BuildTower("bolt", 300)).IsOk);
-        Assert.Equal(10_000 - 70 - 88, s.Credits);
+        Assert.Equal(10_080 - 70 - 88, s.Credits);
         Assert.Equal(109, s.NextTowerCost(0));           // 70 × 1,56 = 109,2
         Assert.Equal(90, s.NextTowerCost(1));            // Gelo ainda em n = 0
         Assert.True(s.Apply(new BuildTower("frost", 500)).IsOk);
-        Assert.Equal(10_000 - 70 - 88 - 90, s.Credits);
+        Assert.Equal(10_080 - 70 - 88 - 90, s.Credits);
     }
 
     [Fact(DisplayName = "TD.20 / CA-29.2 Sell is fungible: refunds rate × cost(type, n−1) whichever tower is sold, and lowers the next price")]
@@ -268,10 +268,10 @@ public sealed class TdMatchTests
         Assert.Equal(hash, s.ComputeStateHash());
         s.Apply(new BuildTower("bolt", 100));
         s.Apply(new BuildTower("bolt", 200));
-        var r = s.Apply(new BuildTower("bolt", 300)); // 150 - 70 = 80; a 2ª custa 88 (custo cresce por tipo)
+        var r = s.Apply(new BuildTower("bolt", 300)); // 230 - 70 - 88 = 72; a 3ª custa 109.
         Assert.Equal(CommandReason.InsufficientCredits, r.Reason);
-        Assert.Equal(8, r.Missing);
-        Assert.Single(s.Towers);
+        Assert.Equal(37, r.Missing);
+        Assert.Equal(2, s.Towers.Count);
     }
 
     [Fact(DisplayName = "CA-28.3 / T-28.3 CallNextWave is rejected before spawns end, then pays a capped bonus and overlaps waves")]
@@ -321,14 +321,14 @@ public sealed class TdMatchTests
         Assert.Equal(Math.Min(raw, cap), s.Credits - before);
     }
 
-    [Fact(DisplayName = "RF-28.4 Wave bonus (20 + 4w) × factor is paid when a wave ends")]
+    [Fact(DisplayName = "RF-28.4 Wave bonus (60 + 5w) × factor is paid when a wave ends")]
     public void WaveBonus_PaidOnCompletion()
     {
         var s = New(content: Variant([1, 1], credits: 0));
-        Assert.Equal(0, s.Credits);
+        Assert.Equal(80, s.Credits);
         RunUntilPhase(s, MatchPhase.Vitoria);
-        // Sem torres: o grunt vaza (sem ouro de morte); bônus onda 1 = 24, onda 2 = 28.
-        Assert.Equal(24 + 28, s.Credits);
+        // Sem torres: o grunt vaza (sem ouro e sem bônus de onda perfeita).
+        Assert.Equal(80 + 65 + 70, s.Credits);
     }
 
     [Fact(DisplayName = "CA-28.1 Preparo freezes towers: no cooldown recovery between waves")]
@@ -360,7 +360,7 @@ public sealed class TdMatchTests
         Assert.Equal(MatchPhase.Vitoria, s.Phase);
         Assert.Equal(20, s.Integrity);
         Assert.Equal(3, s.Stars);
-        Assert.Equal(credits + 3 * 6 + 24, s.Credits);
+        Assert.Equal(credits + 3 * 6 + 65 + 42, s.Credits);
     }
 
     [Fact(DisplayName = "CA-28.1 Enemy cap on the field is respected (44); excess spawns wait")]
@@ -448,7 +448,7 @@ public sealed class TdMatchTests
         Assert.True(r.Ticks > 0);
     }
 
-    private const ulong GoldenReplay = 16774011634538135045UL;
+    private const ulong GoldenReplay = 2075538275561993642UL;
 
     private static TdReplayResult RunScript(ulong seed)
     {

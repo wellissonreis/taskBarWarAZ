@@ -19,8 +19,7 @@ public sealed partial class TdMatchState
     /// <summary>Créditos pagos por um acerto antes da onda <paramref name="wave"/> (<c>creditsBase + creditsPerWave × onda</c>).</summary>
     public long BonusCreditsFor(int wave)
     {
-        var q = _content.Stages.Rules.BonusQuestion;
-        return q.CreditsBase + (long)q.CreditsPerWave * Math.Max(1, wave);
+        return _content.Runes.CreditSources.BonusQuestionBase + (long)_content.Runes.CreditSources.BonusQuestionPerWave * Math.Max(1, wave);
     }
 
     private CommandResult DoAnswerBonus(AnswerBonus cmd)

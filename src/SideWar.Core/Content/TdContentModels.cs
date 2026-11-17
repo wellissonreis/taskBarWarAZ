@@ -89,7 +89,7 @@ public sealed record TdRuneSectorDef(string Id, string Name, string? Tower);
 /// <summary>Custos em créditos por tipo de nó (fixos, sem arbitragem; SDD-29 §4.2).</summary>
 public sealed record TdRuneCostsDef(int Small, int Notable, int Border, int Keystone);
 
-/// <summary>Valores-alvo das fontes de crédito da §6 (moeda única). Ainda não consumidos pelo Core: a TD.20/21/22 liga e calibra.</summary>
+/// <summary>Fontes de crédito da §6 (moeda única), consumidas pelo Core desde a TD.21; calibração na TD.22.</summary>
 public sealed record TdCreditSourcesDef(
     int StartingCreditsBonus, int WaveBonusBase, int WaveBonusPerWave, int NoLeakBase, int NoLeakPerWave,
     int CrateBase, int CratePerWave, int BonusQuestionBase, int BonusQuestionPerWave, int BossCredits);

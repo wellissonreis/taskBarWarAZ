@@ -125,6 +125,7 @@ public sealed class TdActiveWave
     internal TdSpawn[] Spawns { get; }
     public int NextSpawn { get; internal set; }
     public int Alive { get; internal set; }
+    public bool Leaked { get; internal set; }
     public bool SpawnsDone => NextSpawn >= Spawns.Length;
     public int SpawnCount => Spawns.Length;
 }

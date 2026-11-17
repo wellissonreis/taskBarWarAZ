@@ -34,11 +34,11 @@ public sealed class TdBonusDefeatTests
         long c0 = s.Credits;
         var r = s.Apply(new AnswerBonus(7, true));
         Assert.True(r.IsOk);
-        var q = C.Stages.Rules.BonusQuestion;
-        Assert.Equal(c0 + q.CreditsBase + q.CreditsPerWave * 1, s.Credits);
+        var q = C.Runes.CreditSources;
+        Assert.Equal(c0 + q.BonusQuestionBase + q.BonusQuestionPerWave * 1, s.Credits);
         Assert.Contains(s.Events, e => e.Type == TdEventType.BonusAnswered && e.A == 7 && e.B == s.Credits - c0);
         Assert.Equal(CommandReason.AlreadyUsed, s.Apply(new AnswerBonus(8, true)).Reason);
-        Assert.Equal(c0 + q.CreditsBase + q.CreditsPerWave, s.Credits);
+        Assert.Equal(c0 + q.BonusQuestionBase + q.BonusQuestionPerWave, s.Credits);
     }
 
     [Fact]

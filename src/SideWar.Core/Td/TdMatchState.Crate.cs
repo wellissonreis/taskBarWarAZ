@@ -154,7 +154,7 @@ public sealed partial class TdMatchState
     {
         if (Phase != MatchPhase.Onda) return Reject(CommandReason.InvalidPhase);
         if (!CrateActive || cmd.CrateId != CrateId) return Reject(CommandReason.NotAvailable);
-        long credits = WaveBonusFor(WaveNumber);
+        long credits = _content.Runes.CreditSources.CrateBase + (long)_content.Runes.CreditSources.CratePerWave * WaveNumber;
         Credits = Sat.Add(Credits, credits);
         int best = -1;
         for (int i = 0; i < _abilityCd.Length; i++)

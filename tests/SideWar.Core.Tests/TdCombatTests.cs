@@ -445,7 +445,7 @@ public sealed class TdCombatTests
 
     // ---------------------------------------------------------------- determinismo
 
-    private const ulong GoldenStage3 = 14218406681746317761UL;
+    private const ulong GoldenStage3 = 14724320659106336327UL;
 
     private static List<TdLogEntry> ScriptLog() => new List<TdLogEntry>
         {

@@ -53,7 +53,8 @@ public sealed partial class TdMatchState
         _abilityUses = new int[content.Abilities.Length];
         Integrity = content.Stages.Rules.CoreIntegrity;
         IntegrityMax = Integrity;
-        Credits = stage.StartingCredits;
+        Credits = stage.StartingCredits + content.Runes.CreditSources.StartingCreditsBonus;
+        _ownedRunes = 1UL << Array.FindIndex(content.Runes.Nodes, n => n.Id == content.Runes.CenterId);
         AutoStart = content.Stages.Rules.AutoStart.DefaultMode == "countdown" ? AutoStartMode.Countdown : AutoStartMode.Off;
         AutoStartSeconds = content.Stages.Rules.AutoStart.DefaultCountdownSeconds;
         RestartCountdown();
@@ -87,7 +88,7 @@ public sealed partial class TdMatchState
 
     public int TotalWaves => _waves.Length;
     public int Integrity { get; private set; }
-    public int IntegrityMax { get; }
+    public int IntegrityMax { get; private set; }
     public int IntegrityLost => IntegrityMax - Integrity;
     public long Credits { get; private set; }
     /// <summary>Teto técnico de segurança (SDD-29 §5.3): 48 torres no total, contando as SEM POSIÇÃO. Não é teto de design: o custo crescente limita antes.</summary>
@@ -109,9 +110,14 @@ public sealed partial class TdMatchState
     public long NextTowerCost(int defIndex) => TowerCostAt(defIndex, TowerCount(defIndex));
 
     /// <summary>Preço da torre do tipo quando já existem <paramref name="n"/> do mesmo tipo (n &gt;= 0; acima da tabela usa a última entrada).</summary>
-    public long TowerCostAt(int defIndex, int n) => TowerCost(_content, defIndex, n);
+    public long TowerCostAt(int defIndex, int n)
+    {
+        var table = Rune("general", "costGrowthLow") > 0 ? _content.Stages.Rules.TowerCostTableLow : _content.Stages.Rules.TowerCostTable;
+        long cost = DivRoundHalfEven(_content.Towers[defIndex].Cost * (long)table[Math.Clamp(n, 0, table.Length - 1)], 100);
+        return DivRoundHalfEven(cost * (10000 - Rune("general", "towerCostDiscountBp")), 10000);
+    }
 
-    /// <summary>Tabela de custo vigente (a normal; a <c>towerCostTableLow</c> da runa "Cota folgada" entra na TD.21).</summary>
+    /// <summary>Custo base sem modificadores de runas, para consumidores sem partida.</summary>
     internal static long TowerCost(TdContent content, int defIndex, int n)
     {
         var table = content.Stages.Rules.TowerCostTable;
@@ -135,6 +141,7 @@ public sealed partial class TdMatchState
     {
         var rules = _content.Stages.Rules;
         long bp = (long)Math.Round(rules.SellRefund * 10000.0, MidpointRounding.ToEven);
+        bp += Rune("general", "sellRefundBp");
         bp = Math.Min(bp, _content.Runes.SellRefundCapBp);
         return TowerCostAt(defIndex, Math.Max(0, countBefore - 1)) * bp / 10000;
     }
@@ -180,8 +187,7 @@ public sealed partial class TdMatchState
     /// <summary>Valor do bônus de onda (RF-28.4): <c>(base + perWave × w) × bonusFactor</c>, arredondado para cima.</summary>
     public long WaveBonusFor(int wave)
     {
-        var r = _content.Stages.Rules;
-        return CeilEps((r.WaveBonusBase + r.WaveBonusPerWave * wave) * _waves[wave - 1].BonusFactor);
+        return CeilEps((_content.Runes.CreditSources.WaveBonusBase + _content.Runes.CreditSources.WaveBonusPerWave * wave) * _waves[wave - 1].BonusFactor * RuneFactor("general", "waveBonusBp"));
     }
 
     /// <summary>ETA estimado (s) para todos os inimigos vivos chegarem ao núcleo: <c>max(X / Speed)</c> (RF-28.3).</summary>
@@ -204,7 +210,7 @@ public sealed partial class TdMatchState
     private double CallBonusFactor(int wave)
     {
         var c = _content.Stages.Rules.CallNext;
-        return c.BonusBase + c.BonusPerWave * wave;
+        return (c.BonusBase + c.BonusPerWave * wave) * RuneFactor("general", "callNextBonusBp");
     }
 
     private void RestartCountdown()
@@ -231,6 +237,8 @@ public sealed partial class TdMatchState
             return Reject(CommandReason.PausedCommand); // "nada de comando de tempo enquanto pausado" (SDD-29 §11)
         return command switch
         {
+            BuyRune b => DoBuyRune(b),
+            RefundRune r => DoRefundRune(r),
             Pause => DoPause(),
             Resume => DoResume(),
             StartWave => DoStartWave(),

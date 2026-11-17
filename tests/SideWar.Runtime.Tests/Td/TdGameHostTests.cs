@@ -301,7 +301,7 @@ public sealed class TdGameHostTests
         r.Run(1); // o comando entra no próximo Wake; um passo depois fecha o Frame do replay
         Assert.False(r.Match.CrateActive);
         Assert.Contains(r.Host.CommandLog, e => e.Command is CollectCrate);
-        Assert.True(r.Match.Credits >= credits + r.Match.WaveBonusFor(r.Match.WaveNumber));
+        Assert.True(r.Match.Credits >= credits + content.Runes.CreditSources.CrateBase + content.Runes.CreditSources.CratePerWave * r.Match.WaveNumber);
         var replay = TdReplayRunner.Run(content, new TdReplayScript(2, 42, 54, r.Host.CommandLog, r.Match.Frame));
         Assert.Equal(r.Match.ComputeStateHash(), replay.StateHash);
     }
