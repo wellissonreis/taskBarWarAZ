@@ -189,7 +189,8 @@ public sealed class TdContentTests
     {
         var c = TdContentLoader.LoadEmbedded().Runes.CreditSources;
         Assert.Equal((80, 120, 10), (c.StartingCreditsBonus, c.WaveBonusBase, c.WaveBonusPerWave)); // TD.29a: dobrados (sem créditos para runas, só torres)
-        Assert.Equal((80, 4, 40, 2), (c.NoLeakBase, c.NoLeakPerWave, c.CrateBase, c.CratePerWave));
+        // TD.30a: a caixa-bomba saiu; seu valor médio por onda (chance 0,5 × (40 + 2·onda) = 20 + 1·onda) foi somado ao bônus "sem vazar".
+        Assert.Equal((100, 5), (c.NoLeakBase, c.NoLeakPerWave));
         Assert.Equal((40, 3, 120), (c.BonusQuestionBase, c.BonusQuestionPerWave, c.BossCredits));
     }
 }

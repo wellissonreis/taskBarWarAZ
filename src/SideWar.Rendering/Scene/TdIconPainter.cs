@@ -105,9 +105,6 @@ internal static class TdIconPainter
                 c.DrawCircle(P(8, 8), 6.5f * u, line); c.DrawCircle(P(8, 8), 3f * u, line); c.DrawCircle(P(8, 8), 1f * u, fill); break;
             case TdIcon.Clock:
                 c.DrawCircle(P(8, 8), 6.5f * u, line); c.DrawLine(P(8, 4), P(8, 8), line); c.DrawLine(P(8, 8), P(11, 9.5f), line); break;
-            case TdIcon.Box:
-                c.DrawRect(SKRect.Create(P(2, 4).X, P(2, 4).Y, 12 * u, 10 * u), line);
-                c.DrawLine(P(2, 7.5f), P(14, 7.5f), line); c.DrawLine(P(8, 4), P(8, 7.5f), line); break;
             case TdIcon.Portal:
                 c.DrawOval(SKRect.Create(P(3.5f, 1.5f).X, P(3.5f, 1.5f).Y, 9 * u, 13 * u), line);
                 c.DrawOval(SKRect.Create(P(6, 5).X, P(6, 5).Y, 4 * u, 6 * u), fill); break;

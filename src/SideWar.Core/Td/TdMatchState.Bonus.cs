@@ -7,7 +7,6 @@ public sealed partial class TdMatchState
 {
     private int[]? _leakCount;
     private int[]? _leakDamage;
-    private int _crateTowersLost;
     private int _bonusCorrect;
     private int _bonusWrong;
 
@@ -67,9 +66,6 @@ public sealed partial class TdMatchState
         }
     }
 
-    /// <summary>Torres destruídas por explosão de caixa-bomba.</summary>
-    public int CrateTowersLost => _crateTowersLost;
-
     /// <summary>Motivo principal da derrota (RF-28.24), derivado dos contadores; só faz sentido em Derrota.</summary>
     public TdDefeatInfo DefeatAnalysis() => TdDefeat.Analyze(this);
 }
@@ -77,14 +73,14 @@ public sealed partial class TdMatchState
 /// <summary>Vazamento agregado de um tipo de inimigo: quantos chegaram ao núcleo e quanta integridade tiraram.</summary>
 public readonly record struct TdLeakStat(string EnemyId, bool IsBoss, bool Flying, int Count, int Damage);
 
-public enum TdDefeatReason : byte { BossLeaked, CrateBlast, FlyersLeaked, FewTowersNearPortal, EnemyLeaked }
+public enum TdDefeatReason : byte { BossLeaked, FlyersLeaked, FewTowersNearPortal, EnemyLeaked }
 
-public enum TdDefeatTip : byte { UseAbility, ClickCrate, UseCounters, BuildNearPortal }
+public enum TdDefeatTip : byte { UseAbility, UseCounters, BuildNearPortal }
 
 /// <summary>Motivo + dica da derrota. <c>EnemyId</c> = tipo que mais vazou (ou chefe); <c>CounterTowerIds</c> = até 2 torres que o contra-atacam (ids do td-towers.json).</summary>
 public sealed record TdDefeatInfo(TdDefeatReason Reason, TdDefeatTip Tip, string? EnemyId, IReadOnlyList<string> CounterTowerIds);
 
-/// <summary>Análise determinística e barata da derrota (regras simples, na ordem: chefe, caixa, voadores, poucas torres perto do portal, inimigo que mais vazou).</summary>
+/// <summary>Análise determinística e barata da derrota (regras simples, na ordem: chefe, voadores, poucas torres perto do portal, inimigo que mais vazou).</summary>
 public static class TdDefeat
 {
     /// <summary>Metade do caminho a partir do portal (X lógico ≥ 600) conta como "perto do portal".</summary>
@@ -111,8 +107,6 @@ public static class TdDefeat
             placed++;
             if (t.X >= NearPortalX) near++;
         }
-        if (s.CrateTowersLost >= 2 || (s.CrateTowersLost >= 1 && placed <= 3))
-            return Make(s, TdDefeatReason.CrateBlast, TdDefeatTip.ClickCrate, null);
         if (total > 0 && flyDmg * 2 >= total)
         {
             string? fly = null;

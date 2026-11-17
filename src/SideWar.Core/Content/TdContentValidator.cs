@@ -107,20 +107,7 @@ public static class TdContentValidator
         var fr = r.Fragments;
         Req(e, fr is not null, "td-stages.rules.fragments ausente");
         if (fr is not null)
-            Req(e, fr.PerWave >= 0 && fr.PerCrate >= 0 && fr.PerQuestion >= 0 && fr.PerBoss >= 0, "td-stages.rules.fragments: valores devem ser >= 0");
-        var bc = r.BombCrate;
-        Req(e, bc is not null, "td-stages.rules.bombCrate ausente");
-        if (bc is not null)
-        {
-            Req(e, bc.Chance is >= 0 and <= 1, "td-stages.rules.bombCrate.chance deve estar em [0, 1]");
-            Req(e, bc.FirstEligibleWaveStage1 >= 1, "td-stages.rules.bombCrate.firstEligibleWaveStage1 deve ser >= 1");
-            Req(e, bc.MinDropSeconds >= 0, "td-stages.rules.bombCrate.minDropSeconds deve ser >= 0");
-            Req(e, bc.DropMaxSpawnFraction is > 0 and <= 1, "td-stages.rules.bombCrate.dropMaxSpawnFraction deve estar em (0, 1]");
-            Req(e, bc.CountdownSeconds >= 1, "td-stages.rules.bombCrate.countdownSeconds deve ser >= 1");
-            Req(e, bc.EdgeMargin is >= 0 and < 600, "td-stages.rules.bombCrate.edgeMargin deve estar em [0, 600)");
-            Req(e, bc.CooldownReductionSeconds >= 0, "td-stages.rules.bombCrate.cooldownReductionSeconds deve ser >= 0");
-            Req(e, bc.PresenceWindowSeconds >= 1, "td-stages.rules.bombCrate.presenceWindowSeconds deve ser >= 1");
-        }
+            Req(e, fr.PerWave >= 0 && fr.PerQuestion >= 0 && fr.PerBoss >= 0, "td-stages.rules.fragments: valores devem ser >= 0");
 
         var challenges = Ids(r.Challenges, x => x.Id, "td-stages.challenges", e);
         foreach (var ch in r.Challenges)
@@ -427,7 +414,7 @@ public static class TdContentValidator
 
         var cs = r.CreditSources;
         Req(e, cs.StartingCreditsBonus >= 0 && cs.WaveBonusBase >= 0 && cs.WaveBonusPerWave >= 0 && cs.NoLeakBase >= 0 && cs.NoLeakPerWave >= 0
-               && cs.CrateBase >= 0 && cs.CratePerWave >= 0 && cs.BonusQuestionBase >= 0 && cs.BonusQuestionPerWave >= 0 && cs.BossCredits >= 0,
+               && cs.BonusQuestionBase >= 0 && cs.BonusQuestionPerWave >= 0 && cs.BossCredits >= 0,
             $"{f}.creditSources: todos os valores devem ser >= 0");
     }
 }

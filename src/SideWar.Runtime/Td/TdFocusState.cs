@@ -1,7 +1,7 @@
 namespace SideWar.Runtime.Td;
 
 /// <summary>
-/// Sinal "presente agora" da caixa-bomba (RF-28.19, TD.14): substitui a leitura global do último input do sistema. O jogador está
+/// Sinal "presente agora" (TD.14): substitui a leitura global do último input do sistema. O jogador está
 /// <b>ausente</b> depois de ativar OUTRO app (mudança de foreground para janela que não é do SideWar) e volta a <b>presente</b> ao
 /// interagir com o SideWar (mouse sobre a faixa, o HUD ou um popover, clique). Só um sinal binário no host; não gera crédito.
 /// </summary>
@@ -11,7 +11,7 @@ public interface ITdPresence
 }
 
 /// <summary>
-/// Estado de foco da faixa TD (TD.14): ausente ⇒ esmaecer faixa e HUD (se ligado), render a 8 fps e caixa-bomba sem presença.
+/// Estado de foco da faixa TD (TD.14): ausente ⇒ esmaecer faixa e HUD (se ligado), render a 8 fps.
 /// Atualizado na T-Game (hook de foreground e eventos de mouse); leitura segura de qualquer thread.
 /// </summary>
 public sealed class TdFocusState : ITdPresence

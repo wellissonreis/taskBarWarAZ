@@ -4,7 +4,7 @@ using SideWar.Runtime.Input;
 namespace SideWar.Runtime.Td;
 
 /// <summary>
-/// Hit-test básico da faixa TD (TD.7; a interação completa é a TD.8): caixa-bomba ativa primeiro, depois torre posicionada
+/// Hit-test básico da faixa TD (TD.7; a interação completa é a TD.8): torre posicionada
 /// (maior Id vence) e, por fim, o chip de torre SEM POSIÇÃO. Espaço livre não é alvo (o clique passa). Sem alocação.
 /// </summary>
 public static class TdHitTester
@@ -15,12 +15,6 @@ public static class TdHitTester
         if (!float.IsFinite(xDip) || !float.IsFinite(yDip) || yDip < 0 || yDip >= TdBand.HeightDip) return HitTarget.None;
         int width = TdBand.WidthDip(match);
         if (xDip < 0 || xDip >= width) return HitTarget.None;
-
-        if (match.CrateActive)
-        {
-            float cx = TdBand.ToDip(match.CrateX, width);
-            if (xDip >= cx - TdBand.CrateHitHalfWidth && xDip < cx + TdBand.CrateHitHalfWidth) return HitTarget.Crate(match.CrateId);
-        }
 
         var towers = match.Towers;
         int best = -1;

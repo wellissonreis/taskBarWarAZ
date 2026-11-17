@@ -4,7 +4,7 @@ using SideWar.Core.Content.Td;
 namespace SideWar.Core.Tests;
 
 /// <summary>
-/// Conteúdo TD congelado (valores do TD.3b, antes do balanceamento da TD.10) para os testes de MECÂNICA do Core TD (Match/Combat/Crate/Placement).
+/// Conteúdo TD congelado (valores do TD.3b, antes do balanceamento da TD.10) para os testes de MECÂNICA do Core TD (Match/Combat/Placement).
 /// Assim o tuning de <c>td-*.json</c> (HP, custos, ondas) não quebra testes que verificam regras; a curva de dificuldade é coberta por
 /// <c>TdSanityBotTests</c> sobre o conteúdo embarcado de verdade.
 /// </summary>
@@ -29,7 +29,7 @@ internal static class TdMechanicsContent
         var result = TdContentLoader.Load(files);
         var content = result.Content ?? throw new InvalidOperationException("Conteúdo congelado inválido: " + string.Join("; ", result.Errors));
         // Fontes de crédito congeladas (valores da TD.22): a recalibração da TD.29a de td-runes.json não mexe nos testes de mecânica.
-        return content with { Runes = content.Runes with { CreditSources = new TdCreditSourcesDef(80, 60, 5, 40, 2, 40, 2, 40, 3, 120) } };
+        return content with { Runes = content.Runes with { CreditSources = new TdCreditSourcesDef(80, 60, 5, 40, 2, 40, 3, 120) } };
     }
 
     private const string Abilities = """
@@ -122,8 +122,7 @@ internal static class TdMechanicsContent
     "autoStart": { "defaultMode": "off", "defaultCountdownSeconds": 15, "minCountdownSeconds": 5, "maxCountdownSeconds": 60 },
     "stars": { "twoStarMaxLoss": 6, "threeStarMaxLoss": 2 },
     "bonusQuestion": { "timerSeconds": 10, "creditsBase": 15, "creditsPerWave": 3, "cooldownReductionSeconds": 10 },
-    "fragments": { "perWave": 1, "perCrate": 1, "perQuestion": 1, "perBoss": 2 },
-    "bombCrate": { "chance": 0.5, "firstEligibleWaveStage1": 3, "minDropSeconds": 5, "dropMaxSpawnFraction": 0.7, "countdownSeconds": 8, "edgeMargin": 24, "cooldownReductionSeconds": 20, "presenceWindowSeconds": 5 },
+    "fragments": { "perWave": 1, "perQuestion": 1, "perBoss": 2 },
     "challenges": [
       { "id": "frugal",   "name": "Frugal",   "description": "Concluir com no máximo 4 torres.", "maxTowers": 4, "noAbilities": false, "noCallNext": false, "startingCreditsFactor": 1.0 },
       { "id": "purist",   "name": "Purista",  "description": "Concluir sem usar habilidades.", "maxTowers": null, "noAbilities": true, "noCallNext": false, "startingCreditsFactor": 1.0 },

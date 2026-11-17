@@ -17,7 +17,6 @@ public enum TdStripScene
 {
     Wave,
     PrepRange,
-    Crate,
     Unpositioned,
     /// <summary>TD.16b: modo posicionar (borda e véu na faixa, fantasma seguindo o mouse).</summary>
     Placing,
@@ -25,7 +24,7 @@ public enum TdStripScene
 
 /// <summary>
 /// Cenas da faixa TD (TD.7, 1200 × 32 DIP: 1 unidade lógica = 1 DIP) montadas pela API pública do Core com um conteúdo de teste que
-/// fixa os números (créditos, custos, velocidades, ondas, caixa 100%): os goldens não dependem do balanceamento do JSON. Compostas
+/// fixa os números (créditos, custos, velocidades, ondas): os goldens não dependem do balanceamento do JSON. Compostas
 /// sobre o fundo do desktop (#1b2230) e uma barra de 48 DIP sintética logo abaixo (só referência visual; o jogo não a desenha).
 /// </summary>
 public static class TdStripScenes
@@ -39,7 +38,6 @@ public static class TdStripScenes
     {
         TdStripScene.Wave => "td-strip-wave",
         TdStripScene.PrepRange => "td-strip-prep-range",
-        TdStripScene.Crate => "td-strip-crate",
         TdStripScene.Placing => "td-strip-placing",
         _ => "td-strip-unpositioned",
     };
@@ -48,15 +46,9 @@ public static class TdStripScenes
 
     public static string GoldenName(TdStripScene scene, int dpi) => $"{Name(scene)}-{dpi * 100 / 96}";
 
-    /// <summary>Cenas com texto (contagem da caixa): golden só no SO de referência (RF-17.3).</summary>
-    public static bool HasText(TdStripScene scene) => scene == TdStripScene.Crate;
-
     private static TdContent TestContent()
     {
-        var rules = Embedded.Stages.Rules with
-        {
-            BombCrate = Embedded.Stages.Rules.BombCrate with { Chance = 1.0, FirstEligibleWaveStage1 = 1, MinDropSeconds = 5, DropMaxSpawnFraction = 0.7 },
-        };
+        var rules = Embedded.Stages.Rules;
         var stage = Embedded.Stages.Stages.First(s => s.Id == 1) with { Waves = 1, StartingCredits = 1_000_000 };
         TdWaveGroupDef G(string id, int count, double offset) => new(id, count, offset, 1.5);
         var wave = new TdWaveDef(1, false, 1.0, [G("grunt", 1, 0), G("runner", 1, 1), G("flyer", 1, 2), G("armored", 1, 3), G("regen", 1, 4), G("leech", 1, 5), G("ransomware", 1, 6)]);
@@ -113,22 +105,12 @@ public static class TdStripScenes
             case TdStripScene.Placing:
                 Build(m, "bolt", 330);
                 Build(m, "frost", 440);
-                return (m, new TdView(0, 0, false) { PlacingMode = true, GhostX = 650, GhostValid = true, GhostDef = 0 }, 100.0);
+                return (m, new TdView(0, 0) { PlacingMode = true, GhostX = 650, GhostValid = true, GhostDef = 0 }, 100.0);
             case TdStripScene.PrepRange:
                 Build(m, "bolt", 330);
                 Build(m, "frost", 440);
                 Build(m, "cannon", 880);
-                return (m, new TdView(m.Towers[0].Id, 0, false), 100.0);
-            case TdStripScene.Crate:
-                Build(m, "bolt", 330);
-                Build(m, "cannon", 620);
-                Build(m, "frost", 900);
-                Do(m, new SetPresence(true));
-                Do(m, new StartWave());
-                for (int i = 0; i < 30 * 40 && !m.CrateActive; i++) Steps(m, 1);
-                if (!m.CrateActive) throw new InvalidOperationException("a caixa não caiu");
-                Steps(m, 30 * 6); // 2 s restantes: piscando
-                return (m, new TdView(0, 0, false), 100.0);
+                return (m, new TdView(m.Towers[0].Id, 0), 100.0);
             default:
                 Build(m, "bolt", 150);
                 Build(m, "frost", 260);

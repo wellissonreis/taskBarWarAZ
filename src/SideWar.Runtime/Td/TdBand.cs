@@ -10,7 +10,7 @@ namespace SideWar.Runtime.Td;
 public static class TdBand
 {
     /// <summary>
-    /// Altura do ESPAÇO DE DESENHO da faixa (TD.14): toda a geometria abaixo (trilho, torres, chips, caixa, zonas, Core) é projetada para
+    /// Altura do ESPAÇO DE DESENHO da faixa (TD.14): toda a geometria abaixo (trilho, torres, chips, zonas, Core) é projetada para
     /// 32 DIP. A altura real da janela é <c>bandHeightDip</c> (32 a 96, padrão 64) e tudo escala por <see cref="Scale"/> (k = altura / 32):
     /// o Core enxerga a faixa com largura <c>W_dip / k</c> e as bordas (render, hit-test, janelas) convertem.
     /// </summary>
@@ -51,8 +51,7 @@ public static class TdBand
     /// <summary>Faixa livre às pontas (núcleo à esquerda, portal à direita): zona de torres = [EdgeClearDip, W − EdgeClearDip).</summary>
     public const int EdgeClearDip = 32;
 
-    public const float CrateSize = 16f, CrateTop = 3f;
-    public const float TowerHitHalfWidth = 20f, CrateHitHalfWidth = 12f;
+    public const float TowerHitHalfWidth = 20f;
     public const float UnplacedChipLeft = 30f, UnplacedChipWidth = 14f, UnplacedChipGap = 2f, UnplacedChipTop = 16f, UnplacedChipHeight = 14f;
 
     /// <summary>Unidade lógica → DIP (largura da faixa em DIP).</summary>

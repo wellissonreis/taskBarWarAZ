@@ -66,8 +66,7 @@ public sealed partial class TdMatchState
         foreach (var z in _zones) { h.AddDouble(z.X); h.AddDouble(z.Radius); h.AddInt32(z.TicksLeft); h.AddDouble(z.DamagePerTick); }
         for (int i = 0; i < _abilityCd.Length; i++) { h.AddInt32(_abilityCd[i]); h.AddInt32(_abilityActive[i]); h.AddInt32(_abilityUses[i]); }
         foreach (var m in _metaNodes.Order(StringComparer.Ordinal)) h.AddString(m);
-        h.AddBool(_present); h.AddBool(CrateActive); h.AddInt32(CrateId); h.AddInt32(CrateX); h.AddInt32(CrateTicksLeft);
-        h.AddInt32(_cratePendingWave); h.AddInt64(_crateDropTick); h.AddUInt64(_crateXRaw); h.AddInt32(_nextCrateId);
+        h.AddBool(_present);
         h.AddBool(_bonusAnswered);
         if (Paused) h.AddBool(true); // só quando verdadeiro: o hash de partidas sem pausa não muda
         h.AddInt32((int)_awakened);

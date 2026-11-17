@@ -2,7 +2,7 @@ namespace SideWar.Runtime.Td;
 
 /// <summary>
 /// TD.28b: atalho global de minimizar tudo (boss key). Esconde faixa, chip, painel, cartões e modal de uma vez; a partida CONTINUA rodando
-/// (a <c>AppStateMachine</c> segue visível: nada pausa), o jogador conta como ausente (caixa-bomba sem presença) e o render fica parado.
+/// (a <c>AppStateMachine</c> segue visível: nada pausa), o jogador conta como ausente e o render fica parado.
 /// O mesmo atalho, o item "Mostrar SideWar" da bandeja ou uma 2ª instância trazem tudo de volta. Estado só em memória: o App sempre abre visível.
 /// Só na T-Game.
 /// </summary>

@@ -12,8 +12,6 @@ public enum HotkeyAction
     StartWave,
     /// <summary>ESC temporário durante o modo construção/popover TD (RegisterHotKey só enquanto ativo, RF-28.20).</summary>
     CancelBuild,
-    /// <summary>TD.16b: coleta a caixa-bomba ativa (só registrada no modo TD; a faixa é click-through).</summary>
-    CollectCrate,
 }
 
 /// <summary>Posted to the game command sink when a registered hotkey fires. The effect belongs to the host.</summary>

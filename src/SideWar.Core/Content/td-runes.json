@@ -1,5 +1,5 @@
 {
-  "creditSources": {"startingCreditsBonus": 80, "waveBonusBase": 120, "waveBonusPerWave": 10, "noLeakBase": 80, "noLeakPerWave": 4, "crateBase": 40, "cratePerWave": 2, "bonusQuestionBase": 40, "bonusQuestionPerWave": 3, "bossCredits": 120},
+  "creditSources": {"startingCreditsBonus": 80, "waveBonusBase": 120, "waveBonusPerWave": 10, "noLeakBase": 100, "noLeakPerWave": 5, "bonusQuestionBase": 40, "bonusQuestionPerWave": 3, "bossCredits": 120},
   "types": [
     {"id": "range", "name": "Alcance", "effect": "rangeBp", "value": 400, "text": "+4% de alcance em todas as torres."},
     {"id": "bolt", "name": "Raio", "effect": "boltDamageBp", "value": 500, "text": "+5% de dano do Raio."},

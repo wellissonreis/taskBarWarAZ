@@ -300,26 +300,16 @@ public sealed class TdGameHostTests
     }
 
     [Fact]
-    public void Presence_log_replays_to_the_same_hash_and_RequestCollectCrate_collects()
+    public void Presence_log_replays_to_the_same_hash()
     {
-        var bc = Content.Stages.Rules.BombCrate with { Chance = 1.0, MinDropSeconds = 1 };
         var stages = Content.Stages.Stages.Select(s => s with { StartingCredits = 1_000_000 }).ToArray();
-        var content = Content with { Stages = Content.Stages with { Rules = Content.Stages.Rules with { BombCrate = bc, CoreIntegrity = 100_000 }, Stages = stages } };
+        var content = Content with { Stages = Content.Stages with { Rules = Content.Stages.Rules with { CoreIntegrity = 100_000 }, Stages = stages } };
         var match = TdMatchState.Create(content, 2, Rng.Seed(42, 54));
         var input = new FakeInput { Present = true };
         var r = new Rig(input: input, match: match);
-        Assert.False(r.Host.RequestCollectCrate()); // sem caixa: nada enfileirado
         r.Host.OnCommand(new BuildTower("bolt", 300));
         r.Host.OnCommand(new StartWave());
-        long credits = 0;
-        for (int i = 0; i < 20 && !r.Match.CrateActive; i++) r.Run(1);
-        Assert.True(r.Match.CrateActive);
-        credits = r.Match.Credits;
-        Assert.True(r.Host.RequestCollectCrate());
-        r.Run(1); // o comando entra no próximo Wake; um passo depois fecha o Frame do replay
-        Assert.False(r.Match.CrateActive);
-        Assert.Contains(r.Host.CommandLog, e => e.Command is CollectCrate);
-        Assert.True(r.Match.Credits >= credits + content.Runes.CreditSources.CrateBase + content.Runes.CreditSources.CratePerWave * r.Match.WaveNumber);
+        r.Run(20);
         var replay = TdReplayRunner.Run(content, new TdReplayScript(2, 42, 54, r.Host.CommandLog, r.Match.Frame));
         Assert.Equal(r.Match.ComputeStateHash(), replay.StateHash);
     }

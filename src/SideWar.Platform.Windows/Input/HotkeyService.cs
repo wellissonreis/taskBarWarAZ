@@ -46,7 +46,6 @@ public sealed class HotkeyService : IDisposable
         // StartWave (modo TD) só é registrada se o host passou o atalho; no idle ele não rouba a tecla.
         var actions = new List<HotkeyAction>(BaseActions);
         if (bindings is not null && bindings.ContainsKey(HotkeyAction.StartWave)) actions.Add(HotkeyAction.StartWave);
-        if (bindings is not null && bindings.ContainsKey(HotkeyAction.CollectCrate)) actions.Add(HotkeyAction.CollectCrate);
         Actions = [.. actions];
         foreach (var a in Actions)
             text[(int)a] = bindings is not null && bindings.TryGetValue(a, out var t) ? t : Describe(a);
@@ -63,7 +62,6 @@ public sealed class HotkeyService : IDisposable
         HotkeyAction.TogglePause => "Ctrl+Alt+P",
         HotkeyAction.StartWave => "Ctrl+Alt+Space",
         HotkeyAction.CancelBuild => "Esc",
-        HotkeyAction.CollectCrate => "Ctrl+Alt+C",
         _ => throw new ArgumentOutOfRangeException(nameof(action)),
     };
 

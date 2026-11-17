@@ -107,7 +107,7 @@ public sealed partial class TdUiController
     // ================================================================ entradas
 
     /// <summary>Visão da faixa: seleção, fantasma e alcance da torre candidata.</summary>
-    public TdView View => new(_selectedTowerId, 0, false)
+    public TdView View => new(_selectedTowerId, 0)
     {
         GhostX = BuildActive ? _ghostX : -1,
         GhostValid = _ghostValid,
@@ -128,7 +128,7 @@ public sealed partial class TdUiController
 
     /// <summary>
     /// Botão esquerdo na faixa. TD.16b: só existe no modo posicionar (a janela é click-through fora dele); fora do modo devolve falso e não
-    /// faz nada (não há inspetor por clique, nem popover ao clicar num ponto livre, nem coleta da caixa na faixa).
+    /// faz nada (não há inspetor por clique, nem popover ao clicar num ponto livre).
     /// </summary>
     public bool SceneLeftClick(float xDip, float yDip, HitTarget target)
     {
@@ -230,10 +230,6 @@ public sealed partial class TdUiController
             case TdUiAction.Sell:
                 _send(new SellTower(item.Arg));
                 if (Mode == TdUiMode.Towers) Changed?.Invoke(); else Close();
-                break;
-            case TdUiAction.CollectCrate when !ModalOpen:
-                if (_match().CrateActive) _send(new CollectCrate(_match().CrateId));
-                Changed?.Invoke();
                 break;
             case TdUiAction.TowersOpen: SetMode(TdUiMode.Towers); break;
             case TdUiAction.PauseToggle when !ModalOpen:
@@ -552,12 +548,11 @@ public sealed partial class TdUiController
             + $" Esconder tudo: {_host.BossHotkey}.";
 
         // TD.29b (feedback do usuário: a barra longa atrapalhava o navegador): chip COMPACTO colado ao canto direito. Grupo fixo à direita
-        // (chip, Torres, Pausar, velocidade); Iniciar (só no Preparo inicial) e Coletar caixa (só com caixa) crescem para a ESQUERDA.
+        // (chip, Torres, Pausar, velocidade); Iniciar (só no Preparo inicial) cresce para a ESQUERDA.
         bool needed = _onb is not null && (HudNeeded(m) || ComputeStep(m) == TdTutorialStep.HudOpen);
         bool live = m.Phase is MatchPhase.Preparo or MatchPhase.Onda;
         bool showStart = live && (!m.Options.ContinuousWaves || m.Phase == MatchPhase.Preparo);
-        bool showCrate = m.CrateActive;
-        float extras = (showStart ? TdHudView.StartWidth + TdHudView.Gap : 0f) + (showCrate ? TdHudView.CrateWidth + TdHudView.Gap : 0f);
+        float extras = showStart ? TdHudView.StartWidth + TdHudView.Gap : 0f;
         float x = 0f;
         if (showStart)
         {
@@ -568,17 +563,10 @@ public sealed partial class TdUiController
                 Icon: m.Phase == MatchPhase.Onda ? TdIcon.FastForward : TdIcon.Play));
             x += TdHudView.StartWidth + TdHudView.Gap;
         }
-        if (showCrate)
-        {
-            // Coletar caixa: só existe quando há caixa (ícone compacto âmbar).
-            items.Add(new TdUiItem(new DipRect(x, 0, TdHudView.CrateWidth, 28), TdUiKind.Button, "", TdUiAction.CollectCrate,
-                Enabled: !ModalOpen, Icon: TdIcon.Box, Highlight: PulseOn, Tip: "Coletar caixa: Ctrl+Alt+C"));
-            x += TdHudView.CrateWidth + TdHudView.Gap;
-        }
         items.Add(new TdUiItem(new DipRect(x, 0, TdHudView.ChipWidth, 28), TdUiKind.Button,
             $"{integ}/{max} {shown}/{m.TotalWaves} ¢{m.Credits}{(ModalOpen ? " ⏸" : "")}",
             TdUiAction.HudRestore, Icon: TdIcon.Heart, Tone: integTone, Tip: coreTip + $" {stageText.Trim()} Onda {shown}/{m.TotalWaves}. Créditos ¢{m.Credits}. Clique para abrir o menu.",
-            Highlight: (needed || m.CrateActive) && PulseOn));
+            Highlight: needed && PulseOn));
         x += TdHudView.ChipWidth + TdHudView.Gap;
         items.Add(new TdUiItem(new DipRect(x, 0, 28, 28), TdUiKind.Button, "", TdUiAction.QuickTowers,
             Enabled: !ModalOpen, Icon: TdIcon.Castle, Tip: PanelPinned ? "Torres (painel fixo: Jogo ou Configurações)" : "Torres: escolha e posicione sem pausar", Selected: QuickTowersOpen));

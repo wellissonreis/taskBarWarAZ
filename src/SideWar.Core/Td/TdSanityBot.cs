@@ -6,11 +6,11 @@ namespace SideWar.Core.Td;
 /// <summary>Perfis do jogador simulado (SDD-28 RF-28.12, DP-28.10).</summary>
 public enum TdBotProfile : byte
 {
-    /// <summary>Só o básico (Raio e Canhão), sem habilidades, ignora a caixa-bomba.</summary>
+    /// <summary>Só o básico (Raio e Canhão), sem habilidades.</summary>
     Novato = 0,
     /// <summary>Usa o contra óbvio da fase, habilidades; não chama ondas antes.</summary>
     Medio,
-    /// <summary>Contra do conceito, mira, habilidades, chamada antecipada e caixa-bomba.</summary>
+    /// <summary>Contra do conceito, mira, habilidades e chamada antecipada.</summary>
     Otimizado,
     /// <summary>Como o médio, mas SEM o contra do conceito da fase (deve perder).</summary>
     SemContra,
@@ -86,22 +86,12 @@ public static class TdSanityBot
         private int _next;
         private int _rejected;
         private int _builtCount;
-        private long _crateSeenFrame = -1;
-        private int _crateSeenId;
         private int _wavesStarted;
 
         public Runner(TdMatchState s, Step[] plan, TdBotProfile profile)
         {
             _s = s; _plan = plan; _profile = profile;
         }
-
-        /// <summary>Tempo de reação à caixa-bomba (a contagem é de 8 s): o novato demora, o otimizado clica quase na hora.</summary>
-        private int CrateReactionFrames => _profile switch
-        {
-            TdBotProfile.Novato => 195,     // 6,5 s
-            TdBotProfile.Otimizado => 45,   // 1,5 s
-            _ => 90,                        // médio e sem-contra: 3 s
-        };
 
         private bool Smart => _profile != TdBotProfile.Novato; // o novato não usa habilidades
         private bool Expert => _profile == TdBotProfile.Otimizado;
@@ -132,7 +122,6 @@ public static class TdSanityBot
                     Abilities();
                     if (Expert) TryCall();
                 }
-                HandleCrate();
                 _s.Step();
             }
             return new TdRunBotResult(_profile, seed, startStage, _s.StagesCleared, _s.StageNumber, _s.WaveNumber, _s.Phase, _s.Integrity, _s.Credits,
@@ -157,7 +146,6 @@ public static class TdSanityBot
                     Abilities();
                     if (Expert) TryCall();
                 }
-                HandleCrate();
                 while (_lostByWave.Count < _s.WaveNumber) _lostByWave.Add(0);
                 if (_s.WaveNumber > 0) _lostByWave[_s.WaveNumber - 1] = _s.IntegrityLost;
                 _s.Step();
@@ -316,13 +304,6 @@ public static class TdSanityBot
             if (_s.NextWaveNumber == 0 || _s.Enemies.Count > 3) return;
             if (_s.IntegrityLost > 1) return;
             _s.Apply(new CallNextWave());
-        }
-
-        private void HandleCrate()
-        {
-            if (!_s.CrateActive) { _crateSeenFrame = -1; return; }
-            if (_crateSeenFrame < 0 || _crateSeenId != _s.CrateId) { _crateSeenFrame = _s.Frame; _crateSeenId = _s.CrateId; }
-            if (_s.Frame - _crateSeenFrame >= CrateReactionFrames) Send(new CollectCrate(_s.CrateId));
         }
     }
 

@@ -146,7 +146,7 @@ public sealed class TdBandTests
     }
 
     [Fact]
-    public void HitTester_prefers_the_crate_then_the_highest_placed_tower_and_ignores_free_space()
+    public void HitTester_hits_the_highest_placed_tower_and_ignores_free_space()
     {
         var (match, host, clock, _) = Rig();
         host.OnCommand(new BuildTower("bolt", 600));

@@ -146,8 +146,6 @@ public enum TdEventType : byte
     TowerBranched /* obsoleto (SDD-29): não é mais emitido */, TowerTargeting, AbilityUsed, TowerDisabled, BossSplit, NodeSpawned, NodeEnded,
     // TD.4 (anexados ao fim). A = id da torre; LayoutApplied: A = largura em DIP, B = torres sem posição.
     TowerPlaced, TowerUnplaced, LayoutApplied,
-    // TD.3b (anexados ao fim). Caixa-bomba: A = id da caixa; CrateSpawned B = X lógico; CrateCollected B = créditos; CrateExploded B = id da torre destruída (0 = nenhuma).
-    CrateSpawned, CrateCollected, CrateExploded, CrateVanished,
     // TD.17: pergunta-bônus. A = id da pergunta; B = créditos pagos (0 = errou).
     BonusAnswered,
     // TD.28a: corrida contínua. A = número absoluto da fase concluída; B = pontuação. O resumo completo fica em <c>TdMatchState.StageResults</c>.

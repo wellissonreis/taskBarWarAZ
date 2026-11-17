@@ -26,9 +26,6 @@ public static class TdArtMap
     /// <summary>Altura (DIP) do núcleo e do portal: 42 = 1,5× a torre (28); passam do topo do espaço de 32 (folga de 14 na janela da cena).</summary>
     public const float EdgeHeightDip = 42f;
 
-    /// <summary>Largura (DIP) da caixa-bomba (a área de clique tem 24 DIP de largura).</summary>
-    public const float CrateWidthDip = 26f;
-
     private static readonly SKColor Cyan = Palette.Td.TintCyan, Amber = Palette.Td.TintAmber, Green = Palette.Td.TintGreen,
         Magenta = Palette.Td.TintMagenta, Orange = Palette.Td.TintOrange, Red = Palette.Td.TintRed, Violet = Palette.Td.TintViolet;
 

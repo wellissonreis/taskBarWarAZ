@@ -88,7 +88,6 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     private TdFocusState? tdFocus;
     private int tdBandHeight = TdBand.DefaultHeightDip; // TD.14/TD.28c: lido das configurações; mudar aplica ao vivo (ApplyBandHeight)
     private SceneLayoutWatcher? tdWatcher;
-    private int crateSeen;
 
     public GameComposition(GameRuntime runtime, CompositeLoopHost loop, SceneFrameSink sink, SessionPersistence persistence,
         AppSettings settings, Action<string> log, Action<Exception> report, Action<UiRequest> ui,
@@ -185,7 +184,6 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             tdDriver = new TdRenderDriver(td.Host, runtime.App, clock, tdSink);
             tdWatcher = new SceneLayoutWatcher(td.Host, null, layout => new SideWar.Core.Td.LayoutChanged(layout));
             loop.AddAfter(tdDriver); // depois do TdGameHost: um frame por tick novo, ou por evento/comando
-            loop.AddAfter(new LoopParticipant(() => null, _ => SyncCrateMode()));
             res.Started("td-frame-sink", () =>
             {
                 tdSink.Dispose();
@@ -296,8 +294,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             [HotkeyAction.TogglePause] = settings.Hotkeys.TogglePause,
             // Só no modo TD (no idle a tecla não é registrada).
             [HotkeyAction.StartWave] = settings.Hotkeys.StartWave,
-            [HotkeyAction.CollectCrate] = settings.Hotkeys.CollectCrate,
-        }.Where(kv => td is not null || kv.Key is not (HotkeyAction.StartWave or HotkeyAction.CollectCrate)).ToDictionary());
+        }.Where(kv => td is not null || kv.Key is not HotkeyAction.StartWave).ToDictionary());
         hotkeys.Conflict += (_, message) => log(message);
         hotkeys.Register();
         res.Started("hotkeys", hotkeys.Dispose); // UnregisterHotKey
@@ -327,7 +324,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         // 8. Fullscreen (SDD-06).
         fullscreen = new FullscreenWatcher(clock, ToFullscreenMode(settings.Behavior.HideOnFullscreen), first.Monitor.DeviceName, report);
         fullscreen.Transition += OnFullscreen;
-        // TD.14: ativar OUTRO app = ausente (esmaece, 8 fps, caixa-bomba sem presença); janela do SideWar ativada = presente.
+        // TD.14: ativar OUTRO app = ausente (esmaece, 8 fps); janela do SideWar ativada = presente.
         if (tdFocus is not null)
             game.Mode.TdExternalInput += tdFocus.OnExternalInput; // TD.16: clique fora das janelas do SideWar = ausente
         if (tdFocus is not null)
@@ -478,7 +475,6 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
                     HotkeyAction.ToggleVisibility => AppCommandKind.ToggleVisibility,
                     HotkeyAction.StartWave => AppCommandKind.StartWave,
                     HotkeyAction.CancelBuild => AppCommandKind.CancelBuild,
-                    HotkeyAction.CollectCrate => AppCommandKind.CollectCrate,
                     _ => AppCommandKind.TogglePause,
                 });
                 return true;
@@ -506,7 +502,6 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             case AppCommandKind.ToggleHud: tdUi?.ToggleHud(); break;
             case AppCommandKind.HowToPlay: tdUi?.OpenHowTo(); break;
             case AppCommandKind.CancelBuild: tdUi?.Controller.Cancel(); break;
-            case AppCommandKind.CollectCrate: tdUi?.CollectCrate(); break;
             case AppCommandKind.SelectMonitor: SelectMonitor(monitorIndex); break;
             case AppCommandKind.ShowAndInteract:
                 boss?.Show();
@@ -557,21 +552,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     {
         runtime.NotifyInteraction();
         if (target.Kind == HitKind.SceneTower) panel?.OpenArsenal(target.TowerId);
-        else if (target.Kind == HitKind.TdCrate) td?.Host.RequestCollectCrate(); // TD.7: clique na caixa-bomba (a UI completa é a TD.8)
         else if (target.Kind == HitKind.TdTower) tdDriver?.SetSelected(target.TowerId);
-    }
-
-    /// <summary>
-    /// A caixa-bomba só recebe clique no modo Interativo (a cena é passante por padrão, RF-28.14): quando uma caixa nova cai, a cena
-    /// passa a Interativo (o retorno automático ao Passivo vale como no resto). Decisão da TD.7 até a TD.8 tratar o modo na UI.
-    /// </summary>
-    private void SyncCrateMode()
-    {
-        var match = td!.Host.Match;
-        int id = match.CrateActive ? match.CrateId : 0;
-        if (id == crateSeen) return;
-        crateSeen = id;
-        if (id != 0 && runtime.App.IsVisible) game.Mode.SetMode(OverlayMode.Interactive);
     }
 
     private void OnModeChanged(OverlayMode mode) => PublishMenu();

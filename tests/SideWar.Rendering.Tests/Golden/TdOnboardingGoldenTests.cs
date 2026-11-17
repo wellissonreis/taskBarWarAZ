@@ -25,7 +25,7 @@ public sealed class TdOnboardingGoldenTests
     private const int BandWidth = 1200;
     private static readonly SKColor Backdrop = new(0x1b, 0x22, 0x30);
 
-    public enum Scene { HudOpen, HudCollapse, Core, Credits, Portal, Build, Point, Tower, Range, Wave, Hurt, Quiz, QuizRight, QuizWrong, QuizTime, Defeat, ChipPulse, Ability, Crate, Help, Tip }
+    public enum Scene { HudOpen, HudCollapse, Core, Credits, Portal, Build, Point, Tower, Range, Wave, Hurt, Quiz, QuizRight, QuizWrong, QuizTime, Defeat, ChipPulse, Ability, Help, Tip }
 
     private sealed class Host : ITdUiHost
     {
@@ -112,10 +112,6 @@ public sealed class TdOnboardingGoldenTests
                 Intro(); Acks(3); Bolt(330); Acks(1); m.Apply(new StartWave()); Prop(m, "Integrity", m.Integrity - 1); ui.Sync();
                 break;
             case Scene.Ability: Intro(); Acks(3); Bolt(330); Acks(1); m.Apply(new StartWave()); Acks(1); Prop(m, "Credits", 0L); ui.Sync(); break;
-            case Scene.Crate:
-                Intro(); Acks(3); Bolt(330); Acks(1); m.Apply(new StartWave()); Acks(1); Prop(m, "Credits", 0L); ui.Activate(item(TdUiAction.Ability, "scale"));
-                Prop(m, "CrateActive", true); Prop(m, "CrateX", 700); Prop(m, "CrateTicksLeft", 120); ui.Sync();
-                break;
             case Scene.Quiz: Intro(); Acks(3); Bolt(330); Acks(1); ToPrep2(); break;
             case Scene.QuizRight: Bolt(330); ToPrep2(); ui.Activate(item(TdUiAction.QuizTrue, null)); break; // q01 é verdadeira
             case Scene.QuizWrong: Bolt(330); ToPrep2(); ui.Activate(item(TdUiAction.QuizFalse, null)); break;

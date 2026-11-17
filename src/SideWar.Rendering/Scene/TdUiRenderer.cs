@@ -110,12 +110,6 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             _p.Text(c, it.Text, PanelFont.JetBrainsMono, 9.5f, new DipRect(r.X, r.Y + (r.H - 12) / 2f, r.W, 12), it.Selected ? Palette.Td.Amber : Palette.Td.Text, TextAlign.Center);
             return;
         }
-        if (it.Action == TdUiAction.CollectCrate)
-        {
-            RoundBox(c, r, Palette.Td.Amber, hover ? Palette.AmbarHover : Palette.Td.Amber, 6);
-            DrawIcon(c, TdIcon.Box, r.X + (r.W - 14) / 2f, r.Y + (r.H - 14) / 2f, 14f, Palette.Td.Background);
-            return;
-        }
         if (it.Action == TdUiAction.PauseToggle)
         {
             // Pausar/Retomar: neutro quando rodando; âmbar (borda + fundo translúcido) quando pausado.
@@ -138,10 +132,9 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         bool enabled = it.Enabled && it.Action != TdUiAction.None;
         if (isButton)
         {
-            var border = enabled && it.Action == TdUiAction.CollectCrate ? Palette.Td.Amber : Palette.Td.BorderStrong;
-            var fill = enabled && it.Action == TdUiAction.CollectCrate ? Palette.Td.Amber : hover && enabled ? Palette.Td.BorderStrong : Palette.Td.Surface;
+            var border = Palette.Td.BorderStrong;
+            var fill = hover && enabled ? Palette.Td.BorderStrong : Palette.Td.Surface;
             RoundBox(c, r, border, fill, 4);
-            if (it.Action == TdUiAction.CollectCrate && enabled) color = Palette.Td.Background;
             if (it.Fill > 0f) _p.Fill(c, new DipRect(r.X + 1, r.Y + r.H - 3, (r.W - 2) * it.Fill, 2), Palette.Azul);
             if (!enabled && it.Tone != TdTone.Dim) color = Palette.TxtRotulo;
         }

@@ -15,7 +15,7 @@ public sealed class TdPauseTests
 
     private static TdContent Rich()
     {
-        var rules = Base.Stages.Rules with { CoreIntegrity = 100_000, BombCrate = Base.Stages.Rules.BombCrate with { Chance = 1.0 } };
+        var rules = Base.Stages.Rules with { CoreIntegrity = 100_000 };
         var stages = Base.Stages.Stages.Select(s => s with { StartingCredits = 1_000_000 }).ToArray();
         return Base with { Stages = Base.Stages with { Rules = rules, Stages = stages } };
     }
@@ -65,7 +65,6 @@ public sealed class TdPauseTests
         Assert.Equal(CommandReason.PausedCommand, s.Apply(new StartWave()).Reason);
         Assert.Equal(CommandReason.PausedCommand, s.Apply(new CallNextWave()).Reason);
         Assert.Equal(CommandReason.PausedCommand, s.Apply(new UseAbility("firewall")).Reason);
-        Assert.Equal(CommandReason.PausedCommand, s.Apply(new CollectCrate(1)).Reason);
         Assert.Equal(MatchPhase.Preparo, s.Phase);
         Assert.True(s.Apply(new BuildTower("bolt", 400)).IsOk);
         Assert.True(s.Apply(new SideWar.Core.Td.SetTargeting(1, TdTargeting.Strong)).IsOk);
@@ -93,44 +92,37 @@ public sealed class TdPauseTests
         Assert.True(s.CountdownRemainingSeconds < cd);
     }
 
-    [Fact(DisplayName = "TD.19b Bomb crate, ability cooldowns, spawns and overlapped waves freeze under pause")]
-    public void Onda_CrateAbilitiesSpawnsFrozen()
+    [Fact(DisplayName = "TD.19b Ability cooldowns, spawns and overlapped waves freeze under pause")]
+    public void Onda_AbilitiesSpawnsFrozen()
     {
         var s = New();
         Assert.True(s.Apply(new StartWave()).IsOk);
-        int guard = 0;
-        while (!s.CrateActive && s.Phase == MatchPhase.Onda && guard++ < 20_000) s.Step();
-        Assert.True(s.CrateActive);
+        StepN(s, 200);
         string ability = s.AbilityStatuses.First(a => a.Unlocked && a.Id != "snapshot").Id;
         Assert.True(s.Apply(new UseAbility(ability)).IsOk);
         StepN(s, 30);
         var cds = s.AbilityStatuses.Select(a => (a.CooldownTicks, a.ActiveTicks)).ToArray();
-        int crateLeft = s.CrateTicksLeft;
         long tick = s.Tick;
         s.Apply(new Pause());
         ulong h = s.ComputeStateHash();
         StepN(s, 3000);
-        Assert.True(s.CrateActive);
-        Assert.Equal(crateLeft, s.CrateTicksLeft);
         Assert.Equal(tick, s.Tick);
         Assert.Equal(cds, s.AbilityStatuses.Select(a => (a.CooldownTicks, a.ActiveTicks)).ToArray());
         Assert.Equal(h, s.ComputeStateHash());
         s.Apply(new Resume());
         s.Step();
         Assert.Equal(tick + 1, s.Tick);
-        Assert.Equal(crateLeft - 1, s.CrateTicksLeft);
     }
 
-    [Fact(DisplayName = "TD.19b Presence changes during pause are deterministic and the crate leaves on absence")]
+    [Fact(DisplayName = "TD.19b Presence changes during pause are deterministic")]
     public void Presence_DuringPause()
     {
         var s = New();
         s.Apply(new StartWave());
-        int guard = 0;
-        while (!s.CrateActive && guard++ < 20_000) s.Step();
+        StepN(s, 100);
         s.Apply(new Pause());
         Assert.True(s.Apply(new SetPresence(false)).IsOk);
-        Assert.False(s.CrateActive);
+        Assert.False(s.Present);
     }
 
     private static List<TdLogEntry> BaseLog() =>

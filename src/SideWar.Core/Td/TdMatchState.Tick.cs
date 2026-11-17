@@ -11,7 +11,7 @@ public sealed partial class TdMatchState
     /// </summary>
     public void Step()
     {
-        if (Paused) return; // pausa: nada avança (inimigos, spawns, recargas, caixa-bomba, contagem, ondas, tempo)
+        if (Paused) return; // pausa: nada avança (inimigos, spawns, recargas, contagem, ondas, tempo)
         Frame++;
         if (Phase == MatchPhase.Preparo)
         {
@@ -24,7 +24,6 @@ public sealed partial class TdMatchState
         {
             Tick++;
             TickAbilities();
-            TickCrate();
             SpawnDue();
             TickEnemyStatus();
             FireTowers();
@@ -103,7 +102,6 @@ public sealed partial class TdMatchState
             if (Integrity == 0)
             {
                 Phase = MatchPhase.Derrota;
-                CrateLeaveWave();
                 Stars = 0;
                 Emit(TdEventType.Defeat, WaveNumber, IntegrityLost);
                 return;

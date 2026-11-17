@@ -35,7 +35,7 @@ public sealed class TdUiGoldenTests
         public bool PurchaseNode(string nodeId) => true;
     }
 
-    public enum UiScene { HudPrep, HudWave, HudMin, HudTip, Chooser, ChooserPoint, Inspector, Preview, Map, Seals, Victory, Menu, HudCrate, HudPlacing, Towers, Runes, Help, Defeat, QuickTowers }
+    public enum UiScene { HudPrep, HudWave, HudMin, HudTip, Chooser, ChooserPoint, Inspector, Preview, Map, Seals, Victory, Menu, HudPlacing, Towers, Runes, Help, Defeat, QuickTowers }
 
     public static TheoryData<UiScene, int> Cases()
     {
@@ -72,12 +72,6 @@ public sealed class TdUiGoldenTests
             case UiScene.Menu: ui.Activate(item(TdUiAction.Menu, 0)); break;
             case UiScene.Towers: ui.Activate(item(TdUiAction.TowersOpen, 0)); break;
             case UiScene.HudPlacing: ui.Activate(item(TdUiAction.BuildToggle, 0)); break;
-            case UiScene.HudCrate:
-                match.Apply(new StartWave());
-                for (int i = 0; i < 30; i++) match.Step();
-                typeof(TdMatchState).GetProperty("CrateActive")!.SetValue(match, true);
-                typeof(TdMatchState).GetProperty("CrateId")!.SetValue(match, 1);
-                break;
             case UiScene.Map: ui.Activate(item(TdUiAction.MapOpen, 0)); break;
             case UiScene.Seals: ui.Activate(item(TdUiAction.MapOpen, 0)); ui.Activate(item(TdUiAction.MapTab, 1)); break;
             case UiScene.Victory:
@@ -107,7 +101,7 @@ public sealed class TdUiGoldenTests
             GoldenImage.Blit(tc, tl, 0, 0);
             return tb;
         }
-        bool hud = scene is UiScene.HudPrep or UiScene.HudWave or UiScene.HudMin or UiScene.HudCrate or UiScene.HudPlacing;
+        bool hud = scene is UiScene.HudPrep or UiScene.HudWave or UiScene.HudMin or UiScene.HudPlacing;
         if (hud)
         {
             var v = ui.BuildHud();
@@ -174,8 +168,8 @@ public sealed class TdUiGoldenTests
         using var valid = new SKBitmap(new SKImageInfo(w, h, SKColorType.Bgra8888, SKAlphaType.Premul));
         using var invalid = new SKBitmap(new SKImageInfo(w, h, SKColorType.Bgra8888, SKAlphaType.Premul));
         using (var c = new SKCanvas(none)) r.Draw(c, match, 1, TdView.None);
-        using (var c = new SKCanvas(valid)) r.Draw(c, match, 1, new TdView(0, 0, false) { GhostX = 700, GhostValid = true, GhostDef = 0 });
-        using (var c = new SKCanvas(invalid)) r.Draw(c, match, 1, new TdView(0, 0, false) { GhostX = 700, GhostValid = false, GhostDef = 0 });
+        using (var c = new SKCanvas(valid)) r.Draw(c, match, 1, new TdView(0, 0) { GhostX = 700, GhostValid = true, GhostDef = 0 });
+        using (var c = new SKCanvas(invalid)) r.Draw(c, match, 1, new TdView(0, 0) { GhostX = 700, GhostValid = false, GhostDef = 0 });
         Assert.False(none.Bytes.AsSpan().SequenceEqual(valid.Bytes));
         Assert.False(valid.Bytes.AsSpan().SequenceEqual(invalid.Bytes));
     }

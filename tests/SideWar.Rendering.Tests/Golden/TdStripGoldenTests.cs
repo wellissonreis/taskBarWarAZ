@@ -22,8 +22,6 @@ public sealed class TdStripGoldenTests
     [MemberData(nameof(Cases))]
     public void TdStrip_MatchesGolden(TdStripScene scene, int dpi)
     {
-        if (TdStripScenes.HasText(scene))
-            Assert.SkipUnless(OperatingSystem.IsLinux(), "texto Skia difere entre SOs; golden com texto só no Linux (RF-17.3)");
         using var bmp = TdStripScenes.Render(scene, dpi);
         Assert.Equal(TdStripScenes.WidthDip * dpi / 96, bmp.Width);
         string? failure = GoldenImage.Verify(TdStripScenes.GoldenName(scene, dpi), bmp);

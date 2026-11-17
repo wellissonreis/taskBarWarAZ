@@ -183,14 +183,14 @@ public sealed class TdContinuousRunTests
     }
 
     [Fact]
-    public void Crate_and_stage_cleared_event_survive_in_continuous_run()
+    public void Stage_cleared_event_survives_in_continuous_run()
     {
         var s = New(Tiny(2), 1);
         Armed(s);
         Assert.True(s.Apply(new SetPresence(true)).IsOk);
         Assert.True(s.Apply(new StartWave()).IsOk);
         StepUntil(s, TdEventType.StageCleared);
-        Assert.False(s.CrateActive);
+        Assert.Contains(s.Events, e => e.Type == TdEventType.StageCleared);
     }
 
     private static TdReplayResult Replay(TdMatchOptions? o, int stage = 1)

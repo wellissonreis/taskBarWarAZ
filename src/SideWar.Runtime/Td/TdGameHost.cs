@@ -125,17 +125,6 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
     public void ApplyAutoStart(bool enabled, int seconds) =>
         OnCommand(new SetAutoStart(enabled ? AutoStartMode.Countdown : AutoStartMode.Off, Math.Clamp(seconds, 5, 60)));
 
-    /// <summary>
-    /// Clique na caixa-bomba ativa (ligado ao hit-test na TD.7/TD.8): enfileira <see cref="CollectCrate"/> com o id vigente.
-    /// Devolve false (nada enfileirado) se não há caixa ativa.
-    /// </summary>
-    public bool RequestCollectCrate()
-    {
-        if (IsShutdown || !Match.CrateActive) return false;
-        OnCommand(new CollectCrate(Match.CrateId));
-        return true;
-    }
-
     /// <summary>Troca a partida (nova fase/revanche). O log recomeça; o último layout da barra é reaplicado na nova partida.</summary>
     public void Restart(TdMatchState next)
     {

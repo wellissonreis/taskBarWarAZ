@@ -65,14 +65,11 @@ public class SettingsTdTests
     }
 
     [Fact]
-    public void Collect_crate_hotkey_defaults_to_ctrl_alt_c_roundtrips_and_towers_in_bar_stays_off()
+    public void Towers_in_bar_stays_off_and_legacy_collect_crate_hotkey_in_old_files_is_ignored()
     {
-        Assert.Equal("Ctrl+Alt+C", AppSettings.Default.Hotkeys.CollectCrate);
-        Assert.Equal("Ctrl+Alt+C", ReadPayload("{}").Hotkeys.CollectCrate);
         Assert.False(AppSettings.Default.Taskbar.TowersInBar); // TD.16b: modo "dentro da barra" segue desabilitado
-        var st = new SettingsStore(new FakeFileSystem(), "/data", utcNow: () => Now);
-        Assert.True(st.Save(new AppSettings { Hotkeys = new HotkeySettings { CollectCrate = "Ctrl+Alt+K" } }));
-        Assert.Equal("Ctrl+Alt+K", st.Load().Settings.Hotkeys.CollectCrate);
+        var r = ReadPayload("{\"hotkeys\":{\"CollectTdCrate\":\"Ctrl+Alt+K\"}}");
+        Assert.Equal(AppSettings.Default.Hotkeys, r.Hotkeys); // TD.30a: a tecla da caixa foi removida; arquivo antigo carrega sem erro
     }
 
     [Fact]

@@ -25,7 +25,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     private HideOnFullscreenMode hideOnFullscreen;
     private int presentFps, absentFps, peekOpacity, absentOpacity, autoPassiveSeconds, volumePercent;
     private LogLevelSetting logLevel;
-    private string toggleInteractive = "", toggleVisibility = "", togglePause = "", startWave = "", collectCrate = "";
+    private string toggleInteractive = "", toggleVisibility = "", togglePause = "", startWave = "";
     private GameMode gameMode;
     private bool tdAutoStart;
     private int tdAutoStartSeconds, tdBandHeight, tdFadePercent, tdGameSpeed = 1;
@@ -62,7 +62,6 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     public LogLevelSetting LogLevel { get => logLevel; set => Set(ref logLevel, value); }
     public string ToggleInteractive { get => toggleInteractive; set { if (Set(ref toggleInteractive, value)) Check(nameof(ToggleInteractive), ValidateHotkey(value)); } }
     public string ToggleVisibility { get => toggleVisibility; set { if (Set(ref toggleVisibility, value)) Check(nameof(ToggleVisibility), ValidateHotkey(value)); } }
-    public string CollectCrate { get => collectCrate; set { if (Set(ref collectCrate, value)) Check(nameof(CollectCrate), ValidateHotkey(value)); } }
     public string StartWave { get => startWave; set { if (Set(ref startWave, value)) Check(nameof(StartWave), ValidateHotkey(value)); } }
     /// <summary>Auto-início das ondas TD (padrão desligado).</summary>
     public GameMode GameMode { get => gameMode; set => Set(ref gameMode, value); }
@@ -90,7 +89,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     {
         get
         {
-            string?[] vals = [Canon(toggleInteractive), Canon(toggleVisibility), Canon(togglePause), Canon(startWave), Canon(collectCrate)];
+            string?[] vals = [Canon(toggleInteractive), Canon(toggleVisibility), Canon(togglePause), Canon(startWave)];
             var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var v in vals) if (v is not null && !set.Add(v)) return "Dois atalhos usam a mesma combinação.";
             return null;
@@ -109,7 +108,6 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         ToggleVisibility = d.ToggleVisibility;
         TogglePause = d.TogglePause;
         StartWave = d.StartWave;
-        CollectCrate = d.CollectCrate;
     }
 
     /// <summary>Valida tudo e devolve os settings editados (preservando o que a janela não edita).</summary>
@@ -134,7 +132,6 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
             ToggleVisibility = Canon(toggleVisibility) ?? toggleVisibility,
             TogglePause = Canon(togglePause) ?? togglePause,
             StartWave = Canon(startWave) ?? startWave,
-            CollectCrate = Canon(collectCrate) ?? collectCrate,
         },
         Audio = new AudioSettings { Enabled = audioEnabled, Volume = volumePercent / 100.0 },
         Diagnostics = new DiagnosticsSettings { RecordCommands = recordCommands, LogLevel = logLevel },
@@ -189,7 +186,6 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         toggleVisibility = s.Hotkeys.ToggleVisibility;
         togglePause = s.Hotkeys.TogglePause;
         startWave = s.Hotkeys.StartWave;
-        collectCrate = s.Hotkeys.CollectCrate;
         gameMode = s.GameMode;
         tdAutoStart = s.Td.AutoStartEnabled;
         tdAutoStartSeconds = s.Td.AutoStartSeconds;

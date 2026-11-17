@@ -259,7 +259,7 @@ public sealed partial class TdMatchState
     public CommandResult Apply(IGameCommand? command)
     {
         if (_inTick) throw new InvalidOperationException("Comandos só podem ser aplicados entre ticks.");
-        if (Paused && command is StartWave or CallNextWave or UseAbility or CollectCrate)
+        if (Paused && command is StartWave or CallNextWave or UseAbility)
             return Reject(CommandReason.PausedCommand); // "nada de comando de tempo enquanto pausado" (SDD-29 §11)
         return command switch
         {
@@ -277,7 +277,6 @@ public sealed partial class TdMatchState
             SetTargeting g => DoSetTargeting(g),
             UseAbility u => DoUseAbility(u),
             SetPresence sp => DoSetPresence(sp),
-            CollectCrate cc => DoCollectCrate(cc),
             AnswerBonus ab => DoAnswerBonus(ab),
             _ => Reject(CommandReason.UnknownCommand),
         };
@@ -444,7 +443,6 @@ public sealed partial class TdMatchState
         }
         var ordered = spawns.OrderBy(s => s.Due).ThenBy(s => s.Seq).Select(s => new TdSpawn(s.Due, s.Index, s.Boss)).ToArray();
         _active.Add(new TdActiveWave(w, Tick, ordered, def.BonusFactor));
-        RollCrate(w, ordered);
         WaveNumber = w;
         Phase = MatchPhase.Onda;
         _bonusAnswered = false;
@@ -460,7 +458,6 @@ public sealed partial class TdMatchState
     private void SettlePhase()
     {
         if (_active.Count > 0 || _enemies.Count > 0 || Phase != MatchPhase.Onda) return;
-        CrateLeaveWave();
         if (WaveNumber >= _waves.Length)
         {
             if (_options.PersistentRun)

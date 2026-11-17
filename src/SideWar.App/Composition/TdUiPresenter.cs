@@ -140,15 +140,6 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     /// <summary>"Como jogar" da bandeja (TD.15).</summary>
     public void OpenHowTo() { controller.OpenHowTo(); Kick(); }
 
-    /// <summary>TD.16b: atalho global "Coletar caixa" (a faixa é click-through; o botão do HUD usa o mesmo comando).</summary>
-    public void CollectCrate()
-    {
-        Present();
-        runtime.NotifyInteraction();
-        td.Host.RequestCollectCrate();
-        Kick();
-    }
-
     public string TipsSeen => tipsSeenText;
     public string QuestionsSeen => questionsSeenText;
 
@@ -348,7 +339,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         // TD.28c: a janela da cena tem folga acima da faixa (portal/núcleo); o HUD fica logo acima da FAIXA, não da folga.
         int bandTop = c.Scene.Top + (int)MathF.Round(TdBand.HeadroomRealDip(bandHeight) * Scale);
         int bottom = Math.Max(c.Monitor.WorkArea.Top + h, bandTop - (int)MathF.Round(2 * Scale));
-        int left = c.Scene.Right - w; // TD.29b: colado ao canto direito; Iniciar/caixa crescem para a esquerda
+        int left = c.Scene.Right - w; // TD.29b: colado ao canto direito; Iniciar cresce para a esquerda
         return new PixelRect(left, bottom - h, left + w, bottom);
     }
 
@@ -361,7 +352,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         controller.Sync();
         Refresh(false);
         var m = td.Host.Match;
-        bool busy = runtime.App.IsVisible && (m.Phase == MatchPhase.Onda || controller.PopoverOpen || controller.CurrentTip is not null || m.CountdownRemainingSeconds > 0 || m.CrateActive || controller.QuizActive || controller.Pulsing || controller.NoticeOpen);
+        bool busy = runtime.App.IsVisible && (m.Phase == MatchPhase.Onda || controller.PopoverOpen || controller.CurrentTip is not null || m.CountdownRemainingSeconds > 0 || controller.QuizActive || controller.Pulsing || controller.NoticeOpen);
         deadline = busy ? clock.NowTicks + (long)(TickSeconds * clock.TicksPerSecond) : null;
     }
 

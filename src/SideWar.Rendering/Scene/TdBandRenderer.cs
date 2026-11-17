@@ -12,16 +12,15 @@ namespace SideWar.Rendering.Scene;
 /// Faixa TD de 32 DIP (TD.7, SDD-28 RF-28.15 com o fallback Band de RF-28.18): trilho dos inimigos no topo (núcleo à esquerda, portal à
 /// direita), torres embaixo. Lê o <see cref="TdMatchState"/> (só leitura) e desenha num <see cref="SKCanvas"/> transparente.
 /// TD.9: usa as SPRITES do design (<see cref="TdArtMap"/>), pré-escaladas por DPI (<see cref="TdSpriteBaker"/>) e desenhadas em pixels
-/// inteiros (nítidas a 100/150%): torres de 28 DIP, núcleo/portal de 42 DIP (1,5× a torre, passam do topo da faixa), inimigos de 11 a 28 DIP, caixa-bomba de 26 DIP.
+/// inteiros (nítidas a 100/150%): torres de 28 DIP, núcleo/portal de 42 DIP (1,5× a torre, passam do topo da faixa), inimigos de 11 a 28 DIP.
 /// Tudo apoiado no chão (base da faixa); inimigos à frente das torres. Legibilidade por cima das sprites: tipo de inimigo por <b>tinta +
 /// pino de traço</b> (voador losango, blindado quadrado, regenera triângulo, drena cruz, chefe quadrado vermelho), barra de vida só para
-/// chefe e elite danificado, alcance como barra no topo, nós do balanceador, caixa-bomba
+/// chefe e elite danificado, alcance como barra no topo, nós do balanceador
 /// com contagem e destaque de perigo, torre em risco marcada, torres SEM POSIÇÃO como chips tracejados. Paints/paths/imagens pré-criados;
 /// sem alocação por frame em regime. Não thread-safe (T-Game).
 /// </summary>
 public sealed class TdBandRenderer : IDisposable
 {
-    private static readonly string[] Digits = BuildDigits();
 
     private const byte FlyingBit = 1, ArmoredBit = 2, RegenBit = 4, DrainBit = 8;
 
@@ -33,12 +32,11 @@ public sealed class TdBandRenderer : IDisposable
     private readonly SKPath _triangle = Poly(0, -4, 4, 3.5f, -4, 3.5f);
     private readonly SKPath _cross = Poly(-1.5f, -4, 1.5f, -4, 1.5f, -1.5f, 4, -1.5f, 4, 1.5f, 1.5f, 1.5f, 1.5f, 4, -1.5f, 4, -1.5f, 1.5f, -4, 1.5f, -4, -1.5f, -1.5f, -1.5f);
     private readonly SKPath _bolt = Poly(1.5f, -5, -3, 0.5f, 0, 0.5f, -1.5f, 5, 3, -0.5f, 0, -0.5f);
-    private readonly SKPath _riskMark = Poly(-3, -1, 3, -1, 0, 3);
     private readonly SKPaint _img = new() { IsAntialias = false };
     private readonly SpriteAtlas _atlas;
     private readonly bool _ownsAtlas;
     private SKImage?[] _towerImg = [], _chipImg = [], _enemyImg = [];
-    private SKImage? _coreImg, _portalImg, _crateImg;
+    private SKImage? _coreImg, _portalImg;
     private bool _baked;
     private static readonly SKSamplingOptions Nearest = new(SKFilterMode.Nearest);
     private const float Ground = 32f, EnemyFoot = 30.5f, FlyFoot = 24f, ChipSpriteDip = 11f;
@@ -114,7 +112,6 @@ public sealed class TdBandRenderer : IDisposable
         DrawEnemies(canvas, match, w);
         DrawGhost(canvas, match, view, w);
         DrawFire(canvas, match, w);
-        DrawCrate(canvas, match, view, now, w);
         DrawHint(canvas, view, now, w);
         DrawPlacingMode(canvas, view, w);
         canvas.Restore();
@@ -159,7 +156,6 @@ public sealed class TdBandRenderer : IDisposable
         }
         _coreImg = TdSpriteBaker.ByHeight(_atlas, SpriteId.Core, TdArtMap.EdgeHeightDip * px, default, 0);
         _portalImg = TdSpriteBaker.ByHeight(_atlas, SpriteId.Portal, TdArtMap.EdgeHeightDip * px, default, 0);
-        _crateImg = TdSpriteBaker.ByWidth(_atlas, SpriteId.SupplyCrate, TdArtMap.CrateWidthDip * px);
         _baked = true;
     }
 
@@ -168,9 +164,9 @@ public sealed class TdBandRenderer : IDisposable
         foreach (var i in _towerImg) i?.Dispose();
         foreach (var i in _chipImg) i?.Dispose();
         foreach (var i in _enemyImg) i?.Dispose();
-        _coreImg?.Dispose(); _portalImg?.Dispose(); _crateImg?.Dispose();
+        _coreImg?.Dispose(); _portalImg?.Dispose();
         _towerImg = []; _chipImg = []; _enemyImg = [];
-        _coreImg = _portalImg = _crateImg = null;
+        _coreImg = _portalImg = null;
         _baked = false;
     }
 
@@ -374,13 +370,12 @@ public sealed class TdBandRenderer : IDisposable
 
     private void DrawTowers(SKCanvas c, TdMatchState m, in TdView view, int w)
     {
-        int risk = m.CrateTargetTowerId;
         for (int i = 0; i < m.Towers.Count; i++)
         {
             var t = m.Towers[i];
             if (!t.Placed) continue;
             float cx = TdBand.TowerCenterDip(m, t, w);
-            DrawTower(c, cx, t, view.SelectedTowerId == t.Id, view.HoverTowerId == t.Id, risk == t.Id);
+            DrawTower(c, cx, t, view.SelectedTowerId == t.Id, view.HoverTowerId == t.Id);
         }
     }
 
@@ -432,7 +427,7 @@ public sealed class TdBandRenderer : IDisposable
         _stroke.StrokeWidth = 1f;
     }
 
-    // Destaque do tutorial (TD.15): contorno âmbar pulsante na zona de torres ou anel no alvo (torre/caixa). Alfa pela fase do relógio.
+    // Destaque do tutorial (TD.15): contorno âmbar pulsante na zona de torres ou anel no alvo (torre). Alfa pela fase do relógio.
     private void DrawHint(SKCanvas c, in TdView view, double now, int w)
     {
         if (!view.BandHint && view.HintX < 0f) return;
@@ -449,7 +444,7 @@ public sealed class TdBandRenderer : IDisposable
         _stroke.StrokeWidth = 1f;
     }
 
-    private void DrawTower(SKCanvas c, float cx, in TdTower t, bool selected, bool hover, bool atRisk)
+    private void DrawTower(SKCanvas c, float cx, in TdTower t, bool selected, bool hover)
     {
         var img = t.DefIndex >= 0 && t.DefIndex < _towerImg.Length ? _towerImg[t.DefIndex] : null;
         bool disabled = t.DisabledTicks > 0;
@@ -469,15 +464,6 @@ public sealed class TdBandRenderer : IDisposable
         {
             _stroke.Color = Palette.Perigo;
             c.DrawLine(left + 2, top + 2, left + sw - 2, Ground - 2, _stroke);
-        }
-        if (atRisk)
-        {
-            _stroke.Color = Palette.Perigo;
-            _stroke.StrokeWidth = 2f;
-            c.DrawRoundRect(left - 1f, top - 1f, sw + 2, sh + 2, 3, 3, _stroke);
-            _stroke.StrokeWidth = 1f;
-            _fill.Color = Palette.Perigo;
-            Shape(c, _riskMark, cx, MathF.Max(2.5f, top - 3f), true, false);
         }
     }
 
@@ -542,40 +528,6 @@ public sealed class TdBandRenderer : IDisposable
         }
     }
 
-    // ------------------------------------------------------------------ caixa-bomba
-
-    private void DrawCrate(SKCanvas c, TdMatchState m, in TdView view, double now, int w)
-    {
-        if (!m.CrateActive) return;
-        float cx = TdBand.ToDip(m.CrateX, w);
-        double left = m.CrateSecondsLeft;
-        bool urgent = left <= 3.0;
-        bool blink = urgent && ((int)(now * 4) & 1) == 0;
-        // a torre em risco é marcada em DrawTower (CrateTargetTowerId)
-        float ch = HeightDip(_crateImg), cw = WidthDip(_crateImg);
-        float bottom = TdBand.CrateTop + ch + 1f;
-        // destaque de perigo: halo vermelho (pisca nos últimos 3 s) atrás da caixa
-        _fill.Color = (urgent ? Palette.Perigo : Palette.Ambar).WithAlpha(blink ? (byte)150 : (byte)70);
-        c.DrawRoundRect(cx - cw / 2f - 2f, bottom - ch - 2f, cw + 4f, ch + 4f, 3, 3, _fill);
-        Blit(c, _crateImg, cx, bottom);
-        _stroke.Color = view.CrateHover ? Palette.TxtBranco : urgent ? Palette.Perigo : Palette.Ambar;
-        _stroke.StrokeWidth = 1.5f;
-        c.DrawRoundRect(cx - cw / 2f - 0.75f, bottom - ch - 0.75f, cw + 1.5f, ch + 1.5f, 2.5f, 2.5f, _stroke);
-        _stroke.StrokeWidth = 1f;
-
-        // contagem regressiva num selo escuro ao lado da caixa (física: fora da escala do canvas)
-        float bx = cx + cw / 2f + 2f, by = bottom - ch;
-        _fill.Color = Palette.BgAbismo.WithAlpha(235);
-        c.DrawRoundRect(bx, by, 13f, 9f, 2, 2, _fill);
-        int sec = Math.Clamp((int)Math.Ceiling(left), 0, Digits.Length - 1);
-        c.Save();
-        c.ResetMatrix();
-        var font = _typography.GetFont(FontRole.SilkscreenBold, 8, (int)MathF.Round(_dpi * _k));
-        _text.Color = urgent ? Palette.Perigo : Palette.Ambar;
-        c.DrawText(Digits[sec], (bx + 6.5f) * _s, (by + 4.5f + TdBand.EdgeHeadroomDip) * _s + font.Size * 0.35f, SKTextAlign.Center, font, _text);
-        c.Restore();
-    }
-
     private static SKPath Poly(params float[] xy)
     {
         using var b = new SKPathBuilder();
@@ -595,13 +547,6 @@ public sealed class TdBandRenderer : IDisposable
         c.Restore();
     }
 
-    private static string[] BuildDigits()
-    {
-        var d = new string[100];
-        for (int i = 0; i < d.Length; i++) d[i] = i.ToString(System.Globalization.CultureInfo.InvariantCulture);
-        return d;
-    }
-
     public void Dispose()
     {
         ReleaseSprites();
@@ -610,7 +555,7 @@ public sealed class TdBandRenderer : IDisposable
         _fill.Dispose();
         _stroke.Dispose();
         _text.Dispose();
-        _diamond.Dispose(); _triangle.Dispose(); _cross.Dispose(); _bolt.Dispose(); _riskMark.Dispose();
+        _diamond.Dispose(); _triangle.Dispose(); _cross.Dispose(); _bolt.Dispose();
         _dash.Dispose();
     }
 }

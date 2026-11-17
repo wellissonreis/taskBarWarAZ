@@ -74,7 +74,7 @@ public sealed class TdHud29bTests
         Assert.Equal(MatchPhase.Onda, r.Match.Phase);
         var rest = r.Ui.BuildHud();
         Assert.Equal(TdHudView.RestWidth, rest.Width);
-        Assert.DoesNotContain(rest.Items, i => i.Action is TdUiAction.StartWave or TdUiAction.CollectCrate);
+        Assert.DoesNotContain(rest.Items, i => i.Action is TdUiAction.StartWave);
         Assert.All(rest.Items, i => Assert.True(i.Rect.X + i.Rect.W <= rest.Width + 0.01f));
         Assert.All(rest.Items.Where(i => i.Kind == TdUiKind.Button), i => Assert.True(i.Rect.W <= 118f, i.Text));
     }

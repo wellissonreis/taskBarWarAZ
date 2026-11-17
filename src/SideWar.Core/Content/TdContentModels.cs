@@ -41,22 +41,17 @@ public sealed record TdStarsDef(int TwoStarMaxLoss, int ThreeStarMaxLoss);
 public sealed record TdChallengeDef(
     string Id, string Name, string Description, int? MaxTowers, bool NoAbilities, bool NoCallNext, double StartingCreditsFactor);
 
-/// <summary>Caixa-bomba (RF-28.19): chance por onda elegível, janela de queda, contagem, recompensa e janela de presença do host.</summary>
-public sealed record TdBombCrateDef(
-    double Chance, int FirstEligibleWaveStage1, int MinDropSeconds, double DropMaxSpawnFraction, int CountdownSeconds,
-    int EdgeMargin, int CooldownReductionSeconds, int PresenceWindowSeconds);
-
 /// <summary>Pergunta-bônus do Preparo (RF-28.23): tempo da pergunta (s) e recompensa por acerto (créditos = base + porOnda × onda; redução de recarga em s).</summary>
 public sealed record TdBonusQuestionDef(int TimerSeconds, int CreditsBase, int CreditsPerWave, int CooldownReductionSeconds);
 
-/// <summary>Fragmentos de runa (TD.29a): ganhos por onda vencida, caixa coletada, pergunta certa e chefe derrotado.</summary>
-public sealed record TdFragmentsDef(int PerWave, int PerCrate, int PerQuestion, int PerBoss);
+/// <summary>Fragmentos de runa (TD.29a): ganhos por onda vencida, pergunta certa e chefe derrotado.</summary>
+public sealed record TdFragmentsDef(int PerWave, int PerQuestion, int PerBoss);
 
 /// <summary>Regras de partida (RF-28.1 a RF-28.4, RF-28.10, RF-28.12).</summary>
 public sealed record TdMatchRulesDef(
     int CoreIntegrity, double SellRefund, int[] TowerCostTable, int[] TowerCostTableLow, int WaveBonusBase, int WaveBonusPerWave, double HpWaveGrowth, double HpStageStep,
     double SpawnJitter, int MaxEnemiesOnField, TdCallNextDef CallNext, TdAutoStartDef AutoStart, TdStarsDef Stars,
-    TdChallengeDef[] Challenges, TdBombCrateDef BombCrate, TdBonusQuestionDef BonusQuestion, TdFragmentsDef Fragments);
+    TdChallengeDef[] Challenges, TdBonusQuestionDef BonusQuestion, TdFragmentsDef Fragments);
 
 public sealed record TdStageDef(
     int Id, string Title, string Region, string Concept, int Waves, long StartingCredits, string Challenge);
@@ -89,7 +84,7 @@ public sealed record TdRuneNodeDef(string Id, int Ring, int Sector, string Type,
 /// <summary>Fontes de crédito da §6 (moeda única), consumidas pelo Core desde a TD.21; calibração na TD.22.</summary>
 public sealed record TdCreditSourcesDef(
     int StartingCreditsBonus, int WaveBonusBase, int WaveBonusPerWave, int NoLeakBase, int NoLeakPerWave,
-    int CrateBase, int CratePerWave, int BonusQuestionBase, int BonusQuestionPerWave, int BossCredits);
+    int BonusQuestionBase, int BonusQuestionPerWave, int BossCredits);
 
 /// <summary>Teia de runas (td-runes.json): 32 nós fixos (4 anéis × 8 setores), 8 tipos e as fontes de crédito da §6.</summary>
 public sealed record TdRunesDef(TdCreditSourcesDef CreditSources, TdRuneTypeDef[] Types, TdRuneNodeDef[] Nodes);

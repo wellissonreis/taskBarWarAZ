@@ -36,11 +36,8 @@ public sealed record PlaceTower(int TowerId, int X) : IGameCommand;
 /// <summary>Reposiciona, sem custo, uma torre SEM POSIÇÃO em X lógico (snap de 44 DIP); mantém a recarga. Torre posicionada é rejeitada (NotUnpositioned).</summary>
 public sealed record MoveTower(int TowerId, int X) : IGameCommand;
 
-/// <summary>Sinal "presente agora" do hospedeiro (RF-28.19): enviado ao log só quando muda; o Core nunca lê relógio nem entrada.</summary>
+/// <summary>Sinal "presente agora" do hospedeiro (ex-RF-28.19): enviado ao log só quando muda; o Core nunca lê relógio nem entrada.</summary>
 public sealed record SetPresence(bool Present) : IGameCommand;
-
-/// <summary>Coleta a caixa-bomba ativa a tempo (RF-28.19): créditos de creditSources.crateBase/PerWave e redução de recarga de habilidade.</summary>
-public sealed record CollectCrate(int CrateId) : IGameCommand;
 
 /// <summary>
 /// Pergunta-bônus do Preparo (RF-28.23, 2026-11-17): o hospedeiro confere V/F no banco <c>td-questions.json</c> e registra o resultado.

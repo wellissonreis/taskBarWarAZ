@@ -490,34 +490,4 @@ public sealed class TdUiControllerTests
         r.Ui.OpenTowerFromList(r.Match.Towers[0].Id);
         Assert.Equal(TdUiMode.Inspector, r.Ui.Mode);
     }
-
-    [Fact]
-    public void Crate_button_in_the_hud_is_disabled_without_crate_and_collects_through_the_host_when_there_is_one()
-    {
-        var r = new Rig();
-        Assert.DoesNotContain(r.Ui.BuildHud().Items, i => i.Action == TdUiAction.CollectCrate); // só aparece com caixa
-        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.CollectCrate));
-        Assert.Empty(r.Sent);
-        typeof(TdMatchState).GetProperty("CrateActive")!.SetValue(r.Match, true);
-        typeof(TdMatchState).GetProperty("CrateId")!.SetValue(r.Match, 7);
-        r.Now = 0; // fase do pulso ligada
-        var live = r.Ui.BuildHud().Items.Single(i => i.Action == TdUiAction.CollectCrate);
-        Assert.True(live.Enabled);
-        Assert.True(live.Highlight);
-        Assert.Contains("Coletar caixa", live.Tip);
-        r.Ui.Activate(live);
-        var cmd = Assert.IsType<CollectCrate>(r.Sent.Single());
-        Assert.Equal(7, cmd.CrateId);
-    }
-
-    [Fact]
-    public void Minimized_chip_blinks_and_says_Caixa_while_a_crate_is_active()
-    {
-        var r = new Rig();
-        typeof(TdMatchState).GetProperty("CrateActive")!.SetValue(r.Match, true);
-        r.Now = 0;
-        Assert.True(r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.CollectCrate).Highlight);
-        r.Now = .6;
-        Assert.False(r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.CollectCrate).Highlight);
-    }
 }

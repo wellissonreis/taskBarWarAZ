@@ -5,9 +5,9 @@ using SideWar.Runtime.Lifecycle;
 namespace SideWar.Runtime.Td;
 
 /// <summary>Estado de interação lido pelo render (seleção e passar do mouse; a UI completa é da TD.8).</summary>
-public readonly record struct TdView(int SelectedTowerId, int HoverTowerId, bool CrateHover)
+public readonly record struct TdView(int SelectedTowerId, int HoverTowerId)
 {
-    public static TdView None => new(0, 0, false);
+    public static TdView None => new(0, 0);
 
     /// <summary>Fantasma do modo construção (TD.8): X lógico (-1 = sem fantasma), validade (laranja se inválido) e torre candidata (alcance; -1 = genérico).</summary>
     public int GhostX { get; init; } = -1;
@@ -23,7 +23,7 @@ public readonly record struct TdView(int SelectedTowerId, int HoverTowerId, bool
     /// <summary>Tutorial (TD.15): contorno pulsante em toda a faixa de torres (passo "clique num ponto da faixa").</summary>
     public bool BandHint { get; init; }
 
-    /// <summary>Tutorial (TD.15): X (DIP do espaço de desenho) de um alvo a destacar com anel âmbar (caixa-bomba); -1 = nenhum.</summary>
+    /// <summary>Tutorial (TD.15): X (DIP do espaço de desenho) de um alvo a destacar com anel âmbar (torre); -1 = nenhum.</summary>
     public float HintX { get; init; } = -1f;
 }
 
@@ -64,8 +64,7 @@ public sealed class TdRenderDriver : ILoopParticipant
     public TdView View => _view;
 
     /// <summary>
-    /// Jogador ausente (outro app ativo). TD.28c: NÃO muda o fps (a animação segue a 30 fps com ou sem foco; só o esmaecer da janela e
-    /// a ausência para a caixa continuam). Mantido como informação de estado.
+    /// Jogador ausente (outro app ativo). TD.28c: NÃO muda o fps (a animação segue a 30 fps com ou sem foco; só o esmaecer da janela continua). Mantido como informação de estado.
     /// </summary>
     public bool Absent { get; set; }
 
@@ -85,7 +84,7 @@ public sealed class TdRenderDriver : ILoopParticipant
 
     public void SetSelected(int towerId) => Update(_view with { SelectedTowerId = towerId });
 
-    public void SetHover(int towerId, bool crate) => Update(_view with { HoverTowerId = towerId, CrateHover = crate });
+    public void SetHover(int towerId) => Update(_view with { HoverTowerId = towerId });
 
     /// <summary>Desenha já (Show após Hide: um frame completo antes de mostrar a janela).</summary>
     public void ForceDraw() => Draw();
@@ -130,7 +129,6 @@ public sealed class TdRenderDriver : ILoopParticipant
         h.Add(match.Credits);
         h.Add(match.Integrity);
         h.Add(match.WaveNumber);
-        h.Add(match.CrateActive);
         h.Add(match.Layout?.Width ?? 0);
         h.Add(match.Layout?.FreeZones.Length ?? 0);
         h.Add((int)Math.Ceiling(match.CountdownRemainingSeconds));
