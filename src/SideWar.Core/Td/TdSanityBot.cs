@@ -25,6 +25,14 @@ public sealed record TdBotResult(
     public bool Won => Phase == MatchPhase.Vitoria;
 }
 
+/// <summary>Resultado de uma corrida contínua do SanityBot (TD.28a): fases concluídas em sequência com as mesmas torres/runas/créditos, até derrota ou limite.</summary>
+public sealed record TdRunBotResult(
+    TdBotProfile Profile, ulong Seed, int StartStage, int StagesCleared, int StageNumber, int WaveInStage, MatchPhase Phase, int Integrity,
+    long CreditsLeft, int TowersBuilt, int TowersAtEnd, long Frames, double CombatSeconds, int CommandsRejected, IReadOnlyList<TdStageSummary> Stages, ulong StateHash)
+{
+    public bool Defeated => Phase == MatchPhase.Derrota;
+}
+
 /// <summary>
 /// SanityBot TD (TD.10): jogador headless e determinístico que usa só a API pública de <see cref="TdMatchState"/> (Apply/Step) com os
 /// comandos do jogo. Cada perfil segue um roteiro por fase (DSL abaixo) num layout típico de barra de 1920 DIP. Serve de teste de
@@ -54,10 +62,26 @@ public static class TdSanityBot
         return bot.Play(seed);
     }
 
+    /// <summary>
+    /// Corrida contínua (TD.28a, SDD-29 §20): uma única partida com <see cref="TdMatchOptions.Default"/> (delay 0 entre ondas, torres/runas/créditos
+    /// mantidos), jogada até derrota ou <paramref name="maxStages"/> fases concluídas (6 = a campanha; mais = ciclo infinito). A cada fase o bot
+    /// carrega o roteiro da fase de conteúdo (só construir/runas: mira e venda do roteiro de fase única dependem de ids que a corrida já mudou).
+    /// </summary>
+    public static TdRunBotResult RunContinuous(TdContent content, int startStage, TdBotProfile profile, ulong seed, int maxStages = 6)
+    {
+        ArgumentNullException.ThrowIfNull(content);
+        var state = TdMatchState.Create(content, startStage, Rng.Seed(seed, 54), null, TdMatchOptions.Default);
+        var bot = new Runner(state, RunPlan(startStage, profile), profile) { RunMaxStages = maxStages };
+        return bot.PlayRun(seed, startStage);
+    }
+
+    private static Step[] RunPlan(int stageId, TdBotProfile profile) => [.. TdBotPlans.For(stageId, profile).Where(s => s.Kind is 'b' or 'r' or 's')];
+
     private sealed class Runner
     {
         private readonly TdMatchState _s;
-        private readonly Step[] _plan;
+        private Step[] _plan;
+        public int RunMaxStages { get; init; }
         private readonly TdBotProfile _profile;
         private int _next;
         private int _rejected;
@@ -81,6 +105,39 @@ public static class TdSanityBot
 
         private bool Smart => _profile != TdBotProfile.Novato; // o novato não usa habilidades
         private bool Expert => _profile == TdBotProfile.Otimizado;
+
+        public TdRunBotResult PlayRun(ulong seed, int startStage)
+        {
+            Send(new LayoutChanged(TypicalLayout()));
+            Send(new SetPresence(true));
+            long maxFrames = 30L * 3600 * 2 * Math.Max(1, RunMaxStages);
+            int cleared = 0;
+            while (_s.Frame < maxFrames && _s.Phase is MatchPhase.Preparo or MatchPhase.Onda && _s.StagesCleared < RunMaxStages)
+            {
+                if (_s.StagesCleared != cleared)
+                {
+                    cleared = _s.StagesCleared;
+                    _plan = RunPlan(_s.StageId, _profile); // fase nova: roteiro da fase de conteúdo; torres/runas já possuídas ficam
+                    _next = 0;
+                    _fallbackBuilt = 0;
+                }
+                if (_s.Phase == MatchPhase.Preparo)
+                {
+                    Spend();
+                    Send(new StartWave());
+                }
+                else if (_s.Frame % DecisionEveryFrames == 0)
+                {
+                    Spend();
+                    Abilities();
+                    if (Expert) TryCall();
+                }
+                HandleCrate();
+                _s.Step();
+            }
+            return new TdRunBotResult(_profile, seed, startStage, _s.StagesCleared, _s.StageNumber, _s.WaveNumber, _s.Phase, _s.Integrity, _s.Credits,
+                _builtCount, _s.Towers.Count, _s.Frame, _s.Tick / (double)TdWorld.TicksPerSecond, _rejected, [.. _s.StageResults], _s.ComputeStateHash());
+        }
 
         public TdBotResult Play(ulong seed)
         {

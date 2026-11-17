@@ -7,8 +7,8 @@ namespace SideWar.Core.Td;
 /// <remarks><c>Seq</c> desempata comandos no mesmo frame (ex.: <c>Pause</c>, compras, <c>Resume</c>); o log é ordenado por (Frame, Seq).</remarks>
 public sealed record TdLogEntry(long Frame, IGameCommand Command, int Seq = 0);
 
-/// <summary>Partida scriptada: fase, seed da partida (PCG32), log de comandos e limite de passos (ADR-026).</summary>
-public sealed record TdReplayScript(int Stage, ulong SeedState, ulong SeedStream, IReadOnlyList<TdLogEntry> Log, long MaxFrames);
+/// <summary>Partida scriptada (<c>Options</c> nulo = modo clássico, compatível com os logs antigos): fase, seed da partida (PCG32), log de comandos e limite de passos (ADR-026).</summary>
+public sealed record TdReplayScript(int Stage, ulong SeedState, ulong SeedStream, IReadOnlyList<TdLogEntry> Log, long MaxFrames, TdMatchOptions? Options = null);
 
 public sealed record TdReplayResult(ulong StateHash, long Frames, long Ticks, MatchPhase Phase, int Stars, int Integrity, long Credits, int CommandsRejected);
 
@@ -19,7 +19,7 @@ public static class TdReplayRunner
     {
         ArgumentNullException.ThrowIfNull(content);
         ArgumentNullException.ThrowIfNull(script);
-        var state = TdMatchState.Create(content, script.Stage, Rng.Seed(script.SeedState, script.SeedStream));
+        var state = TdMatchState.Create(content, script.Stage, Rng.Seed(script.SeedState, script.SeedStream), null, script.Options ?? TdMatchOptions.Classic);
         var log = script.Log.OrderBy(e => e.Frame).ThenBy(e => e.Seq).ToArray(); // estável: ordem de declaração se (Frame, Seq) empatar
         int next = 0, rejected = 0;
         while (state.Frame < script.MaxFrames)

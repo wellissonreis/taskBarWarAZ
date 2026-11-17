@@ -24,7 +24,8 @@ public sealed partial class TdMatchState
 
     private CommandResult DoAnswerBonus(AnswerBonus cmd)
     {
-        if (Phase != MatchPhase.Preparo) return Reject(CommandReason.InvalidPhase);
+        // Clássico: só em Preparo. Contínuo (TD.28a): não há Preparo entre ondas; a pergunta vale durante a onda em andamento (1 por onda iniciada).
+        if (Phase != MatchPhase.Preparo && !(_options.ContinuousWaves && Phase == MatchPhase.Onda)) return Reject(CommandReason.InvalidPhase);
         if (_bonusAnswered) return Reject(CommandReason.AlreadyUsed);
         _bonusAnswered = true;
         long paid = 0;
@@ -32,7 +33,7 @@ public sealed partial class TdMatchState
         {
             _bonusCorrect++;
             var q = _content.Stages.Rules.BonusQuestion;
-            paid = BonusCreditsFor(NextWaveNumber);
+            paid = BonusCreditsFor(Phase == MatchPhase.Preparo ? NextWaveNumber : WaveNumber);
             Credits = Sat.Add(Credits, paid);
             int red = q.CooldownReductionSeconds * TdWorld.TicksPerSecond;
             for (int i = 0; i < _abilityCd.Length; i++) _abilityCd[i] = Math.Max(0, _abilityCd[i] - red);

@@ -26,7 +26,7 @@ public sealed partial class TdMatchState
     public int PeakTowers => _peakTowers;
 
     /// <summary>Segundos de combate (relógio do mundo, só avança em Onda).</summary>
-    public double CombatSeconds => Tick / (double)TdWorld.TicksPerSecond;
+    public double CombatSeconds => (Tick - _stageStartTick) / (double)TdWorld.TicksPerSecond;
 
     /// <summary>O desafio da fase (RF-28.10) foi cumprido: limite de torres, sem habilidades, sem chamada antecipada. O fator de créditos do Maratona não é aplicado.</summary>
     public bool ChallengeMet
@@ -45,14 +45,21 @@ public sealed partial class TdMatchState
     private TdMatchResult ComputeResult()
     {
         if (Phase != MatchPhase.Vitoria) return new(Phase, Stars, IntegrityLost);
-        bool crown = IntegrityLost == 0;
+        var s = BuildSummary(Stars, IntegrityLost);
+        return new(Phase, Stars, IntegrityLost, s.Crown, s.Medals, s.Score);
+    }
+
+    /// <summary>Coroa, medalhas e pontuação da fase corrente (contadores por fase) para <paramref name="stars"/>/<paramref name="lost"/> dados.</summary>
+    private TdStageSummary BuildSummary(int stars, int lost)
+    {
+        bool crown = lost == 0;
         var medals = TdMedals.None;
         if (!_sold) medals |= TdMedals.SemVender;
         if (!UsedAnyAbility) medals |= TdMedals.SemHabilidades;
         if (_waves.Length >= 2 && _earlyCalls >= _waves.Length - 1) medals |= TdMedals.Pressa;
         if (ChallengeMet) medals |= TdMedals.Desafio;
-        int score = TdScoring.Compute(Integrity, CombatSeconds, _earlyCalls, Credits, Stars, crown);
-        return new(Phase, Stars, IntegrityLost, crown, medals, score);
+        int score = TdScoring.Compute(Integrity, CombatSeconds, _earlyCalls, Credits, stars, crown);
+        return new(_stageNumber, _stage.Id, Cycle, stars, lost, crown, medals, score, CombatSeconds);
     }
 }
 

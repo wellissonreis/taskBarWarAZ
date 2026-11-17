@@ -13,8 +13,14 @@ namespace SideWar.Core.Td;
 public sealed partial class TdMatchState
 {
     private readonly TdContent _content;
-    private readonly TdStageDef _stage;
-    private readonly TdWaveDef[] _waves;
+    private TdStageDef _stage;
+    private TdWaveDef[] _waves;
+    private readonly TdMatchOptions _options;
+    private int _stageNumber;
+    private int _stageClears;
+    private long _stageStartTick;
+    private int _stageBaseIntegrity;
+    private readonly List<TdStageSummary> _stageResults = [];
     private readonly TdEnemyStats[] _enemyStats;
     private readonly HashSet<string> _metaNodes;
     private readonly int[] _abilityCd;
@@ -40,9 +46,11 @@ public sealed partial class TdMatchState
     /// <summary>Teto de eventos retidos até <see cref="ClearEvents"/> (excedente é descartado).</summary>
     public const int MaxEvents = 4096;
 
-    private TdMatchState(TdContent content, TdStageDef stage, TdWaveDef[] waves, Rng rng, IEnumerable<string>? metaNodes)
+    private TdMatchState(TdContent content, TdStageDef stage, TdWaveDef[] waves, Rng rng, IEnumerable<string>? metaNodes, TdMatchOptions options)
     {
         _content = content;
+        _options = options;
+        _stageNumber = stage.Id;
         _stage = stage;
         _waves = waves;
         _rng = rng;
@@ -63,6 +71,7 @@ public sealed partial class TdMatchState
         _ownedRunes = 1UL << Array.FindIndex(content.Runes.Nodes, n => n.Id == content.Runes.CenterId);
         AutoStart = content.Stages.Rules.AutoStart.DefaultMode == "countdown" ? AutoStartMode.Countdown : AutoStartMode.Off;
         AutoStartSeconds = content.Stages.Rules.AutoStart.DefaultCountdownSeconds;
+        _stageBaseIntegrity = Integrity;
         RestartCountdown();
     }
 
@@ -70,17 +79,32 @@ public sealed partial class TdMatchState
     /// Cria a partida da fase <paramref name="stageId"/> (1 a 6) em Preparo, com créditos e integridade iniciais.
     /// <paramref name="unlockedMetaNodes"/>: ids de nós da árvore já comprados (inclui créditos iniciais e desbloqueio de habilidades, ex.: <c>operation.snapshot</c>).
     /// </summary>
-    public static TdMatchState Create(TdContent content, int stageId, Rng rng, IEnumerable<string>? unlockedMetaNodes = null)
+    public static TdMatchState Create(TdContent content, int stageId, Rng rng, IEnumerable<string>? unlockedMetaNodes = null) =>
+        Create(content, stageId, rng, unlockedMetaNodes, TdMatchOptions.Classic);
+
+    /// <summary>Cria a partida com as regras de <paramref name="options"/> (TD.28a): <see cref="TdMatchOptions.Default"/> é a corrida contínua.</summary>
+    public static TdMatchState Create(TdContent content, int stageId, Rng rng, IEnumerable<string>? unlockedMetaNodes, TdMatchOptions options)
     {
+        ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(content);
         var stage = content.Stages.Stages.FirstOrDefault(s => s.Id == stageId)
             ?? throw new ArgumentOutOfRangeException(nameof(stageId), stageId, "Fase inexistente no td-stages.json.");
         var waves = content.Waves.Stages.Single(s => s.Stage == stageId).Waves;
-        return new TdMatchState(content, stage, waves, rng, unlockedMetaNodes);
+        return new TdMatchState(content, stage, waves, rng, unlockedMetaNodes, options);
     }
 
     public TdContent Content => _content;
+    /// <summary>Id do conteúdo da fase atual (1 a 6; no ciclo infinito volta a 1).</summary>
     public int StageId => _stage.Id;
+    /// <summary>Número absoluto da fase na corrida (1, 2, … 6, 7, …); sobe a cada <see cref="TdEventType.StageCleared"/>. Escala HP e destrava torres/habilidades.</summary>
+    public int StageNumber => _stageNumber;
+    /// <summary>Volta completa pelas fases do conteúdo (0 até concluir a última).</summary>
+    public int Cycle => (_stageNumber - 1) / _content.Stages.Stages.Length;
+    public TdMatchOptions Options => _options;
+    /// <summary>Fases concluídas na corrida (sempre 0 no modo clássico).</summary>
+    public int StagesCleared => _stageClears;
+    /// <summary>Resumos das fases concluídas, em ordem (evento <see cref="TdEventType.StageCleared"/> = último item).</summary>
+    public IReadOnlyList<TdStageSummary> StageResults => _stageResults;
     public MatchPhase Phase { get; private set; } = MatchPhase.Preparo;
 
     /// <summary>Relógio do mundo (ticks de 30 Hz); só avança em Onda.</summary>
@@ -356,7 +380,7 @@ public sealed partial class TdMatchState
         int di = cmd.TowerId is null ? -1 : TowerDefIndex(cmd.TowerId);
         if (di < 0) return Reject(CommandReason.TowerNotFound);
         var def = _content.Towers[di];
-        if (_stage.Id < def.UnlockStage) return Reject(CommandReason.TowerLocked);
+        if (_stageNumber < def.UnlockStage) return Reject(CommandReason.TowerLocked);
         var reason = ResolvePlacement(cmd.X, 0, out int px);
         if (reason != CommandReason.None) return Reject(reason);
         if (_towers.Count >= TechnicalTowerLimit) return Reject(CommandReason.TowerLimit);
@@ -434,22 +458,72 @@ public sealed partial class TdMatchState
         Emit(TdEventType.WaveStarted, w);
     }
 
-    /// <summary>Atualiza a fase após uma onda concluir: Vitória na última, senão volta a Preparo.</summary>
+    /// <summary>
+    /// Atualiza a fase após uma onda concluir. Clássico: Vitória na última, senão Preparo. Contínuo (TD.28a): a próxima onda começa no mesmo
+    /// passo (Preparo de 0 s) e, ao fim da fase, a corrida persistente segue para a próxima sem recriar o estado.
+    /// </summary>
     private void SettlePhase()
     {
         if (_active.Count > 0 || _enemies.Count > 0 || Phase != MatchPhase.Onda) return;
         CrateLeaveWave();
         if (WaveNumber >= _waves.Length)
         {
+            if (_options.PersistentRun)
+            {
+                ClearStageAndAdvance();
+                return;
+            }
             Phase = MatchPhase.Vitoria;
             var stars = _content.Stages.Rules.Stars;
             Stars = IntegrityLost <= stars.ThreeStarMaxLoss ? 3 : IntegrityLost <= stars.TwoStarMaxLoss ? 2 : 1;
             Emit(TdEventType.Victory, Stars, IntegrityLost);
         }
+        else if (_options.ContinuousWaves)
+        {
+            BeginWave(NextWaveNumber);
+        }
         else
         {
             Phase = MatchPhase.Preparo;
             _bonusAnswered = false;
+            RestartCountdown();
+        }
+    }
+
+    /// <summary>
+    /// Fim de fase na corrida persistente: registra o resumo (estrelas, coroa, medalhas, pontuação da fase), recupera integridade,
+    /// avança para a próxima fase (depois da última, volta ao conteúdo da fase 1 com HP escalado por volta) MANTENDO torres, runas,
+    /// créditos, habilidades e relógio, e inicia a onda 1 (contínuo) ou volta ao Preparo.
+    /// </summary>
+    private void ClearStageAndAdvance()
+    {
+        int lost = Math.Max(0, _stageBaseIntegrity - Integrity);
+        var stars = _content.Stages.Rules.Stars;
+        int starCount = lost <= stars.ThreeStarMaxLoss ? 3 : lost <= stars.TwoStarMaxLoss ? 2 : 1;
+        var summary = BuildSummary(starCount, lost);
+        Stars = starCount;
+        _stageResults.Add(summary);
+        _stageClears++;
+        Emit(TdEventType.StageCleared, summary.StageNumber, summary.Score);
+
+        Integrity = Math.Min(IntegrityMax, Integrity + Math.Max(0, _options.StageClearHeal));
+        _stageBaseIntegrity = Integrity;
+        _stageNumber++;
+        var defs = _content.Stages.Stages;
+        _stage = defs[(_stageNumber - 1) % defs.Length];
+        _waves = _content.Waves.Stages.Single(s => s.Stage == _stage.Id).Waves;
+        WaveNumber = 0;
+        _stageStartTick = Tick;
+        _earlyCalls = 0;
+        _sold = false;
+        _peakTowers = _towers.Count;
+        _hasLeaked = false; // runas "sem vazar" valem por fase na corrida contínua
+        Array.Clear(_abilityUses); // "usos por fase" recomeçam; recargas continuam
+        _bonusAnswered = false;
+        if (_options.ContinuousWaves) BeginWave(1);
+        else
+        {
+            Phase = MatchPhase.Preparo;
             RestartCountdown();
         }
     }

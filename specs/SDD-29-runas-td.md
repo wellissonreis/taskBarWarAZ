@@ -385,6 +385,7 @@ Ficha TD.19 anterior (conteúdo) fica; a **modal central e a pausa viram fichas 
 | **TD.24b** | **Aba Runas:** grafo radial (estados, pan/zoom, tooltips, caminho até alvo, devolução com aviso de cascata) e aba Construir com preço crescente | TD.21, TD.24a | 🟡 |
 | **TD.25** | Tutorial/"Como jogar" e dicas: chip → abrir modal, runas (§16) (atualiza TD.17) | TD.17, TD.24a, TD.24b | 🟡 |
 | **TD.26** | Documentação: revisar SDD-28 (RF-28.4/28.5/28.13/28.22, CA/T), ADR, `PLANO.md`, MTC | TD.19 a TD.25 | 🟢 |
+| **TD.28a** ✅ | **Corrida contínua no Core:** `TdMatchOptions` (ondas contínuas, corrida persistente), `StageCleared`, infinito depois da fase 6, `TdSanityBot.RunContinuous`; ver §20 | TD.22, TD.24c | 🟢 |
 | **TD.27** (pós-MVP) | Medalha "Especialista", desafio "Sem runas", páginas salvas | TD.24b | 🟡 |
 
 Ordem: TD.19 → TD.19b → TD.20 → TD.21 → (TD.22 ‖ TD.23 ‖ TD.24a) → TD.24b → TD.25 → TD.26; TD.27 por último.
@@ -410,3 +411,33 @@ Ordem: TD.19 → TD.19b → TD.20 → TD.21 → (TD.22 ‖ TD.23 ‖ TD.24a) →
 ### TD.24c — retorno após fim de partida
 
 Ao terminar, a modal oferece reinício e mapa; na vitória, oferece também a próxima fase desbloqueada. Fechar o resultado mantém o chip como caminho para reabri-lo. A aba Jogo permite reiniciar mediante confirmação Sim/Não. Uma nova partida usa a criação e seed já existentes, após fechar a modal e liberar sua pausa.
+
+### TD.24d — nota de integração visual
+
+O canvas de Runas apresenta apenas um estado “em breve”; não especifica uma teia. O HUD mapeia “Fim da fase” à ação existente de iniciar ou chamar a próxima onda, conforme o estado da partida. A ilustração de três faixas não altera o mapa jogável. O painel rápido de torres usa a faixa existente para posicionamento e não pausa a partida.
+
+## 20. Corrida contínua (2026-11-17, TD.28a)
+
+Visão do usuário: **jogo para jogar enquanto trabalha** — sensação de jogo infinito rodando ao fundo, discreto. O Core ganha duas regras de partida, agrupadas em `TdMatchOptions` (passadas a `TdMatchState.Create(..., options)` e a `TdReplayScript.Options`):
+
+| Opção | Padrão | Efeito |
+|---|---|---|
+| `ContinuousWaves` | **ligado** | Delay 0: assim que a onda termina (nada vivo, nada por nascer), a próxima começa **no mesmo passo** (`WaveCompleted` e `WaveStarted` no mesmo `Step`). A fase nunca volta a Preparo entre ondas. Só o Preparo **inicial** (antes da onda 1 da corrida, para montar a defesa e dar `StartWave`) continua existindo. `CallNextWave` segue valendo. |
+| `PersistentRun` | **ligado** | Vencer a fase **não** termina a partida: o estado não é recriado. Torres (ids, posições, recargas), runas, créditos, habilidades e relógio continuam; muda o conteúdo (fase seguinte). Depois da fase 6, o ciclo infinito. Só a **derrota** (`Phase = Derrota`) encerra a corrida inteira. `Victory` não é mais emitido. |
+| `StageClearHeal` | 5 | Integridade do núcleo recuperada ao concluir cada fase, limitada ao máximo. Escolha: **+5** (25% de 20) — alivia, sem apagar o aperto; "cheia" tiraria a tensão de vazar. |
+
+`TdMatchOptions.Classic` (ambos desligados) mantém exatamente o comportamento anterior (Preparo manual entre ondas, Vitória terminal). **`TdMatchState.Create` sem opções e `TdReplayScript` sem `Options` usam Classic**, então testes/logs/hashes anteriores e o host atual continuam iguais até a TD.28b trocar para `TdMatchOptions.Default`.
+
+**Fim de fase (`StageCleared`).** Evento anexado ao enum (`A` = número absoluto da fase, `B` = pontuação); o resumo completo fica em `state.StageResults[^1]`: `TdStageSummary(StageNumber, StageId, Cycle, Stars, IntegrityLost, Crown, Medals, Score, CombatSeconds)`. Estrelas, coroa, medalhas e pontuação usam contadores **da fase** (perda de integridade desde o início da fase, vendas, chamadas antecipadas, torres de pico, habilidades usadas, segundos de combate); `Score` usa a mesma fórmula (`TdScoring`). O host registra recorde/coroa/medalhas por fase com `StageId`. Reiniciam por fase: `UsesPerStage` das habilidades, `_hasLeaked` (runas "sem vazar"), contadores de feitos. Continuam: recargas, créditos, runas, torres.
+
+**Infinito.** `StageNumber` é absoluto (1…6, 7…); `StageId` é o conteúdo (1…6, volta a 1) e `Cycle` a volta (0 até concluir a fase 6). O HP dos inimigos comuns escala por `(1 + hpStageStep × (StageNumber − 1)) × 1,25^Cycle` (`TdMatchState.CycleHpGrowth = 1,25`, multiplicação iterativa, sem `Math.Pow`); torres/habilidades destravam por `StageNumber`, nunca re-travam. Chefes não escalam (como antes). Ondas/inimigos vêm do conteúdo da fase `StageId`, e o `WaveNumber`/`TotalWaves` do HUD são **da fase** (volta a 1 a cada fase).
+
+**Pergunta-bônus.** Sem Preparo, `AnswerBonus` vale **durante a onda em andamento**, uma vez por onda iniciada (`BonusAnswered` volta a falso em cada `WaveStarted`); paga `BonusCreditsFor(WaveNumber)`. O host a mostra como card no cantinho. Em Classic continua só em Preparo. A caixa-bomba não mudou (já era só em Onda).
+
+**Determinismo.** Fora de Classic o `StateHash` inclui as duas opções, `StageNumber` e `StagesCleared`; em Classic o hash é idêntico ao anterior (goldens TD **não** mudaram: old = new; idle intactos). Log/replay sem comandos novos.
+
+**Layout.** O layout da barra é do host (`LayoutChanged`); o Core não o recria na troca de fase, então as torres continuam onde estão e só ficam SEM POSIÇÃO se o host mandar um layout em que a zona sumiu (regra existente, ADR-034).
+
+**SanityBot da corrida (`TdSanityBot.RunContinuous`).** Uma única partida com `Default`, mesmo layout típico, a cada fase carrega o roteiro da fase de conteúdo (só construir/runas; mira e venda do roteiro de fase única são descartadas porque os ids de torre já mudaram), até derrota ou `maxStages`. Critérios (20 seeds, fase inicial 1, limite 40 fases; as 6 por perfil confirmam): **SemContra** perde na fase 1 (0 fases concluídas, ≈2 torres); **Novato** conclui a campanha acumulando torres e cai em ≈16–17 fases (derrota em 6/6); **Médio** cai em ≈33 fases (6/6); **Otimizado** nunca cai até 40 (limitado pelo teto técnico de 48 torres / compra de runas do roteiro). Os critérios por fase única da TD.22 (matriz 20 seeds) permanecem como estão: `Run` não mudou.
+
+**O que o host faz na TD.28b:** criar com `TdMatchOptions.Default`; não esperar `Phase.Preparo` entre ondas nem `Victory` (ler `StageCleared` e `StageResults[^1]` para o card/recorde por fase, e seguir sem fechar a partida); gravar recorde/coroas/medalhas por `StageId` a cada `StageCleared`; tratar `Derrota` como fim da corrida; mostrar a pergunta-bônus como card durante a onda (usar `BonusAnswered`/`AnswerBonus`); o HUD "Onda n/Total" é da fase, e `StageNumber`/`Cycle` mostram o progresso da corrida; "Iniciar" só existe no Preparo inicial; mandar `LayoutChanged` como hoje. Persistir `TdReplayScript.Options` se gravar replays.

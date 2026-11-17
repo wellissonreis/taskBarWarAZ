@@ -144,6 +144,8 @@ public enum TdEventType : byte
     CrateSpawned, CrateCollected, CrateExploded, CrateVanished,
     // TD.17: pergunta-bônus. A = id da pergunta; B = créditos pagos (0 = errou).
     BonusAnswered,
+    // TD.28a: corrida contínua. A = número absoluto da fase concluída; B = pontuação. O resumo completo fica em <c>TdMatchState.StageResults</c>.
+    StageCleared,
 }
 
 /// <summary>Evento observável (não entra no hash). <c>A</c>/<c>B</c>: valores do evento (onda, créditos, id etc.).</summary>
@@ -169,3 +171,21 @@ public enum TdMedals
 
 /// <summary>O que o resultado trouxe de novo ao perfil (card de Vitória, RF-28.21): recorde, coroa e medalhas inéditos e selos bônus (coroa/medalhas; os das estrelas ficam fora).</summary>
 public readonly record struct TdRecordOutcome(bool NewRecord, bool NewCrown, TdMedals NewMedals, int BonusSeals);
+
+/// <summary>
+/// Regras de partida da corrida contínua (TD.28a, SDD-29 §20). <see cref="Default"/> = modo "jogar enquanto trabalha": delay 0 entre ondas e
+/// corrida persistente (torres/runas/créditos mantidos de fase em fase, infinito depois da última). <see cref="Classic"/> = comportamento
+/// anterior (Preparo manual entre ondas, Vitória terminal ao fim da fase) e é o que <c>TdMatchState.Create</c> sem opções usa.
+/// </summary>
+/// <param name="ContinuousWaves">A próxima onda começa no mesmo passo em que a anterior termina (Preparo de 0 s). O Preparo inicial (antes da onda 1 da corrida) continua existindo.</param>
+/// <param name="PersistentRun">Vencer a fase segue para a próxima sem recriar o estado; depois da última, ciclos infinitos mais difíceis. Só a derrota encerra.</param>
+/// <param name="StageClearHeal">Integridade do núcleo recuperada ao concluir cada fase (limitada ao máximo).</param>
+public sealed record TdMatchOptions(bool ContinuousWaves = true, bool PersistentRun = true, int StageClearHeal = 5)
+{
+    public static TdMatchOptions Default { get; } = new();
+    public static TdMatchOptions Classic { get; } = new(false, false, 0);
+    public bool IsClassic => !ContinuousWaves && !PersistentRun;
+}
+
+/// <summary>Resumo de uma fase concluída na corrida contínua (evento <see cref="TdEventType.StageCleared"/>). <c>StageNumber</c> é absoluto (1, 2, … 6, 7, …); <c>StageId</c> é o conteúdo (1 a 6) e <c>Cycle</c> a volta (0 = primeira).</summary>
+public readonly record struct TdStageSummary(int StageNumber, int StageId, int Cycle, int Stars, int IntegrityLost, bool Crown, TdMedals Medals, int Score, double CombatSeconds);

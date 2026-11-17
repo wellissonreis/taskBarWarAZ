@@ -42,7 +42,7 @@ public sealed partial class TdMatchState
     private bool CrateEligible(int wave)
     {
         var bc = _content.Stages.Rules.BombCrate;
-        return _stage.Id != 1 || wave >= bc.FirstEligibleWaveStage1;
+        return _stageNumber != 1 || wave >= bc.FirstEligibleWaveStage1;
     }
 
     /// <summary>Chamado ao fim de <c>BeginWave</c>: sorteia (a) se há caixa, (b) o segundo de queda, (c) o X bruto. Sem caixa ativa/pendente.</summary>
