@@ -69,6 +69,7 @@ public sealed partial class TdMatchState
         h.AddBool(_present); h.AddBool(CrateActive); h.AddInt32(CrateId); h.AddInt32(CrateX); h.AddInt32(CrateTicksLeft);
         h.AddInt32(_cratePendingWave); h.AddInt64(_crateDropTick); h.AddUInt64(_crateXRaw); h.AddInt32(_nextCrateId);
         h.AddBool(_bonusAnswered);
+        if (Paused) h.AddBool(true); // só quando verdadeiro: o hash de partidas sem pausa não muda
         h.AddUInt64(_rng.State);
         h.AddUInt64(_rng.Inc);
         return h.Value;

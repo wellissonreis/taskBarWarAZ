@@ -374,6 +374,8 @@ Ficha TD.19 anterior (conteúdo) fica; a **modal central e a pausa viram fichas 
 |---|---|---|---|
 | **TD.19** | Conteúdo: `td-runes.json` + modelos/validador (grafo conexo, custos em créditos, regra anti-exploit); remover `levels/branches` e `maxTowers` das fases; `towerCostTable`/`towerCostTableLow`; fontes de crédito da §6 | TD.18b aprovada | 🟢 |
 
+**TD.19b concluída (2026-11-17):** pausa no Core entregue (`Pause`/`Resume`, `Paused` no hash só quando verdadeiro, recusa `PausedCommand`, `Step` congelado, log `(Frame, Seq)`); evidência em `specs/evidencias/TD.19b.md`.
+
 **TD.19 concluída (2026-11-17):** conteúdo e validador entregues (`td-runes.json`, `towerCostTable`/`towerCostTableLow`); evidência em `specs/evidencias/TD.19.md`. Remoção de `levels/branches/maxTowers` e ligação das fontes de crédito §6 ficam para a TD.20/TD.21 (consumidores ainda usam o legado).
 | **TD.19b** | **Pausa no Core:** `Paused` no hash, comandos `Pause`/`Resume`, recusa de comandos de tempo, log `(tick, seq)`, caixa-bomba e temporizadores congelados; testes de determinismo e replay | TD.19 | 🟢 |
 | **TD.20** | Core economia: custo crescente por tipo (tabela inteira), venda (§5.2), remover `UpgradeTower`/`ChooseBranch`, teto técnico 48, espaço | TD.19 | 🟢 |

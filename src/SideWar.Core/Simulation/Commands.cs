@@ -86,6 +86,12 @@ public enum CommandReason : byte
     InvalidPhase,
     /// <summary>Região ainda bloqueada ou inexistente (SDD-27 RF-27.10).</summary>
     RegionLocked,
+    /// <summary><c>Pause</c> com a partida já pausada (SDD-29 §11).</summary>
+    AlreadyPaused,
+    /// <summary><c>Resume</c> sem pausa ativa (SDD-29 §11).</summary>
+    NotPaused,
+    /// <summary>Comando de tempo recusado durante a pausa (SDD-29 §11).</summary>
+    PausedCommand,
 }
 
 /// <summary>Resultado de um comando: <c>Missing</c> = créditos que faltam (só em <see cref="CommandReason.InsufficientCredits"/>).</summary>

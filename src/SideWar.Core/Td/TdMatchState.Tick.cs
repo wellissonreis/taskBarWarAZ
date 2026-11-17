@@ -11,6 +11,7 @@ public sealed partial class TdMatchState
     /// </summary>
     public void Step()
     {
+        if (Paused) return; // pausa: nada avança (inimigos, spawns, recargas, caixa-bomba, contagem, ondas, tempo)
         Frame++;
         if (Phase == MatchPhase.Preparo)
         {

@@ -53,3 +53,10 @@ public sealed record CollectCrate(int CrateId) : IGameCommand;
 /// Só em Preparo e uma vez por Preparo; acerto paga créditos e reduz recargas (<c>rules.bonusQuestion</c>), erro não tem penalidade.
 /// </summary>
 public sealed record AnswerBonus(int QuestionId, bool Correct) : IGameCommand;
+
+/// <summary>Pausa a simulação (SDD-29 §11, TD.19b): o <c>Step</c> deixa de avançar tudo. Só com a partida em andamento e fora de pausa.</summary>
+public sealed record Pause : IGameCommand;
+
+/// <summary>Retoma a simulação pausada por <see cref="Pause"/>.</summary>
+[System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1716", Justification = "Nome fixado por SDD-29 §11.")]
+public sealed record Resume : IGameCommand;

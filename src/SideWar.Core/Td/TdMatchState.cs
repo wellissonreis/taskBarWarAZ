@@ -183,8 +183,12 @@ public sealed partial class TdMatchState
     public CommandResult Apply(IGameCommand? command)
     {
         if (_inTick) throw new InvalidOperationException("Comandos só podem ser aplicados entre ticks.");
+        if (Paused && command is StartWave or CallNextWave or UseAbility or CollectCrate)
+            return Reject(CommandReason.PausedCommand); // "nada de comando de tempo enquanto pausado" (SDD-29 §11)
         return command switch
         {
+            Pause => DoPause(),
+            Resume => DoResume(),
             StartWave => DoStartWave(),
             CallNextWave => DoCallNextWave(),
             BuildTower b => DoBuild(b),
@@ -202,6 +206,24 @@ public sealed partial class TdMatchState
             AnswerBonus ab => DoAnswerBonus(ab),
             _ => Reject(CommandReason.UnknownCommand),
         };
+    }
+
+    /// <summary>Simulação pausada (SDD-29 §11): entra no <c>StateHash</c> só quando verdadeira, então partidas sem pausa mantêm o hash.</summary>
+    public bool Paused { get; private set; }
+
+    private CommandResult DoPause()
+    {
+        if (!Running) return Reject(CommandReason.InvalidPhase);
+        if (Paused) return Reject(CommandReason.AlreadyPaused);
+        Paused = true;
+        return CommandResult.Ok;
+    }
+
+    private CommandResult DoResume()
+    {
+        if (!Paused) return Reject(CommandReason.NotPaused);
+        Paused = false;
+        return CommandResult.Ok;
     }
 
     private bool Running => Phase is MatchPhase.Preparo or MatchPhase.Onda;
