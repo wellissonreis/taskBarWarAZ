@@ -80,6 +80,41 @@ internal static class TdIconPainter
                 c.DrawLine(P(1, 6), P(15, 6), line); c.DrawLine(P(1, 10), P(15, 10), line);
                 c.DrawLine(P(8, 2), P(8, 6), line); c.DrawLine(P(5, 6), P(5, 10), line); c.DrawLine(P(11, 6), P(11, 10), line); c.DrawLine(P(8, 10), P(8, 14), line);
                 break;
+            case TdIcon.Alert:
+                Poly(c, line, P(8, 1.5f), P(15, 14), P(1, 14));
+                c.DrawLine(P(8, 6), P(8, 10), line); c.DrawCircle(P(8, 12.2f), 0.9f * u, fill);
+                break;
+            case TdIcon.Question:
+            {
+                using var b = new SKPathBuilder();
+                b.MoveTo(P(5, 5.5f)); b.CubicTo(P(5, 1.5f), P(11, 1.5f), P(11, 5.5f)); b.CubicTo(P(11, 8), P(8, 8), P(8, 10.5f));
+                using var path = b.Detach();
+                c.DrawPath(path, line);
+                c.DrawCircle(P(8, 13.5f), 1f * u, fill);
+                break;
+            }
+            case TdIcon.Check:
+                c.DrawLine(P(2.5f, 8.5f), P(6.5f, 12.5f), line); c.DrawLine(P(6.5f, 12.5f), P(13.5f, 3.5f), line); break;
+            case TdIcon.Cross:
+                c.DrawLine(P(3, 3), P(13, 13), line); c.DrawLine(P(13, 3), P(3, 13), line); break;
+            case TdIcon.Target:
+                c.DrawCircle(P(8, 8), 6.5f * u, line); c.DrawCircle(P(8, 8), 3f * u, line); c.DrawCircle(P(8, 8), 1f * u, fill); break;
+            case TdIcon.Clock:
+                c.DrawCircle(P(8, 8), 6.5f * u, line); c.DrawLine(P(8, 4), P(8, 8), line); c.DrawLine(P(8, 8), P(11, 9.5f), line); break;
+            case TdIcon.Box:
+                c.DrawRect(SKRect.Create(P(2, 4).X, P(2, 4).Y, 12 * u, 10 * u), line);
+                c.DrawLine(P(2, 7.5f), P(14, 7.5f), line); c.DrawLine(P(8, 4), P(8, 7.5f), line); break;
+            case TdIcon.Portal:
+                c.DrawOval(SKRect.Create(P(3.5f, 1.5f).X, P(3.5f, 1.5f).Y, 9 * u, 13 * u), line);
+                c.DrawOval(SKRect.Create(P(6, 5).X, P(6, 5).Y, 4 * u, 6 * u), fill); break;
+            case TdIcon.Crown:
+                Poly(c, fill, P(1.5f, 13), P(1.5f, 4), P(5, 8), P(8, 2.5f), P(11, 8), P(14.5f, 4), P(14.5f, 13)); break;
+            case TdIcon.Medal:
+                c.DrawCircle(P(8, 9), 5f * u, fill); c.DrawLine(P(5, 1.5f), P(7, 5), line); c.DrawLine(P(11, 1.5f), P(9, 5), line); break;
+            case TdIcon.Expand: // seta para cima/esquerda e canto: abrir
+                c.DrawLine(P(3, 13), P(13, 3), line); c.DrawLine(P(6, 3), P(13, 3), line); c.DrawLine(P(13, 3), P(13, 10), line); break;
+            case TdIcon.Collapse: // chevron para baixo: recolher
+                c.DrawLine(P(3, 5.5f), P(8, 11), line); c.DrawLine(P(8, 11), P(13, 5.5f), line); break;
             case TdIcon.Snapshot: // seta circular (restaurar)
             {
                 var oval = SKRect.Create(P(2, 2).X, P(2, 2).Y, 12 * u, 12 * u);

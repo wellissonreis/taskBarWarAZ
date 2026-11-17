@@ -89,6 +89,7 @@ public sealed partial class TdMatchState
             _enemies.RemoveAt(i);
             WaveOf(e.Wave).Alive--;
             Integrity = Math.Max(0, Integrity - e.CoreDamage);
+            RecordLeak(e);
             Emit(TdEventType.EnemyLeaked, e.Id, e.CoreDamage);
             if (Integrity == 0)
             {

@@ -252,5 +252,5 @@ public sealed class TdBombCrateTests
         Assert.Equal(Golden, first.StateHash);
     }
 
-    private const ulong Golden = 9484780872707564732UL;
+    private const ulong Golden = 3885537575890932158UL;
 }

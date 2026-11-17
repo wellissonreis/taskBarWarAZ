@@ -91,6 +91,14 @@ public static class TdContentValidator
             "td-stages.rules.autoStart: 0 < min <= default <= max");
         Req(e, r.Stars.ThreeStarMaxLoss >= 0 && r.Stars.ThreeStarMaxLoss <= r.Stars.TwoStarMaxLoss && r.Stars.TwoStarMaxLoss < r.CoreIntegrity,
             "td-stages.rules.stars: 0 <= threeStarMaxLoss <= twoStarMaxLoss < coreIntegrity");
+        var bq = r.BonusQuestion;
+        Req(e, bq is not null, "td-stages.rules.bonusQuestion ausente");
+        if (bq is not null)
+        {
+            Req(e, bq.TimerSeconds is >= 3 and <= 60, "td-stages.rules.bonusQuestion.timerSeconds deve estar em [3, 60]");
+            Req(e, bq.CreditsBase >= 0 && bq.CreditsPerWave >= 0 && bq.CreditsBase + bq.CreditsPerWave > 0, "td-stages.rules.bonusQuestion: créditos >= 0 e com recompensa");
+            Req(e, bq.CooldownReductionSeconds >= 0, "td-stages.rules.bonusQuestion.cooldownReductionSeconds deve ser >= 0");
+        }
         var bc = r.BombCrate;
         Req(e, bc is not null, "td-stages.rules.bombCrate ausente");
         if (bc is not null)

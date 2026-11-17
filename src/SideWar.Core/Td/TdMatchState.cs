@@ -35,6 +35,7 @@ public sealed partial class TdMatchState
     private bool _inTick;
     private int _countdownTicks;
     private bool _countdownActive;
+    private bool _bonusAnswered;
 
     /// <summary>Teto de eventos retidos até <see cref="ClearEvents"/> (excedente é descartado).</summary>
     public const int MaxEvents = 4096;
@@ -198,6 +199,7 @@ public sealed partial class TdMatchState
             UseAbility u => DoUseAbility(u),
             SetPresence sp => DoSetPresence(sp),
             CollectCrate cc => DoCollectCrate(cc),
+            AnswerBonus ab => DoAnswerBonus(ab),
             _ => Reject(CommandReason.UnknownCommand),
         };
     }
@@ -390,6 +392,7 @@ public sealed partial class TdMatchState
         RollCrate(w, ordered);
         WaveNumber = w;
         Phase = MatchPhase.Onda;
+        _bonusAnswered = false;
         _countdownActive = false;
         _countdownTicks = 0;
         Emit(TdEventType.WaveStarted, w);
@@ -410,6 +413,7 @@ public sealed partial class TdMatchState
         else
         {
             Phase = MatchPhase.Preparo;
+            _bonusAnswered = false;
             RestartCountdown();
         }
     }

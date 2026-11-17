@@ -51,7 +51,7 @@ public class SettingsTdTests
     {
         var td = AppSettings.Default.Td;
         Assert.Equal(64, td.BandHeightDip);
-        Assert.False(td.HudMinimized);
+        Assert.True(td.HudMinimized); // TD.17: nasce recolhido
         Assert.True(td.FadeWhenUnfocused);
         Assert.Equal(50, td.FadeOpacityPercent);
         var old = ReadPayload("{\"td\":{\"autoStartEnabled\":true}}").Td; // JSON antigo: campos ausentes = padrão

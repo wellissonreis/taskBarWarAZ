@@ -218,5 +218,5 @@ public sealed class TdPlacementTests
         Assert.Equal(Golden, first.StateHash);
     }
 
-    private const ulong Golden = 1649672874497974502UL;
+    private const ulong Golden = 12074968237746493662UL;
 }

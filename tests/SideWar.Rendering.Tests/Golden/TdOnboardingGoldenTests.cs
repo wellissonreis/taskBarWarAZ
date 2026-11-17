@@ -25,7 +25,7 @@ public sealed class TdOnboardingGoldenTests
     private const int BandWidth = 1200;
     private static readonly SKColor Backdrop = new(0x1b, 0x22, 0x30);
 
-    public enum Scene { Build, Point, Tower, Wave, Upgrade, UpgradeInspector, Ability, Crate, Help, Tip }
+    public enum Scene { HudOpen, HudCollapse, Core, Credits, Portal, Build, Point, Tower, Range, Wave, Hurt, Quiz, QuizRight, QuizWrong, QuizTime, Defeat, ChipPulse, Ability, Crate, Help, Tip }
 
     private sealed class Host : ITdUiHost
     {
@@ -33,8 +33,8 @@ public sealed class TdOnboardingGoldenTests
         public void TogglePause() { }
         public void OpenSettings() { }
         public void RequestExit() { }
-        public bool HudMinimized => false;
-        public void SetHudMinimized(bool minimized) { }
+        public bool HudMinimized { get; set; }
+        public void SetHudMinimized(bool minimized) => HudMinimized = minimized;
         public void StartStage(int stageId) { }
         public int StageCount => 6;
         public bool StageUnlocked(int stageId) => stageId <= 2;
@@ -52,6 +52,7 @@ public sealed class TdOnboardingGoldenTests
     private sealed class Store : ITdOnboardingStore
     {
         public bool Done;
+        public bool BonusQuestions => true;
         public bool TutorialDone => Done;
         public void SetTutorialDone(bool done) => Done = done;
         public bool TipSeen(string id) => false;
@@ -72,26 +73,58 @@ public sealed class TdOnboardingGoldenTests
     {
         var m = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 1, Rng.Seed(42, 54));
         m.Apply(new LayoutChanged(StripLayout.Create(BandWidth, BandWidth - 46, 88, 4, BandWidth - 80, TowerHost.Band, [new FreeZone(32, BandWidth - 32)])));
-        var store = new Store { Done = scene == Scene.Help };
-        var ui = new TdUiController(() => m, c => m.Apply(c is TdWaveRequest ? new StartWave() : c), new Host(), () => 0, store);
+        bool plain = scene is Scene.Help or Scene.QuizRight or Scene.QuizWrong or Scene.QuizTime or Scene.Defeat or Scene.ChipPulse;
+        var store = new Store { Done = plain };
+        var host = new Host { HudMinimized = scene is Scene.HudOpen or Scene.ChipPulse };
+        double now = 0;
+        var picker = new TdQuestionPicker(TdQuestionBank.LoadEmbedded(), "", _ => 0, _ => { });
+        var ui = new TdUiController(() => m, c => m.Apply(c is TdWaveRequest ? new StartWave() : c), host, () => now, store, picker);
         ui.Sync();
         var item = (TdUiAction a, string? s) => new TdUiItem(default, TdUiKind.Button, "", a, 0, s);
         void Bolt(int x) { m.Apply(new BuildTower("bolt", x)); ui.Sync(); }
+        void Intro()
+        {
+            host.HudMinimized = false; ui.Sync();
+            ui.Activate(item(TdUiAction.HudMinimize, null)); ui.Sync();
+            ui.Activate(item(TdUiAction.HudRestore, null)); ui.Sync();
+        }
+        void Acks(int n) { for (int i = 0; i < n; i++) ui.Activate(item(TdUiAction.TutorialNext, null)); }
+        void ToPrep2()
+        {
+            m.Apply(new StartWave());
+            for (int i = 0; i < 30 * 900 && m.Phase == MatchPhase.Onda; i++) m.Step();
+            ui.Sync();
+        }
         switch (scene)
         {
-            case Scene.Point: ui.Activate(item(TdUiAction.BuildToggle, null)); break;
-            case Scene.Tower: ui.SceneLeftClick(600, 20, HitTarget.None); break;
-            case Scene.Wave: Bolt(330); break;
-            case Scene.Upgrade:
-            case Scene.UpgradeInspector:
-                Bolt(330); m.Apply(new StartWave()); Prop(m, "Credits", 500L); ui.Sync();
-                if (scene == Scene.UpgradeInspector) ui.SceneLeftClick(0, 0, HitTarget.TdTower(m.Towers[0].Id));
+            case Scene.HudOpen: break;
+            case Scene.HudCollapse: host.HudMinimized = false; ui.Sync(); break;
+            case Scene.Core: Intro(); break;
+            case Scene.Credits: Intro(); Acks(1); break;
+            case Scene.Portal: Intro(); Acks(2); break;
+            case Scene.Build: Intro(); Acks(3); break;
+            case Scene.Point: Intro(); Acks(3); ui.Activate(item(TdUiAction.BuildToggle, null)); break;
+            case Scene.Tower: Intro(); Acks(3); ui.SceneLeftClick(600, 20, HitTarget.None); break;
+            case Scene.Range: Intro(); Acks(3); Bolt(330); break;
+            case Scene.Wave: Intro(); Acks(3); Bolt(330); Acks(1); break;
+            case Scene.Hurt:
+                Intro(); Acks(3); Bolt(330); Acks(1); m.Apply(new StartWave()); Prop(m, "Integrity", m.Integrity - 1); ui.Sync();
                 break;
-            case Scene.Ability: Bolt(330); m.Apply(new StartWave()); Prop(m, "Credits", 0L); ui.Sync(); break;
+            case Scene.Ability: Intro(); Acks(3); Bolt(330); Acks(1); m.Apply(new StartWave()); Acks(1); Prop(m, "Credits", 0L); ui.Sync(); break;
             case Scene.Crate:
-                Bolt(330); m.Apply(new StartWave()); Prop(m, "Credits", 0L); ui.Activate(item(TdUiAction.Ability, "scale"));
+                Intro(); Acks(3); Bolt(330); Acks(1); m.Apply(new StartWave()); Acks(1); Prop(m, "Credits", 0L); ui.Activate(item(TdUiAction.Ability, "scale"));
                 Prop(m, "CrateActive", true); Prop(m, "CrateX", 700); Prop(m, "CrateTicksLeft", 120); ui.Sync();
                 break;
+            case Scene.Quiz: Intro(); Acks(3); Bolt(330); Acks(1); ToPrep2(); break;
+            case Scene.QuizRight: Bolt(330); ToPrep2(); ui.Activate(item(TdUiAction.QuizTrue, null)); break; // q01 é verdadeira
+            case Scene.QuizWrong: Bolt(330); ToPrep2(); ui.Activate(item(TdUiAction.QuizFalse, null)); break;
+            case Scene.QuizTime: Bolt(330); ToPrep2(); now += 10.5; ui.Sync(); break;
+            case Scene.Defeat:
+                m.Apply(new StartWave());
+                for (int i = 0; i < 30 * 900 && m.Phase != MatchPhase.Derrota; i++) { if (m.Phase == MatchPhase.Preparo) m.Apply(new StartWave()); m.Step(); }
+                ui.Sync();
+                break;
+            case Scene.ChipPulse: ui.Sync(); break;
             case Scene.Help: ui.OpenHowTo(); break;
             case Scene.Tip: m.Apply(new BuildTower("bolt", 330)); store.Done = true; ui.Sync(); break;
         }
@@ -123,7 +156,19 @@ public sealed class TdOnboardingGoldenTests
             GoldenImage.Blit(tc, tl, 0, 0);
             return tb;
         }
-        var pop = ui.BuildPopover() ?? throw new InvalidOperationException(scene.ToString());
+        if (ui.BuildPopover() is null)
+        {
+            // Só o HUD (chip pulsante): sem popover.
+            var chip = ui.BuildHud();
+            var (cw, ch) = r.PhysicalSize(chip.Width, chip.Height);
+            var cb = new SKBitmap(new SKImageInfo(cw, ch, SKColorType.Bgra8888, SKAlphaType.Premul));
+            using var cc = new SKCanvas(cb);
+            cc.Clear(Backdrop);
+            using var cl = Layer(r, cw, ch, lc => r.DrawHud(lc, chip, -1));
+            GoldenImage.Blit(cc, cl, 0, 0);
+            return cb;
+        }
+        var pop = ui.BuildPopover()!;
         bool hudTarget = pop.TargetHudX >= 0;
         bool bandTarget = pop.AnchorX > 0 && pop.HasArrow;
         float areaW = hudTarget ? TdHudView.DefaultWidth : BandWidth;

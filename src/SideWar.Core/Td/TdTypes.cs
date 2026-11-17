@@ -142,6 +142,8 @@ public enum TdEventType : byte
     TowerPlaced, TowerUnplaced, LayoutApplied,
     // TD.3b (anexados ao fim). Caixa-bomba: A = id da caixa; CrateSpawned B = X lógico; CrateCollected B = créditos; CrateExploded B = id da torre destruída (0 = nenhuma).
     CrateSpawned, CrateCollected, CrateExploded, CrateVanished,
+    // TD.17: pergunta-bônus. A = id da pergunta; B = créditos pagos (0 = errou).
+    BonusAnswered,
 }
 
 /// <summary>Evento observável (não entra no hash). <c>A</c>/<c>B</c>: valores do evento (onda, créditos, id etc.).</summary>

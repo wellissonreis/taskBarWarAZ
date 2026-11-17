@@ -31,6 +31,7 @@ public sealed partial class TdUiController
 
     private TdMatchState? _lastMatch;
     private bool _endShown;
+    private bool _winGuide;
     private int _chosenX = -1;       // X lógico já escolhido (passo "escolher a torre"); -1 = ainda no passo do ponto
     private int _moveTowerId;        // > 0: reposicionando uma torre SEM POSIÇÃO (sem escolha de tipo)
     private int _ghostX = -1;
@@ -43,9 +44,10 @@ public sealed partial class TdUiController
     private float _anchorX;
 
     public TdUiController(Func<TdMatchState> match, Action<IGameCommand> send, ITdUiHost host, Func<double>? now = null,
-        ITdOnboardingStore? onboarding = null)
+        ITdOnboardingStore? onboarding = null, TdQuestionPicker? quiz = null)
     {
         _onb = onboarding;
+        _quiz = quiz;
         _match = match ?? throw new ArgumentNullException(nameof(match));
         _send = send ?? throw new ArgumentNullException(nameof(send));
         _host = host ?? throw new ArgumentNullException(nameof(host));
@@ -178,6 +180,10 @@ public sealed partial class TdUiController
             case TdUiAction.TutorialSkip: SkipTutorial(); break;
             case TdUiAction.HowTo: Toggle(TdUiMode.Help); break;
             case TdUiAction.RedoTutorial: RedoTutorial(); break;
+            case TdUiAction.TutorialNext: break;
+            case TdUiAction.QuizTrue: AnswerQuiz(true); break;
+            case TdUiAction.QuizFalse: AnswerQuiz(false); break;
+            case TdUiAction.QuizClose: CloseQuiz(); break;
             case TdUiAction.Close: Close(); break;
             case TdUiAction.BuildToggle:
                 if (BuildActive) Close(); else EnterBuild();
@@ -237,10 +243,19 @@ public sealed partial class TdUiController
             Changed?.Invoke();
         }
     Checked:
+        TrackPhase(m);
         SyncOnboarding(m);
+        SyncQuiz(m);
         if (m.Phase is MatchPhase.Vitoria or MatchPhase.Derrota)
         {
-            if (!_endShown) { _endShown = true; ResetBuild(); SetMode(TdUiMode.End); }
+            if (!_endShown)
+            {
+                _endShown = true;
+                _winGuide = m.Phase == MatchPhase.Vitoria && _onb is not null && !_onb.TipSeen("firstwin");
+                if (_winGuide) _onb!.MarkTipSeen("firstwin");
+                ResetBuild();
+                SetMode(TdUiMode.End);
+            }
             return;
         }
         if (Mode == TdUiMode.Build)
@@ -352,9 +367,10 @@ public sealed partial class TdUiController
 
         if (_host.HudMinimized)
         {
+            bool needed = _onb is not null && (HudNeeded(m) || ComputeStep(m) == TdTutorialStep.HudOpen);
             items.Add(new TdUiItem(new DipRect(0, 0, TdHudView.ChipWidth, TdHudView.ChipHeight), TdUiKind.Button,
-                $"{integ}/{max}   Onda {shown}/{m.TotalWaves}", TdUiAction.HudRestore, Icon: TdIcon.Heart, Tone: integTone,
-                Tip: $"HUD recolhido. Núcleo {integ}/{max}, onda {shown} de {m.TotalWaves}. Clique para mostrar o HUD completo."));
+                $"{integ}/{max}  Onda {shown}/{m.TotalWaves}", TdUiAction.HudRestore, Icon: TdIcon.Heart, Tone: integTone,
+                Tip: "Clique para abrir", RightIcon: TdIcon.Expand, Right: needed ? "Abrir HUD" : null, Highlight: needed && PulseOn));
             return new TdHudView([.. items], TdHudView.ChipWidth, TdHudView.ChipHeight, Minimized: true);
         }
 
@@ -363,10 +379,11 @@ public sealed partial class TdUiController
             Tip: "Créditos: moeda da partida. Use para construir e melhorar torres; vender devolve parte. Cada onda concluída rende bônus."));
         items.Add(new TdUiItem(new DipRect(208, 3, 100, 26), TdUiKind.Label, $"Onda {shown} de {m.TotalWaves}", Icon: TdIcon.Wave,
             Tip: $"Onda atual: {shown} de {m.TotalWaves}. Sobreviva a todas as ondas da fase para vencer."));
-        items.Add(new TdUiItem(new DipRect(432, 3, 24, 26), TdUiKind.Button, "", TdUiAction.HudMinimize, Icon: TdIcon.Minus,
-            Tip: "Recolher o HUD: vira um chip pequeno com núcleo e onda. Clique no chip (ou em Mostrar HUD na bandeja) para voltar."));
+        items.Add(new TdUiItem(new DipRect(432, 3, 24, 26), TdUiKind.Button, "", TdUiAction.HudMinimize, Icon: TdIcon.Collapse,
+            Tip: "Recolher"));
 
         var (startText, startRight, startEnabled, startTone, startTip) = StartButton(m);
+        if (startEnabled && StartBlockedFor(m)) (startEnabled, startTone, startTip, startRight) = (false, TdTone.Dim, "Coloque 1 torre primeiro", null);
         items.Add(new TdUiItem(new DipRect(4, 33, 138, 28), TdUiKind.Button, startText, TdUiAction.StartWave, Right: startRight, Enabled: startEnabled,
             Tone: startTone, Icon: m.Phase == MatchPhase.Onda ? TdIcon.FastForward : TdIcon.Play, RightCoin: startRight is not null, Tip: startTip));
 
@@ -441,6 +458,7 @@ public sealed partial class TdUiController
     public TdPopoverView? BuildPopover()
     {
         var m = _match();
+        if (Mode == TdUiMode.None && _quizQ is not null && m.Phase == MatchPhase.Preparo) return BuildQuiz(m);
         var view = Mode switch
         {
             TdUiMode.Build => BuildChooser(m),
@@ -449,7 +467,7 @@ public sealed partial class TdUiController
             TdUiMode.Menu => BuildMenu(m),
             TdUiMode.Map => BuildMap(m),
             TdUiMode.End => BuildEnd(m),
-            TdUiMode.Help => BuildHelp(),
+            TdUiMode.Help => BuildHelp(m),
             _ => null,
         };
         return DecoratePopover(m, view);
@@ -462,9 +480,9 @@ public sealed partial class TdUiController
         public float Width = width;
 
         public void Add(TdUiKind kind, string text, float h, TdUiAction action = TdUiAction.None, int arg = 0, string? sarg = null,
-            string? right = null, string? sub = null, bool enabled = true, bool selected = false, TdTone tone = TdTone.Normal)
+            string? right = null, string? sub = null, bool enabled = true, bool selected = false, TdTone tone = TdTone.Normal, TdIcon icon = TdIcon.None)
         {
-            Items.Add(new TdUiItem(new DipRect(Pad, Y, Width - 2 * Pad, h), kind, text, action, arg, sarg, right, sub, enabled, selected, tone));
+            Items.Add(new TdUiItem(new DipRect(Pad, Y, Width - 2 * Pad, h), kind, text, action, arg, sarg, right, sub, enabled, selected, tone, Icon: icon));
             Y += h + 2;
         }
     }
@@ -697,6 +715,18 @@ public sealed partial class TdUiController
                 tone: o.NewRecord ? TdTone.Accent : TdTone.Normal);
             if (o.BonusSeals > 0) s.Add(TdUiKind.Label, $"Selos bonus: +{o.BonusSeals}", RowH - 4, tone: TdTone.Good);
             AddRankBar(s, _host.Rank);
+            if (_winGuide)
+            {
+                s.Add(TdUiKind.Label, "Coroa: vença sem perder núcleo.", 14f, tone: TdTone.Accent, icon: TdIcon.Crown);
+                s.Add(TdUiKind.Label, "Medalhas: desafios extras.", 14f, tone: TdTone.Accent, icon: TdIcon.Medal);
+                s.Add(TdUiKind.Label, "Patente: soma dos recordes.", 14f, tone: TdTone.Accent, icon: TdIcon.Target);
+            }
+        }
+        else
+        {
+            var (ri, reason, ti, tip) = DefeatTexts(m);
+            s.Add(TdUiKind.Label, reason, 16f, tone: TdTone.Bad, icon: ri);
+            s.Add(TdUiKind.Label, tip, 16f, tone: TdTone.Accent, icon: ti);
         }
         s.Add(TdUiKind.Button, "Repetir fase", RowH + 2, TdUiAction.Restart);
         if (won && m.StageId < _host.StageCount && _host.StageUnlocked(m.StageId + 1))

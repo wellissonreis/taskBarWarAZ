@@ -35,7 +35,7 @@ public sealed class TdSanityBotTests
         return sb.ToString();
     }
 
-    private const ulong GoldenOptimizedStage3 = 4040583883875090050UL;
+    private const ulong GoldenOptimizedStage3 = 11218145559906341500UL;
     private const int Seeds = 6;
     private static readonly Lazy<TdBotResult[]> Matrix = new(() =>
     {

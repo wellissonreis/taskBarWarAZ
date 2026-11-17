@@ -319,6 +319,29 @@ Tudo é **estado de UI** (como o modo construção, RF-28.20.7): **nenhum comand
 - **Dicas de 1ª vez:** uma linha curta (borda âmbar, janela do tooltip) na primeira vez que cada **tipo de torre** (construída) e cada **inimigo/chefe** (em campo) aparece: torre = nome e papel; inimigo = nome, traço e torres que o contra-atacam (do `td-enemies.json`; ex.: "Dica: Ping: rápido, pouca vida. Use Balanceador ou Gelo."). Persistida ao exibir (nunca repete), não bloqueia o jogo, some sozinha em **6 s** ou ao clicar, e espera enquanto houver balão do tutorial ou popover aberto (o tooltip de hover tem prioridade).
 - **Escala e foco:** balão, dica e destaques usam a escala do HUD da TD.14 (`TdBand.HudScale`) e esmaecem com o foco como o resto da UI.
 
+
+**Ampliação (TD.17, 2026-11-17; diretriz do usuário: "jogo geração Z, fácil de entender mas complexo taticamente; pouca leitura; no Azure Defense as pessoas ficaram com preguiça de ler").** Todo texto novo tem **no máximo ~8 palavras por balão/linha, ícone antes do texto e verbo no imperativo**.
+- **Fase 1 pausada até a 1ª torre.** Enquanto o tutorial não termina, a onda 1 não começa: o botão **Iniciar onda** fica desabilitado com a dica "Coloque 1 torre primeiro" e o host descarta o pedido de hotkey/bandeja (`TdGameHost.WaveGate`). Decisão: é **regra de UI/host, não do Core** (em Preparo os inimigos já não andam e a regra só vale para o tutorial); nenhum comando novo, `StateHash` intacto por esta regra.
+- **HUD nasce minimizado** (`td.hudMinimized` padrão **true** na 1ª execução; depois respeita o que o usuário deixou). O tutorial ensina: "Clique no chip para abrir o HUD" (chip com ícone de expandir, destaque pulsante) → "Clique na seta para recolher" (botão com ícone de recolher) → "Clique no chip para abrir" de novo. **Reforço contínuo:** com o HUD recolhido e necessário (créditos e nenhuma torre; Preparo esperando Iniciar onda por 15 s; pergunta-bônus na tela), o chip **pisca** (amber, 1 Hz) e mostra a micro-dica "Abrir HUD". Tooltips: chip "Clique para abrir"; botão "Recolher".
+- **Passos (todos avançam por ação; "Pular" sempre visível):** abrir HUD, recolher, abrir de novo → núcleo/integridade (OK) → créditos (OK) → portal e trilho (OK) → Construir → ponto → torre → **alcance** (OK, círculo da torre) → Iniciar onda → durante a onda: **Chamar próxima (+bônus)** (OK), **habilidade** (liberada e pronta), **caixa-bomba** com a regra de ausência ("Longe do PC? Ela some.") → no Preparo seguinte: **pergunta-bônus de exemplo guiada** (a afirmação fixa `q01`, V destacado) e **vender** (OK; devolve 70%). Cada tipo de torre básica ganha a dica de 1ª vez ao ser construída (texto curto "Raio: alvo único…"). No fim da **1ª vitória** o cartão mostra 3 linhas: coroa, medalhas e patente (uma vez; chave `firstwin` em `tipsSeen`). **Fora do tutorial: melhorar torre e ramos A/B NÃO têm passo nem dica** (decisão do usuário, 2026-11-17: a evolução de torre será substituída por uma página de runas global em ficha futura).
+- **Reforço ao tomar dano (1ª partida):** quando o núcleo perde integridade, um balão com seta aponta o que fazer: "Inimigo passou!" + "Construa perto do portal." (poucas torres perto do portal; aponta a faixa), "Use uma habilidade." (aponta a habilidade pronta) ou "Construa mais torres." (aponta Construir); dura 6 s e no máximo **1 a cada 15 s**.
+- **"Como jogar"** vira 13 **cartões curtos com ícone** (uma linha de ≤ 8 palavras cada), sem parágrafos, mais "Refazer tutorial".
+
+### RF-28.23: Pergunta-bônus Verdadeiro/Falso no Preparo (decisão do usuário, 2026-11-17; TD.17; revoga DP-28.5, CA-28.10 e T-28.10)
+
+- **Regra.** Entre ondas (Preparo **depois da onda 1**) aparece, **opcionalmente**, UMA afirmação Azure de 1 linha (≤ 60 caracteres) num popover com 2 botões grandes **V Verdadeiro / F Falso** e uma **barra de tempo visível de 10 s** (`rules.bonusQuestion.timerSeconds`). Não trava o jogo nem impede **Iniciar onda**: é só um popover, fechável em "X".
+- **Recompensa (JSON, `td-stages.json` → `rules.bonusQuestion`):** acertar paga `creditsBase + creditsPerWave × (próxima onda)` créditos (15 + 3·w) e reduz as recargas de habilidade em `cooldownReductionSeconds` (10 s). Errar, ignorar ou deixar expirar: **sem penalidade**; mostra a resposta certa ("Era VERDADEIRO." / "Era FALSO.", ≤ 6 palavras) e a explicação (≤ 8 palavras).
+- **Core.** Comando novo **`AnswerBonus(QuestionId, Correct)`** (só em Preparo, **uma vez por Preparo**, `AlreadyUsed` depois; rejeição não altera o estado), evento `BonusAnswered` (A = id, B = créditos pagos) e o flag "respondida neste Preparo" no `StateHash`. O host confere V/F no banco e registra só o resultado; o Core **não** conhece o banco (sem cópia de respostas na simulação). Determinístico: mesmo log + seed ⇒ mesmo `StateHash`. **Goldens/hashes TD mudam antigo → novo** (novo campo em `rules` altera o `ContentHash`; novo flag no hash); goldens idle intactos.
+- **Banco.** `td-questions.json` (embarcado, **fora** do `ContentHash` TD): 75 afirmações PT-BR de AZ-900 (38 V / 37 F), texto ≤ 60 caracteres, explicação ≤ 8 palavras, ids `q01…q75`; validado no carregamento (`TdQuestionBank`). O `questions.json` antigo não é reutilizado.
+- **Seleção.** `TdQuestionPicker`: sorteia sem repetir até esgotar o banco (depois recomeça); o "visto" é a string `td.questionsSeen` (`q03;q41…`) em settings; a escolha fica registrada ali e o `QuestionId` no log do replay. O sorteio é estado de UI (não entra na simulação).
+- **Setting** `td.bonusQuestions` (padrão **ligado**) em Configurações > Geral ("Pergunta-bônus entre as ondas").
+
+**Critérios:** CA-28.19 (§9). **Testes:** T-28.22, T-28.23 (§10).
+
+### RF-28.24: Derrota ensina (TD.17)
+
+O cartão de derrota mostra **o motivo principal em 1 linha + 1 dica acionável com ícone**, derivados da partida por `TdDefeat.Analyze` (regras simples, nesta ordem): **chefe passou** ("{Chefe} passou!" / "Use habilidades no chefe."), **caixa explodiu ≥ 2 torres** (ou 1 com ≤ 3 torres) ("A caixa explodiu suas torres." / "Clique na caixa a tempo."), **voadores ≥ 50% do dano** ("Voadores passaram." / "Use Gelo/Raio." — torres do `counters` do inimigo), **< 2 torres perto do portal** (X lógico ≥ 600) ("Poucas torres perto do portal." / "Construa perto do portal."), senão o **inimigo que mais vazou** ("{Nome} passou." / "Use {contra-torres}."). Estatísticas registradas no Core **fora do `StateHash`** (`Leaks` por tipo com contagem e dano, `CrateTowersLost`), sem alterar a simulação.
+
 **Critérios:** CA-28.18 (§9). **Testes:** T-28.19 a T-28.21 (§10).
 
 ## 6. Requisitos não funcionais
@@ -352,7 +375,8 @@ SDD-21 (mantido), SDD-22 RF-22.8 (hotspots, mantido), SDD-10/11 (a revisar), SDD
 - **CA-28.7:** Dois monitores/DPIs com a mesma seed e os mesmos comandos produzem o mesmo `StateHash` (mundo lógico; T-28.7).
 - **CA-28.8:** Com o App em execução (MTC, Windows isolado e **com autorização do usuário**, memória `sem-testes-interativos-sem-aviso`): trilho e torres dentro da barra, sem faixa acima, ícones continuam clicáveis, o jogo **não esmaece sozinho** (MTC-28.1 a 28.4).
 - **CA-28.9:** Em Preparo e em Pausa o App fica a 0 fps (medição de SDD-16; rótulo "não medido" até medir).
-- **CA-28.10:** Nenhuma tela do jogo exibe pergunta, resposta ou pontuação de conhecimento (inspeção + T-28.10 sobre `Strings.cs`).
+- **CA-28.10:** ~~Nenhuma tela do jogo exibe pergunta, resposta ou pontuação de conhecimento.~~ **REVOGADO (2026-11-17, TD.17):** a única pergunta permitida é a pergunta-bônus V/F de 1 linha do Preparo (RF-28.23); continuam proibidos quiz em onda, pontuação de conhecimento, perguntas longas e bloqueio do jogo (CA-28.19).
+- **CA-28.19:** A pergunta-bônus aparece só em Preparo depois da onda 1, tem texto ≤ 60 caracteres, timer de 10 s e 2 botões; acerto paga créditos e entra no log como `AnswerBonus` (uma vez por Preparo; replay com o mesmo `StateHash`); erro/ignorar/expirar não penalizam e mostram a resposta; nunca impede Iniciar onda; `td.bonusQuestions` desliga; o sorteio não repete até esgotar. A fase 1 do tutorial não inicia a onda 1 sem torre; o HUD nasce minimizado e o chip pisca quando necessário; o cartão de derrota mostra motivo + dica; nenhum texto novo passa de ~8 palavras por linha (T-28.22, T-28.23).
 - **CA-28.11:** A caixa-bomba nunca aparece em Preparo, Pausa ou nas 2 primeiras ondas da fase 1, nunca há mais de 1 caixa ativa, e a frequência média em 50 partidas scriptadas fica em ~1 caixa a cada 2 ondas (T-28.11).
 - **CA-28.12:** Sem `SetPresence(true)` no log nenhuma caixa aparece (a queda é adiada e, no fim da onda, perdida sem punição); com presença que cai com a caixa ativa, a caixa some sem explodir (T-28.12).
 - **CA-28.13:** `CollectCrate` dentro de 8 s paga ~1 bônus de onda e reduz a recarga restante de uma habilidade em 20 s; sem clique, aos 8 s de SimTime a torre **mais próxima do ponto X** (empate pela menor `id`) é destruída sem reembolso; durante a contagem essa torre está marcada e a marca acompanha mudanças do alvo (T-28.13).
@@ -375,7 +399,7 @@ SDD-21 (mantido), SDD-22 RF-22.8 (hotspots, mantido), SDD-10/11 (a revisar), SDD
 | T-28.7 | Mundo lógico: mesma partida em 3 larguras de barra |
 | T-28.8 | Migração de save do idle (DP-28.4) |
 | T-28.9 | `LayoutChanged` reavalia pads e `SEM POSIÇÃO` com `maxTowers` |
-| T-28.10 | Varredura de textos: nenhuma pergunta ou quiz no jogo |
+| T-28.10 | ~~Varredura de textos: nenhuma pergunta ou quiz no jogo~~ **REVOGADO (2026-11-17, TD.17):** substituído por T-28.22/T-28.23 (a varredura agora garante que só existe a pergunta-bônus V/F do Preparo, ≤ 60 caracteres, sem pontuação de conhecimento) |
 | T-28.11 | Caixa-bomba: elegibilidade (Preparo, ondas 1 e 2 da fase 1), no máximo 1, frequência em 50 seeds |
 | T-28.12 | Caixa-bomba e presença: sem `SetPresence` nada cai; queda adiada; presença cai com caixa ativa → some sem explodir |
 | T-28.13 | Caixa-bomba: coleta (créditos, recarga de habilidade) e explosão (torre mais próxima, empate, sem torres, sem reembolso, marca de risco) |
@@ -386,6 +410,8 @@ SDD-21 (mantido), SDD-22 RF-22.8 (hotspots, mantido), SDD-10/11 (a revisar), SDD
 | T-28.18 | Patente: limiares, progresso, calibração com o bot por perfil; UI: card de Vitória, Mapa e Menu (`TdScoreTests`, `TdUiControllerTests`, goldens `td-ui-*`) |
 | T-28.19 | Tutorial: passos por ação real (não por tempo), destaque/seta no alvo, pular persiste, só fase 1, termina com a partida, HUD recolhido expande, hash e log intactos (`TdOnboardingTests`) |
 | T-28.20 | Como jogar: item no menu/bandeja, cartão com os 6 tópicos, Refazer tutorial (`TdOnboardingTests`, `MenuModelTests`) |
+| T-28.22 | `AnswerBonus` no Core (créditos, uma vez por Preparo, rejeições sem efeito no estado, hash/replay, evento) e `TdQuestionPicker`/banco (≥ 60, equilibrado, tamanhos, sem repetir até esgotar, retomada do visto) |
+| T-28.23 | UI TD.17: pergunta (aparece/some/timer/V-F/expira), tutorial ampliado (HUD abrir/recolher/abrir, passos informativos com OK, dano, chamar próxima, vender, caixa com ausência), portão da onda 1, chip pulsante, cartão de derrota, "Como jogar" curto (≤ 8 palavras, ícone); goldens `td-tut-*` |
 | T-28.21 | Dicas de 1ª vez: uma vez por tipo, 6 s/clique, não bloqueia, espera o balão; settings `tutorialDone`/`tipsSeen`; goldens `td-tut-*` e `td-ui-menu-*` (`TdOnboardingGoldenTests`, `SettingsTdTests`) |
 
 ## 11. Riscos técnicos e decisões pendentes
@@ -407,7 +433,7 @@ SDD-21 (mantido), SDD-22 RF-22.8 (hotspots, mantido), SDD-10/11 (a revisar), SDD
 | **DP-28.2** | Mundo lógico fixo (1.200 unidades) ou DIP físico (como hoje)? | Lógico fixo, dificuldade igual em qualquer monitor | Decidida (2026-11-16): aceita a proposta (mundo lógico fixo de 1.200 unidades) |
 | **DP-28.3** | Torres em pads discretos ou X livre com snap de 44 DIP? | X livre com snap (mantém ADR-034) e limite `maxTowers` | Decidida (2026-11-16): aceita a proposta (X livre com snap de 44 DIP e `maxTowers`) |
 | **DP-28.4** | Cortar presença/offline e o que fazer com saves antigos (Reservas, torres, onda)? | Cortar tudo; migrar convertendo `ondaMax` em selos iniciais ou recomeçar | Decidida (2026-11-16): cortar presença, offline, Reservas, Migrar e missões; save antigo convertido em selos iniciais pela onda máxima. **Ajuste (2026-11-16):** só o sinal binário "presente agora" (mouse/teclado nos últimos segundos) permanece, e apenas para a caixa-bomba (RF-28.19); presença econômica e offline continuam cortados |
-| **DP-28.5** | Banco de perguntas Azure: arquivar, usar como "Códex" opcional sem quiz ou apagar? | Arquivar; só flavor de uma linha em tooltips | Decidida (2026-11-16): banco de perguntas arquivado; Azure só como flavor curto nos tooltips |
+| **DP-28.5** | Banco de perguntas Azure: arquivar, usar como "Códex" opcional sem quiz ou apagar? | Arquivar; só flavor de uma linha em tooltips | Decidida (2026-11-16): banco de perguntas arquivado; Azure só como flavor curto nos tooltips. **REVOGADA em 2026-11-17 (TD.17, decisão do usuário):** volta uma pergunta-bônus Verdadeiro/Falso opcional no Preparo (RF-28.23, ADR-036); o banco antigo `questions.json` continua arquivado e o novo é `td-questions.json` |
 | DP-28.6 | Chamada antecipada: fórmula do bônus, teto e se reduz recargas | `ceil(ETA × (0,6 + 0,05·w))`; reduz recargas em `ETA × 0,25` | Decidida (2026-11-16): aceita a proposta (bônus `ceil(ETA × (0,6 + 0,05·w))`, reduz recargas em `ETA × 0,25`) |
 | DP-28.7 | Venda 70% (inclusive durante onda) e juros de economia | 70% sempre; sem juros | Decidida (2026-11-16): aceita a proposta (venda 70% sempre, sem juros) |
 | **DP-28.8** | Estrelas: ★3 = 0 de integridade perdida ou ≤ 2? | ≤ 2 (menos frustrante para quem joga trabalhando) | Decidida (2026-11-16): três estrelas com até 2 de integridade perdida |
@@ -443,6 +469,7 @@ Legenda: 🟢 WSL puro, 🟡 WSL + Windows, 🔴 só Windows. Todas dependem da 
 | TD.10 | `SanityBot` novo e curva de balanceamento das 6 fases; evidência E-TD | TD.3 | 🟢 |
 | TD.11 | Pós-MVP: modo infinito, desafio do dia, políticas (DP-28.9) | TD.8, TD.10 | 🟡 |
 | TD.13 ✅ | Recompensas por perfeição e patente local (RF-28.21): coroa, medalhas, pontuação, recorde e patente; perfil v2; UI | TD.8, TD.10 | 🟡 |
+| TD.17 ✅ | Fase 1 guiada, HUD minimizado que ensina, tutorial ampliado, pergunta-bônus V/F (RF-28.23, revoga DP-28.5/CA-28.10/T-28.10) e derrota que ensina (RF-28.24) | TD.15, TD.16 | 🟡 |
 | TD.15 ✅ | Onboarding (RF-28.22): tutorial guiado da 1ª partida, "Como jogar" no menu e na bandeja, dicas de 1ª vez; sem comando novo no log | TD.8, TD.14 | 🟡 |
 | TD.12 | Limpeza e documentação: arquivar SDD-25/26/27, marcar substituições, `PLANO.md`, `README.md`, MTC-28 | todas | 🟢 |
 

@@ -121,8 +121,8 @@ public sealed record TdSettings
     /// <summary>Altura da faixa TD em DIP (32 a 96; presets Pequeno 40, Médio 64, Grande 88). Aplica ao reiniciar o SideWar.</summary>
     public int BandHeightDip { get; init; } = DefaultBandHeightDip;
 
-    /// <summary>HUD recolhido a um chip no canto da faixa (lembrado entre sessões).</summary>
-    public bool HudMinimized { get; init; }
+    /// <summary>HUD recolhido a um chip no canto da faixa (lembrado entre sessões). TD.17: nasce recolhido na 1ª execução (o tutorial ensina a abrir).</summary>
+    public bool HudMinimized { get; init; } = true;
 
     /// <summary>Esmaecer faixa e HUD quando o usuário ativa outro app (ausente: 8 fps e caixa-bomba sem presença).</summary>
     public bool FadeWhenUnfocused { get; init; } = true;
@@ -138,4 +138,10 @@ public sealed record TdSettings
 
     /// <summary>Dicas de 1ª vez já mostradas (ids <c>tower:bolt</c>, <c>enemy:runner</c>…), separadas por ';'. String única para a igualdade de records.</summary>
     public string TipsSeen { get; init; } = "";
+
+    /// <summary>Pergunta-bônus Verdadeiro/Falso no Preparo (TD.17, RF-28.23); ligada por padrão.</summary>
+    public bool BonusQuestions { get; init; } = true;
+
+    /// <summary>Ids das afirmações do banco já sorteadas (<c>q01;q02</c>…): não repetem até esgotar o banco (TD.17).</summary>
+    public string QuestionsSeen { get; init; } = "";
 }

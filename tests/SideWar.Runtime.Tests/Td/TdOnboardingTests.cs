@@ -8,7 +8,7 @@ using Xunit;
 using BuildTower = SideWar.Core.Td.BuildTower;
 using LayoutChanged = SideWar.Core.Td.LayoutChanged;
 using StartWave = SideWar.Core.Td.StartWave;
-using UpgradeTower = SideWar.Core.Td.UpgradeTower;
+using AnswerBonus = SideWar.Core.Td.AnswerBonus;
 
 namespace SideWar.Runtime.Tests.Td;
 
@@ -45,6 +45,8 @@ public sealed class TdOnboardingTests
         public bool Done;
         public readonly HashSet<string> Tips = [];
         public int Saves;
+        public bool Bonus;
+        public bool BonusQuestions => Bonus;
         public bool TutorialDone => Done;
         public void SetTutorialDone(bool done) { Done = done; Saves++; }
         public bool TipSeen(string id) => Tips.Contains(id);
@@ -60,13 +62,31 @@ public sealed class TdOnboardingTests
         public double Now;
         public readonly TdUiController Ui;
 
-        public Rig(int stage = 1, Store? store = null, bool tutorialDone = false)
+        public readonly TdQuestionPicker? Picker;
+        public string Seen = "";
+
+        public Rig(int stage = 1, Store? store = null, bool tutorialDone = false, bool intro = true, bool bonus = false, bool hudMin = false)
         {
+            Host.HudMinimized = hudMin;
             Match = Create(stage);
             Store = store ?? new Store { Done = tutorialDone };
-            Ui = new TdUiController(() => Match, Send, Host, () => Now, Store);
+            Store.Bonus = bonus;
+            Picker = new TdQuestionPicker(TdQuestionBank.LoadEmbedded(), "", n => 0, v => Seen = v);
+            Ui = new TdUiController(() => Match, Send, Host, () => Now, Store, Picker);
             Ui.Sync();
+            if (intro && !Store.Done && stage == 1) PassIntro();
         }
+
+        /// <summary>HUD abre → recolhe → abre de novo; depois OK em núcleo, créditos e portal.</summary>
+        public void PassIntro()
+        {
+            Host.HudMinimized = false; Ui.Sync();            // abriu
+            Click(TdUiAction.HudMinimize); Ui.Sync();         // recolheu
+            Click(TdUiAction.HudRestore); Ui.Sync();          // abriu de novo
+            Click(TdUiAction.TutorialNext); Click(TdUiAction.TutorialNext); Click(TdUiAction.TutorialNext);
+        }
+
+        public void Ack() => Click(TdUiAction.TutorialNext);
 
         private void Send(IGameCommand c)
         {
@@ -105,6 +125,61 @@ public sealed class TdOnboardingTests
     // ------------------------------------------------------------ tutorial
 
     [Fact]
+    public void Intro_teaches_chip_then_collapse_then_chip_again_then_core_credits_portal()
+    {
+        var r = new Rig(intro: false, hudMin: true);
+        Assert.Equal(TdTutorialStep.HudOpen, r.Ui.Step);
+        Assert.True(r.Ui.Pulsing);
+        Assert.Equal(TdIcon.Expand, r.Ui.BuildHud().Items[0].RightIcon);
+        Assert.Equal("Clique para abrir", r.Ui.BuildHud().Items[0].Tip);
+        Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Text == "Clique no chip para abrir o HUD");
+        r.Click(TdUiAction.HudRestore); r.Ui.Sync();
+        Assert.Equal(TdTutorialStep.HudCollapse, r.Ui.Step);
+        var minus = r.Hud(TdUiAction.HudMinimize);
+        Assert.Equal("Recolher", minus.Tip);
+        Assert.Equal(TdIcon.Collapse, minus.Icon);
+        Assert.True(minus.Highlight);
+        r.Click(TdUiAction.HudMinimize); r.Ui.Sync();
+        Assert.Equal(TdTutorialStep.HudOpen, r.Ui.Step); // de novo
+        r.Click(TdUiAction.HudRestore); r.Ui.Sync();
+        Assert.Equal(TdTutorialStep.Core, r.Ui.Step);
+        r.Ack(); Assert.Equal(TdTutorialStep.Credits, r.Ui.Step);
+        r.Ack(); Assert.Equal(TdTutorialStep.Portal, r.Ui.Step);
+        Assert.True(r.Ui.View.HintX > 0);
+        r.Ack(); Assert.Equal(TdTutorialStep.Build, r.Ui.Step);
+    }
+
+    [Fact]
+    public void Chip_pulses_with_a_micro_hint_when_the_player_needs_the_hud()
+    {
+        var r = new Rig(tutorialDone: true);
+        r.Host.HudMinimized = true;
+        r.Now = 0; r.Ui.Sync();
+        Assert.True(r.Ui.Pulsing); // créditos e nenhuma torre
+        var chip = r.Ui.BuildHud().Items[0];
+        Assert.Equal("Abrir HUD", chip.Right);
+        Assert.True(chip.Highlight);
+        r.Now = 0.5;
+        Assert.False(r.Ui.BuildHud().Items[0].Highlight); // pisca
+        r.Host.HudMinimized = false;
+        Assert.False(r.Ui.Pulsing);
+    }
+
+    [Fact]
+    public void Wave_one_waits_for_the_first_tower_in_the_tutorial_stage()
+    {
+        var r = new Rig();
+        Assert.True(r.Ui.StartBlocked);
+        var start = r.Hud(TdUiAction.StartWave);
+        Assert.False(start.Enabled);
+        Assert.Equal("Coloque 1 torre primeiro", start.Tip);
+        r.BuildBolt();
+        Assert.False(r.Ui.StartBlocked);
+        Assert.True(r.Hud(TdUiAction.StartWave).Enabled);
+        Assert.DoesNotContain(new Rig(tutorialDone: true).Ui.BuildHud().Items, i => i.Action == TdUiAction.StartWave && !i.Enabled);
+    }
+
+    [Fact]
     public void Steps_advance_by_real_actions_not_by_time()
     {
         var r = new Rig();
@@ -116,6 +191,9 @@ public sealed class TdOnboardingTests
         r.Ui.SceneLeftClick(300, 20, HitTarget.None);
         Assert.Equal(TdTutorialStep.Tower, r.Ui.Step);
         r.Click(TdUiAction.ChooseTower, "bolt");
+        Assert.Equal(TdTutorialStep.Range, r.Ui.Step);
+        Assert.True(r.Ui.View.HintX > 0);
+        r.Ack();
         Assert.Equal(TdTutorialStep.Wave, r.Ui.Step);
         r.Click(TdUiAction.StartWave);
         Assert.Equal(MatchPhase.Onda, r.Match.Phase);
@@ -131,17 +209,35 @@ public sealed class TdOnboardingTests
     }
 
     [Fact]
-    public void Build_step_shows_callout_with_arrow_to_the_construir_button_and_skip_button()
+    public void Build_step_shows_short_callout_with_arrow_to_the_construir_button_and_skip_button()
     {
         var r = new Rig();
         var pop = r.Ui.BuildPopover()!;
-        Assert.StartsWith("Tutorial 1/7", pop.Title);
+        Assert.Equal("Tutorial", pop.Title);
         Assert.True(pop.HasArrow);
         Assert.True(pop.TargetHudX > 0);
-        Assert.Contains(pop.Items, i => i.Kind == TdUiKind.Label && i.Text.Contains("Construir"));
+        Assert.Contains(pop.Items, i => i.Kind == TdUiKind.Label && i.Text.Contains("Construir") && i.Icon == TdIcon.Build);
         Assert.Contains(pop.Items, i => i.Action == TdUiAction.TutorialSkip && i.Clickable);
         Assert.True(r.Hud(TdUiAction.BuildToggle).Highlight);
         Assert.False(r.Hud(TdUiAction.StartWave).Highlight);
+    }
+
+    [Fact]
+    public void Every_tutorial_line_has_at_most_8_words_and_an_icon()
+    {
+        var r = new Rig(intro: false, hudMin: true);
+        var seen = new List<TdUiItem>();
+        void Grab() { if (r.Ui.BuildPopover() is { } p) seen.AddRange(p.Items.Where(i => i.Kind == TdUiKind.Label)); }
+        Grab();
+        r.Click(TdUiAction.HudRestore); r.Ui.Sync(); Grab();
+        r.Click(TdUiAction.HudMinimize); r.Ui.Sync(); r.Click(TdUiAction.HudRestore); r.Ui.Sync(); Grab();
+        for (int i = 0; i < 3; i++) { r.Ack(); Grab(); }
+        Assert.NotEmpty(seen);
+        foreach (var l in seen.Where(i => i.Tone == TdTone.Accent))
+        {
+            Assert.True(l.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length <= 8, l.Text);
+            Assert.NotEqual(TdIcon.None, l.Icon);
+        }
     }
 
     [Fact]
@@ -166,60 +262,98 @@ public sealed class TdOnboardingTests
     {
         var r = new Rig();
         r.BuildBolt();
+        r.Ack(); // alcance
         Assert.Equal(TdTutorialStep.Wave, r.Ui.Step);
         Assert.True(r.Hud(TdUiAction.StartWave).Highlight);
         Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Text == "Clique em Iniciar onda");
     }
 
     [Fact]
-    public void Upgrade_step_when_credits_allow_and_ends_on_the_real_upgrade_click()
+    public void Hurt_hint_points_at_the_target_and_is_rate_limited()
     {
         var r = new Rig();
-        r.BuildBolt();
+        r.BuildBolt(); r.Ack();
         r.Click(TdUiAction.StartWave);
-        r.Credits(500);
+        r.Now = 100;
         r.Ui.Sync();
-        Assert.Equal(TdTutorialStep.Upgrade, r.Ui.Step);
+        Assert.NotEqual(TdTutorialStep.Hurt, r.Ui.Step);
+        typeof(TdMatchState).GetProperty("Integrity")!.SetValue(r.Match, r.Match.Integrity - 1);
+        r.Ui.Sync();
+        Assert.Equal(TdTutorialStep.Hurt, r.Ui.Step);
+        var pop = r.Ui.BuildPopover()!;
+        Assert.Contains(pop.Items, i => i.Text == "Inimigo passou!" && i.Icon == TdIcon.Alert);
+        Assert.Contains(pop.Items, i => i.Text == "Construa perto do portal.");
+        Assert.True(pop.AnchorX > 0 && pop.HasArrow);
         Assert.True(r.Ui.View.HintX > 0);
-        Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Text.Contains("torre para melhorar"));
-        r.Ui.SceneLeftClick(0, 0, HitTarget.TdTower(r.Match.Towers[0].Id));
-        var inspector = r.Ui.BuildPopover()!;
-        Assert.Equal(TdUiAction.Upgrade, Assert.Single(inspector.Items, i => i.Highlight).Action);
-        r.Click(TdUiAction.Upgrade, arg: r.Match.Towers[0].Id);
-        Assert.NotEqual(TdTutorialStep.Upgrade, r.Ui.Step);
-        Assert.IsType<UpgradeTower>(r.Sent.Last());
+        r.Now = 100 + TdUiController.HurtSeconds + 1; r.Ui.Sync();
+        Assert.NotEqual(TdTutorialStep.Hurt, r.Ui.Step);
+        typeof(TdMatchState).GetProperty("Integrity")!.SetValue(r.Match, r.Match.Integrity - 1);
+        r.Now += 2; r.Ui.Sync();
+        Assert.NotEqual(TdTutorialStep.Hurt, r.Ui.Step); // mínimo de 15 s entre dicas
+        typeof(TdMatchState).GetProperty("Integrity")!.SetValue(r.Match, r.Match.Integrity - 1);
+        r.Now += TdUiController.HurtMinGapSeconds; r.Ui.Sync();
+        Assert.Equal(TdTutorialStep.Hurt, r.Ui.Step);
     }
 
     [Fact]
-    public void Upgrade_step_waits_while_credits_are_short()
+    public void Hurt_hint_is_only_for_the_first_match()
     {
-        var r = new Rig();
+        var r = new Rig(tutorialDone: true);
         r.BuildBolt();
         r.Click(TdUiAction.StartWave);
+        typeof(TdMatchState).GetProperty("Integrity")!.SetValue(r.Match, r.Match.Integrity - 1);
+        r.Ui.Sync();
+        Assert.Equal(TdTutorialStep.None, r.Ui.Step);
+    }
+
+    [Fact]
+    public void Call_next_step_in_the_wave_and_sell_step_in_the_next_prep_have_ok_and_skip()
+    {
+        var r = new Rig();
+        r.BuildBolt(); r.Ack();
+        r.Click(TdUiAction.StartWave);
         r.Credits(0);
-        Assert.NotEqual(TdTutorialStep.Upgrade, r.Ui.Step);
+        for (int i = 0; i < 30 * 40 && !r.Match.ActiveWaves.All(a => a.SpawnsDone); i++) r.Match.Step();
+        r.Ui.Sync();
+        Assert.Equal(TdTutorialStep.CallNext, r.Ui.Step);
+        var pop = r.Ui.BuildPopover()!;
+        Assert.Contains(pop.Items, i => i.Action == TdUiAction.TutorialNext);
+        Assert.Contains(pop.Items, i => i.Action == TdUiAction.TutorialSkip);
+        r.Ack();
+        Assert.NotEqual(TdTutorialStep.CallNext, r.Ui.Step);
+        // próximo Preparo: vender
+        for (int i = 0; i < 30 * 600 && r.Match.Phase == MatchPhase.Onda; i++) r.Match.Step();
+        r.Ui.Sync();
+        if (r.Match.Phase == MatchPhase.Preparo)
+        {
+            Assert.Equal(TdTutorialStep.Sell, r.Ui.Step);
+            Assert.True(r.Ui.View.HintX > 0);
+            r.Ui.SceneLeftClick(0, 0, HitTarget.TdTower(r.Match.Towers[0].Id));
+            Assert.Equal(TdUiAction.Sell, Assert.Single(r.Ui.BuildPopover()!.Items, i => i.Highlight).Action);
+        }
     }
 
     [Fact]
     public void Ability_step_appears_when_ready_and_ends_when_used()
     {
         var r = new Rig();
-        r.BuildBolt();
+        r.BuildBolt(); r.Ack();
         r.Click(TdUiAction.StartWave);
+        r.Ack(); // chamar próxima (se aparecer) não bloqueia
         r.Credits(0);
         r.Ui.Sync();
         Assert.Equal(TdTutorialStep.Ability, r.Ui.Step);
         var hi = Assert.Single(r.Ui.BuildHud().Items, i => i.Highlight);
         Assert.Equal(TdUiAction.Ability, hi.Action);
         r.Click(TdUiAction.Ability, "scale");
-        Assert.Equal(TdTutorialStep.None, r.Ui.Step);
+        Assert.NotEqual(TdTutorialStep.Ability, r.Ui.Step);
     }
 
     [Fact]
     public void Crate_step_on_first_crate_and_a_collected_or_vanished_crate_completes_it()
     {
         var r = new Rig();
-        r.BuildBolt();
+        r.BuildBolt(); r.Ack();
         r.Click(TdUiAction.StartWave);
         r.Credits(0);
         r.Click(TdUiAction.Ability, "scale");
@@ -229,7 +363,8 @@ public sealed class TdOnboardingTests
         Assert.Equal(TdTutorialStep.Crate, r.Ui.Step);
         Assert.True(r.Ui.View.HintX > 0);
         var pop = r.Ui.BuildPopover()!;
-        Assert.Contains(pop.Items, i => i.Text == "Clique na caixa antes que exploda");
+        Assert.Contains(pop.Items, i => i.Text == "Clique na caixa-bomba!" && i.Icon == TdIcon.Box);
+        Assert.Contains(pop.Items, i => i.Text == "Longe do PC? Ela some."); // regra de ausência
         Assert.True(pop.AnchorX > 0);
         typeof(TdMatchState).GetProperty("CrateActive")!.SetValue(r.Match, false);
         r.Ui.Sync();
@@ -279,18 +414,6 @@ public sealed class TdOnboardingTests
     }
 
     [Fact]
-    public void Minimized_hud_is_expanded_once_when_the_tutorial_starts()
-    {
-        var r = new Rig();
-        r.Host.HudMinimized = true;
-        r.Ui.Sync();
-        Assert.False(r.Host.HudMinimized);
-        r.Host.HudMinimized = true; // depois disso o jogador manda
-        r.Ui.Sync();
-        Assert.True(r.Host.HudMinimized);
-    }
-
-    [Fact]
     public void Tutorial_does_not_change_the_simulation_hash_or_the_command_log()
     {
         ulong Run(bool withOnboarding)
@@ -321,8 +444,15 @@ public sealed class TdOnboardingTests
         Assert.Equal(TdUiMode.Help, r.Ui.Mode);
         var card = r.Ui.BuildPopover()!;
         Assert.Equal("Como jogar", card.Title);
-        foreach (var topic in new[] { "Objetivo", "Torres", "Ondas", "Habilidades", "Caixa-bomba", "Coroa, medalhas e patente" })
-            Assert.Contains(card.Items, i => i.Kind == TdUiKind.Header && i.Text == topic);
+        var cards = card.Items.Where(i => i.Kind == TdUiKind.Label).ToArray();
+        Assert.True(cards.Length >= 10);
+        foreach (var c in cards)
+        {
+            Assert.NotEqual(TdIcon.None, c.Icon);                                              // ícone antes do texto
+            Assert.True(c.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length <= 8, c.Text); // cartão curto, não parágrafo
+        }
+        Assert.Contains(cards, c => c.Icon == TdIcon.Question);
+        Assert.Contains(cards, c => c.Icon == TdIcon.Crown);
         Assert.Contains(card.Items, i => i.Action == TdUiAction.RedoTutorial);
     }
 
@@ -336,7 +466,7 @@ public sealed class TdOnboardingTests
         Assert.False(r.Store.Done);
         Assert.Contains("stage1", r.Host.Calls);
         Assert.Equal(TdUiMode.None, r.Ui.Mode);
-        Assert.Equal(TdTutorialStep.Build, r.Ui.Step);
+        Assert.Equal(TdTutorialStep.HudCollapse, r.Ui.Step);
     }
 
     // ------------------------------------------------------------ dicas de 1ª vez
@@ -348,7 +478,7 @@ public sealed class TdOnboardingTests
         var r = new Rig(store: store);
         r.BuildBolt();
         r.Ui.Sync();
-        Assert.StartsWith("Dica: Raio:", r.Ui.CurrentTip);
+        Assert.StartsWith("Raio:", r.Ui.CurrentTip);
         Assert.Contains("tower:bolt", store.Tips);
         r.Now = 7; r.Ui.Sync();
         Assert.Null(r.Ui.CurrentTip); // some sozinha em ~6 s
@@ -393,7 +523,7 @@ public sealed class TdOnboardingTests
     public void Tips_wait_while_the_tutorial_callout_is_visible()
     {
         var r = new Rig();
-        r.BuildBolt(); // passo Wave: balão visível
+        r.BuildBolt(); // passo Alcance: balão visível
         r.Ui.Sync();
         Assert.Null(r.Ui.CurrentTip);
         Assert.DoesNotContain("tower:bolt", r.Store.Tips);

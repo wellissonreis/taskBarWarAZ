@@ -57,6 +57,9 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
         _observer = observer;
     }
 
+    /// <summary>TD.17: portão do pedido "Iniciar onda" em Preparo (ex.: fase 1 do tutorial espera a 1ª torre). Falso ⇒ o pedido é descartado e não entra no log.</summary>
+    public Func<bool>? WaveGate { get; set; }
+
     public TdMatchState Match { get; private set; }
     public bool IsShutdown { get; private set; }
 
@@ -186,6 +189,7 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
     {
         while (_pending.TryDequeue(out var cmd))
         {
+            if (cmd is TdWaveRequest && Match.Phase == MatchPhase.Preparo && WaveGate is { } gate && !gate()) continue;
             var applied = cmd is TdWaveRequest
                 ? (Match.Phase == MatchPhase.Preparo ? new StartWave() : (IGameCommand)new CallNextWave())
                 : cmd;

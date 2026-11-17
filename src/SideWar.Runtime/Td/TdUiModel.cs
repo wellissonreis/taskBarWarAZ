@@ -19,12 +19,16 @@ public enum TdUiAction : byte
     Preview, MapOpen, MapTab, SelectStage, BuyNode, Pause, Settings, Exit, Restart, NextStage, HudMinimize, HudRestore,
     /// <summary>TD.15: pular o tutorial, abrir "Como jogar" e refazer o tutorial.</summary>
     TutorialSkip, HowTo, RedoTutorial,
+    /// <summary>TD.17: avançar passo informativo do tutorial (OK) e pergunta-bônus (V, F, ignorar).</summary>
+    TutorialNext, QuizTrue, QuizFalse, QuizClose,
 }
 
 /// <summary>Ícone do HUD desenhado por código (TD.14); o renderer mapeia para caminhos vetoriais.</summary>
 public enum TdIcon : byte
 {
     None, Heart, Coin, Wave, Play, FastForward, Build, Menu, Minus, Restore, Lock, Scale, Firewall, Snapshot,
+    /// <summary>TD.17: ícones de balão e cartões (alerta, pergunta, certo, errado, alcance, tempo, caixa, portal, coroa, medalha) e chip/recolher do HUD.</summary>
+    Alert, Question, Check, Cross, Target, Clock, Box, Portal, Crown, Medal, Expand, Collapse,
 }
 
 /// <summary>
@@ -34,7 +38,7 @@ public enum TdIcon : byte
 public readonly record struct TdUiItem(
     DipRect Rect, TdUiKind Kind, string Text, TdUiAction Action = TdUiAction.None, int Arg = 0, string? SArg = null,
     string? Right = null, string? Sub = null, bool Enabled = true, bool Selected = false, TdTone Tone = TdTone.Normal, float Fill = 0f,
-    TdIcon Icon = TdIcon.None, string? Tip = null, bool RightCoin = false, bool Highlight = false)
+    TdIcon Icon = TdIcon.None, string? Tip = null, bool RightCoin = false, bool Highlight = false, TdIcon RightIcon = TdIcon.None)
 {
     public bool Clickable => Kind == TdUiKind.Button && Enabled && Action != TdUiAction.None;
 }
@@ -65,7 +69,7 @@ public sealed record TdPopoverView(string Title, TdUiItem[] Items, float Width, 
         h.Add(Title); h.Add(IconTower); h.Add((int)(ArrowX * 10)); h.Add((int)(TargetHudX * 10));
         foreach (var it in Items)
         {
-            h.Add(it.Text); h.Add(it.Right); h.Add(it.Sub); h.Add(it.Arg); h.Add(it.Highlight); h.Add(it.Enabled); h.Add(it.Selected); h.Add((int)it.Tone); h.Add((int)(it.Fill * 100));
+            h.Add(it.Text); h.Add(it.Right); h.Add(it.Sub); h.Add(it.Arg); h.Add((int)it.Icon); h.Add(it.Highlight); h.Add(it.Enabled); h.Add(it.Selected); h.Add((int)it.Tone); h.Add((int)(it.Fill * 100));
         }
         return h.ToHashCode();
     }
@@ -106,7 +110,7 @@ public sealed record TdHudView(TdUiItem[] Items, float Width, float Height, bool
         var h = new HashCode();
         foreach (var it in Items)
         {
-            h.Add(it.Text); h.Add(it.Right); h.Add(it.Enabled); h.Add(it.Selected); h.Add(it.Highlight); h.Add((int)it.Tone); h.Add((int)(it.Fill * 100)); h.Add((int)it.Icon);
+            h.Add(it.Text); h.Add(it.Right); h.Add(it.Enabled); h.Add(it.Selected); h.Add(it.Highlight); h.Add((int)it.Tone); h.Add((int)(it.Fill * 100)); h.Add((int)it.Icon); h.Add((int)it.RightIcon);
         }
         h.Add(Minimized);
         return h.ToHashCode();

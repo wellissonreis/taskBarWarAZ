@@ -121,6 +121,7 @@ public sealed partial class TdMatchState
         {
             _nodes.RemoveAll(n => n.TowerId == target);
             _towers.RemoveAt(i); // sem reembolso
+            _crateTowersLost++;
         }
         Emit(TdEventType.CrateExploded, CrateId, target);
         ClearCrate();

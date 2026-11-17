@@ -238,8 +238,9 @@ internal sealed class AppComposition : IDisposable
     {
         bool done = gameSide.TutorialDone;
         string tips = gameSide.TipsSeen;
-        if (settings.Td.TutorialDone == done && settings.Td.TipsSeen == tips) return;
-        var value = settings with { Td = settings.Td with { TutorialDone = done, TipsSeen = tips } };
+        string seenQ = gameSide.QuestionsSeen;
+        if (settings.Td.TutorialDone == done && settings.Td.TipsSeen == tips && settings.Td.QuestionsSeen == seenQ) return;
+        var value = settings with { Td = settings.Td with { TutorialDone = done, TipsSeen = tips, QuestionsSeen = seenQ } };
         if (settingsStore.Save(value)) settings = value;
     }
 

@@ -131,6 +131,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     /// <summary>Onboarding TD (TD.15), lido pela T-UI ao gravar as configurações.</summary>
     public bool TutorialDone => tdUi?.TutorialDone ?? settings.Td.TutorialDone;
     public string TipsSeen => tdUi?.TipsSeen ?? settings.Td.TipsSeen;
+    public string QuestionsSeen => tdUi?.QuestionsSeen ?? settings.Td.QuestionsSeen;
 
     /// <summary>Barra usada pela cena (altura em DIP); a cena padrão (Band) usa 48.</summary>
     public float BarHeightDip => barHeightDip;
@@ -295,7 +296,8 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         {
             // TD.8: HUD, popover, modo construção (ESC temporário) e Interativo ao passar o mouse sobre a faixa.
             tdUi = new TdUiPresenter(game, runtime, td, tdDriver, typography!, clock, ui, () => hotkeys, tdFocus!, tdBandHeight,
-                settings.Td.HudMinimized, PublishMenu, atlas, settings.Td.TutorialDone, settings.Td.TipsSeen);
+                settings.Td.HudMinimized, PublishMenu, atlas, settings.Td.TutorialDone, settings.Td.TipsSeen,
+                settings.Td.BonusQuestions, settings.Td.QuestionsSeen);
             game.Mode.EnableTdHover(1.5);
             tdUi.Setup();
             loop.AddAfter(new LoopParticipant(() => tdUi.NextDeadline, _ => tdUi.OnWake()));
@@ -352,6 +354,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
         settings = value;
         td?.ApplySettings(value);
         tdFocus?.Configure(value.Td.FadeWhenUnfocused, value.Td.FadeOpacityPercent);
+        tdUi?.SetBonusQuestions(value.Td.BonusQuestions);
         if (td is not null && Math.Clamp(value.Td.BandHeightDip, TdBand.MinHeightDip, TdBand.MaxHeightDip) != tdBandHeight)
             log($"td.bandHeightDip {value.Td.BandHeightDip} salvo; vale ao reiniciar o SideWar (atual {tdBandHeight}).");
         runtime.ApplySettings(value.Performance.PresentFps, value.Performance.AbsentFps, value.Accessibility.ReducedMotion, value.AutoScale);

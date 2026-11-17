@@ -70,6 +70,8 @@ public static class SettingsSerializer
         w.WriteNumber("fadeOpacityPercent", s.Td.FadeOpacityPercent);
         w.WriteBoolean("tutorialDone", s.Td.TutorialDone);
         w.WriteString("tipsSeen", s.Td.TipsSeen);
+        w.WriteBoolean("bonusQuestions", s.Td.BonusQuestions);
+        w.WriteString("questionsSeen", s.Td.QuestionsSeen);
         w.WriteEndObject();
         w.WriteEndObject();
     }
@@ -147,6 +149,8 @@ public static class SettingsSerializer
                 FadeOpacityPercent = IntRange(td, "fadeOpacityPercent", TdSettings.MinFadePercent, TdSettings.MaxFadePercent, d.Td.FadeOpacityPercent),
                 TutorialDone = Bool(td, "tutorialDone", d.Td.TutorialDone),
                 TipsSeen = Str(td, "tipsSeen", 1024) ?? d.Td.TipsSeen,
+                BonusQuestions = Bool(td, "bonusQuestions", d.Td.BonusQuestions),
+                QuestionsSeen = Str(td, "questionsSeen", 1024) ?? d.Td.QuestionsSeen,
             },
         };
     }

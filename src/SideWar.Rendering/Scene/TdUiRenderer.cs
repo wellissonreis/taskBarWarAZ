@@ -125,9 +125,14 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         }
         if (iconOnly) return;
         float rightW = 0f;
+        if (it.RightIcon != TdIcon.None)
+        {
+            DrawIcon(c, it.RightIcon, r.X + r.W - 17f, r.Y + (r.H - 12f) / 2f, 12f, enabled ? Palette.Ambar : color);
+            rightW += 16f;
+        }
         if (it.Right is not null)
         {
-            rightW = (_p.TextEnabled ? _p.Font(PanelFont.JetBrainsMono, fs).MeasureText(it.Right) / (_p.Dpi / 96f) : 18f) + (it.RightCoin ? 12f : 0f) + 3f;
+            rightW += (_p.TextEnabled ? _p.Font(PanelFont.JetBrainsMono, fs).MeasureText(it.Right) / (_p.Dpi / 96f) : 18f) + (it.RightCoin ? 12f : 0f) + 3f;
             float rx = r.X + r.W - rightW - 3f;
             _p.Text(c, it.Right, PanelFont.JetBrainsMono, fs, new DipRect(rx, r.Y + (r.H - 12f) / 2f, rightW - (it.RightCoin ? 12f : 0f), 12f), enabled ? Palette.Ambar : Palette.TxtRotulo);
             if (it.RightCoin) DrawIcon(c, TdIcon.Coin, r.X + r.W - 15f, r.Y + (r.H - 10f) / 2f, 10f, Palette.Ambar);
@@ -185,6 +190,11 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
                 if (it.Fill > 0f) _p.Fill(c, new DipRect(r.X, r.Y + r.H - 3, r.W * Math.Clamp(it.Fill, 0f, 1f), 3), Palette.Ambar);
                 return;
             case TdUiKind.Label:
+                if (it.Icon != TdIcon.None)
+                {
+                    DrawIcon(c, it.Icon, r.X, r.H >= 24f ? r.Y + 1f : r.Y + (r.H - 12f) / 2f, 12f, color);
+                    r = new DipRect(r.X + 16f, r.Y, r.W - 16f, r.H);
+                }
                 if (!small && r.H >= 24f && _p.TextEnabled && _p.Font(PanelFont.JetBrainsMono, size).MeasureText(it.Text) > _p.Px(r.W))
                 {
                     DrawWrapped(c, it.Text, r, color);
@@ -207,6 +217,11 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         {
             DrawTowerIcon(c, it.SArg, r.X + 4, r.Y + (r.H - ChooserIconDip) / 2f, ChooserIconDip, enabled ? (byte)255 : (byte)110);
             shift = 36f;
+        }
+        if (it.Icon != TdIcon.None && it.Action != TdUiAction.ChooseTower)
+        {
+            DrawIcon(c, it.Icon, r.X + 5f, r.Y + (r.H - 12f) / 2f, 12f, textColor);
+            shift = 17f;
         }
         var box = new DipRect(r.X + 4 + shift, top, r.W - 8 - shift, 12);
         _p.Text(c, it.Text, small ? PanelFont.Silkscreen : PanelFont.JetBrainsMono, small ? 8.5f : size, box, textColor, small && it.Right is null ? TextAlign.Center : TextAlign.Left);

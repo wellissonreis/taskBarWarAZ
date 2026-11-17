@@ -47,3 +47,9 @@ public sealed record SetPresence(bool Present) : IGameCommand;
 
 /// <summary>Coleta a caixa-bomba ativa a tempo (RF-28.19): créditos de um bônus de onda e redução de recarga de habilidade.</summary>
 public sealed record CollectCrate(int CrateId) : IGameCommand;
+
+/// <summary>
+/// Pergunta-bônus do Preparo (RF-28.23, 2026-11-17): o hospedeiro confere V/F no banco <c>td-questions.json</c> e registra o resultado.
+/// Só em Preparo e uma vez por Preparo; acerto paga créditos e reduz recargas (<c>rules.bonusQuestion</c>), erro não tem penalidade.
+/// </summary>
+public sealed record AnswerBonus(int QuestionId, bool Correct) : IGameCommand;

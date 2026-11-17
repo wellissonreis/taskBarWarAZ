@@ -295,6 +295,14 @@ Para alterar uma decisão aceita, é preciso registrar uma nova ADR com justific
 - **Adendo (2026-11-16, ficha TD.0b):** o usuário acrescentou (a) a **caixa-bomba** (SDD-28 RF-28.19, DP-28.16; só em onda, só com usuário presente), o que mantém **apenas** o sinal "presente agora" (ajuste de DP-28.4: presença econômica e offline seguem cortados), e (b) a **colocação de torres** como parte do MVP (RF-28.20, DP-28.17), substituindo TA.8. Fichas TD.3b e TD.8.
 - **Revisões em SDDs (fichas TD.1 a TD.12, não editadas aqui):** SDD-07, 10, 11, 12, 14, 15, 16, 17, 22, 23, 24 (lista em SDD-28 §12.3). Série de execução em PLANO.md, seção 9.
 
+### ADR-036: Pergunta-bônus V/F no Preparo e onboarding de poucas palavras (revoga a DP-28.5; TD.17)
+
+- **Status:** decisão do usuário, 2026-11-17 (ficha TD.17).
+- **Contexto:** o usuário quer um "jogo geração Z, fácil de entender mas complexo taticamente", de pouca leitura ("no Azure Defense as pessoas ficaram com preguiça de ler"). Jogando o build TD.16 pediu: fase 1 guiada, tutorial maior, o Azure de volta como **bônus opcional** e derrota que ensina.
+- **Decisão:** (1) **revoga a DP-28.5**, o **CA-28.10** e o **T-28.10** do SDD-28: volta UMA afirmação Azure V/F de 1 linha no Preparo, com 2 botões e timer de 10 s, recompensa em créditos/recarga (valores em `rules.bonusQuestion`), sem penalidade, sem travar o jogo; comando novo `AnswerBonus` no log (determinístico; goldens TD antigo → novo); banco novo `td-questions.json` (75 afirmações, fora do `ContentHash`), setting `td.bonusQuestions` (ligado) e `td.questionsSeen`; (2) fase 1 espera a 1ª torre (regra de UI/host, não do Core); (3) HUD nasce minimizado (`td.hudMinimized` padrão true) e o tutorial o ensina; (4) tutorial ampliado e "Como jogar" em cartões curtos (≤ 8 palavras, ícone, imperativo); (5) derrota mostra motivo + dica a partir de estatísticas fora do hash (RF-28.24).
+- **Escopo excluído (decisão do usuário, mesma data):** **nenhum passo de tutorial nem dica de derrota sobre melhorar torre ou ramos A/B**: a evolução de torre será substituída por uma página de runas global em ficha futura.
+- **Refina:** ADR-035 (SDD-28 RF-28.22 ampliado; novos RF-28.23 e RF-28.24).
+
 ---
 
 ## Decisões pendentes (dependem do usuário)

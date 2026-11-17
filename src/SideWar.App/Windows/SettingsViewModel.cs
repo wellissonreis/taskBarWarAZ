@@ -30,6 +30,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     private bool tdAutoStart;
     private int tdAutoStartSeconds, tdBandHeight, tdFadePercent;
     private bool tdFadeWhenUnfocused;
+    private bool tdBonusQuestions;
     private string? saveError;
 
     public SettingsViewModel(AppSettings current, Func<AppSettings, bool> save)
@@ -69,6 +70,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     /// <summary>Altura da faixa TD em DIP (32 a 96); presets Pequeno 40 / Médio 64 / Grande 88. Vale ao reiniciar o SideWar.</summary>
     public int TdBandHeight { get => tdBandHeight; set { if (Set(ref tdBandHeight, value)) Check(nameof(TdBandHeight), value is >= TdSettings.MinBandHeightDip and <= TdSettings.MaxBandHeightDip ? null : "Altura entre 32 e 96 DIP."); } }
     /// <summary>Esmaecer faixa e HUD ao ativar outro app (TD.14).</summary>
+    public bool TdBonusQuestions { get => tdBonusQuestions; set => Set(ref tdBonusQuestions, value); }
     public bool TdFadeWhenUnfocused { get => tdFadeWhenUnfocused; set => Set(ref tdFadeWhenUnfocused, value); }
     public int TdFadePercent { get => tdFadePercent; set { if (Set(ref tdFadePercent, value)) Check(nameof(TdFadePercent), value is >= TdSettings.MinFadePercent and <= TdSettings.MaxFadePercent ? null : "Opacidade entre 10 e 90%."); } }
     public string TogglePause { get => togglePause; set { if (Set(ref togglePause, value)) Check(nameof(TogglePause), ValidateHotkey(value)); } }
@@ -134,7 +136,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         Td = original.Td with
         {
             AutoStartEnabled = tdAutoStart, AutoStartSeconds = tdAutoStartSeconds, BandHeightDip = tdBandHeight,
-            FadeWhenUnfocused = tdFadeWhenUnfocused, FadeOpacityPercent = tdFadePercent,
+            FadeWhenUnfocused = tdFadeWhenUnfocused, FadeOpacityPercent = tdFadePercent, BonusQuestions = tdBonusQuestions,
         },
     };
 
@@ -186,6 +188,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         tdBandHeight = s.Td.BandHeightDip;
         tdFadeWhenUnfocused = s.Td.FadeWhenUnfocused;
         tdFadePercent = s.Td.FadeOpacityPercent;
+        tdBonusQuestions = s.Td.BonusQuestions;
     }
 
     private void Check(string property, string? error)

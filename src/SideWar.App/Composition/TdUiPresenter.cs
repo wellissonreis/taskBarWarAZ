@@ -41,6 +41,8 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     private volatile bool hudMinimized;
     private volatile bool tutorialDone;
     private volatile string tipsSeenText;
+    private volatile bool bonusQuestions;
+    private volatile string questionsSeenText;
     private readonly HashSet<string> tipsSeen;
     private TdUiWindow? hudWindow, popWindow, tipWindow;
     private int tipIndex = -1;
@@ -60,8 +62,10 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     public TdUiPresenter(GameThread game, GameRuntime runtime, TdComposition td, TdRenderDriver driver, Typography typography,
         IClock clock, Action<UiRequest> ui, Func<HotkeyService?> hotkeys,
         TdFocusState focus, int bandHeight, bool hudMinimized, Action menuChanged, SideWar.Rendering.Sprites.SpriteAtlas? atlas = null,
-        bool tutorialDone = false, string tipsSeen = "")
+        bool tutorialDone = false, string tipsSeen = "", bool bonusQuestions = true, string questionsSeen = "")
     {
+        this.bonusQuestions = bonusQuestions;
+        questionsSeenText = questionsSeen ?? "";
         this.tutorialDone = tutorialDone;
         tipsSeenText = tipsSeen ?? "";
         this.tipsSeen = new HashSet<string>(tipsSeenText.Split(';', StringSplitOptions.RemoveEmptyEntries), StringComparer.Ordinal);
@@ -71,7 +75,11 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         this.atlas = atlas;
         this.game = game; this.runtime = runtime; this.td = td; this.driver = driver; this.typography = typography;
         this.clock = clock; this.ui = ui; this.hotkeys = hotkeys;
-        controller = new TdUiController(() => td.Host.Match, Send, this, () => clock.NowTicks / (double)clock.TicksPerSecond, this);
+        TdQuestionPicker? picker = null;
+        try { picker = new TdQuestionPicker(SideWar.Core.Content.Td.TdQuestionBank.LoadEmbedded(), questionsSeenText, Random.Shared.Next, SetQuestionsSeen); }
+        catch (Exception) { /* banco indisponível: sem pergunta-bônus */ }
+        controller = new TdUiController(() => td.Host.Match, Send, this, () => clock.NowTicks / (double)clock.TicksPerSecond, this, picker);
+        td.Host.WaveGate = () => !controller.StartBlocked;
         controller.Changed += () => { Refresh(false); Kick(); };
         focus.Changed += ApplyFade;
     }
@@ -86,6 +94,23 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     public void OpenHowTo() { controller.OpenHowTo(); Kick(); }
 
     public string TipsSeen => tipsSeenText;
+    public string QuestionsSeen => questionsSeenText;
+
+    /// <summary>td.bonusQuestions (Configurações): liga/desliga a pergunta-bônus V/F do Preparo.</summary>
+    public bool BonusQuestions => bonusQuestions;
+
+    public void SetBonusQuestions(bool on)
+    {
+        if (bonusQuestions == on) return;
+        bonusQuestions = on;
+        Kick();
+    }
+
+    private void SetQuestionsSeen(string seen)
+    {
+        questionsSeenText = seen;
+        ui(UiRequest.SaveOnboarding);
+    }
 
     // ITdOnboardingStore (T-Game): grava nas configurações pela T-UI.
     public bool TutorialDone => tutorialDone;
@@ -227,7 +252,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         controller.Sync();
         Refresh(false);
         var m = td.Host.Match;
-        bool busy = runtime.App.IsVisible && (m.Phase == MatchPhase.Onda || controller.PopoverOpen || controller.CurrentTip is not null || m.CountdownRemainingSeconds > 0 || m.CrateActive);
+        bool busy = runtime.App.IsVisible && (m.Phase == MatchPhase.Onda || controller.PopoverOpen || controller.CurrentTip is not null || m.CountdownRemainingSeconds > 0 || m.CrateActive || controller.QuizActive || controller.Pulsing);
         deadline = busy ? clock.NowTicks + (long)(TickSeconds * clock.TicksPerSecond) : null;
     }
 

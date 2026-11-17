@@ -1,0 +1,454 @@
+{
+ "questions": [
+  {
+   "id": "q01",
+   "text": "Na nuvem você paga pelo que usar (consumo).",
+   "answer": true,
+   "explanation": "Modelo de consumo: pague pelo uso."
+  },
+  {
+   "id": "q02",
+   "text": "Nuvem pública exige comprar servidores próprios.",
+   "answer": false,
+   "explanation": "O provedor possui o hardware."
+  },
+  {
+   "id": "q03",
+   "text": "Elasticidade fixa os recursos, ignorando a demanda.",
+   "answer": false,
+   "explanation": "Elasticidade acompanha a demanda."
+  },
+  {
+   "id": "q04",
+   "text": "Alta disponibilidade garante zero falhas.",
+   "answer": false,
+   "explanation": "Reduz falhas, não garante zero."
+  },
+  {
+   "id": "q05",
+   "text": "IaaS entrega apenas aplicativos prontos para uso.",
+   "answer": false,
+   "explanation": "Isso é SaaS."
+  },
+  {
+   "id": "q06",
+   "text": "No SaaS você gerencia o sistema operacional.",
+   "answer": false,
+   "explanation": "O provedor gerencia tudo."
+  },
+  {
+   "id": "q07",
+   "text": "No PaaS você gerencia o hardware do servidor.",
+   "answer": false,
+   "explanation": "O provedor gerencia o hardware."
+  },
+  {
+   "id": "q08",
+   "text": "Microsoft 365 é um exemplo de IaaS.",
+   "answer": false,
+   "explanation": "É SaaS."
+  },
+  {
+   "id": "q09",
+   "text": "CapEx é um gasto contínuo conforme o uso.",
+   "answer": false,
+   "explanation": "CapEx é gasto antecipado."
+  },
+  {
+   "id": "q10",
+   "text": "OpEx é gasto contínuo conforme o uso.",
+   "answer": true,
+   "explanation": "OpEx: custo operacional."
+  },
+  {
+   "id": "q11",
+   "text": "A nuvem troca OpEx por CapEx.",
+   "answer": false,
+   "explanation": "Troca CapEx por OpEx."
+  },
+  {
+   "id": "q12",
+   "text": "Nuvem híbrida usa somente nuvem pública.",
+   "answer": false,
+   "explanation": "Híbrida mistura pública e privada."
+  },
+  {
+   "id": "q13",
+   "text": "Nuvem privada é compartilhada entre vários clientes.",
+   "answer": false,
+   "explanation": "Privada serve uma organização."
+  },
+  {
+   "id": "q14",
+   "text": "Uma região do Azure tem um ou mais datacenters.",
+   "answer": true,
+   "explanation": "Região: conjunto de datacenters."
+  },
+  {
+   "id": "q15",
+   "text": "Zonas de disponibilidade ficam no mesmo prédio.",
+   "answer": false,
+   "explanation": "São datacenters separados."
+  },
+  {
+   "id": "q16",
+   "text": "Zonas de disponibilidade protegem de falha de datacenter.",
+   "answer": true,
+   "explanation": "Datacenters fisicamente separados."
+  },
+  {
+   "id": "q17",
+   "text": "Pares de regiões ajudam na recuperação de desastres.",
+   "answer": true,
+   "explanation": "Regiões pareadas se apoiam."
+  },
+  {
+   "id": "q18",
+   "text": "Todo serviço do Azure existe em todas as regiões.",
+   "answer": false,
+   "explanation": "A disponibilidade varia por região."
+  },
+  {
+   "id": "q19",
+   "text": "Um grupo de recursos agrupa recursos relacionados.",
+   "answer": true,
+   "explanation": "Organiza e gerencia em conjunto."
+  },
+  {
+   "id": "q20",
+   "text": "Um recurso pode estar em dois grupos de recursos.",
+   "answer": false,
+   "explanation": "Só pertence a um grupo."
+  },
+  {
+   "id": "q21",
+   "text": "Uma assinatura (subscription) é um limite de cobrança.",
+   "answer": true,
+   "explanation": "Assinatura: cobrança e acesso."
+  },
+  {
+   "id": "q22",
+   "text": "Grupos de gerenciamento organizam várias assinaturas.",
+   "answer": true,
+   "explanation": "Hierarquia acima das assinaturas."
+  },
+  {
+   "id": "q23",
+   "text": "O Azure Resource Manager só funciona pelo portal.",
+   "answer": false,
+   "explanation": "Também CLI, PowerShell e API."
+  },
+  {
+   "id": "q24",
+   "text": "A Azure CLI pode criar recursos por linha de comando.",
+   "answer": true,
+   "explanation": "CLI automatiza tarefas."
+  },
+  {
+   "id": "q25",
+   "text": "O Cloud Shell exige instalar software no PC.",
+   "answer": false,
+   "explanation": "Roda direto no navegador."
+  },
+  {
+   "id": "q26",
+   "text": "Máquinas virtuais do Azure não podem ser redimensionadas.",
+   "answer": false,
+   "explanation": "Dá para mudar o tamanho."
+  },
+  {
+   "id": "q27",
+   "text": "Conjuntos de escala (VMSS) ajustam o número de VMs.",
+   "answer": true,
+   "explanation": "Escalam VMs automaticamente."
+  },
+  {
+   "id": "q28",
+   "text": "Azure App Service hospeda aplicativos web.",
+   "answer": true,
+   "explanation": "PaaS para apps web."
+  },
+  {
+   "id": "q29",
+   "text": "Azure Functions exige servidor sempre ligado.",
+   "answer": false,
+   "explanation": "É serverless, sob demanda."
+  },
+  {
+   "id": "q30",
+   "text": "Contêineres compartilham o kernel do sistema host.",
+   "answer": true,
+   "explanation": "Mais leves que VMs."
+  },
+  {
+   "id": "q31",
+   "text": "Cada contêiner inclui um sistema operacional completo.",
+   "answer": false,
+   "explanation": "Compartilha o kernel do host."
+  },
+  {
+   "id": "q32",
+   "text": "Azure Kubernetes Service orquestra contêineres.",
+   "answer": true,
+   "explanation": "AKS gerencia clusters."
+  },
+  {
+   "id": "q33",
+   "text": "Rede virtual (VNet) isola recursos no Azure.",
+   "answer": true,
+   "explanation": "VNet: rede privada na nuvem."
+  },
+  {
+   "id": "q34",
+   "text": "NSG filtra tráfego de rede por regras.",
+   "answer": true,
+   "explanation": "Regras de entrada e saída."
+  },
+  {
+   "id": "q35",
+   "text": "VPN Gateway usa uma linha dedicada privada.",
+   "answer": false,
+   "explanation": "VPN usa a internet criptografada."
+  },
+  {
+   "id": "q36",
+   "text": "ExpressRoute é conexão privada com o Azure.",
+   "answer": true,
+   "explanation": "Não passa pela internet pública."
+  },
+  {
+   "id": "q37",
+   "text": "Azure DNS resolve nomes de domínio.",
+   "answer": true,
+   "explanation": "Hospeda zonas DNS."
+  },
+  {
+   "id": "q38",
+   "text": "Blob Storage é ideal para tabelas relacionais.",
+   "answer": false,
+   "explanation": "Blob guarda objetos, não tabelas."
+  },
+  {
+   "id": "q39",
+   "text": "Azure Files só funciona dentro do Azure.",
+   "answer": false,
+   "explanation": "Também pode ser montado local."
+  },
+  {
+   "id": "q40",
+   "text": "Armazenamento frio custa menos que o quente.",
+   "answer": true,
+   "explanation": "Acesso raro, preço menor."
+  },
+  {
+   "id": "q41",
+   "text": "Redundância local (LRS) copia dados em um datacenter.",
+   "answer": true,
+   "explanation": "LRS: três cópias locais."
+  },
+  {
+   "id": "q42",
+   "text": "GRS mantém cópias apenas na mesma região.",
+   "answer": false,
+   "explanation": "GRS replica para outra região."
+  },
+  {
+   "id": "q43",
+   "text": "Azure SQL Database é um banco gerenciado (PaaS).",
+   "answer": true,
+   "explanation": "O Azure cuida da infraestrutura."
+  },
+  {
+   "id": "q44",
+   "text": "Cosmos DB é um banco NoSQL distribuído globalmente.",
+   "answer": true,
+   "explanation": "Multimodelo e global."
+  },
+  {
+   "id": "q45",
+   "text": "Microsoft Entra ID gerencia identidades.",
+   "answer": true,
+   "explanation": "Antigo Azure Active Directory."
+  },
+  {
+   "id": "q46",
+   "text": "MFA usa apenas senha longa.",
+   "answer": false,
+   "explanation": "Exige mais de um fator."
+  },
+  {
+   "id": "q47",
+   "text": "Acesso condicional aplica regras ao entrar.",
+   "answer": true,
+   "explanation": "Decide com base em condições."
+  },
+  {
+   "id": "q48",
+   "text": "RBAC concede permissões por função.",
+   "answer": true,
+   "explanation": "Controle de acesso por função."
+  },
+  {
+   "id": "q49",
+   "text": "Zero Trust confia em tudo dentro da rede.",
+   "answer": false,
+   "explanation": "Nunca confia; sempre verifica."
+  },
+  {
+   "id": "q50",
+   "text": "Defesa em profundidade usa várias camadas.",
+   "answer": true,
+   "explanation": "Se uma falha, outra protege."
+  },
+  {
+   "id": "q51",
+   "text": "Defender for Cloud avalia a postura de segurança.",
+   "answer": true,
+   "explanation": "Recomenda melhorias."
+  },
+  {
+   "id": "q52",
+   "text": "Key Vault serve para hospedar sites.",
+   "answer": false,
+   "explanation": "Guarda segredos, chaves e certificados."
+  },
+  {
+   "id": "q53",
+   "text": "Azure Policy bloqueia o login de usuários.",
+   "answer": false,
+   "explanation": "Aplica regras aos recursos."
+  },
+  {
+   "id": "q54",
+   "text": "Azure Policy ajuda na conformidade de recursos.",
+   "answer": true,
+   "explanation": "Audita e impõe padrões."
+  },
+  {
+   "id": "q55",
+   "text": "Bloqueios de recurso evitam exclusão acidental.",
+   "answer": true,
+   "explanation": "Delete e ReadOnly."
+  },
+  {
+   "id": "q56",
+   "text": "Tags alteram o desempenho dos recursos.",
+   "answer": false,
+   "explanation": "Tags só organizam e rastreiam."
+  },
+  {
+   "id": "q57",
+   "text": "A calculadora de preços mostra o custo real pago.",
+   "answer": false,
+   "explanation": "É só uma estimativa."
+  },
+  {
+   "id": "q58",
+   "text": "Azure Cost Management ajuda a monitorar gastos.",
+   "answer": true,
+   "explanation": "Acompanha e controla custos."
+  },
+  {
+   "id": "q59",
+   "text": "Instâncias reservadas são cobradas só por segundo.",
+   "answer": false,
+   "explanation": "Compromisso de 1 ou 3 anos."
+  },
+  {
+   "id": "q60",
+   "text": "Reserved Instances dão desconto por compromisso.",
+   "answer": true,
+   "explanation": "Reserve por 1 ou 3 anos."
+  },
+  {
+   "id": "q61",
+   "text": "SLA define a disponibilidade prometida pelo serviço.",
+   "answer": true,
+   "explanation": "Ex.: 99,9% de uptime."
+  },
+  {
+   "id": "q62",
+   "text": "Encadear serviços reduz o SLA composto.",
+   "answer": true,
+   "explanation": "Cada elo soma risco."
+  },
+  {
+   "id": "q63",
+   "text": "O Azure Monitor serve para criar máquinas virtuais.",
+   "answer": false,
+   "explanation": "Ele coleta métricas e logs."
+  },
+  {
+   "id": "q64",
+   "text": "Azure Advisor dá recomendações personalizadas.",
+   "answer": true,
+   "explanation": "Custo, segurança, desempenho."
+  },
+  {
+   "id": "q65",
+   "text": "O Service Health mostra o status do seu PC.",
+   "answer": false,
+   "explanation": "Mostra a saúde dos serviços Azure."
+  },
+  {
+   "id": "q66",
+   "text": "Serviços em preview podem ter limites e sem SLA.",
+   "answer": true,
+   "explanation": "Versão prévia: use com cautela."
+  },
+  {
+   "id": "q67",
+   "text": "Azure Arc só gerencia recursos dentro do Azure.",
+   "answer": false,
+   "explanation": "Estende o Azure a outros locais."
+  },
+  {
+   "id": "q68",
+   "text": "Azure Arc gerencia recursos de outras nuvens.",
+   "answer": true,
+   "explanation": "Controle em ambientes híbridos."
+  },
+  {
+   "id": "q69",
+   "text": "O Cloud Adoption Framework trata só de hardware.",
+   "answer": false,
+   "explanation": "Guia estratégia, plano e governança."
+  },
+  {
+   "id": "q70",
+   "text": "Responsabilidade compartilhada divide tarefas na nuvem.",
+   "answer": true,
+   "explanation": "Provedor e cliente dividem."
+  },
+  {
+   "id": "q71",
+   "text": "Na nuvem o cliente nunca é responsável por dados.",
+   "answer": false,
+   "explanation": "Os dados são do cliente."
+  },
+  {
+   "id": "q72",
+   "text": "Escalar na horizontal adiciona mais instâncias.",
+   "answer": true,
+   "explanation": "Scale out."
+  },
+  {
+   "id": "q73",
+   "text": "Escalar na vertical adiciona mais instâncias.",
+   "answer": false,
+   "explanation": "Vertical aumenta o tamanho."
+  },
+  {
+   "id": "q74",
+   "text": "Tolerância a falhas mantém o serviço mesmo com falhas.",
+   "answer": true,
+   "explanation": "Resiliência do sistema."
+  },
+  {
+   "id": "q75",
+   "text": "Na nuvem o custo de TI é sempre fixo.",
+   "answer": false,
+   "explanation": "Varia conforme o consumo."
+  }
+ ]
+}

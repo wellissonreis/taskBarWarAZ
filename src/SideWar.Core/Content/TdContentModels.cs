@@ -57,11 +57,14 @@ public sealed record TdBombCrateDef(
     double Chance, int FirstEligibleWaveStage1, int MinDropSeconds, double DropMaxSpawnFraction, int CountdownSeconds,
     int EdgeMargin, int CooldownReductionSeconds, int PresenceWindowSeconds);
 
+/// <summary>Pergunta-bônus do Preparo (RF-28.23): tempo da pergunta (s) e recompensa por acerto (créditos = base + porOnda × onda; redução de recarga em s).</summary>
+public sealed record TdBonusQuestionDef(int TimerSeconds, int CreditsBase, int CreditsPerWave, int CooldownReductionSeconds);
+
 /// <summary>Regras de partida (RF-28.1 a RF-28.4, RF-28.10, RF-28.12).</summary>
 public sealed record TdMatchRulesDef(
     int CoreIntegrity, double SellRefund, int WaveBonusBase, int WaveBonusPerWave, double HpWaveGrowth, double HpStageStep,
     double SpawnJitter, int MaxEnemiesOnField, TdCallNextDef CallNext, TdAutoStartDef AutoStart, TdStarsDef Stars,
-    TdChallengeDef[] Challenges, TdBombCrateDef BombCrate);
+    TdChallengeDef[] Challenges, TdBombCrateDef BombCrate, TdBonusQuestionDef BonusQuestion);
 
 public sealed record TdStageDef(
     int Id, string Title, string Region, string Concept, int Waves, long StartingCredits, int MaxTowers, string Challenge);
