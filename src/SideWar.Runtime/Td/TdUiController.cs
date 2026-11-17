@@ -33,6 +33,12 @@ public sealed partial class TdUiController
     private bool _endShown;
     private bool _winGuide;
     private bool _confirmRestart;
+    public bool QuickTowersOpen { get; private set; }
+    private bool _endCorner;
+    /// <summary>Cartão automático de fim de fase no cantinho (sem modal, sem foco); clicar no chip abre a modal central.</summary>
+    public bool EndCardOpen => Mode == TdUiMode.End && _endCorner;
+    /// <summary>Qualquer popover pequeno ancorado ao chip: painel rápido, pergunta-bônus ou cartão de fim de fase. Nunca ativa janela.</summary>
+    public bool CornerPopover => QuickTowersOpen || EndCardOpen || (Mode == TdUiMode.None && QuizActive);
     private int _chosenX = -1;       // X lógico já escolhido (passo "escolher a torre"); -1 = ainda no passo do ponto
     private int _moveTowerId;        // > 0: reposicionando uma torre SEM POSIÇÃO (sem escolha de tipo)
     private int _ghostX = -1;
@@ -43,7 +49,7 @@ public sealed partial class TdUiController
     private string? _placementType;
     private int _modalCount;
     public int ModalCount => _modalCount;
-    public bool ModalOpen => !BuildActive && (Mode != TdUiMode.None || QuizActive);
+    public bool ModalOpen => !QuickTowersOpen && !BuildActive && Mode != TdUiMode.None && !EndCardOpen;
     private bool _mapSeals;
     private int _towerPage;
     private double _lastActionAt;
@@ -69,7 +75,7 @@ public sealed partial class TdUiController
     public bool BuildActive => Mode == TdUiMode.Build && (_placementType is not null || _moveTowerId > 0);
 
     /// <summary>Algum popover aberto (o ESC fecha).</summary>
-    public bool PopoverOpen => Mode != TdUiMode.None || QuizActive;
+    public bool PopoverOpen => QuickTowersOpen || Mode != TdUiMode.None || QuizActive;
 
     /// <summary>Passo do ponto: o fantasma segue o mouse e o clique escolhe o ponto.</summary>
     public bool ChoosingPoint => BuildActive && _chosenX < 0;
@@ -122,7 +128,8 @@ public sealed partial class TdUiController
         else
         {
             _send(new BuildTower(_placementType!, _ghostX));
-            SetMode(TdUiMode.Build);
+            if (QuickTowersOpen) { ResetBuild(); Changed?.Invoke(); }
+            else SetMode(TdUiMode.Build);
         }
         return true;
     }
@@ -169,6 +176,13 @@ public sealed partial class TdUiController
             case TdUiAction.QuizFalse: AnswerQuiz(false); break;
             case TdUiAction.QuizClose: CloseQuiz(); break;
             case TdUiAction.Close: Close(); break;
+            case TdUiAction.QuickTowers:
+                if (QuickTowersOpen) Close();
+                else if (!ModalOpen && _match().Phase is not (MatchPhase.Vitoria or MatchPhase.Derrota))
+                {
+                    QuickTowersOpen = true; Mode = TdUiMode.Build; ResetBuild(); UpdateModalPause(); Changed?.Invoke();
+                }
+                break;
             case TdUiAction.BuildToggle:
                 if (BuildActive) Close(); else SetMode(TdUiMode.Build);
                 break;
@@ -260,6 +274,7 @@ public sealed partial class TdUiController
             if (first) goto Checked;
             _modalCount = 0;
             _endShown = false;
+            _endCorner = false;
             _selectedTowerId = 0;
             if (Mode != TdUiMode.None) { ResetBuild(); Mode = TdUiMode.None; }
             Changed?.Invoke();
@@ -278,6 +293,7 @@ public sealed partial class TdUiController
                 if (_winGuide) _onb!.MarkTipSeen("firstwin");
                 ResetBuild();
                 SetMode(TdUiMode.End);
+                _endCorner = true;
             }
             return;
         }
@@ -294,7 +310,7 @@ public sealed partial class TdUiController
                     Changed?.Invoke();
                 }
             }
-            if (_now() - _lastActionAt > BuildTimeoutSeconds) Close();
+            if (!QuickTowersOpen && _now() - _lastActionAt > BuildTimeoutSeconds) Close();
         }
         else if (Mode == TdUiMode.Inspector && FindTower(m, _selectedTowerId) < 0) SetMode(TdUiMode.Towers);
     }
@@ -331,6 +347,8 @@ public sealed partial class TdUiController
     private void Close()
     {
         ResetBuild();
+        QuickTowersOpen = false;
+        _endCorner = false;
         _confirmRestart = false;
         Mode = TdUiMode.None;
         if (QuizActive) CloseQuiz();
@@ -342,6 +360,8 @@ public sealed partial class TdUiController
     private void SetMode(TdUiMode mode)
     {
         ResetBuild();
+        QuickTowersOpen = false;
+        _endCorner = false;
         _confirmRestart = false;
         Mode = mode;
         UpdateModalPause();
@@ -352,7 +372,7 @@ public sealed partial class TdUiController
 
     private void UpdateModalPause()
     {
-        int count = BuildActive ? 0 : (Mode != TdUiMode.None ? 1 : 0) + (QuizActive ? 1 : 0);
+        int count = ModalOpen ? 1 : 0;
         if (_modalCount == count) return;
         bool wasOpen = _modalCount > 0;
         _modalCount = count;
@@ -405,15 +425,17 @@ public sealed partial class TdUiController
         string coreTip = "Integridade do núcleo: se chegar a 0 você perde a fase. Inimigos que chegam ao núcleo tiram integridade.";
 
         bool needed = _onb is not null && (HudNeeded(m) || ComputeStep(m) == TdTutorialStep.HudOpen);
-        items.Add(new TdUiItem(new DipRect(0, 0, 290, 28), TdUiKind.Button,
+        items.Add(new TdUiItem(new DipRect(0, 0, 260, 28), TdUiKind.Button,
             $"{integ}/{max}  Onda {shown}/{m.TotalWaves}  ¢{m.Credits}{(ModalOpen ? " ⏸" : "")}",
             TdUiAction.HudRestore, Icon: TdIcon.Heart, Tone: integTone, Tip: coreTip, RightIcon: TdIcon.Expand, Highlight: (needed || m.CrateActive) && PulseOn));
+        items.Add(new TdUiItem(new DipRect(264, 0, 26, 28), TdUiKind.Button, "", TdUiAction.QuickTowers,
+            Enabled: !ModalOpen, Icon: TdIcon.Menu, Tip: "Torres", Selected: QuickTowersOpen));
         var (text, right, enabled, tone, tip) = StartButton(m);
         items.Add(new TdUiItem(new DipRect(294, 0, 126, 28), TdUiKind.Button, text, TdUiAction.StartWave,
             Right: right, Enabled: enabled && !StartBlockedFor(m) && !ModalOpen, Tone: tone, Tip: StartBlockedFor(m) ? "Coloque 1 torre primeiro" : tip, Icon: m.Phase == MatchPhase.Onda ? TdIcon.FastForward : TdIcon.Play, RightCoin: right is not null));
         items.Add(new TdUiItem(new DipRect(424, 0, 116, 28), TdUiKind.Button, "Coletar caixa", TdUiAction.CollectCrate,
             Enabled: m.CrateActive && !ModalOpen, Icon: TdIcon.Box, Highlight: m.CrateActive && PulseOn, Tip: "Coletar caixa: Ctrl+Alt+C"));
-        return new TdHudView(HighlightHud(items), 540, 28, Minimized: true);
+        return new TdHudView(HighlightHud(items), 540, 28, Minimized: true, Wave: shown, TotalWaves: m.TotalWaves);
     }
 
     /// <summary>Dica do item do HUD sob o ponto (null = sem dica). A janela do tooltip posiciona acima do item.</summary>
@@ -461,8 +483,9 @@ public sealed partial class TdUiController
     public TdPopoverView? BuildPopover()
     {
         var m = _match();
+        if (QuickTowersOpen) return BuildQuickTowers(m);
         if (BuildActive) return null;
-        if (Mode == TdUiMode.None && _quizQ is not null && m.Phase == MatchPhase.Preparo) return Modalize(BuildQuiz(m));
+        if (Mode == TdUiMode.None && _quizQ is not null && m.Phase == MatchPhase.Preparo) return BuildQuiz(m);
         var view = Mode switch
         {
             TdUiMode.Build => BuildChooser(m),
@@ -476,14 +499,110 @@ public sealed partial class TdUiController
             TdUiMode.Runes => Finish("Runas", Placeholder(), 0),
             _ => null,
         };
-        return view is null ? null : Modalize(DecoratePopover(m, view));
+        return view is null ? null : EndCardOpen ? DecoratePopover(m, view) : Modalize(DecoratePopover(m, view));
+    }
+
+    private TdPopoverView BuildQuickTowers(TdMatchState m)
+    {
+        var items = new List<TdUiItem>();
+        for (int i = 0; i < m.Content.Towers.Length; i++)
+        {
+            var d = m.Content.Towers[i];
+            long price = m.NextTowerCost(i);
+            items.Add(new TdUiItem(new DipRect(8 + i * 80, 38, 76, 88), TdUiKind.Button, d.Name,
+                TdUiAction.ChooseTower, SArg: d.Id, Right: $"${price}", Enabled: m.StageId >= d.UnlockStage && m.Credits >= price,
+                Selected: _placementType == d.Id));
+        }
+        return new TdPopoverView(BuildActive ? "TORRES   Toque na faixa" : "TORRES   Escolha uma torre", [.. items], 416, 136, 0);
     }
 
     private static Stack Placeholder()
     {
         var s = new Stack(PopoverWidth);
-        s.Add(TdUiKind.Label, "Em breve", RowH);
+        s.Add(TdUiKind.Label, "Runas chegam em breve", RowH);
+        s.Add(TdUiKind.Label, "Esta aba ainda não está disponível. Volte em uma próxima atualização.", TwoLineH);
+        s.Add(TdUiKind.Label, "Em breve", RowH, tone: TdTone.Accent);
         return s;
+    }
+
+    /// <summary>Composição do Main.dc.html para Runas, Torres, Jogo e Como jogar (modal 720×480, conteúdo a partir de y=100).</summary>
+    private void RelayoutTab(TdPopoverView view, List<TdUiItem> items)
+    {
+        TdUiItem Put(TdUiItem it, float x, float y, float w, float h) => it with { Rect = new DipRect(x, y, w, h) };
+        var src = view.Items;
+        foreach (var it in src) if (it.Action == TdUiAction.Close) items.Add(Put(it, 674, 4, 36, 36));
+        switch (Mode)
+        {
+            case TdUiMode.Runes:
+                items.Add(new(new DipRect(160, 262, 400, 26), TdUiKind.Label, "Runas chegam em breve", Icon: TdIcon.Lock, SArg: "c18"));
+                items.Add(new(new DipRect(160, 296, 400, 20), TdUiKind.Label, "Esta aba ainda não está disponível. Volte em uma próxima atualização.", SArg: "c13"));
+                items.Add(new(new DipRect(300, 328, 120, 24), TdUiKind.Label, "Em breve", SArg: "badge"));
+                break;
+            case TdUiMode.Help:
+            {
+                int n = 0;
+                foreach (var it in src)
+                {
+                    if (it.Action == TdUiAction.Close) continue;
+                    if (it.Action == TdUiAction.RedoTutorial) { items.Add(Put(it, 16, 400, 180, 40)); continue; }
+                    int row = n / 2, col = n % 2; n++;
+                    items.Add(Put(it, 16 + col * 352, 108 + row * 36, 336, 30));
+                }
+                break;
+            }
+            case TdUiMode.Towers:
+            {
+                var m = _match();
+                items.Add(new(new DipRect(16, 104, 400, 18), TdUiKind.Label, $"Torres em campo: {m.Towers.Count}", Tone: TdTone.Dim, SArg: "hdr"));
+                items.Add(new(new DipRect(500, 104, 204, 18), TdUiKind.Label, $"Venda devolve {Math.Round(m.Content.Stages.Rules.SellRefund * 100):0}%", Tone: TdTone.Dim, SArg: "hdrR"));
+                if (m.Towers.Count == 0)
+                {
+                    items.Add(new(new DipRect(16, 132, 688, 320), TdUiKind.Label, "", SArg: "empty"));
+                    items.Add(new(new DipRect(160, 268, 400, 26), TdUiKind.Label, "Nenhuma torre em campo", Icon: TdIcon.Build, SArg: "c18"));
+                    items.Add(new(new DipRect(160, 302, 400, 20), TdUiKind.Label, "Construa uma torre para gerenciá-la aqui. Você pode vender a qualquer momento.", SArg: "c13"));
+                    items.Add(new(new DipRect(260, 336, 200, 40), TdUiKind.Button, "Ir para Construir", TdUiAction.ModalTab, (int)TdUiMode.Build, SArg: "primary"));
+                    break;
+                }
+                int row = 0;
+                foreach (var it in src)
+                {
+                    if (it.Action is TdUiAction.Close or TdUiAction.None) continue;
+                    float y = 132 + row * 52;
+                    if (it.Action == TdUiAction.OpenTower) items.Add(Put(it, 16, y, 560, 46));
+                    else if (it.Action == TdUiAction.Sell) { items.Add(Put(it, 584, y, 120, 46)); row++; }
+                    else if (it.Action == TdUiAction.Reposition) items.Add(Put(it, 330, y + 6, 240, 34));
+                    else items.Add(Put(it, 16 + (it.Arg > 0 ? 360 : 0), 132 + 8 * 52 + 4, 336, 34));
+                }
+                break;
+            }
+            case TdUiMode.Menu:
+            {
+                float lx = 16, rx = 368, w = 336;
+                int ab = 0, opt = 0;
+                foreach (var it in src)
+                {
+                    switch (it.Action)
+                    {
+                        case TdUiAction.None when it.Kind == TdUiKind.Bar: items.Add(Put(it, lx, 104, w, 64)); break;
+                        case TdUiAction.ResumeAbility: items.Add(Put(it, lx + ab++ * 114, 196, 108, 56)); break;
+                        case TdUiAction.Preview: items.Add(Put(it, lx, 282, 165, 40)); break;
+                        case TdUiAction.TowersOpen: items.Add(Put(it, lx + 171, 282, 165, 40)); break;
+                        case TdUiAction.MapOpen: items.Add(Put(it, lx, 328, 165, 40)); break;
+                        case TdUiAction.HowTo: items.Add(Put(it, lx + 171, 328, 165, 40)); break;
+                        case TdUiAction.RestartPrompt: items.Add(Put(it, lx, 376, w, 40)); break;
+                        case TdUiAction.Restart: items.Add(Put(it, lx, 376, 165, 40)); break;
+                        case TdUiAction.None when it.Text == "Reiniciar?": items.Add(Put(it, lx, 358, w, 14) with { SArg = "sec", Tone = TdTone.Warn }); break;
+                        case TdUiAction.RestartCancel: items.Add(Put(it, lx + 171, 376, 165, 40)); break;
+                        case TdUiAction.GameOption: items.Add(Put(it, rx, 122 + opt++ * 40, w, 40)); break;
+                        case TdUiAction.Exit: items.Add(Put(it, rx, 372, w, 40)); break;
+                    }
+                }
+                items.Add(new(new DipRect(lx, 178, w, 14), TdUiKind.Label, "HABILIDADES", SArg: "sec"));
+                items.Add(new(new DipRect(lx, 264, w, 14), TdUiKind.Label, "AÇÕES", SArg: "sec"));
+                items.Add(new(new DipRect(rx, 104, w, 14), TdUiKind.Label, "CONFIGURAÇÕES", SArg: "sec"));
+                break;
+            }
+        }
     }
 
     private TdPopoverView? Modalize(TdPopoverView? view)
@@ -493,15 +612,36 @@ public sealed partial class TdUiController
         var modes = new[] { TdUiMode.Build, TdUiMode.Runes, TdUiMode.Towers, TdUiMode.Menu, TdUiMode.Help };
         string[] labels = ["Construir", "Runas", "Torres", "Jogo", "Como jogar"];
         for (int i = 0; i < modes.Length; i++)
-            items.Add(new(new DipRect(12 + i * 136, 30, 132, 28), TdUiKind.Button, labels[i],
+            items.Add(new(new DipRect(16 + i * 136, 52, 132, 36), TdUiKind.Button, labels[i],
                 TdUiAction.ModalTab, (int)modes[i], Selected: Mode == modes[i]));
         float factor = Math.Min(1f, 402f / Math.Max(1, view.Height));
+        int towerRow = 0;
+        if (Mode is TdUiMode.Menu or TdUiMode.Towers or TdUiMode.Help or TdUiMode.Runes)
+        {
+            RelayoutTab(view, items);
+            return new TdPopoverView($"{view.Title}   ¢{_match().Credits}", [.. items], 720, 480, 0);
+        }
         foreach (var item in view.Items)
         {
             var r = item.Rect;
-            items.Add(item with { Rect = new DipRect(r.X * 2.2f + 20, 66 + r.Y * factor, r.W * 2.2f, r.H * factor) });
+            if (item.Action == TdUiAction.Close)
+            {
+                items.Add(item with { Rect = new DipRect(674, 4, 36, 36) });
+                continue;
+            }
+            if (Mode == TdUiMode.Build && item.Kind == TdUiKind.Label && towerRow == 0)
+            {
+                items.Add(item with { Rect = new DipRect(16, 103, 688, 18) });
+                continue;
+            }
+            if (item.Action == TdUiAction.ChooseTower)
+            {
+                items.Add(item with { Rect = new DipRect(16, 130 + towerRow++ * 64, 688, 58) });
+                continue;
+            }
+            items.Add(item with { Rect = new DipRect(r.X * 2.2f + 20, 96 + r.Y * factor * .92f, r.W * 2.2f, r.H * factor * .92f) });
         }
-        return new TdPopoverView($"{view.Title}   ¢{_match().Credits}   Pausado", [.. items], 720, 480, 0);
+        return new TdPopoverView($"{view.Title}   ¢{_match().Credits}", [.. items], 720, 480, 0);
     }
 
     private sealed class Stack(float width)
@@ -576,7 +716,7 @@ public sealed partial class TdUiController
             if (_notice is not null) s.Add(TdUiKind.Label, _notice, RowH - 4, tone: TdTone.Warn);
             return Finish(title, s, _anchorX);
         }
-        s.Add(TdUiKind.Label, $"Torres {m.Towers.Count}   Creditos {m.Credits}", RowH - 4, tone: TdTone.Dim);
+        s.Add(TdUiKind.Label, "Escolha uma torre e toque na faixa para posicionar.", RowH - 4, tone: TdTone.Dim);
         var towers = m.Content.Towers;
         for (int i = 0; i < towers.Length; i++)
         {

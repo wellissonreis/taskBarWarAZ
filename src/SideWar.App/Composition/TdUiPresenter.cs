@@ -67,7 +67,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     private int hudHover = -1, popHover = -1;
     private long hudSig = long.MinValue, popSig = long.MinValue;
     private PixelRect popBounds;
-    private bool buildApplied, escApplied, disposed;
+    private bool buildApplied, escApplied, disposed, quickApplied;
     private long? deadline;
 
     public TdUiPresenter(GameThread game, GameRuntime runtime, TdComposition td, TdRenderDriver driver, Typography typography,
@@ -191,14 +191,14 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         popWindow.Moved += (x, y) =>
         {
             Present();
-            int h = pop?.HitTest(x / ModalScale, y / ModalScale) ?? -1;
+            int h = pop?.HitTest(x / PopScale, y / PopScale) ?? -1;
             if (h == popHover) return;
             popHover = h;
             controller.Hover(h >= 0 ? pop!.Items[h] : null);
             Refresh(true);
         };
         popWindow.Left += () => { if (popHover != -1) { popHover = -1; controller.Hover(null); Refresh(true); } };
-        popWindow.LeftUp += (x, y) => Click(pop?.Items, pop?.HitTest(x / ModalScale, y / ModalScale) ?? -1);
+        popWindow.LeftUp += (x, y) => Click(pop?.Items, pop?.HitTest(x / PopScale, y / PopScale) ?? -1);
         popWindow.RightUp += (_, _) => controller.Cancel();
         tipWindow.LeftUp += (_, _) => { Present(); controller.DismissTip(); };
 
@@ -223,6 +223,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
 
     /// <summary>Pixels por DIP de desenho do HUD/popover/dica: DPI × escala do HUD (proporcional à faixa).</summary>
     private float UiScale => Scale * hudScale;
+    private float PopScale => controller.CornerPopover ? UiScale : ModalScale;
     private float ModalScale => game.Dock.Current is { } c ? TdModalLayout.Scale(c.Monitor.WorkArea, Scale) : Scale;
 
     private void ModalKey(int key)
@@ -326,20 +327,28 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         else
         {
             var work = c.Monitor.WorkArea;
-            var bounds = TdModalLayout.Bounds(work, Scale);
-            if (scrimWindow is not null && (!scrimWindow.WantsVisible || scrimWindow.Bounds != c.Monitor.Bounds))
+            bool quick = controller.CornerPopover;
+            int quickW = (int)MathF.Round(pop.Width * UiScale), quickH = (int)MathF.Round(pop.Height * UiScale);
+            var bounds = quick ? new PixelRect(hudBounds.Right - quickW, Math.Max(work.Top, hudBounds.Top - quickH - 2), hudBounds.Right, Math.Max(work.Top, hudBounds.Top - quickH - 2) + quickH) : TdModalLayout.Bounds(work, Scale);
+            if (!quick && scrimWindow is not null && (!scrimWindow.WantsVisible || scrimWindow.Bounds != c.Monitor.Bounds))
             {
                 scrimWindow.Apply(c.Monitor.Bounds); scrimWindow.Show();
                 Draw(scrimWindow, scrimCanvas, cv => cv.Clear(new SkiaSharp.SKColor(0, 0, 0, 120)));
             }
+            if (quick) scrimWindow?.Hide();
+            if (quickApplied != quick && popWindow.WantsVisible)
+            {
+                if (quick) { popWindow.DeactivateModal(); popWindow.RestoreFocus(); } else popWindow.ActivateModal();
+            }
+            quickApplied = quick;
             long ps = pop.Signature() * 31 + popHover;
             bool moved = bounds != popBounds || !popWindow.WantsVisible;
             if (moved) { popWindow.Apply(bounds); popBounds = bounds; popCanvas.Invalidate(); }
-            if (!popWindow.WantsVisible) { popWindow.Show(); popWindow.Surface.SetOpacity(255); popWindow.ActivateModal(); }
+            if (!popWindow.WantsVisible) { popWindow.Show(); popWindow.Surface.SetOpacity(controller.QuickTowersOpen ? focus.Alpha : (byte)255); if (quick) popWindow.DeactivateModal(); else popWindow.ActivateModal(); }
             if (force || moved || ps != popSig)
             {
                 popSig = ps;
-                Draw(popWindow, popCanvas, cv => { cv.Save(); cv.Scale(ModalScale / Scale); modalRenderer!.DrawPopover(cv, pop, popHover); cv.Restore(); });
+                Draw(popWindow, popCanvas, cv => { if (quick) renderer.DrawPopover(cv, pop, popHover); else { cv.Save(); cv.Scale(ModalScale / Scale); modalRenderer!.DrawPopover(cv, pop, popHover); cv.Restore(); } });
             }
         }
         if (controller.ModalOpen) { Present(); game.Mode.SetTdFade(255); driver.Absent = false; }

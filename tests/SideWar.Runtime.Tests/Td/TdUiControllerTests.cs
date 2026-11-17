@@ -76,6 +76,24 @@ public sealed class TdUiControllerTests
         v.Items.First(i => i.Action == a && (sarg is null || i.SArg == sarg));
 
     [Fact]
+    public void Quick_towers_builds_without_pausing_and_stays_open()
+    {
+        var r = new Rig();
+        r.Ui.Activate(Assert.Single(r.Ui.BuildHud().Items, i => i.Action == TdUiAction.QuickTowers));
+        Assert.True(r.Ui.QuickTowersOpen);
+        Assert.False(r.Ui.ModalOpen);
+        r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.ChooseTower, "bolt"));
+        Assert.True(r.Ui.BuildActive);
+        Assert.True(r.Ui.SceneLeftClick(300, 20, HitTarget.None));
+        Assert.Single(r.Match.Towers);
+        Assert.True(r.Ui.QuickTowersOpen);
+        Assert.False(r.Ui.BuildActive);
+        Assert.DoesNotContain(r.Sent, c => c is Pause or Resume);
+        r.Ui.Cancel();
+        Assert.False(r.Ui.QuickTowersOpen);
+    }
+
+    [Fact]
     public void Ability_closes_and_resumes_before_sending_the_time_command()
     {
         var r = new Rig();
@@ -327,9 +345,16 @@ public sealed class TdUiControllerTests
         Assert.StartsWith("DERROTA", card.Title, StringComparison.Ordinal);
         Assert.DoesNotContain(card.Items, i => i.Action == TdUiAction.NextStage);
         Assert.Contains(card.Items, i => i.Action == TdUiAction.MapOpen);
+        Assert.Contains(card.Items, i => i.Action == TdUiAction.Restart); // o card do cantinho mantém "Reiniciar fase"
+        Assert.True(r.Ui.EndCardOpen);
+        Assert.True(r.Ui.CornerPopover);
+        Assert.False(r.Ui.ModalOpen); // automático: cantinho, sem modal central
+        Assert.DoesNotContain(card.Items, i => i.Action == TdUiAction.ModalTab);
         r.Ui.Cancel();
         r.Ui.Activate(r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.HudRestore));
         Assert.Equal(TdUiMode.End, r.Ui.Mode);
+        Assert.False(r.Ui.EndCardOpen);
+        Assert.True(r.Ui.ModalOpen); // clique do usuário no chip abre a modal central
         card = r.Ui.BuildPopover()!;
         r.Host.OnStartStage = stage => r.Match = Create(stage);
         r.Ui.Activate(Find(card, TdUiAction.Restart));

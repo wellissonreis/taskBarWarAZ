@@ -184,6 +184,20 @@ public static class Palette
     /// <summary>Faixa TD (TD.7): tons da cena de 32 DIP que não têm token em SDD-20 (código de cor por traço de inimigo, trilho, placa de torre).</summary>
     public static class Td
     {
+        public static readonly SKColor Background = new(0x0b, 0x16, 0x26);
+        public static readonly SKColor Surface = new(0x0e, 0x1a, 0x2c);
+        public static readonly SKColor Border = new(0x1c, 0x2e, 0x47);
+        public static readonly SKColor BorderStrong = new(0x22, 0x38, 0x5a);
+        public static readonly SKColor Text = new(0xe6, 0xed, 0xf7);
+        public static readonly SKColor Muted = new(0x93, 0xa4, 0xbc);
+        public static readonly SKColor Dim = new(0x7f, 0x91, 0xab);
+        public static readonly SKColor Amber = new(0xf5, 0xb5, 0x44);
+        public static readonly SKColor Red = new(0xf2, 0x6d, 0x7d);
+        public static readonly SKColor Green = new(0x5b, 0xd6, 0x9a);
+        public static readonly SKColor Bolt = new(0x4f, 0xd1, 0xe8);
+        public static readonly SKColor Frost = new(0x93, 0xc5, 0xfd);
+        public static readonly SKColor Cannon = new(0xf5, 0x9e, 0x5a);
+        public static readonly SKColor PauseBadge = new(0x32, 0x2b, 0x25);
         public static readonly SKColor EnemySolo = new(0x8a, 0xa0, 0xc0);
         public static readonly SKColor EnemyDrain = new(0xff, 0x4d, 0xd2);
         public static readonly SKColor Plate = new(0x0b, 0x1a, 0x2e, 0xe6);

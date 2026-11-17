@@ -23,6 +23,12 @@ public sealed class TdUiWindow : OverlayChildWindow
         NativeFocus.AllowActivation(Handle);
         NativeFocus.Activate(Handle);
     }
+    /// <summary>Volta a janela ao estado sem ativação (cartão no cantinho: clicar nunca rouba o foco).</summary>
+    public void DeactivateModal()
+    {
+        classIsModal = false;
+        NativeFocus.BlockActivation(Handle);
+    }
     public void RestoreFocus()
     {
         if (previousFocus != 0) NativeFocus.Activate(previousFocus);
@@ -55,5 +61,6 @@ internal static class NativeFocus
     private static extern int SetWindowLong(nint window, int index, int value);
     internal static nint Foreground() => GetForegroundWindow();
     internal static void AllowActivation(nint window) => _ = SetWindowLong(window, -20, GetWindowLong(window, -20) & ~0x08000000);
+    internal static void BlockActivation(nint window) => _ = SetWindowLong(window, -20, GetWindowLong(window, -20) | 0x08000000);
     internal static void Activate(nint window) => _ = SetForegroundWindow(window);
 }

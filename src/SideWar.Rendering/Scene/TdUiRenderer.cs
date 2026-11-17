@@ -31,10 +31,16 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     public void DrawHud(SKCanvas c, TdHudView hud, int hover)
     {
         c.Clear(SKColors.Transparent);
-        _p.Box(c, new DipRect(0, 0, hud.Width, hud.Height), Palette.BordaForte, Palette.Td.Plate);
+        RoundBox(c, new DipRect(0, 0, hud.Width, hud.Height), Palette.Td.Border, Palette.Td.Surface, 5);
         for (int i = 0; i < hud.Items.Length; i++)
         {
             DrawHudItem(c, hud.Items[i], i == hover);
+            if (i == 0 && hud.TotalWaves > 0)
+            {
+                int bars = Math.Min(hud.TotalWaves, 20);
+                for (int b = 0; b < bars; b++)
+                    _p.Fill(c, new DipRect(104 + b * 5, 23, 3, 2), b < hud.Wave ? Palette.Td.Amber : Palette.Td.BorderStrong);
+            }
             if (hud.Items[i].Highlight) DrawHighlight(c, hud.Items[i].Rect);
         }
     }
@@ -108,9 +114,10 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         bool enabled = it.Enabled && it.Action != TdUiAction.None;
         if (isButton)
         {
-            var border = it.Selected ? Palette.Ambar : enabled ? (hover ? Palette.AzulClaro : Palette.BordaForte) : Palette.BordaPainel;
-            var fill = it.Selected || (hover && enabled) ? Palette.BgCard : Palette.BgItem;
-            _p.Box(c, r, border, fill);
+            var border = enabled && it.Action == TdUiAction.CollectCrate ? Palette.Td.Amber : Palette.Td.BorderStrong;
+            var fill = enabled && it.Action == TdUiAction.CollectCrate ? Palette.Td.Amber : hover && enabled ? Palette.Td.BorderStrong : Palette.Td.Surface;
+            RoundBox(c, r, border, fill, 4);
+            if (it.Action == TdUiAction.CollectCrate && enabled) color = Palette.Td.Background;
             if (it.Fill > 0f) _p.Fill(c, new DipRect(r.X + 1, r.Y + r.H - 3, (r.W - 2) * it.Fill, 2), Palette.Azul);
             if (!enabled && it.Tone != TdTone.Dim) color = Palette.TxtRotulo;
         }
@@ -140,11 +147,174 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         _p.Text(c, it.Text, PanelFont.JetBrainsMono, fs, new DipRect(x, r.Y + (r.H - 12f) / 2f, r.W - (x - r.X) - rightW - 2f, 12f), color);
     }
 
+    private void RoundBox(SKCanvas c, DipRect r, SKColor border, SKColor fill, float radius)
+    {
+        var rect = new SKRect(_p.Px(r.X), _p.Px(r.Y), _p.Px(r.X + r.W), _p.Px(r.Y + r.H));
+        using var paint = new SKPaint { IsAntialias = true, Color = fill };
+        c.DrawRoundRect(rect, _p.Px(radius), _p.Px(radius), paint);
+        paint.Style = SKPaintStyle.Stroke; paint.StrokeWidth = Math.Max(1, _p.Px(1)); paint.Color = border;
+        c.DrawRoundRect(rect, _p.Px(radius), _p.Px(radius), paint);
+    }
+
+    private void DrawModalItem(SKCanvas c, in TdUiItem it, bool hover)
+    {
+        var r = it.Rect;
+        if (it.Action == TdUiAction.ModalTab)
+        {
+            if (it.Selected) RoundBox(c, r, Palette.Td.BorderStrong, Palette.Td.BorderStrong, 5);
+            _p.Text(c, it.Text, PanelFont.JetBrainsMono, 11, new DipRect(r.X + 8, r.Y + 11, r.W - 16, 16), it.Selected ? Palette.Td.Text : Palette.Td.Muted, TextAlign.Center);
+            return;
+        }
+        if (it.Action == TdUiAction.Close)
+        {
+            DrawIcon(c, TdIcon.Cross, r.X + 10, r.Y + 10, 16, Palette.Td.Muted);
+            return;
+        }
+        if (it.Kind == TdUiKind.Label) { DrawModalLabel(c, it); return; }
+        if (it.Kind == TdUiKind.Bar) { DrawRankCard(c, it); return; }
+        if (it.Action == TdUiAction.ResumeAbility)
+        {
+            RoundBox(c, r, Palette.Td.BorderStrong, hover && it.Enabled ? Palette.Td.BorderStrong : Palette.Td.Surface, 6);
+            var fg = it.Enabled ? Palette.Td.Text : Palette.Td.Muted;
+            DrawIcon(c, it.Text switch { "Escalar" => TdIcon.Scale, "Firewall" => TdIcon.Firewall, _ => TdIcon.Snapshot }, r.X + r.W / 2 - 7, r.Y + 8, 14, fg);
+            _p.Text(c, it.Text, PanelFont.JetBrainsMono, 11, new DipRect(r.X + 2, r.Y + 26, r.W - 4, 14), fg, TextAlign.Center);
+            _p.Text(c, it.Right ?? "", PanelFont.JetBrainsMono, 9, new DipRect(r.X + 2, r.Y + 40, r.W - 4, 12), it.Enabled ? Palette.Td.Amber : Palette.Td.Muted, TextAlign.Center);
+            return;
+        }
+        if (it.Action == TdUiAction.GameOption)
+        {
+            if (it.Arg == 0) RoundBox(c, new DipRect(r.X, r.Y, r.W, 240), Palette.Td.BorderStrong, Palette.Td.Surface, 8);
+            if (hover) _p.Fill(c, new DipRect(r.X + 1, r.Y + 1, r.W - 2, r.H - 2), Palette.Td.BorderStrong.WithAlpha((byte)90));
+            int colon = it.Text.IndexOf(':');
+            string name = colon > 0 ? it.Text[..colon] : it.Text, val = colon > 0 ? it.Text[(colon + 1)..].Trim() : "";
+            _p.Text(c, name, PanelFont.JetBrainsMono, 12, new DipRect(r.X + 12, r.Y + 12, 150, 16), Palette.Td.Text);
+            if (it.Arg is 1 or 2 or 4 or 5)
+            {
+                bool on = val.StartsWith("lig", StringComparison.Ordinal);
+                RoundBox(c, new DipRect(r.X + r.W - 52, r.Y + 11, 38, 18), on ? Palette.Td.Amber : Palette.Td.BorderStrong, on ? Palette.Td.Amber : Palette.Td.Background, 9);
+                _p.Fill(c, new DipRect(r.X + r.W - (on ? 32 : 48), r.Y + 14, 12, 12), on ? Palette.Td.Background : Palette.Td.Muted);
+            }
+            else
+            {
+                if (it.Right is not null) _p.Text(c, it.Right, PanelFont.JetBrainsMono, 9, new DipRect(r.X + r.W - 160, r.Y + 13, 90, 14), Palette.Td.Amber, TextAlign.Right);
+                _p.Text(c, val, PanelFont.JetBrainsMono, 12, new DipRect(r.X + r.W - 68, r.Y + 12, 56, 16), Palette.Td.Text, TextAlign.Right);
+            }
+            if (it.Arg < 5) _p.Fill(c, new DipRect(r.X + 1, r.Y + r.H - 1, r.W - 2, 1), Palette.Td.Border);
+            return;
+        }
+        if (it.Action == TdUiAction.ChooseTower)
+        {
+            var col = it.SArg switch { "raio" or "lightning" or "bolt" => Palette.Td.Bolt, "gelo" or "ice" or "frost" => Palette.Td.Frost, "canhao" or "cannon" => Palette.Td.Cannon, _ => Palette.Td.Dim };
+            RoundBox(c, r, it.Selected ? Palette.Td.Amber : Palette.Td.BorderStrong, hover && it.Enabled ? Palette.Td.BorderStrong : Palette.Td.Surface, 8);
+            float size = Math.Min(44, r.H - 8);
+            RoundBox(c, new DipRect(r.X + 7, r.Y + (r.H - size) / 2, size, size), Palette.Td.BorderStrong, col.WithAlpha(40), 6);
+            DrawIcon(c, it.Enabled ? it.SArg switch { "bolt" => TdIcon.Bolt, "frost" => TdIcon.Frost, _ => TdIcon.Target } : TdIcon.Lock, r.X + 7 + (size - 22) / 2, r.Y + (r.H - 22) / 2, 22, col);
+            _p.Text(c, it.Text, PanelFont.JetBrainsMono, 12, new DipRect(r.X + 60, r.Y + 8, 150, 16), it.Enabled ? Palette.Td.Text : Palette.Td.Muted);
+            if (it.Sub is not null) DrawWrapped(c, it.Sub, new DipRect(r.X + 210, r.Y + 9, Math.Max(20, r.W - 290), r.H - 12), Palette.Td.Muted);
+            if (it.Right is not null) _p.Text(c, it.Right, PanelFont.JetBrainsMono, 12, new DipRect(r.X + r.W - 78, r.Y + 10, 66, 16), it.Enabled ? Palette.Td.Amber : Palette.Td.Dim, TextAlign.Right);
+            return;
+        }
+        if (it.Kind == TdUiKind.Button)
+        {
+            var tint = it.SArg == "primary" || it.Action == TdUiAction.Preview ? Palette.Td.Amber : it.Tone == TdTone.Bad ? Palette.Td.Red : it.Tone == TdTone.Good ? Palette.Td.Green : default;
+            var border = it.Selected ? Palette.Td.Amber : tint == default ? Palette.Td.BorderStrong : tint.WithAlpha(115);
+            var back = it.SArg == "primary" ? Palette.Td.Amber : tint != default ? tint.WithAlpha((byte)(hover ? 45 : 28)) : hover && it.Enabled ? Palette.Td.BorderStrong : Palette.Td.Surface;
+            RoundBox(c, r, border, back, 6);
+            var fg = !it.Enabled ? Palette.Td.Dim : it.SArg == "primary" ? Palette.Td.Background : tint != default ? tint : Palette.Td.Text;
+            float tx = r.X + 10;
+            if (it.Icon != TdIcon.None) { DrawIcon(c, it.Icon, tx, r.Y + (r.H - 14) / 2, 14, fg); tx += 22; }
+            _p.Text(c, it.Text, PanelFont.JetBrainsMono, r.H >= 34 ? 12 : 10, new DipRect(tx, r.Y + Math.Max(2, (r.H - 13) / 2), r.W - (tx - r.X) - 10, 13), fg);
+            if (it.Right is not null) _p.Text(c, it.Right, PanelFont.JetBrainsMono, 10, new DipRect(r.X + 10, r.Y + Math.Max(2, (r.H - 13) / 2), r.W - 20, 13), Palette.Td.Amber, TextAlign.Right);
+            return;
+        }
+        DrawItem(c, it, hover, 720, false);
+    }
+
+    private void DrawModalLabel(SKCanvas c, in TdUiItem it)
+    {
+        var r = it.Rect;
+        switch (it.SArg)
+        {
+            case "sec": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 10, r, Palette.Td.Muted); return;
+            case "hdr": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 12, r, Palette.Td.Muted); return;
+            case "hdrR": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 10, r, Palette.Td.Muted, TextAlign.Right); return;
+            case "empty": RoundBox(c, r, Palette.Td.BorderStrong, Palette.Td.Surface, 10); return;
+            case "badge":
+                RoundBox(c, r, Palette.Td.Amber.WithAlpha(30), Palette.Td.Amber.WithAlpha(30), 12);
+                _p.Text(c, it.Text.ToUpperInvariant(), PanelFont.JetBrainsMono, 10, new DipRect(r.X, r.Y + 5, r.W, 14), Palette.Td.Amber, TextAlign.Center);
+                return;
+            case "c18":
+                RoundBox(c, new DipRect(r.X + r.W / 2 - 32, r.Y - 84, 64, 64), Palette.Td.BorderStrong, Palette.Td.Border, 12);
+                if (it.Icon != TdIcon.None) DrawIcon(c, it.Icon, r.X + r.W / 2 - 14, r.Y - 66, 28, it.Icon == TdIcon.Lock ? Palette.Td.Amber : Palette.Td.Muted);
+                _p.Text(c, it.Text, PanelFont.JetBrainsMono, 16, r, Palette.Td.Text, TextAlign.Center);
+                return;
+            case "c13": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 11, r, Palette.Td.Muted, TextAlign.Center); return;
+        }
+        if (it.Icon != TdIcon.None)
+        {
+            var accent = it.Icon == TdIcon.Heart ? Palette.Td.Red : it.Icon is TdIcon.Coin or TdIcon.Crown or TdIcon.Medal ? Palette.Td.Amber : Palette.Td.Muted;
+            float ty = r.Y + (r.H - 26) / 2;
+            RoundBox(c, new DipRect(r.X, ty, 26, 26), accent == Palette.Td.Muted ? Palette.Td.BorderStrong : accent.WithAlpha(36), accent == Palette.Td.Muted ? Palette.Td.Surface : accent.WithAlpha(36), 6);
+            DrawIcon(c, it.Icon, r.X + 6, ty + 6, 14, accent);
+            _p.Text(c, it.Text, PanelFont.JetBrainsMono, 11, new DipRect(r.X + 36, r.Y + (r.H - 14) / 2, r.W - 36, 14), Palette.Td.Text);
+            return;
+        }
+        var col = it.Tone switch { TdTone.Warn or TdTone.Accent => Palette.Td.Amber, TdTone.Bad => Palette.Td.Red, TdTone.Good => Palette.Td.Green, TdTone.Dim => Palette.Td.Muted, _ => Palette.Td.Text };
+        _p.Text(c, it.Text, PanelFont.JetBrainsMono, 12, r, col);
+    }
+
+    private void DrawRankCard(SKCanvas c, in TdUiItem it)
+    {
+        var r = it.Rect;
+        RoundBox(c, r, Palette.Td.BorderStrong, Palette.Td.Surface, 8);
+        RoundBox(c, new DipRect(r.X + 12, r.Y + 12, 32, 32), Palette.Td.Amber.WithAlpha(36), Palette.Td.Amber.WithAlpha(36), 6);
+        DrawIcon(c, TdIcon.Medal, r.X + 20, r.Y + 20, 16, Palette.Td.Amber);
+        int colon = it.Text.IndexOf(':');
+        _p.Text(c, "Patente", PanelFont.JetBrainsMono, 9, new DipRect(r.X + 54, r.Y + 11, 120, 12), Palette.Td.Muted);
+        _p.Text(c, colon > 0 ? it.Text[(colon + 1)..].Trim() : it.Text, PanelFont.JetBrainsMono, 13, new DipRect(r.X + 54, r.Y + 25, 150, 18), Palette.Td.Amber);
+        if (it.Right is not null) _p.Text(c, it.Right, PanelFont.JetBrainsMono, 9, new DipRect(r.X + r.W - 190, r.Y + 17, 178, 12), Palette.Td.Muted, TextAlign.Right);
+        _p.Fill(c, new DipRect(r.X + 12, r.Y + 50, r.W - 24, 6), Palette.Td.Background);
+        _p.Fill(c, new DipRect(r.X + 12, r.Y + 50, Math.Max(2, (r.W - 24) * it.Fill), 6), Palette.Td.Amber);
+    }
+
     public void DrawPopover(SKCanvas c, TdPopoverView v, int hover)
     {
         c.Clear(SKColors.Transparent);
         float boxH = v.HasArrow ? v.Height - TdPopoverView.ArrowH : v.Height;
-        _p.Box(c, new DipRect(0, 0, v.Width, boxH), v.HasArrow ? Palette.Ambar : Palette.BordaForte, Palette.BgPainel);
+        if (v.Width == 416 && v.Height == 136)
+        {
+            RoundBox(c, new DipRect(0, 0, v.Width, v.Height), Palette.Td.BorderStrong, Palette.Td.Background, 8);
+            _p.Text(c, v.Title, PanelFont.JetBrainsMono, 10, new DipRect(10, 12, 390, 16), Palette.Td.Muted);
+            foreach (var it in v.Items)
+            {
+                var r = it.Rect;
+                var col = it.SArg switch { "bolt" => Palette.Td.Bolt, "frost" => Palette.Td.Frost, "cannon" => Palette.Td.Cannon, _ => Palette.Td.Dim };
+                if (!it.Enabled) col = col.WithAlpha(115);
+                RoundBox(c, r, it.Selected ? Palette.Td.Amber : Palette.Td.BorderStrong, Palette.Td.Surface, 6);
+                RoundBox(c, new DipRect(r.X + 22, r.Y + 6, 32, 32), Palette.Td.BorderStrong, col.WithAlpha(35), 5);
+                DrawIcon(c, it.SArg switch { "bolt" => TdIcon.Bolt, "frost" => TdIcon.Frost, _ => TdIcon.Target }, r.X + 29, r.Y + 13, 18, col);
+                _p.Text(c, it.Text, PanelFont.JetBrainsMono, 8, new DipRect(r.X + 2, r.Y + 46, r.W - 4, 12), it.Enabled ? Palette.Td.Text : Palette.Td.Dim, TextAlign.Center);
+                _p.Text(c, it.Right ?? "", PanelFont.JetBrainsMono, 10, new DipRect(r.X + 2, r.Y + 64, r.W - 4, 12), it.Enabled ? Palette.Td.Amber : Palette.Td.Dim, TextAlign.Center);
+            }
+            return;
+        }
+        bool modal = v.Width == 720 && v.Height == 480 && !v.HasArrow;
+        _p.Box(c, new DipRect(0, 0, v.Width, boxH), modal ? Palette.Td.Border : v.HasArrow ? Palette.Ambar : Palette.BordaForte, modal ? Palette.Td.Background : Palette.BgPainel);
+        if (modal)
+        {
+            _p.Fill(c, new DipRect(1, 1, v.Width - 2, 43), Palette.Td.Surface);
+            _p.Fill(c, new DipRect(1, 44, v.Width - 2, 1), Palette.Td.Border);
+            _p.Fill(c, new DipRect(1, 88, v.Width - 2, 1), Palette.Td.Border);
+            RoundBox(c, new DipRect(16, 10, 86, 24), Palette.Td.Surface, Palette.Td.PauseBadge, 4);
+            _p.Text(c, "Ⅱ PAUSADO", PanelFont.JetBrainsMono, 10, new DipRect(21, 15, 80, 14), Palette.Td.Amber);
+            _p.Text(c, v.Title, PanelFont.JetBrainsMono, 11, new DipRect(112, 15, 550, 16), Palette.Td.Muted);
+            for (int i = 0; i < v.Items.Length; i++)
+            {
+                DrawModalItem(c, v.Items[i], i == hover);
+                if (v.Items[i].Highlight) DrawHighlight(c, v.Items[i].Rect);
+            }
+            return;
+        }
         if (v.HasArrow) DrawArrow(c, Math.Clamp(v.ArrowX, 8f, v.Width - 8f), boxH);
         float titleX = TdUiController.Pad + 2;
         if (v.IconTower is not null)

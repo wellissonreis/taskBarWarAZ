@@ -156,8 +156,8 @@ public sealed class TdBandRenderer : IDisposable
             var e = TdArtMap.TryEnemy(id, out var found) ? found : (i < normal.Length ? TdArtMap.Enemies[0] : TdArtMap.Enemies[^3]);
             _enemyImg[i] = TdSpriteBaker.ByHeight(_atlas, e.Sprite, e.HeightDip * px, e.Tint, e.TintAlpha);
         }
-        _coreImg = TdSpriteBaker.ByWidth(_atlas, SpriteId.Core, TdArtMap.EdgeWidthDip * px);
-        _portalImg = TdSpriteBaker.ByWidth(_atlas, SpriteId.Portal, TdArtMap.EdgeWidthDip * px);
+        _coreImg = TdSpriteBaker.ByHeight(_atlas, SpriteId.Core, TdArtMap.EdgeHeightDip * px, default, 0);
+        _portalImg = TdSpriteBaker.ByHeight(_atlas, SpriteId.Portal, TdArtMap.EdgeHeightDip * px, default, 0);
         _crateImg = TdSpriteBaker.ByWidth(_atlas, SpriteId.SupplyCrate, TdArtMap.CrateWidthDip * px);
         _baked = true;
     }
@@ -221,18 +221,18 @@ public sealed class TdBandRenderer : IDisposable
 
     private void DrawCore(SKCanvas c, TdMatchState m)
     {
-        float cx = TdArtMap.EdgeWidthDip / 2f;
+        float cx = Math.Max(TdArtMap.EdgeWidthDip, WidthDip(_coreImg)) / 2f;
         Blit(c, _coreImg, cx, Ground);
         // integridade legível por cima da sprite: barra acima do núcleo
         float frac = m.IntegrityMax > 0 ? Math.Clamp(m.Integrity / (float)m.IntegrityMax, 0f, 1f) : 0f;
-        float top = Ground - HeightDip(_coreImg) - 3.5f;
+        float top = Math.Max(1f, Ground - HeightDip(_coreImg) - 3.5f);
         _fill.Color = Palette.Placeholder.Edge;
         c.DrawRect(1, top - 0.5f, 30, 3.5f, _fill);
         _fill.Color = frac > 0.5f ? Palette.Menta : frac > 0.25f ? Palette.Ambar : Palette.Perigo;
         c.DrawRect(1.5f, top, 29f * frac, 2.5f, _fill);
     }
 
-    private void DrawPortal(SKCanvas c, int w) => Blit(c, _portalImg, w - TdArtMap.EdgeWidthDip / 2f, Ground);
+    private void DrawPortal(SKCanvas c, int w) => Blit(c, _portalImg, w - Math.Max(TdArtMap.EdgeWidthDip, WidthDip(_portalImg)) / 2f, Ground);
 
     // ------------------------------------------------------------------ alcance, zonas, nós
 

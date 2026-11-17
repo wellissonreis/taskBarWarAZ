@@ -76,21 +76,21 @@ public sealed class TdQuizTests
     }
 
     [Fact]
-    public void Quiz_and_tab_share_pause_until_the_last_modal_closes()
+    public void Quiz_is_a_corner_card_that_never_pauses_nor_opens_the_modal()
     {
         var r = new Rig();
         r.ToSecondPrep();
-        Assert.Equal(1, r.Ui.ModalCount);
+        Assert.True(r.Ui.QuizActive);
+        Assert.True(r.Ui.CornerPopover);
+        Assert.False(r.Ui.ModalOpen);
+        Assert.Equal(0, r.Ui.ModalCount);
+        Assert.DoesNotContain(r.Sent, c => c is Pause);
+        Assert.False(r.Match.Paused);
+        Assert.DoesNotContain(r.Ui.BuildPopover()!.Items, i => i.Action == TdUiAction.ModalTab);
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.ModalTab, (int)TdUiMode.Runes));
-        Assert.Equal(2, r.Ui.ModalCount);
-        Assert.Single(r.Sent.OfType<Pause>());
-        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.QuizClose));
         Assert.Equal(1, r.Ui.ModalCount);
-        Assert.True(r.Match.Paused);
-        Assert.Empty(r.Sent.OfType<Resume>());
         r.Ui.Cancel();
         Assert.Equal(0, r.Ui.ModalCount);
-        Assert.Single(r.Sent.OfType<Resume>());
         Assert.False(r.Match.Paused);
     }
 
@@ -108,7 +108,7 @@ public sealed class TdQuizTests
         Assert.Contains(pop.Items, i => i.Action == TdUiAction.QuizFalse && i.Rect.H >= 30f);
         Assert.Contains(pop.Items, i => i.Kind == TdUiKind.Bar && i.Right == "10 s");
         var start = r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.StartWave);
-        Assert.False(start.Enabled); // modal pausa a simulação
+        Assert.True(start.Enabled); // cartão no cantinho não pausa nem bloqueia Iniciar
     }
 
     [Fact]

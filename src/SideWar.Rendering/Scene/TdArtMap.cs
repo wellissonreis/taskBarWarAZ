@@ -20,6 +20,9 @@ public static class TdArtMap
     /// <summary>Largura (DIP) do núcleo e do portal: cabem na folga de 32 DIP às pontas.</summary>
     public const float EdgeWidthDip = 32f;
 
+    /// <summary>Altura (DIP) do núcleo e do portal: ocupam a faixa inteira (32), maiores que as torres (28) — o limite do espaço de desenho.</summary>
+    public const float EdgeHeightDip = 32f;
+
     /// <summary>Largura (DIP) da caixa-bomba (a área de clique tem 24 DIP de largura).</summary>
     public const float CrateWidthDip = 26f;
 

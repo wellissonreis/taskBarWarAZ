@@ -22,7 +22,7 @@ public enum TdUiAction : byte
     /// <summary>TD.17: avançar passo informativo do tutorial (OK) e pergunta-bônus (V, F, ignorar).</summary>
     TutorialNext, QuizTrue, QuizFalse, QuizClose,
     /// <summary>TD.16b: coletar a caixa-bomba pelo HUD, abrir a lista de torres (vender/reposicionar) e abrir uma torre da lista.</summary>
-    CollectCrate, TowersOpen, OpenTower, ModalTab, TowerPage, AutoStartToggle, GameOption, ResumeAbility, RestartPrompt, RestartCancel,
+    CollectCrate, TowersOpen, OpenTower, ModalTab, TowerPage, AutoStartToggle, GameOption, ResumeAbility, RestartPrompt, RestartCancel, QuickTowers,
 }
 
 /// <summary>Ícone do HUD desenhado por código (TD.14); o renderer mapeia para caminhos vetoriais.</summary>
@@ -30,7 +30,7 @@ public enum TdIcon : byte
 {
     None, Heart, Coin, Wave, Play, FastForward, Build, Menu, Minus, Restore, Lock, Scale, Firewall, Snapshot,
     /// <summary>TD.17: ícones de balão e cartões (alerta, pergunta, certo, errado, alcance, tempo, caixa, portal, coroa, medalha) e chip/recolher do HUD.</summary>
-    Alert, Question, Check, Cross, Target, Clock, Box, Portal, Crown, Medal, Expand, Collapse,
+    Alert, Question, Check, Cross, Target, Clock, Box, Portal, Crown, Medal, Expand, Collapse, Bolt, Frost,
 }
 
 /// <summary>
@@ -81,7 +81,7 @@ public sealed record TdPopoverView(string Title, TdUiItem[] Items, float Width, 
 /// HUD (RF-28.14, TD.14) na área à direita da faixa. Projetado para uma faixa de 64 DIP (<see cref="TdBand.HudBaseWidthDip"/>): a janela
 /// escala por <see cref="TdBand.HudScale"/>. <see cref="Minimized"/> = chip pequeno (núcleo e onda) no canto.
 /// </summary>
-public sealed record TdHudView(TdUiItem[] Items, float Width, float Height, bool Minimized = false)
+public sealed record TdHudView(TdUiItem[] Items, float Width, float Height, bool Minimized = false, int Wave = 0, int TotalWaves = 0)
 {
     public const float DefaultWidth = TdBand.HudBaseWidthDip, DefaultHeight = TdBand.HudBaseHeightDip;
     public const float ChipWidth = 190f, ChipHeight = 28f;
@@ -114,7 +114,7 @@ public sealed record TdHudView(TdUiItem[] Items, float Width, float Height, bool
         {
             h.Add(it.Text); h.Add(it.Right); h.Add(it.Enabled); h.Add(it.Selected); h.Add(it.Highlight); h.Add((int)it.Tone); h.Add((int)(it.Fill * 100)); h.Add((int)it.Icon); h.Add((int)it.RightIcon);
         }
-        h.Add(Minimized);
+        h.Add(Minimized); h.Add(Wave); h.Add(TotalWaves);
         return h.ToHashCode();
     }
 }

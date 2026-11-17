@@ -20,6 +20,10 @@ internal static class TdIconPainter
         SKPoint P(float px, float py) => new(x + px * u, y + py * u);
         switch (icon)
         {
+            case TdIcon.Bolt:
+                Poly(c, line, P(9, 1), P(3, 9), P(7, 9), P(6, 15), P(13, 6), P(9, 6)); break;
+            case TdIcon.Frost:
+                c.DrawLine(P(8, 1), P(8, 15), line); c.DrawLine(P(2, 4), P(14, 12), line); c.DrawLine(P(2, 12), P(14, 4), line); break;
             case TdIcon.Heart:
             {
                 using var b = new SKPathBuilder();
