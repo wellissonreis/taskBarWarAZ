@@ -158,61 +158,14 @@ public sealed class TdContentTests
         Assert.DoesNotContain(ContentLoader.FileNames, n => n.StartsWith("td-", StringComparison.Ordinal));
     }
 
-    private static readonly string[] SectorTowers = ["bolt", "frost", "cannon", "balancer", "scaleset"];
-
-    private const string BoltS1 = "\"id\": \"bolt.s1\", \"sector\": \"bolt\", \"type\": \"small\", \"name\": \"Dano\", \"icon\": \"damage\", \"text\": \"+6%\", \"cost\": 40, \"links\": [\"core\"]";
-
-    [Fact(DisplayName = "TD.19 / CA-29.4 Embedded rune page has 61 nodes, 6 sectors of 9 nodes, 6 borders and the SDD-29 costs")]
-    public void Runes_HaveTheRadialShape()
-    {
-        var r = TdContentLoader.LoadEmbedded().Runes;
-        Assert.Equal(61, r.Nodes.Length);
-        Assert.Equal(["bolt", "frost", "cannon", "balancer", "scaleset", "general"], r.Sectors.Select(s => s.Id));
-        Assert.Equal(1, r.Nodes.Count(n => n.Type == "center"));
-        Assert.Equal(36, r.Nodes.Count(n => n.Type == "small"));
-        Assert.Equal(12, r.Nodes.Count(n => n.Type == "notable"));
-        Assert.Equal(6, r.Nodes.Count(n => n.Type == "keystone"));
-        Assert.Equal(6, r.Nodes.Count(n => n.Type == "border"));
-        Assert.All(r.Sectors, s => Assert.Equal(9, r.Nodes.Count(n => n.Sector == s.Id)));
-        Assert.Equal((40, 120, 120, 200), (r.Costs.Small, r.Costs.Notable, r.Costs.Border, r.Costs.Keystone));
-        Assert.All(r.Nodes.Where(n => n.Type != "center"), n => Assert.Equal(
-            n.Type switch { "small" => 40, "notable" => 120, "keystone" => 200, _ => 120 }, n.Cost));
-        Assert.Equal(680, r.Nodes.Where(n => n.Sector == "bolt").Sum(n => n.Cost)); // setor completo
-        Assert.Equal(4800, r.Nodes.Sum(n => n.Cost)); // página inteira
-        Assert.Equal(8500, r.SellRefundCapBp);
-    }
-
-    [Fact(DisplayName = "TD.19 / CA-29.4 Rune graph is connected from the centre, borders join two sectors, and rune text is short")]
-    public void Runes_GraphIsConnectedAndShort()
-    {
-        var r = TdContentLoader.LoadEmbedded().Runes;
-        var adj = r.Nodes.ToDictionary(n => n.Id, _ => new HashSet<string>());
-        foreach (var n in r.Nodes)
-            foreach (var l in n.Links) { adj[n.Id].Add(l); adj[l].Add(n.Id); }
-        var seen = new HashSet<string> { r.CenterId };
-        var q = new Queue<string>([r.CenterId]);
-        while (q.Count > 0)
-            foreach (var x in adj[q.Dequeue()]) if (seen.Add(x)) q.Enqueue(x);
-        Assert.Equal(r.Nodes.Length, seen.Count);
-        var byId = r.Nodes.ToDictionary(n => n.Id);
-        Assert.All(r.Nodes.Where(n => n.Type == "border"), n => Assert.Equal(2, n.Links.Select(l => byId[l].Sector).Distinct().Count()));
-        Assert.All(r.Nodes.Where(n => n.Type is "notable" or "keystone" or "border"),
-            n => Assert.InRange(n.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length, 1, 6));
-        Assert.All(r.Nodes.Where(n => n.Type != "center"), n => Assert.NotEmpty(n.Effects));
-        Assert.All(r.Nodes.SelectMany(n => n.Effects).Where(x => x.Target is not null), x => Assert.Contains(x.Target, SectorTowers));
-    }
-
-    [Fact(DisplayName = "TD.19 / CA-29.4 Validator rejects disconnected graph, wrong cost, unknown effect and the anti-exploit breach")]
+    [Fact(DisplayName = "TD.29a Validator rejects a broken rune web (unknown type/effect, duplicate slot, bad id, missing fragments rule)")]
     public void Runes_ValidatorRejects()
     {
-        AssertError(With("td-runes.json", "\"links\": [\"bolt.s3\", \"bolt.s5\"]", "\"links\": [\"bolt.k\"]"), "td-runes.bolt.k: nó inalcançável a partir do centro");
-        AssertError(With("td-runes.json", BoltS1, BoltS1.Replace("\"cost\": 40", "\"cost\": 41", StringComparison.Ordinal)), "td-runes.bolt.s1.cost deve ser 40");
-        AssertError(With("td-runes.json", "\"kind\": \"superHitEvery\"", "\"kind\": \"laser\""), "efeito desconhecido 'laser'");
-        AssertError(With("td-runes.json", "\"links\": [\"bolt.n2\", \"frost.n1\"]", "\"links\": [\"bolt.n2\", \"bolt.n1\"]"), "liga exatamente 2 setores diferentes");
-        AssertError(With("td-runes.json", "\"links\": [\"bolt.n2\", \"frost.n1\"]", "\"links\": [\"bolt.n2\", \"nada\"]"), "nó inexistente 'nada'");
-        AssertError(With("td-runes.json", "\"text\": \"Ignora 30% de armadura\"", "\"text\": \"um dois tres quatro cinco seis sete\""), "no máximo 6 palavras");
-        AssertError(With("td-runes.json", "\"sellRefundCapBp\": 8500", "\"sellRefundCapBp\": 9500"), "anti-exploit");
-        AssertError(With("td-runes.json", "\"sellRefundCapBp\": 8500", "\"sellRefundCapBp\": 9500"), "9500 bp");
+        AssertError(With("td-runes.json", "\"type\": \"shield\"", "\"type\": \"laser\""), "tipo inexistente 'laser'");
+        AssertError(With("td-runes.json", "\"effect\": \"firewallTenths\"", "\"effect\": \"laser\""), "effect desconhecido 'laser'");
+        AssertError(With("td-runes.json", "\"id\": \"1-3\", \"ring\": 1, \"sector\": 3", "\"id\": \"1-3\", \"ring\": 1, \"sector\": 2"), "id deve ser 'anel-setor'");
+        AssertError(With("td-runes.json", "\"ring\": 3, \"sector\": 7", "\"ring\": 4, \"sector\": 7"), "fora da teia");
+        AssertError(With("td-stages.json", "\"fragments\": { \"perWave\": 1,", "\"fragments\": { \"perWave\": -1,"), "fragments: valores devem ser >= 0");
         var files = TdContentLoader.ReadEmbedded();
         files.Remove("td-runes.json");
         AssertError(TdContentLoader.Load(files), "td-runes.json: arquivo ausente");
@@ -235,8 +188,8 @@ public sealed class TdContentTests
     public void CreditSources_AreStored()
     {
         var c = TdContentLoader.LoadEmbedded().Runes.CreditSources;
-        Assert.Equal((80, 60, 5), (c.StartingCreditsBonus, c.WaveBonusBase, c.WaveBonusPerWave));
-        Assert.Equal((40, 2, 40, 2), (c.NoLeakBase, c.NoLeakPerWave, c.CrateBase, c.CratePerWave));
+        Assert.Equal((80, 120, 10), (c.StartingCreditsBonus, c.WaveBonusBase, c.WaveBonusPerWave)); // TD.29a: dobrados (sem créditos para runas, só torres)
+        Assert.Equal((80, 4, 40, 2), (c.NoLeakBase, c.NoLeakPerWave, c.CrateBase, c.CratePerWave));
         Assert.Equal((40, 3, 120), (c.BonusQuestionBase, c.BonusQuestionPerWave, c.BossCredits));
     }
 }

@@ -35,7 +35,7 @@ public static class TdContentValidator
         Waves(c.Waves, c.Stages, c.Enemies, e);
         Abilities(c.Abilities, stageCount, c.Meta, e);
         Meta(c.Meta, c.Abilities, e);
-        Runes(c.Runes, c.Towers, e);
+        Runes(c.Runes, e);
         return e;
     }
 
@@ -104,6 +104,10 @@ public static class TdContentValidator
             Req(e, bq.CreditsBase >= 0 && bq.CreditsPerWave >= 0 && bq.CreditsBase + bq.CreditsPerWave > 0, "td-stages.rules.bonusQuestion: créditos >= 0 e com recompensa");
             Req(e, bq.CooldownReductionSeconds >= 0, "td-stages.rules.bonusQuestion.cooldownReductionSeconds deve ser >= 0");
         }
+        var fr = r.Fragments;
+        Req(e, fr is not null, "td-stages.rules.fragments ausente");
+        if (fr is not null)
+            Req(e, fr.PerWave >= 0 && fr.PerCrate >= 0 && fr.PerQuestion >= 0 && fr.PerBoss >= 0, "td-stages.rules.fragments: valores devem ser >= 0");
         var bc = r.BombCrate;
         Req(e, bc is not null, "td-stages.rules.bombCrate ausente");
         if (bc is not null)
@@ -385,119 +389,41 @@ public static class TdContentValidator
                 $"td-abilities.{a.Id}: o nó '{a.UnlockMetaNode}' deve ter o efeito unlockAbility '{a.Id}'");
     }
 
-    // ---------------------------------------------------------------- runas (SDD-29 §4, §5.2, CA-29.4)
+    // ---------------------------------------------------------------- teia de runas (SDD-29 §21, TD.29a)
 
-    private static readonly string[] RuneTypes = ["center", "small", "notable", "keystone", "border"];
-    private static readonly string[] RuneEffectKinds =
-    [
-        "damageBp", "cadenceBp", "rangeBp", "slowBp", "areaBp", "nodeDurationBp", "nodeDamageBp", "nodeCooldownBp", "auraBp",
-        "creditKillBp", "waveBonusBp", "abilityCooldownBp", "sellRefundBp", "integrity",
-        "armorPenetrationBp", "superHitEvery", "superHitMultiplierBp", "paralyzeEverySeconds", "paralyzeSeconds", "vulnerableBp",
-        "slowArea", "splashFactorBp", "damageVsArmoredBossBp", "burnZoneSeconds", "nodes", "explodeOnEnd", "spawnAtFront", "nodeHolds",
-        "neighborCadenceBp", "neighborDamageBp", "scaleDurationSeconds", "costGrowthLow", "callNextBonusBp", "damagePerDistinctTypeBp",
-        "damageVsSlowedBp", "damageVsHeldBp", "nodeDurationWithScaleSetBp", "towerCostDiscountBp", "damageNoLeakBp",
-    ];
-    private const int SectorCount = 6;
-    private const int NodesPerSector = 9; // 6 pequenos + 2 notáveis + 1 keystone
-    private const int MaxRuneWords = 6;
+    /// <summary>Efeitos que o Core sabe aplicar; cada tipo de runa do JSON aponta para um deles.</summary>
+    internal static readonly string[] RuneEffects =
+        ["rangeBp", "boltDamageBp", "waveCredits", "frostSlowTenths", "integrity", "cannonDamageBp", "abilityCooldownBp", "firewallTenths"];
+    internal const int WebRings = 4;
+    internal const int WebSectors = 8;
 
-    private static void Runes(TdRunesDef r, TdTowerDef[] towers, List<string> e)
+    private static void Runes(TdRunesDef r, List<string> e)
     {
         const string f = "td-runes";
-        var towerIds = towers.Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
-        var c = r.Costs;
-        Req(e, c.Small > 0 && c.Notable > c.Small && c.Keystone > c.Notable && c.Border >= c.Small,
-            $"{f}.costs: 0 < small < notable < keystone e border >= small");
-
-        Ids(r.Sectors, x => x.Id, $"{f}.sectors", e);
-        Req(e, r.Sectors.Length == SectorCount, $"{f}.sectors: exatamente {SectorCount} setores");
-        foreach (var s in r.Sectors)
+        Ids(r.Types, x => x.Id, $"{f}.types", e);
+        Req(e, r.Types.Length == RuneEffects.Length, $"{f}.types: exatamente {RuneEffects.Length} tipos");
+        foreach (var t in r.Types)
         {
-            Req(e, Text(s.Name), $"{f}.sectors.{s.Id}.name vazio");
-            Req(e, s.Tower is null || towerIds.Contains(s.Tower), $"{f}.sectors.{s.Id}.tower referencia torre inexistente '{s.Tower}'");
+            Req(e, Text(t.Name) && Text(t.Text), $"{f}.types.{t.Id}: name e text não podem ser vazios");
+            Req(e, RuneEffects.Contains(t.Effect), $"{f}.types.{t.Id}.effect desconhecido '{t.Effect}'");
+            Req(e, t.Value != 0, $"{f}.types.{t.Id}.value deve ser != 0");
         }
-        var sectorIds = r.Sectors.Select(s => s.Id).ToHashSet(StringComparer.Ordinal);
-        Req(e, r.Sectors.Count(s => s.Tower is null) == 1, $"{f}.sectors: exatamente um setor geral (tower nula)");
-        foreach (var t in towerIds)
-            Req(e, r.Sectors.Any(s => s.Tower == t), $"{f}.sectors: falta o setor da torre '{t}'");
+        Req(e, r.Types.Select(t => t.Effect).Distinct(StringComparer.Ordinal).Count() == r.Types.Length, $"{f}.types: um tipo por efeito");
+        var typeIds = r.Types.Select(t => t.Id).ToHashSet(StringComparer.Ordinal);
 
-        var ids = Ids(r.Nodes, x => x.Id, $"{f}.nodes", e);
-        Req(e, r.Nodes.Length == 1 + SectorCount * NodesPerSector + SectorCount, $"{f}.nodes: esperado {1 + SectorCount * NodesPerSector + SectorCount} nós (encontrado {r.Nodes.Length})");
-        Req(e, ids.Contains(r.CenterId), $"{f}.centerId referencia nó inexistente '{r.CenterId}'");
-        Req(e, r.Nodes.Count(n => n.Type == "center") == 1, $"{f}: exatamente um nó 'center'");
-
-        var byId = new Dictionary<string, TdRuneNodeDef>(StringComparer.Ordinal);
-        foreach (var n in r.Nodes)
-            byId.TryAdd(n.Id, n);
-        var adj = r.Nodes.ToDictionary(n => n.Id, _ => new HashSet<string>(StringComparer.Ordinal), StringComparer.Ordinal);
+        Ids(r.Nodes, x => x.Id, $"{f}.nodes", e);
+        Req(e, r.Nodes.Length == WebRings * WebSectors, $"{f}.nodes: esperado {WebRings * WebSectors} nós (encontrado {r.Nodes.Length})");
         foreach (var n in r.Nodes)
         {
             var o = $"{f}.{n.Id}";
-            Req(e, RuneTypes.Contains(n.Type), $"{o}.type inválido '{n.Type}'");
-            Req(e, Text(n.Name) && Text(n.Icon) && Text(n.Text), $"{o}: name, icon e text não podem ser vazios");
-            if (n.Type == "center")
-            {
-                Req(e, n.Id == r.CenterId && n.Cost == 0 && n.Effects.Length == 0, $"{o}: o centro tem custo 0, sem efeitos e é o centerId");
-            }
-            else
-            {
-                var expected = n.Type switch { "small" => c.Small, "notable" => c.Notable, "keystone" => c.Keystone, _ => c.Border };
-                Req(e, n.Cost == expected, $"{o}.cost deve ser {expected} ({n.Type})");
-                Req(e, n.Effects.Length >= 1, $"{o}: ao menos um efeito");
-                Req(e, n.Id != r.CenterId, $"{o}: só o centro pode ter o centerId");
-            }
-            if (n.Type is "notable" or "keystone" or "border")
-                Req(e, n.Text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length <= MaxRuneWords, $"{o}.text deve ter no máximo {MaxRuneWords} palavras");
-            Req(e, n.Type == "border" ? n.Sector == "border" : n.Type == "center" || sectorIds.Contains(n.Sector), $"{o}.sector inválido '{n.Sector}'");
-            foreach (var ef in n.Effects)
-            {
-                Req(e, RuneEffectKinds.Contains(ef.Kind), $"{o}: efeito desconhecido '{ef.Kind}'");
-                Req(e, ef.Value != 0, $"{o}.{ef.Kind}.value deve ser != 0");
-                Req(e, ef.Target is null || towerIds.Contains(ef.Target), $"{o}.{ef.Kind}.target referencia torre inexistente '{ef.Target}'");
-            }
-            foreach (var l in n.Links)
-            {
-                if (!byId.ContainsKey(l))
-                {
-                    e.Add($"{o}.links referencia nó inexistente '{l}'");
-                    continue;
-                }
-                Req(e, l != n.Id, $"{o}.links: aresta para si mesmo");
-                adj[n.Id].Add(l);
-                adj[l].Add(n.Id);
-            }
-            if (n.Type == "border")
-                Req(e, n.Links.Length == 2 && n.Links.Select(l => byId.TryGetValue(l, out var x) ? x.Sector : "").Distinct().Count() == 2,
-                    $"{o}: nó de fronteira liga exatamente 2 setores diferentes");
+            Req(e, n.Ring is >= 0 and < WebRings && n.Sector is >= 0 and < WebSectors, $"{o}: anel/setor fora da teia");
+            Req(e, n.Id == $"{n.Ring}-{n.Sector}", $"{o}: id deve ser 'anel-setor'");
+            Req(e, typeIds.Contains(n.Type), $"{o}.type referencia tipo inexistente '{n.Type}'");
+            Req(e, n.X is >= 0 and <= 1 && n.Y is >= 0 and <= 1, $"{o}: x/y normalizados em [0, 1]");
         }
-
-        // Estrutura por setor: 6 pequenos, 2 notáveis, 1 keystone.
-        foreach (var s in r.Sectors)
-        {
-            var mine = r.Nodes.Where(n => n.Sector == s.Id).ToArray();
-            Req(e, mine.Length == NodesPerSector && mine.Count(n => n.Type == "small") == 6 && mine.Count(n => n.Type == "notable") == 2 && mine.Count(n => n.Type == "keystone") == 1,
-                $"{f}.sectors.{s.Id}: 9 nós (6 pequenos, 2 notáveis, 1 keystone)");
-        }
-        Req(e, r.Nodes.Count(n => n.Type == "border") == SectorCount, $"{f}: {SectorCount} notáveis de fronteira");
-
-        // Grafo conexo a partir do centro (CA-29.4): cada nó alcançável; cada setor com acesso direto ao centro ou por fronteira.
-        if (byId.ContainsKey(r.CenterId))
-        {
-            var seen = new HashSet<string>(StringComparer.Ordinal) { r.CenterId };
-            var queue = new Queue<string>([r.CenterId]);
-            while (queue.Count > 0)
-                foreach (var next in adj[queue.Dequeue()])
-                    if (seen.Add(next))
-                        queue.Enqueue(next);
-            foreach (var n in r.Nodes.Where(n => !seen.Contains(n.Id)))
-                e.Add($"{f}.{n.Id}: nó inalcançável a partir do centro (grafo desconexo)");
-        }
-
-        // Regra anti-exploit (§5.2): descontoMáximoDeCompra + tetoDeVenda < 100%.
-        var maxDiscountBp = r.Nodes.SelectMany(n => n.Effects).Where(x => x.Kind == "towerCostDiscountBp").Sum(x => (long)x.Value);
-        Req(e, r.SellRefundCapBp is > 0 and < 10000, $"{f}.sellRefundCapBp deve estar em (0, 10000)");
-        Req(e, maxDiscountBp + r.SellRefundCapBp < 10000,
-            $"{f}: anti-exploit: desconto máximo de compra ({maxDiscountBp} bp) + teto de venda ({r.SellRefundCapBp} bp) deve ser < 10000 bp");
+        for (int ring = 0; ring < WebRings; ring++)
+            for (int sector = 0; sector < WebSectors; sector++)
+                Req(e, r.Nodes.Count(n => n.Ring == ring && n.Sector == sector) == 1, $"{f}: falta exatamente um nó em {ring}-{sector}");
 
         var cs = r.CreditSources;
         Req(e, cs.StartingCreditsBonus >= 0 && cs.WaveBonusBase >= 0 && cs.WaveBonusPerWave >= 0 && cs.NoLeakBase >= 0 && cs.NoLeakPerWave >= 0

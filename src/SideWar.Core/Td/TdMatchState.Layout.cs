@@ -25,6 +25,9 @@ public sealed partial class TdMatchState
     public StripLayout? Layout => _layout;
 
     /// <summary>Posição física (DIP) do centro de uma torre no layout vigente.</summary>
+    /// <summary>X lógico em que o inimigo toca o núcleo desenhado e vaza: <see cref="TdWorld.CoreEdgeDip"/> convertido pela largura do layout (0 sem layout).</summary>
+    public double LeakX => _layout is null ? 0.0 : TdWorld.CoreEdgeDip * TdWorld.PathLength / _layout.Width;
+
     public int TowerDip(in TdTower t) => TdPlacement.ToDip(t.X, _layout?.Width ?? (int)TdWorld.PathLength);
 
     /// <summary>Quantas torres estão SEM POSIÇÃO.</summary>

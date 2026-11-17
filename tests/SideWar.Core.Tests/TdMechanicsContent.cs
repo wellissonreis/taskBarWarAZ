@@ -27,7 +27,9 @@ internal static class TdMechanicsContent
             ["td-waves.json"] = Encoding.UTF8.GetBytes(Waves + "\n"),
         };
         var result = TdContentLoader.Load(files);
-        return result.Content ?? throw new InvalidOperationException("Conteúdo congelado inválido: " + string.Join("; ", result.Errors));
+        var content = result.Content ?? throw new InvalidOperationException("Conteúdo congelado inválido: " + string.Join("; ", result.Errors));
+        // Fontes de crédito congeladas (valores da TD.22): a recalibração da TD.29a de td-runes.json não mexe nos testes de mecânica.
+        return content with { Runes = content.Runes with { CreditSources = new TdCreditSourcesDef(80, 60, 5, 40, 2, 40, 2, 40, 3, 120) } };
     }
 
     private const string Abilities = """
@@ -120,6 +122,7 @@ internal static class TdMechanicsContent
     "autoStart": { "defaultMode": "off", "defaultCountdownSeconds": 15, "minCountdownSeconds": 5, "maxCountdownSeconds": 60 },
     "stars": { "twoStarMaxLoss": 6, "threeStarMaxLoss": 2 },
     "bonusQuestion": { "timerSeconds": 10, "creditsBase": 15, "creditsPerWave": 3, "cooldownReductionSeconds": 10 },
+    "fragments": { "perWave": 1, "perCrate": 1, "perQuestion": 1, "perBoss": 2 },
     "bombCrate": { "chance": 0.5, "firstEligibleWaveStage1": 3, "minDropSeconds": 5, "dropMaxSpawnFraction": 0.7, "countdownSeconds": 8, "edgeMargin": 24, "cooldownReductionSeconds": 20, "presenceWindowSeconds": 5 },
     "challenges": [
       { "id": "frugal",   "name": "Frugal",   "description": "Concluir com no máximo 4 torres.", "maxTowers": 4, "noAbilities": false, "noCallNext": false, "startingCreditsFactor": 1.0 },

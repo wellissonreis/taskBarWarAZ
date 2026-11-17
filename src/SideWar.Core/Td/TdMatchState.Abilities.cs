@@ -69,8 +69,8 @@ public sealed partial class TdMatchState
             if (Integrity >= IntegrityMax) return Reject(CommandReason.NotAvailable); // nada a restaurar
             Integrity = Math.Min(IntegrityMax, Integrity + (int)AbilityStat("snapshot", "integrity"));
         }
-        _abilityActive[i] = Ticks(d.DurationSeconds + (d.Id == "scale" ? Rune("scaleset", "scaleDurationSeconds") : 0));
-        _abilityCd[i] = Ticks(d.CooldownSeconds * RuneFactor("general", "abilityCooldownBp"));
+        _abilityActive[i] = Ticks(d.DurationSeconds + (d.Id == "firewall" ? Rune("firewallTenths") / 10.0 : 0));
+        _abilityCd[i] = Ticks(d.CooldownSeconds * Math.Max(0.2, 1.0 + Rune("abilityCooldownBp") / 10000.0));
         _abilityUses[i]++;
         Emit(TdEventType.AbilityUsed, i);
         return CommandResult.Ok;

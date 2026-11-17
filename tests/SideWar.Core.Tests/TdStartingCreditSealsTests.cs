@@ -23,7 +23,7 @@ public sealed class TdStartingCreditSealsTests
             Assert.Equal(expected, match.Credits);
             match.Step();
             Assert.Equal(expected, match.Credits);
-            Assert.Equal([content.Runes.CenterId], match.OwnedRunes);
+            Assert.Equal(0, match.AwakenedCount);
             var again = TdMatchState.Create(content, stage.Id, Rng.Seed(42, 54), [.. nodes, .. nodes, "unknown", "infrastructure.slots2"]);
             again.Step();
             Assert.Equal(match.ComputeStateHash(), again.ComputeStateHash());

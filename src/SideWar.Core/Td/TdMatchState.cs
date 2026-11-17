@@ -68,7 +68,6 @@ public sealed partial class TdMatchState
                 foreach (var effect in node.Effects)
                     if (effect.Kind == "startingCredits")
                         Credits += (long)effect.Value;
-        _ownedRunes = 1UL << Array.FindIndex(content.Runes.Nodes, n => n.Id == content.Runes.CenterId);
         AutoStart = content.Stages.Rules.AutoStart.DefaultMode == "countdown" ? AutoStartMode.Countdown : AutoStartMode.Off;
         AutoStartSeconds = content.Stages.Rules.AutoStart.DefaultCountdownSeconds;
         _stageBaseIntegrity = Integrity;
@@ -142,9 +141,8 @@ public sealed partial class TdMatchState
     /// <summary>Preço da torre do tipo quando já existem <paramref name="n"/> do mesmo tipo (n &gt;= 0; acima da tabela usa a última entrada).</summary>
     public long TowerCostAt(int defIndex, int n)
     {
-        var table = Rune("general", "costGrowthLow") > 0 ? _content.Stages.Rules.TowerCostTableLow : _content.Stages.Rules.TowerCostTable;
-        long cost = DivRoundHalfEven(_content.Towers[defIndex].Cost * (long)table[Math.Clamp(n, 0, table.Length - 1)], 100);
-        return DivRoundHalfEven(cost * (10000 - Rune("general", "towerCostDiscountBp")), 10000);
+        var table = _content.Stages.Rules.TowerCostTable;
+        return DivRoundHalfEven(_content.Towers[defIndex].Cost * (long)table[Math.Clamp(n, 0, table.Length - 1)], 100);
     }
 
     /// <summary>Custo base sem modificadores de runas, para consumidores sem partida.</summary>
@@ -171,8 +169,6 @@ public sealed partial class TdMatchState
     {
         var rules = _content.Stages.Rules;
         long bp = (long)Math.Round(rules.SellRefund * 10000.0, MidpointRounding.ToEven);
-        bp += Rune("general", "sellRefundBp");
-        bp = Math.Min(bp, _content.Runes.SellRefundCapBp);
         return TowerCostAt(defIndex, Math.Max(0, countBefore - 1)) * bp / 10000;
     }
 
@@ -217,7 +213,7 @@ public sealed partial class TdMatchState
     /// <summary>Valor do bônus de onda (RF-28.4): <c>(base + perWave × w) × bonusFactor</c>, arredondado para cima.</summary>
     public long WaveBonusFor(int wave)
     {
-        return CeilEps((_content.Runes.CreditSources.WaveBonusBase + _content.Runes.CreditSources.WaveBonusPerWave * wave) * _waves[wave - 1].BonusFactor * RuneFactor("general", "waveBonusBp"));
+        return CeilEps((_content.Runes.CreditSources.WaveBonusBase + _content.Runes.CreditSources.WaveBonusPerWave * wave) * _waves[wave - 1].BonusFactor);
     }
 
     /// <summary>ETA estimado (s) para todos os inimigos vivos chegarem ao núcleo: <c>max(X / Speed)</c> (RF-28.3).</summary>
@@ -228,7 +224,7 @@ public sealed partial class TdMatchState
         {
             var e = _enemies[i];
             if (e.Speed <= 0) continue;
-            double t = e.X / e.Speed;
+            double t = Math.Max(0.0, e.X - LeakX) / e.Speed;
             if (t > eta) eta = t;
         }
         return eta;
@@ -240,7 +236,7 @@ public sealed partial class TdMatchState
     private double CallBonusFactor(int wave)
     {
         var c = _content.Stages.Rules.CallNext;
-        return (c.BonusBase + c.BonusPerWave * wave) * RuneFactor("general", "callNextBonusBp");
+        return (c.BonusBase + c.BonusPerWave * wave);
     }
 
     private void RestartCountdown()
@@ -267,8 +263,7 @@ public sealed partial class TdMatchState
             return Reject(CommandReason.PausedCommand); // "nada de comando de tempo enquanto pausado" (SDD-29 §11)
         return command switch
         {
-            BuyRune b => DoBuyRune(b),
-            RefundRune r => DoRefundRune(r),
+            AwakenRune => DoAwakenRune(),
             Pause => DoPause(),
             Resume => DoResume(),
             StartWave => DoStartWave(),

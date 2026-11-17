@@ -84,9 +84,8 @@ public sealed class TdContinuousRunTests
         var s = New(Tiny(2), 1);
         Armed(s);
         Assert.True(s.Apply(new BuildTower("bolt", 900)).IsOk);
-        Assert.True(s.Apply(new BuyRune("bolt.s1")).IsOk);
         var towers = s.Towers.ToArray();
-        var runes = s.OwnedRunes.ToArray();
+        long fragments = s.Fragments;
         long creditsBefore = s.Credits;
         Assert.True(s.Apply(new StartWave()).IsOk);
         var ev = StepUntil(s, TdEventType.StageCleared);
@@ -100,7 +99,7 @@ public sealed class TdContinuousRunTests
         Assert.Equal(1, s.WaveNumber); // onda 1 da fase 2 no mesmo passo
         Assert.Contains(ev, e => e is { Type: TdEventType.WaveStarted, A: 1 });
         Assert.Equal(towers.Select(t => (t.Id, t.X, t.DefIndex, t.Placed)), s.Towers.Select(t => (t.Id, t.X, t.DefIndex, t.Placed)));
-        Assert.Equal(runes, s.OwnedRunes);
+        Assert.Equal(fragments + 2, s.Fragments); // a teia e os fragmentos acompanham a corrida (+1 por onda vencida, 2 ondas)
         Assert.True(s.Credits >= creditsBefore); // só bônus de onda entram; nada é recriado
         Assert.True(s.Credits > Base.Stages.Stages[1].StartingCredits);
         Assert.Equal(s.IntegrityMax, s.Integrity); // coroa: nada vazou e a cura é limitada ao máximo

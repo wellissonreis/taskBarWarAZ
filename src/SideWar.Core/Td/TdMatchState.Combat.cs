@@ -35,29 +35,16 @@ public sealed partial class TdMatchState
 
     // ---- estatísticas por torre ----------------------------------------------------------------------------------
 
-    /// <summary>
-    /// Estatística base com os modificadores inteiros das runas do tipo (SDD-29).
-    /// Converte pontos-base apenas na fronteira com o combate existente em double.
-    /// </summary>
+    /// <summary>Estatística base com os modificadores da teia (TD.29a): só o dano do Raio e do Canhão mudam (+5% por runa).</summary>
     internal double Stat(in TdTower t, TdTowerDef def, string key, double fallback)
     {
         double value = def.Stats.TryGetValue(key, out var v) ? v : fallback;
-        string sector = def.Id;
-        return key switch
+        if (key != "damageMultiplier") return value;
+        return def.Id switch
         {
-            "damageMultiplier" => value * (1 + (Rune(sector, "damageBp") + Rune("general", "damagePerDistinctTypeBp") * DistinctTowerTypes()) / 10000.0),
-            "intervalMultiplier" => value / Math.Max(0.01, RuneFactor(sector, "cadenceBp")),
-            "splashRadiusMultiplier" => value * RuneFactor(sector, "areaBp"),
-            "slowFactor" => value > 0 ? Math.Max(0.01, value - Rune(sector, "slowBp") / 10000.0) : value,
-            "armorPenetration" => value + Rune(sector, "armorPenetrationBp") / 10000.0,
-            "superHitMultiplier" => Rune(sector, "superHitMultiplierBp") > 0 ? Rune(sector, "superHitMultiplierBp") / 10000.0 : value,
-            "vulnerableBonus" => value + Rune(sector, "vulnerableBp") / 10000.0,
-            "splashFactor" => Rune(sector, "splashFactorBp") > 0 ? Rune(sector, "splashFactorBp") / 10000.0 : value,
-            "damageMultiplierVsArmoredAndBoss" => value * RuneFactor(sector, "damageVsArmoredBossBp"),
-            "neighborDamageBonus" => value + Rune(sector, "neighborDamageBp") / 10000.0,
-            "nodeDamagePerSecond" => value * RuneFactor(sector, "nodeDamageBp"),
-            "nodeCooldownSeconds" => value * RuneFactor(sector, "nodeCooldownBp"),
-            _ => value + Rune(sector, key),
+            "bolt" => value * (1 + Rune("boltDamageBp") / 10000.0),
+            "cannon" => value * (1 + Rune("cannonDamageBp") / 10000.0),
+            _ => value,
         };
     }
 
@@ -134,7 +121,7 @@ public sealed partial class TdMatchState
                 var s = _towers[j];
                 var sd = _content.Towers[s.DefIndex];
                 if (sd.Kind != "support" || s.DisabledTicks > 0 || !s.Placed || Dist(s.X, t.X) > EffectiveRange(sd)) continue;
-                double c = BaseAura + (Rune(sd.Id, "auraBp") + Rune(sd.Id, "neighborCadenceBp")) / 10000.0;
+                double c = BaseAura;
                 if (c > 0 && scale) c *= Stat(s, sd, "bonusMultiplierDuringScale", 1.0);
                 cad += c;
                 dmg += Stat(s, sd, "neighborDamageBonus", 0);
@@ -227,9 +214,6 @@ public sealed partial class TdMatchState
         if (slow > 0)
         {
             ApplySlow(target, slow);
-            if (Rune(def.Id, "slowArea") > 0)
-                for (int j = 0; j < _enemies.Count; j++)
-                    if (_enemies[j].Hp > 0 && Dist(_enemies[j].X, _enemies[target].X) <= ParalyzeAreaRadius) ApplySlow(j, slow);
         }
         double corrode = Stat(t, def, "armorReduction", 0);
         double vuln = Stat(t, def, "vulnerableBonus", 0);
@@ -257,7 +241,7 @@ public sealed partial class TdMatchState
         var e = _enemies[idx];
         if (_enemyStats[e.DefIndex].SlowCap <= 0) return; // imune (Zero-day)
         e.SlowMult = e.SlowTicks > 0 ? Math.Min(e.SlowMult, mult) : mult;
-        e.SlowTicks = SlowDurationTicks;
+        e.SlowTicks = SlowDurationTicks + Rune("frostSlowTenths") * 3; // +0,1 s = 3 ticks por décimo (runa Gelo, TD.29a)
         _enemies[idx] = e;
     }
 
@@ -288,11 +272,6 @@ public sealed partial class TdMatchState
     {
         double raw = def.Damage * Stat(tower, def, "damageMultiplier", 1.0) * factor;
         if (st.Armored || st.IsBoss) raw *= Stat(tower, def, "damageMultiplierVsArmoredAndBoss", 1.0);
-        int conditional = 0;
-        if (target.SlowTicks > 0) conditional += Rune(def.Id, "damageVsSlowedBp");
-        if (_held.Contains(target.Id)) conditional += Rune(def.Id, "damageVsHeldBp");
-        if (!_hasLeaked) conditional += Rune(def.Id, "damageNoLeakBp");
-        raw *= 1 + conditional / 10000.0;
         raw *= burst;
         if (target.VulnTicks > 0) raw *= 1.0 + target.VulnBonus;
         raw *= 1.0 + _auraDamage[towerIndex];
@@ -361,7 +340,7 @@ public sealed partial class TdMatchState
             byte flags = (byte)((Stat(t, def, "explodeOnEnd", 0) > 0 ? 1 : 0) | (Stat(t, def, "instantRespawn", 0) > 0 ? 2 : 0));
             _nodes.Add(new TdNode
             {
-                Id = _nextNodeId++, TowerId = t.Id, X = x, Hp = NodeHp, LifeTicks = (int)Math.Round(NodeLifeTicks * (1 + (Rune(def.Id, "nodeDurationBp") + (_towers.Any(x => _content.Towers[x.DefIndex].Id == "scaleset") ? Rune(def.Id, "nodeDurationWithScaleSetBp") : 0)) / 10000.0)),
+                Id = _nextNodeId++, TowerId = t.Id, X = x, Hp = NodeHp, LifeTicks = NodeLifeTicks,
                 Holds = (int)Stat(t, def, "nodeHolds", 1),
                 Dps = Stat(t, def, "nodeDamagePerSecond", 0), Flags = flags,
             });
@@ -461,7 +440,8 @@ public sealed partial class TdMatchState
             if (e.Hp <= 0)
             {
                 _enemies.RemoveAt(i);
-                Credits = Sat.Add(Credits, (long)Math.Floor(e.Gold * RuneFactor("general", "creditKillBp")) + (e.IsBoss ? _content.Runes.CreditSources.BossCredits : 0));
+                Credits = Sat.Add(Credits, (long)e.Gold + (e.IsBoss ? _content.Runes.CreditSources.BossCredits : 0));
+                if (e.IsBoss) GainFragments(_content.Stages.Rules.Fragments.PerBoss);
                 Emit(TdEventType.EnemyKilled, e.Id, e.Gold);
                 _killsByTower[e.LastHitTowerId] = _killsByTower.GetValueOrDefault(e.LastHitTowerId) + 1;
                 WaveOf(e.Wave).Alive--;

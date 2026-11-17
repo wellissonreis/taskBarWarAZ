@@ -72,6 +72,7 @@ public sealed partial class TdMatchState
 
     private void MoveEnemies()
     {
+        double leakX = LeakX;
         double firewall = IsAbilityActive("firewall") ? FirewallSlow() : 0.0;
         for (int i = 0; i < _enemies.Count;)
         {
@@ -86,7 +87,7 @@ public sealed partial class TdMatchState
                 mult = Math.Max(mult, 1.0 - st.SlowCap); // teto de lentidão (chefes 20%, Zero-day 0%)
             }
             e.X -= e.Speed * mult / TdWorld.TicksPerSecond;
-            if (e.X > 0)
+            if (e.X > leakX)
             {
                 if (st.IsBoss && st.InvulnTicks > 0) e = BossPathTriggers(e, st);
                 _enemies[i++] = e;
@@ -132,7 +133,9 @@ public sealed partial class TdMatchState
             _active.RemoveAt(i);
             long bonus = WaveBonusFor(w.Number);
             if (!w.Leaked) bonus += _content.Runes.CreditSources.NoLeakBase + (long)_content.Runes.CreditSources.NoLeakPerWave * w.Number;
+            bonus += (long)Rune("waveCredits"); // runas de Créditos (TD.29a)
             Credits = Simulation.Sat.Add(Credits, bonus);
+            GainFragments(_content.Stages.Rules.Fragments.PerWave);
             Emit(TdEventType.WaveCompleted, w.Number, bonus);
         }
         SettlePhase();

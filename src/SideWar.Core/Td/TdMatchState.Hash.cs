@@ -70,7 +70,8 @@ public sealed partial class TdMatchState
         h.AddInt32(_cratePendingWave); h.AddInt64(_crateDropTick); h.AddUInt64(_crateXRaw); h.AddInt32(_nextCrateId);
         h.AddBool(_bonusAnswered);
         if (Paused) h.AddBool(true); // só quando verdadeiro: o hash de partidas sem pausa não muda
-        h.AddUInt64(_ownedRunes);
+        h.AddInt32((int)_awakened);
+        h.AddInt64(Fragments);
         h.AddBool(_hasLeaked);
         if (!_options.IsClassic) { h.AddBool(_options.ContinuousWaves); h.AddBool(_options.PersistentRun); h.AddInt32(_stageNumber); h.AddInt32(_stageClears); } // só fora do modo clássico: os hashes antigos não mudam
         h.AddUInt64(_rng.State);

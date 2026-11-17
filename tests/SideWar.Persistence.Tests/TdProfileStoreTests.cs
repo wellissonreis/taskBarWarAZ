@@ -306,7 +306,7 @@ public class TdProfileStoreTests
         var content = TdContentLoader.LoadEmbedded();
         var match = TdMatchState.Create(content, 1, SideWar.Core.Simulation.Rng.Seed(42, 54), p.PurchasedNodes);
         Assert.Equal(content.Stages.Stages[0].StartingCredits + content.Runes.CreditSources.StartingCreditsBonus + 130, match.Credits);
-        Assert.Equal([content.Runes.CenterId], match.OwnedRunes);
+        Assert.Equal(0, match.AwakenedCount); // a teia começa vazia (TD.29a)
         Assert.True(store.Save(p));
         Assert.Equal(J(p), J(store.Load().Profile));
     }

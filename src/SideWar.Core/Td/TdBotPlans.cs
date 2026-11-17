@@ -6,17 +6,7 @@ namespace SideWar.Core.Td;
 /// </summary>
 internal static class TdBotPlans
 {
-    public static TdSanityBot.Step[] For(int stage, TdBotProfile profile) => Parse(Script(stage, profile) + Runes(stage, profile));
-
-    private static string Runes(int stage, TdBotProfile profile)
-    {
-        if (profile == TdBotProfile.SemContra) return "";
-        string sector = stage is 2 or 3 ? "cannon" : "bolt";
-        if (profile == TdBotProfile.Novato) return " rune bolt.s1 rune cannon.s1";
-        string army = " +frost@850 +cannon@950 +bolt@650 +frost@500 +cannon@420 +bolt@1050 +frost@300 +bolt@200";
-        return (profile == TdBotProfile.Otimizado && stage != 4 ? " rune " + sector + ".n2 rune frost.n1" : "") + " runeSector " + sector + " 4" + army + (profile == TdBotProfile.Otimizado && stage == 1 ? " sell cannon" : "") + " runeSector " + sector + " 9"
-            + (profile == TdBotProfile.Otimizado ? " rune cannon.n2 rune border.bolt-frost" : "");
-    }
+    public static TdSanityBot.Step[] For(int stage, TdBotProfile profile) => Parse(Script(stage, profile));
 
     private static string Script(int stage, TdBotProfile p) => (stage, p) switch
     {
@@ -28,7 +18,7 @@ internal static class TdBotPlans
 
         // ---------------------------------------------------------------- fase 2 (blindados; balanceador)
         (2, TdBotProfile.Novato) => "+cannon@700 +bolt@900 +cannon@550 +bolt@450 +cannon@1000",
-        (2, TdBotProfile.Medio) => "+bolt@900 +cannon@700 +frost@800 +bolt@550 +balancer@600 +bolt@1000",
+        (2, TdBotProfile.Medio) => "+cannon@700 +bolt@900 +cannon@550 +frost@800 +balancer@600 +cannon@1000",
         (2, TdBotProfile.Otimizado) => "+cannon@700 +bolt@900 +cannon@550 +frost@800 +cannon@1000 +bolt@450",
         (2, TdBotProfile.SemContra) => "+bolt@900 +bolt@700 +bolt@550 +bolt@450 +bolt@1000 +bolt@300",
 
@@ -66,8 +56,6 @@ internal static class TdBotPlans
         for (int i = 0; i < tokens.Length; i++)
         {
             var tok = tokens[i];
-            if (tok == "rune") { list.Add(new('r', "", 0, 0, tokens[++i])); continue; }
-            if (tok == "runeSector") { string sector = tokens[++i]; int count = int.Parse(tokens[++i], System.Globalization.CultureInfo.InvariantCulture); list.Add(new('s', sector, 0, count, "")); continue; }
             if (tok == "sell") { list.Add(new('v', tokens[++i], 0, 0, "")); continue; }
             switch (tok[0])
             {

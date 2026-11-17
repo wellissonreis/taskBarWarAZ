@@ -35,6 +35,7 @@ public sealed partial class TdMatchState
             var q = _content.Stages.Rules.BonusQuestion;
             paid = BonusCreditsFor(Phase == MatchPhase.Preparo ? NextWaveNumber : WaveNumber);
             Credits = Sat.Add(Credits, paid);
+            GainFragments(_content.Stages.Rules.Fragments.PerQuestion);
             int red = q.CooldownReductionSeconds * TdWorld.TicksPerSecond;
             for (int i = 0; i < _abilityCd.Length; i++) _abilityCd[i] = Math.Max(0, _abilityCd[i] - red);
         }

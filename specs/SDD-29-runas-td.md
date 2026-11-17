@@ -387,6 +387,7 @@ Ficha TD.19 anterior (conteúdo) fica; a **modal central e a pausa viram fichas 
 | **TD.26** | Documentação: revisar SDD-28 (RF-28.4/28.5/28.13/28.22, CA/T), ADR, `PLANO.md`, MTC | TD.19 a TD.25 | 🟢 |
 | **TD.28a** ✅ | **Corrida contínua no Core:** `TdMatchOptions` (ondas contínuas, corrida persistente), `StageCleared`, infinito depois da fase 6, `TdSanityBot.RunContinuous`; ver §20 | TD.22, TD.24c | 🟢 |
 | **TD.28b** ✅ | **Host da corrida contínua:** `TdMatchOptions.Default` no host (`td.continuousWaves`, padrão ligado; desligado = Classic), `StageCleared` → perfil por `StageId` + aviso discreto no cantinho, derrota = fim da corrida com "Reiniciar", chip "Fase N · Onda n/Total", Iniciar só no Preparo inicial, pergunta-bônus durante a onda, atalho global de minimizar (boss key), painel de torres fixo (`td.towerPanelPinned`), núcleo/portal ~1,5× a torre; ver §20 | TD.28a, TD.24d | 🟢 |
+| **TD.29a** ✅ | **Teia de runas do design no Core:** substitui o grafo de 61 nós (compra/devolução por créditos, sinergias) pela teia fixa de 32 nós com fragmentos e `AwakenRune`; corrige o vazamento no núcleo desenhado (`LeakX`); ver §21 | TD.28a | 🟢 |
 | **TD.28c** ✅ | **Foto das torres, faixa ao vivo, fps fixo, velocidade:** sprite real da torre nos cards (painel rápido, Construir, Torres); `td.bandHeightDip` aplica na hora; sem queda para 8 fps sem foco; `td.gameSpeed` 1x/2x/3x (botão no chip e aba Jogo; host faz N Steps por tick, replay igual); torres de volta a 28 e portal/núcleo 42 (janela da cena com folga de 14 DIP×k acima da faixa, alfa 0) | TD.28b | 🟢 |
 | **TD.27** (pós-MVP) | Medalha "Especialista", desafio "Sem runas", páginas salvas | TD.24b | 🟡 |
 
@@ -458,3 +459,34 @@ Decisões do usuário: jogo para **jogar enquanto trabalha** (discreto, infinito
 
 ### TD.24d (nota)
 Pergunta-bônus e cartão de fim de fase são cartões no cantinho ancorados ao chip (janela sem ativação, sem Pause, sem modal); a modal central só abre por clique no chip/menu. Painel rápido de torres (botão ≡ do chip) não pausa. Portal e núcleo passam a 32 DIP de altura (torres 28), sem mudar a simulação.
+
+## 21. Teia de runas do design (2026-11-17, TD.29a)
+
+**Decisão do usuário:** a página de runas da SDD-29 (grafo radial de 61 nós, compra/devolução por créditos, sinergias de fronteira) é **substituída** pela "TEIA DE RUNAS" do design v3. As seções 4 a 8 (grafo, custos, compra/devolução, efeitos por setor) e as partes de runas das seções 5.2, 10 e 12 ficam **obsoletas**; a curva de custo das torres e o preço pago como teto de venda (§5, TD.22) **continuam**. Venda volta à regra simples: `floor(custo(tipo, n−1) × sellRefund)` limitada pelo preço efetivamente pago, sem runas de venda e sem teto de runas.
+
+**Teia.** 32 nós fixos = 4 anéis × 8 setores (`Id = "anel-setor"`, ex.: `2-5`). Vizinhança: mesmo anel, setor ±1 (circular), anel interno e anel externo no mesmo setor; o anel 0 liga ao centro (sempre na fronteira). **Fronteira** = nós não despertados no anel 0 ou vizinhos de um despertado. O tipo de cada nó é **determinístico pelo conteúdo** (`td-runes.json`, layout fixo gerado do design, com `x`/`y` normalizados 0–1 para a UI); a teia não é sorteada por partida.
+
+**8 tipos e efeitos (por runa despertada, acumulam):**
+
+| Tipo | Efeito | Valor |
+|---|---|---|
+| Alcance | alcance de **todas** as torres | +4% |
+| Raio | dano do Raio | +5% |
+| Créditos | créditos ao fim de **cada onda** | +3 |
+| Gelo | duração da lentidão do Gelo | +0,3 s |
+| Núcleo | vida máxima do núcleo (e vida atual) | +1 |
+| Canhão | dano do Canhão | +5% |
+| Recarga | tempo de recarga das habilidades (piso 20%) | −4% |
+| Escudo | duração do Firewall | +0,5 s |
+
+**Fragmentos (moeda das runas; créditos ficam só para torres).** Valores em `td-stages.json` → `rules.fragments`: **+1 por onda vencida, +1 por caixa coletada, +1 por pergunta-bônus certa, +2 por chefe derrotado**. `TdMatchState.Fragments`.
+
+**Comando `AwakenRune`** (sem argumentos): gasta 1 fragmento e desperta um nó **aleatório da fronteira**, sorteado pelo `Rng` da partida (determinístico; entra no log do replay). Aceito a qualquer momento da corrida, inclusive **em pausa**; rejeições atômicas (`NoFragments`, `WebComplete`, `InvalidPhase`). **Sem devolução.** Evento `RuneAwakened` (`A` = índice do nó em `RuneWeb`, `B` = fragmentos restantes).
+
+**Persistência.** A teia e os fragmentos persistem na corrida contínua (troca de fase) e recomeçam na nova corrida. O "sem vazar" por fase deixou de existir (era efeito de runa antiga).
+
+**API para a UI (TD.29b):** `TdMatchState.Fragments`, `RuneWeb` (`TdRuneNodeDef`: `Id`, `Ring`, `Sector`, `Type`, `X`, `Y`), `IsAwakened(id)`, `Frontier`, `AwakenedCount`, `AwakenedOfType(typeId)`, `Content.Runes.Types` (`Id`, `Name`, `Effect`, `Value`, `Text`), comando `AwakenRune`, evento `RuneAwakened`. Removidos: `BuyRune`, `RefundRune`, `OwnsRune`, `OwnedRunes`, `TdRuneGraph`, `CommandReason.Rune*`/`UnknownRune` (entram `NoFragments` e `WebComplete`).
+
+**Vazamento no núcleo desenhado (bug urgente).** O Core só vazava o inimigo em `X ≤ 0`, a ponta esquerda da tela; como o núcleo é desenhado com 42 DIP de altura (63 DIP de largura, TD.28c), o inimigo "atravessava" a base antes de dar dano. Agora, **com layout**, o inimigo toca o núcleo e vaza em `LeakX = TdWorld.CoreEdgeDip × 1200 / larguraDoLayout` (`CoreEdgeDip = 63`): causa o `CoreDamage`, some e emite `EnemyLeaked`. Sem layout o ponto segue 0 (mundo lógico antigo, testes legados). `EtaSeconds` usa `LeakX`.
+
+**Bot e economia.** O `TdSanityBot` desperta runas sempre que houver fragmento; os roteiros perderam `rune`/`runeSector`/`sell`; Médio/Otimizado gastam o excedente em até 8 torres extras (limite 4 antes). Sem créditos para runas, o poder dos bots caiu; recalibração mínima: `creditSources` de onda e "sem vazar" **dobrados** (`waveBonus 120+10w`, `noLeak 80+4w`) e HP por onda/fase menores (`hpWaveGrowth 1,05`, `hpStageStep 0,05`). Resultado (10 seeds, tabela em `specs/evidencias/TD.29a.md`): Médio e Otimizado vencem 100% as fases 1–3 (Otimizado também a 5; Médio 70% na 5), Novato vence 1–3, mas **ninguém** vence as fases 4 e 6; os testes de regressão de matriz completa (Médio fases 1–5, Otimizado 3★ nas 6, patente MVP) ficam **`Skip` com motivo** até uma ficha própria de balanceamento da teia.

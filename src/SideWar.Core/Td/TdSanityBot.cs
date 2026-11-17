@@ -190,6 +190,7 @@ public static class TdSanityBot
 
         private void Spend()
         {
+            while (_s.Fragments > 0 && _s.Apply(new AwakenRune()).IsOk) { } // teia: despertar sempre que houver fragmento
             while (_next < _plan.Length)
             {
                 var st = _plan[_next];
@@ -203,20 +204,15 @@ public static class TdSanityBot
 
         private static readonly int[] FallbackX = [1000, 780, 520, 350, 900, 640, 250, 1100];
         private int _fallbackBuilt;
+        private int FallbackLimit => _profile is TdBotProfile.Medio or TdBotProfile.Otimizado ? 8 : 4; // sem runas de crédito, os perfis avançados gastam o excedente em mais torres (TD.29a)
 
-        /// <summary>Depois do roteiro: perfis avançados investem em runas; os demais tentam mais quatro construções a preço crescente.</summary>
+        /// <summary>Depois do roteiro: tenta mais quatro construções a preço crescente.</summary>
         private bool Fallback()
         {
-            if (_profile is TdBotProfile.Medio or TdBotProfile.Otimizado)
-            {
-                foreach (var node in _s.Content.Runes.Nodes.Where(n => _profile == TdBotProfile.Otimizado || n.Sector == "general" || n.Sector == (_s.StageId is 2 or 3 ? "cannon" : "bolt")).OrderBy(n => n.Cost))
-                    if (!_s.OwnsRune(node.Id) && _s.Credits >= node.Cost && _s.Apply(new BuyRune(node.Id)).IsOk) return true;
-                return false;
-            }
             int towers = _s.Towers.Count;
             string kind = _plan.FirstOrDefault(p => p.Kind == 'b').Tower ?? "bolt";
             int di = Array.FindIndex(_s.Content.Towers, t => t.Id == kind);
-            if (towers < TdMatchState.TechnicalTowerLimit && _fallbackBuilt < 4 && _s.Credits >= _s.NextTowerCost(di))
+            if (towers < TdMatchState.TechnicalTowerLimit && _fallbackBuilt < FallbackLimit && _s.Credits >= _s.NextTowerCost(di))
                 foreach (int x in Candidates(FallbackX[_fallbackBuilt % FallbackX.Length]))
                     if (_s.Apply(new BuildTower(kind, x)).IsOk)
                     {
@@ -255,14 +251,6 @@ public static class TdSanityBot
                     _rejected++;
                     return StepResult.Done;
                 }
-                case 'r': return BuyPath(st.Arg);
-                case 's':
-                {
-                    var nodes = _s.Content.Runes.Nodes.Where(n => n.Sector == st.Tower).OrderBy(n => n.Type == "keystone" ? 2 : n.Type == "notable" ? 1 : 0).Take(st.N);
-                    foreach (var node in nodes)
-                        if (BuyPath(node.Id) == StepResult.Wait) return StepResult.Wait;
-                    return StepResult.Done;
-                }
                 case 'v':
                 {
                     var tower = _s.Towers.FirstOrDefault(t => _s.Content.Towers[t.DefIndex].Id == st.Tower);
@@ -275,13 +263,6 @@ public static class TdSanityBot
                     return StepResult.Done; // mira nunca bloqueia o roteiro
                 }
             }
-            return StepResult.Done;
-        }
-
-        private StepResult BuyPath(string target)
-        {
-            foreach (string id in new TdRuneGraph(_s.Content.Runes).PathTo(target, _s.OwnedRunes))
-                if (Settle(_s.Apply(new BuyRune(id))) == StepResult.Wait) return StepResult.Wait;
             return StepResult.Done;
         }
 

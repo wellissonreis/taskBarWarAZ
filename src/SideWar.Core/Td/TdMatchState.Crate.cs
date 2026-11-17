@@ -156,6 +156,7 @@ public sealed partial class TdMatchState
         if (!CrateActive || cmd.CrateId != CrateId) return Reject(CommandReason.NotAvailable);
         long credits = _content.Runes.CreditSources.CrateBase + (long)_content.Runes.CreditSources.CratePerWave * WaveNumber;
         Credits = Sat.Add(Credits, credits);
+        GainFragments(_content.Stages.Rules.Fragments.PerCrate);
         int best = -1;
         for (int i = 0; i < _abilityCd.Length; i++)
             if (_abilityCd[i] > 0 && (best < 0 || _abilityCd[i] > _abilityCd[best])) best = i; // maior recarga; empate: menor índice

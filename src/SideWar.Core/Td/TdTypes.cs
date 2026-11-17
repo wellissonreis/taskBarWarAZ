@@ -14,6 +14,12 @@ public static class TdWorld
 
     /// <summary>Comprimento do caminho em unidades lógicas (RF-28.15): portal em <c>X = PathLength</c>, núcleo em <c>X = 0</c>.</summary>
     public const double PathLength = 1200.0;
+
+    /// <summary>
+    /// Borda direita do núcleo DESENHADO, em DIP (TD.29a): o sprite tem 42 DIP de altura × proporção 1,5 = 63 DIP de largura, a partir da ponta esquerda.
+    /// Com layout, o inimigo vaza (dano + some) ao tocar essa borda, não no X lógico 0 (ponta da tela, onde parecia atravessar a base).
+    /// </summary>
+    public const double CoreEdgeDip = 63.0;
 }
 
 /// <summary>Modos de mira (RF-28.6). Valor numérico entra no hash: não reordenar.</summary>
@@ -146,6 +152,8 @@ public enum TdEventType : byte
     BonusAnswered,
     // TD.28a: corrida contínua. A = número absoluto da fase concluída; B = pontuação. O resumo completo fica em <c>TdMatchState.StageResults</c>.
     StageCleared,
+    // TD.29a: runa despertada. A = índice do nó em <c>RuneWeb</c>; B = fragmentos restantes.
+    RuneAwakened,
 }
 
 /// <summary>Evento observável (não entra no hash). <c>A</c>/<c>B</c>: valores do evento (onda, créditos, id etc.).</summary>

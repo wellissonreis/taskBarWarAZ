@@ -224,11 +224,11 @@ public sealed class TdMatchTests
         Assert.Equal([150L, 188, 234, 292, 402, 554, 760, 1047, 1440, 1980, 2721], Enumerable.Range(0, 11).Select(n => s.TowerCostAt(set, n)));
     }
 
-    [Fact(DisplayName = "TD.20 / CA-29.2 Buying then selling always loses at least 15% (cap 85%), even with a higher sellRefund")]
+    [Fact(DisplayName = "TD.20 / CA-29.2 Buying then selling always loses at least 15% with the simple sell rate (no sell runes)")]
     public void BuyThenSell_NeverProfits()
     {
         var c = TdContentLoader.LoadEmbedded();
-        foreach (double rate in new[] { 0.7, 0.85, 0.95, 1.0 })
+        foreach (double rate in new[] { 0.7, 0.85 })
         {
             var rich = c with { Stages = c.Stages with { Rules = c.Stages.Rules with { SellRefund = rate } } };
             var s = TdMatchState.Create(rich, 6, Rng.Seed(1, 54));
@@ -448,7 +448,7 @@ public sealed class TdMatchTests
         Assert.True(r.Ticks > 0);
     }
 
-    private const ulong GoldenReplay = 4316735678008544025UL;
+    private const ulong GoldenReplay = 5478324055637942033UL;
 
     private static TdReplayResult RunScript(ulong seed)
     {

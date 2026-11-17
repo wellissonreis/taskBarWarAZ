@@ -49,11 +49,14 @@ public sealed record TdBombCrateDef(
 /// <summary>Pergunta-bônus do Preparo (RF-28.23): tempo da pergunta (s) e recompensa por acerto (créditos = base + porOnda × onda; redução de recarga em s).</summary>
 public sealed record TdBonusQuestionDef(int TimerSeconds, int CreditsBase, int CreditsPerWave, int CooldownReductionSeconds);
 
+/// <summary>Fragmentos de runa (TD.29a): ganhos por onda vencida, caixa coletada, pergunta certa e chefe derrotado.</summary>
+public sealed record TdFragmentsDef(int PerWave, int PerCrate, int PerQuestion, int PerBoss);
+
 /// <summary>Regras de partida (RF-28.1 a RF-28.4, RF-28.10, RF-28.12).</summary>
 public sealed record TdMatchRulesDef(
     int CoreIntegrity, double SellRefund, int[] TowerCostTable, int[] TowerCostTableLow, int WaveBonusBase, int WaveBonusPerWave, double HpWaveGrowth, double HpStageStep,
     double SpawnJitter, int MaxEnemiesOnField, TdCallNextDef CallNext, TdAutoStartDef AutoStart, TdStarsDef Stars,
-    TdChallengeDef[] Challenges, TdBombCrateDef BombCrate, TdBonusQuestionDef BonusQuestion);
+    TdChallengeDef[] Challenges, TdBombCrateDef BombCrate, TdBonusQuestionDef BonusQuestion, TdFragmentsDef Fragments);
 
 public sealed record TdStageDef(
     int Id, string Title, string Region, string Concept, int Waves, long StartingCredits, string Challenge);
@@ -77,27 +80,19 @@ public sealed record TdMetaDef(int SealsPerStar, int SealsPerChallenge, TdMetaBr
 
 // ---------------------------------------------------------------- runas (SDD-29 §4)
 
-/// <summary>Efeito de runa em pontos-base inteiros (ou contagem/segundos). <c>Target</c>: torre afetada; nulo = a torre do setor (ou global no setor Geral).</summary>
-public sealed record TdRuneEffectDef(string Kind, int Value, string? Target);
+/// <summary>Tipo de runa da teia (TD.29a): <c>Effect</c> é o identificador do efeito e <c>Value</c> o valor por runa despertada (bp, créditos ou décimos de segundo).</summary>
+public sealed record TdRuneTypeDef(string Id, string Name, string Effect, int Value, string Text);
 
-/// <summary>Nó da página. <c>Type</c>: center | small | notable | keystone | border. <c>Links</c>: arestas (não direcionadas) declaradas neste nó.</summary>
-public sealed record TdRuneNodeDef(
-    string Id, string Sector, string Type, string Name, string Icon, string Text, int Cost, string[] Links, TdRuneEffectDef[] Effects);
-
-public sealed record TdRuneSectorDef(string Id, string Name, string? Tower);
-
-/// <summary>Custos em créditos por tipo de nó (fixos, sem arbitragem; SDD-29 §4.2).</summary>
-public sealed record TdRuneCostsDef(int Small, int Notable, int Border, int Keystone);
+/// <summary>Nó fixo da teia: anel (0 a 3), setor (0 a 7), tipo (id de <see cref="TdRuneTypeDef"/>) e posição normalizada (0 a 1) para a UI.</summary>
+public sealed record TdRuneNodeDef(string Id, int Ring, int Sector, string Type, double X, double Y);
 
 /// <summary>Fontes de crédito da §6 (moeda única), consumidas pelo Core desde a TD.21; calibração na TD.22.</summary>
 public sealed record TdCreditSourcesDef(
     int StartingCreditsBonus, int WaveBonusBase, int WaveBonusPerWave, int NoLeakBase, int NoLeakPerWave,
     int CrateBase, int CratePerWave, int BonusQuestionBase, int BonusQuestionPerWave, int BossCredits);
 
-/// <summary>Página de runas (td-runes.json): grafo radial de 61 nós, 6 setores.</summary>
-public sealed record TdRunesDef(
-    string CenterId, TdRuneCostsDef Costs, int SellRefundCapBp, TdRuneSectorDef[] Sectors, TdCreditSourcesDef CreditSources,
-    TdRuneNodeDef[] Nodes);
+/// <summary>Teia de runas (td-runes.json): 32 nós fixos (4 anéis × 8 setores), 8 tipos e as fontes de crédito da §6.</summary>
+public sealed record TdRunesDef(TdCreditSourcesDef CreditSources, TdRuneTypeDef[] Types, TdRuneNodeDef[] Nodes);
 
 /// <summary>Conteúdo TD completo e validado; <c>ContentHash</c> = SHA-256 hex dos 7 arquivos <c>td-*.json</c> (com <c>td-runes.json</c>).</summary>
 public sealed record TdContent(

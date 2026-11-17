@@ -3,96 +3,130 @@ using SideWar.Core.Simulation;
 
 namespace SideWar.Core.Td;
 
+/// <summary>
+/// Teia de runas do design (TD.29a, SDD-29 §21): 32 nós fixos (4 anéis × 8 setores), 8 tipos de efeito. Cada FRAGMENTO desperta um nó
+/// ALEATÓRIO da fronteira (sorteio pelo <c>Rng</c> da partida). Persiste na corrida contínua; some com a partida.
+/// </summary>
 public sealed partial class TdMatchState
 {
-    private ulong _ownedRunes;
+    private const int WebRings = TdContentValidator.WebRings;
+    private const int WebSectors = TdContentValidator.WebSectors;
+
+    private uint _awakened;
     private bool _hasLeaked;
-    private readonly Dictionary<(string Sector, string Kind), int> _runeEffects = [];
+    private int[]? _webSlot; // anel*8+setor → índice em Content.Runes.Nodes
+    private readonly Dictionary<string, int> _runeEffects = [];
 
-    public bool OwnsRune(string id)
+    /// <summary>Fragmentos disponíveis (moeda das runas; créditos ficam só para torres).</summary>
+    public long Fragments { get; private set; }
+
+    /// <summary>Nós fixos da teia, na ordem do conteúdo (Id, Ring, Sector, Type, X/Y normalizados).</summary>
+    public IReadOnlyList<TdRuneNodeDef> RuneWeb => _content.Runes.Nodes;
+
+    private static int Slot(int ring, int sector) => ring * WebSectors + sector;
+
+    private int NodeIndex(string id)
     {
-        int i = Array.FindIndex(_content.Runes.Nodes, n => n.Id == id);
-        return i >= 0 && (_ownedRunes & (1UL << i)) != 0;
+        var nodes = _content.Runes.Nodes;
+        for (int i = 0; i < nodes.Length; i++)
+            if (nodes[i].Id == id) return i;
+        return -1;
     }
 
-    public IReadOnlyList<string> OwnedRunes => _content.Runes.Nodes.Where(n => OwnsRune(n.Id)).Select(n => n.Id).ToArray();
-
-    private bool Linked(int a, int b) => _content.Runes.Nodes[a].Links.Contains(_content.Runes.Nodes[b].Id, StringComparer.Ordinal)
-        || _content.Runes.Nodes[b].Links.Contains(_content.Runes.Nodes[a].Id, StringComparer.Ordinal);
-
-    private CommandResult DoBuyRune(BuyRune cmd)
+    private int[] WebSlots()
     {
-        if (!Running) return Reject(CommandReason.InvalidPhase);
-        int i = Array.FindIndex(_content.Runes.Nodes, n => n.Id == cmd.RuneId);
-        if (i < 0) return Reject(CommandReason.UnknownRune);
-        if (OwnsRune(cmd.RuneId)) return Reject(CommandReason.RuneOwned);
-        bool adjacent = false;
-        for (int j = 0; j < _content.Runes.Nodes.Length; j++)
-            if ((_ownedRunes & (1UL << j)) != 0 && Linked(i, j)) adjacent = true;
-        if (!adjacent) return Reject(CommandReason.RuneNotAdjacent);
-        int cost = _content.Runes.Nodes[i].Cost;
-        if (Credits < cost) return Reject(CommandReason.InsufficientCredits, cost - Credits);
-        Credits -= cost;
-        _ownedRunes |= 1UL << i;
-        RebuildRuneEffects();
-        return CommandResult.Ok;
+        if (_webSlot is not null) return _webSlot;
+        var slots = new int[WebRings * WebSectors];
+        var nodes = _content.Runes.Nodes;
+        for (int i = 0; i < nodes.Length; i++) slots[Slot(nodes[i].Ring, nodes[i].Sector)] = i;
+        return _webSlot = slots;
     }
 
-    private CommandResult DoRefundRune(RefundRune cmd)
+    private bool AwakenedAt(int ring, int sector) => (_awakened & (1u << Slot(ring, sector))) != 0;
+
+    /// <summary>Despertada? (id desconhecido = false)</summary>
+    public bool IsAwakened(string id)
     {
-        if (!Running) return Reject(CommandReason.InvalidPhase);
-        int i = Array.FindIndex(_content.Runes.Nodes, n => n.Id == cmd.RuneId);
-        if (i < 0) return Reject(CommandReason.UnknownRune);
-        if (!OwnsRune(cmd.RuneId)) return Reject(CommandReason.RuneNotOwned);
-        if (cmd.RuneId == _content.Runes.CenterId) return Reject(CommandReason.NotAvailable);
-        ulong remaining = _ownedRunes & ~(1UL << i);
-        int center = Array.FindIndex(_content.Runes.Nodes, n => n.Id == _content.Runes.CenterId);
-        ulong connected = 1UL << center;
-        bool changed;
-        do
+        int i = NodeIndex(id);
+        if (i < 0) return false;
+        var n = _content.Runes.Nodes[i];
+        return AwakenedAt(n.Ring, n.Sector);
+    }
+
+    /// <summary>Quantidade de runas despertadas.</summary>
+    public int AwakenedCount => System.Numerics.BitOperations.PopCount(_awakened);
+
+    /// <summary>Quantas runas despertadas do tipo <paramref name="typeId"/> (por id do tipo).</summary>
+    public int AwakenedOfType(string typeId)
+    {
+        int n = 0;
+        foreach (var node in _content.Runes.Nodes)
+            if (node.Type == typeId && AwakenedAt(node.Ring, node.Sector)) n++;
+        return n;
+    }
+
+    private bool InFrontier(int ring, int sector)
+    {
+        if (AwakenedAt(ring, sector)) return false;
+        if (ring == 0) return true; // o anel interno liga ao centro
+        return AwakenedAt(ring, (sector + 1) % WebSectors) || AwakenedAt(ring, (sector + WebSectors - 1) % WebSectors)
+            || AwakenedAt(ring - 1, sector) || (ring < WebRings - 1 && AwakenedAt(ring + 1, sector));
+    }
+
+    /// <summary>Nós despertáveis agora: não despertados, no anel 0 ou vizinhos de um despertado (mesmo anel setor ±1, anel interno e externo no mesmo setor).</summary>
+    public IReadOnlyList<string> Frontier
+    {
+        get
         {
-            changed = false;
-            for (int a = 0; a < _content.Runes.Nodes.Length; a++)
-            {
-                ulong bit = 1UL << a;
-                if ((remaining & bit) == 0 || (connected & bit) != 0) continue;
-                for (int b = 0; b < _content.Runes.Nodes.Length; b++)
-                    if ((connected & (1UL << b)) != 0 && Linked(a, b))
-                    { connected |= bit; changed = true; break; }
-            }
-        } while (changed);
-        for (int a = 0; a < _content.Runes.Nodes.Length; a++)
-            if ((_ownedRunes & ~connected & (1UL << a)) != 0)
-                Credits = Sat.Add(Credits, _content.Runes.Nodes[a].Cost);
-        _ownedRunes = connected;
+            var list = new List<string>();
+            var slots = WebSlots();
+            for (int r = 0; r < WebRings; r++)
+                for (int k = 0; k < WebSectors; k++)
+                    if (InFrontier(r, k)) list.Add(_content.Runes.Nodes[slots[Slot(r, k)]].Id);
+            return list;
+        }
+    }
+
+    private CommandResult DoAwakenRune()
+    {
+        if (!Running) return Reject(CommandReason.InvalidPhase);
+        if (Fragments < 1) return Reject(CommandReason.NoFragments, 1 - Fragments);
+        var slots = WebSlots();
+        Span<int> frontier = stackalloc int[WebRings * WebSectors];
+        int count = 0;
+        for (int r = 0; r < WebRings; r++)
+            for (int k = 0; k < WebSectors; k++)
+                if (InFrontier(r, k)) frontier[count++] = Slot(r, k);
+        if (count == 0) return Reject(CommandReason.WebComplete);
+        int pick = frontier[(int)(_rng.NextUInt() % (uint)count)];
+        Fragments--;
+        _awakened |= 1u << pick;
         RebuildRuneEffects();
+        Emit(TdEventType.RuneAwakened, slots[pick], Fragments);
         return CommandResult.Ok;
     }
 
-    private int Rune(string sector, string kind) => _runeEffects.GetValueOrDefault((sector, kind));
-    private double RuneFactor(string sector, string kind) => 1.0 + Rune(sector, kind) / 10000.0;
+    private void GainFragments(int amount)
+    {
+        if (amount > 0) Fragments = Sat.Add(Fragments, amount);
+    }
+
+    private int Rune(string effect) => _runeEffects.GetValueOrDefault(effect);
 
     private void RebuildRuneEffects()
     {
-        int oldIntegrity = Rune("general", "integrity");
+        int oldIntegrity = Rune("integrity");
         _runeEffects.Clear();
+        var types = _content.Runes.Types;
         foreach (var n in _content.Runes.Nodes)
-            if (OwnsRune(n.Id))
-                foreach (var e in n.Effects)
-                {
-                    var key = (e.Target ?? (n.Sector == "border" ? "general" : n.Sector), e.Kind);
-                    _runeEffects[key] = _runeEffects.GetValueOrDefault(key) + e.Value;
-                }
-        int delta = Rune("general", "integrity") - oldIntegrity;
+        {
+            if (!AwakenedAt(n.Ring, n.Sector)) continue;
+            foreach (var t in types)
+                if (t.Id == n.Type) _runeEffects[t.Effect] = _runeEffects.GetValueOrDefault(t.Effect) + t.Value;
+        }
+        int delta = Rune("integrity") - oldIntegrity;
         IntegrityMax += delta;
         Integrity = Math.Clamp(Integrity + delta, 0, IntegrityMax);
-        if (Integrity == 0 && Running)
-        {
-            Phase = MatchPhase.Derrota;
-            CrateLeaveWave();
-            Stars = 0;
-            Emit(TdEventType.Defeat, WaveNumber, IntegrityLost);
-        }
         // Atualiza efeitos dos nós existentes, preservando vida e temporizadores em curso.
         for (int i = 0; i < _nodes.Count; i++)
         {
@@ -106,14 +140,6 @@ public sealed partial class TdMatchState
             n.Flags = (byte)(Stat(t, def, "explodeOnEnd", 0) > 0 ? 1 : 0);
             _nodes[i] = n;
         }
-    }
-
-    private int DistinctTowerTypes()
-    {
-        int count = 0;
-        for (int i = 0; i < _content.Towers.Length; i++)
-            if (TowerCount(i) > 0) count++;
-        return count;
     }
 
     private void RefreshHeldTargets()
@@ -131,5 +157,5 @@ public sealed partial class TdMatchState
         }
     }
 
-    private double EffectiveRange(TdTowerDef def) => def.Range * RuneFactor(def.Id, "rangeBp");
+    private double EffectiveRange(TdTowerDef def) => def.Range * (1.0 + Rune("rangeBp") / 10000.0);
 }

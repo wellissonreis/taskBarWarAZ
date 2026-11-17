@@ -55,8 +55,8 @@ public sealed record Pause : IGameCommand;
 [System.Diagnostics.CodeAnalysis.SuppressMessage("Naming", "CA1716", Justification = "Nome fixado por SDD-29 §11.")]
 public sealed record Resume : IGameCommand;
 
-/// <summary>Compra uma runa adjacente com créditos, inclusive em pausa.</summary>
-public sealed record BuyRune(string RuneId) : IGameCommand;
-
-/// <summary>Devolve uma runa e os nós desconectados do Núcleo por 100% dos créditos.</summary>
-public sealed record RefundRune(string RuneId) : IGameCommand;
+/// <summary>
+/// Desperta uma runa ALEATÓRIA da fronteira da teia gastando 1 fragmento (TD.29a). Sorteio pelo <c>Rng</c> da partida (replay determinístico);
+/// aceito a qualquer momento da corrida, inclusive em pausa; sem devolução.
+/// </summary>
+public sealed record AwakenRune : IGameCommand;

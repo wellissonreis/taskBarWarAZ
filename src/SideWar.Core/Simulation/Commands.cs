@@ -92,10 +92,10 @@ public enum CommandReason : byte
     NotPaused,
     /// <summary>Comando de tempo recusado durante a pausa (SDD-29 §11).</summary>
     PausedCommand,
-    RuneNotAdjacent,
-    RuneOwned,
-    RuneNotOwned,
-    UnknownRune,
+    /// <summary><c>AwakenRune</c> sem fragmento (TD.29a).</summary>
+    NoFragments,
+    /// <summary><c>AwakenRune</c> com a teia inteira despertada (TD.29a).</summary>
+    WebComplete,
 }
 
 /// <summary>Resultado de um comando: <c>Missing</c> = créditos que faltam (só em <see cref="CommandReason.InsufficientCredits"/>).</summary>
