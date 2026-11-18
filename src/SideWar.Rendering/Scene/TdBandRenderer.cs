@@ -142,8 +142,8 @@ public sealed class TdBandRenderer : IDisposable
         for (int i = 0; i < content.Towers.Length; i++)
         {
             var e = TdArtMap.TryTower(content.Towers[i].Id, out var found) ? found : TdArtMap.Towers[0];
-            _towerImg[i] = TdSpriteBaker.ByHeight(_atlas, e.Sprite, e.HeightDip * px, e.Tint, e.TintAlpha);
-            _chipImg[i] = TdSpriteBaker.ByHeight(_atlas, e.Sprite, ChipSpriteDip * px, e.Tint, e.TintAlpha);
+            _towerImg[i] = TdVectorSprites.IsTower(content.Towers[i].Id) ? TdVectorSprites.Bake(content.Towers[i].Id, TdArtMap.TowerHeightDip * px, false) : TdSpriteBaker.ByHeight(_atlas, e.Sprite, e.HeightDip * px, e.Tint, e.TintAlpha);
+            _chipImg[i] = TdVectorSprites.IsTower(content.Towers[i].Id) ? TdVectorSprites.Bake(content.Towers[i].Id, ChipSpriteDip * px, false) : TdSpriteBaker.ByHeight(_atlas, e.Sprite, ChipSpriteDip * px, e.Tint, e.TintAlpha);
         }
         var normal = content.Enemies.Enemies;
         var bosses = content.Enemies.Bosses;
@@ -152,7 +152,7 @@ public sealed class TdBandRenderer : IDisposable
         {
             string id = i < normal.Length ? normal[i].Id : bosses[i - normal.Length].Id;
             var e = TdArtMap.TryEnemy(id, out var found) ? found : (i < normal.Length ? TdArtMap.Enemies[0] : TdArtMap.Enemies[^3]);
-            _enemyImg[i] = TdSpriteBaker.ByHeight(_atlas, e.Sprite, e.HeightDip * px, e.Tint, e.TintAlpha);
+            _enemyImg[i] = TdVectorSprites.IsEnemy(id) ? TdVectorSprites.Bake(id, e.HeightDip * px, true) : TdSpriteBaker.ByHeight(_atlas, e.Sprite, e.HeightDip * px, e.Tint, e.TintAlpha);
         }
         _coreImg = TdSpriteBaker.ByHeight(_atlas, SpriteId.Core, TdArtMap.EdgeHeightDip * px, default, 0);
         _portalImg = TdSpriteBaker.ByHeight(_atlas, SpriteId.Portal, TdArtMap.EdgeHeightDip * px, default, 0);

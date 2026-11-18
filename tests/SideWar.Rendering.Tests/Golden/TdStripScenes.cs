@@ -20,6 +20,8 @@ public enum TdStripScene
     Unpositioned,
     /// <summary>TD.16b: modo posicionar (borda e véu na faixa, fantasma seguindo o mouse).</summary>
     Placing,
+    AllTowers,
+    NewEnemies,
 }
 
 /// <summary>
@@ -39,6 +41,8 @@ public static class TdStripScenes
         TdStripScene.Wave => "td-strip-wave",
         TdStripScene.PrepRange => "td-strip-prep-range",
         TdStripScene.Placing => "td-strip-placing",
+        TdStripScene.AllTowers => "td-strip-all-towers",
+        TdStripScene.NewEnemies => "td-strip-new-enemies",
         _ => "td-strip-unpositioned",
     };
 
@@ -46,12 +50,13 @@ public static class TdStripScenes
 
     public static string GoldenName(TdStripScene scene, int dpi) => $"{Name(scene)}-{dpi * 100 / 96}";
 
-    private static TdContent TestContent()
+    private static TdContent TestContent(bool newEnemies = false)
     {
         var rules = Embedded.Stages.Rules;
         var stage = Embedded.Stages.Stages.First(s => s.Id == 1) with { Waves = 1, StartingCredits = 1_000_000 };
         TdWaveGroupDef G(string id, int count, double offset) => new(id, count, offset, 1.5);
         var wave = new TdWaveDef(1, false, 1.0, [G("grunt", 1, 0), G("runner", 1, 1), G("flyer", 1, 2), G("armored", 1, 3), G("regen", 1, 4), G("leech", 1, 5), G("ransomware", 1, 6)]);
+        if (newEnemies) wave = new TdWaveDef(1, false, 1.0, [G("fork", 1, 0), G("trojan", 1, 1), G("phishing", 1, 2)]);
         var enemies = Embedded.Enemies with
         {
             Enemies = [.. Embedded.Enemies.Enemies.Select(e => e with { Speed = 40, Hp = 100 })],
@@ -74,9 +79,9 @@ public static class TdStripScenes
 
     private static void Build(TdMatchState m, string tower, int x) => Do(m, new BuildTower(tower, x));
 
-    private static TdMatchState NewMatch(int width = WidthDip)
+    private static TdMatchState NewMatch(int width = WidthDip, bool newEnemies = false)
     {
-        var m = TdMatchState.Create(TestContent(), 1, Rng.Seed(42, 54));
+        var m = TdMatchState.Create(TestContent(newEnemies), 1, Rng.Seed(42, 54));
         Do(m, new LayoutChanged(StripLayout.Create(width, width - 46, 88, 4, width - 80, TowerHost.Band, [new FreeZone(32, width - 32)])));
         return m;
     }
@@ -89,9 +94,16 @@ public static class TdStripScenes
 
     public static (TdMatchState Match, TdView View, double Now) Build(TdStripScene scene)
     {
-        var m = NewMatch();
+        var m = NewMatch(newEnemies: scene == TdStripScene.NewEnemies);
         switch (scene)
         {
+            case TdStripScene.AllTowers:
+                for (int i = 0; i < Embedded.Towers.Length; i++) Build(m, Embedded.Towers[i].Id, 80 + i * 72);
+                return (m, TdView.None, 100.0);
+            case TdStripScene.NewEnemies:
+                Do(m, new StartWave());
+                Steps(m, 150);
+                return (m, TdView.None, 100.0);
             case TdStripScene.Wave:
                 Build(m, "bolt", 150);
                 Build(m, "frost", 260);

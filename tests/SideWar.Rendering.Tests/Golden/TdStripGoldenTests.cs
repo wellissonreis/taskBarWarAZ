@@ -13,7 +13,7 @@ public sealed class TdStripGoldenTests
     {
         var d = new TheoryData<TdStripScene, int>();
         foreach (var scene in Enum.GetValues<TdStripScene>())
-            foreach (int dpi in new[] { 96, 144 })
+            foreach (int dpi in scene is TdStripScene.AllTowers or TdStripScene.NewEnemies ? new[] { 96, 144, 192 } : new[] { 96, 144 })
                 d.Add(scene, dpi);
         return d;
     }
