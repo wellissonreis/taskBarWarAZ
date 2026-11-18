@@ -143,6 +143,7 @@ public sealed class TdActiveWave
     public int Alive { get; internal set; }
     public bool Leaked { get; internal set; }
     public bool SpawnsDone => NextSpawn >= Spawns.Length;
+    internal TdActiveWave Copy() => new(Number, StartTick, Spawns, BonusFactor) { NextSpawn = NextSpawn, Alive = Alive, Leaked = Leaked };
     public int SpawnCount => Spawns.Length;
 }
 

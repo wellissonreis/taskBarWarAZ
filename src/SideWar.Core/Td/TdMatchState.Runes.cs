@@ -15,7 +15,7 @@ public sealed partial class TdMatchState
     private uint _awakened;
     private bool _hasLeaked;
     private int[]? _webSlot; // anel*8+setor → índice em Content.Runes.Nodes
-    private readonly Dictionary<string, int> _runeEffects = [];
+    private Dictionary<string, int> _runeEffects = [];
 
     /// <summary>Fragmentos disponíveis (moeda das runas; créditos ficam só para torres).</summary>
     public long Fragments { get; private set; }

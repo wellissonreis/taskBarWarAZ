@@ -25,7 +25,7 @@ public sealed partial class TdMatchState
 
     private double[] _auraCadence = new double[8];
     private int _damageSource;
-    private readonly Dictionary<int, int> _killsByTower = [];
+    private Dictionary<int, int> _killsByTower = [];
 
     /// <summary>Mortes por id de torre (0 = zona de queimadura). Só observação (SanityBot/balanceamento); fora do hash.</summary>
     public IReadOnlyDictionary<int, int> KillsByTower => _killsByTower;
