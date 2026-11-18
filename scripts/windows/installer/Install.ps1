@@ -60,7 +60,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $here 'SideWar.exe'))) { throw 'Side
 Write-Host "Instalando o SideWar em $InstallDir (sem precisar de administrador)..."
 Stop-SideWar
 New-Item -ItemType Directory -Path $InstallDir -Force | Out-Null
-foreach ($f in 'SideWar.exe', 'LICENSE.txt', 'THIRD-PARTY-NOTICES.txt', 'README.txt', 'LEIA-ME-AMIGOS.txt', 'Install.ps1', 'Desinstalar.cmd') {
+foreach ($f in 'SideWar.exe', 'LICENSE.txt', 'THIRD-PARTY-NOTICES.txt', 'README.txt', 'LEIA-ME.txt', 'Install.ps1', 'Desinstalar.cmd') {
     $src = Join-Path $here $f
     if (Test-Path -LiteralPath $src) { Copy-Item -LiteralPath $src -Destination $InstallDir -Force }
 }

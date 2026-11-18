@@ -1,5 +1,4 @@
-SIDEWAR - TESTE COM AMIGOS
-==========================
+SIDEWAR
 
 O que e: um jogo de defesa (tower defense) que roda como uma faixa discreta sobre a
 barra de tarefas do Windows, para jogar enquanto voce trabalha. Versao de teste.

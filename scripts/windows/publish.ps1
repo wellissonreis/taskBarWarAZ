@@ -66,9 +66,9 @@ foreach ($f in 'LICENSE.txt', 'THIRD-PARTY-NOTICES.txt', 'README.txt') {
     if (-not (Test-Path -LiteralPath $src)) { throw "$f ausente na raiz do repositório" }
     Copy-Item -LiteralPath $src -Destination $staging
 }
-# Instalador para testadores (scripts/windows/installer): Instalar.cmd, Desinstalar.cmd, Install.ps1, LEIA-ME-AMIGOS.txt.
+# Instalador para testadores (scripts/windows/installer): Instalar.cmd, Desinstalar.cmd, Install.ps1, LEIA-ME.txt.
 $installerDir = Join-Path $PSScriptRoot 'installer'
-foreach ($f in 'Instalar.cmd', 'Desinstalar.cmd', 'Install.ps1', 'LEIA-ME-AMIGOS.txt') {
+foreach ($f in 'Instalar.cmd', 'Desinstalar.cmd', 'Install.ps1', 'LEIA-ME.txt') {
     $src = Join-Path $installerDir $f
     if (-not (Test-Path -LiteralPath $src)) { throw "$f ausente em scripts/windows/installer" }
     Copy-Item -LiteralPath $src -Destination $staging
