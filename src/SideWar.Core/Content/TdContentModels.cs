@@ -105,7 +105,27 @@ public sealed record TdFusionDef(
     int MinStage, string[] ResolveOrder, Dictionary<string, string[]> Roles,
     Dictionary<string, Dictionary<string, double>> Generic, TdFusionPairDef[] Pairs);
 
-/// <summary>Conteúdo TD completo e validado; <c>ContentHash</c> = SHA-256 hex dos 8 arquivos <c>td-*.json</c> (com <c>td-runes.json</c> e <c>td-fusion.json</c>).</summary>
+// ---------------------------------------------------------------- mutações de inimigos (SDD-37 §4)
+
+/// <summary>
+/// Traço de mutação (RF-37.7). Fatores sobre os valores escalados da base: HP, velocidade, armadura (soma) e escudo inicial (fração do HP máximo escalado).
+/// <c>Excludes</c>: traços mutuamente exclusivos (simétrico). Disponível a partir da fase absoluta <c>MinStage</c>.
+/// </summary>
+public sealed record TdMutationTraitDef(
+    string Id, string Name, string Label, int MinStage, double HpMult, double SpeedMult, double ArmorAdd, double ShieldPct, bool Flying, string[] Excludes);
+
+/// <summary>
+/// Degrau da progressão (RF-37.8): vale com fase absoluta &gt;= <c>MinStage</c> e <c>MinWaves</c> ondas já iniciadas antes da onda atual.
+/// <c>MaxMutatedPct</c> = fração dos não chefes (piso); <c>MaxDoubles</c> = mutados com dois traços (-1 = usar <c>DoublePct</c> dos mutados, piso).
+/// </summary>
+public sealed record TdMutationTierDef(int MinStage, int MinWaves, double MaxMutatedPct, int MaxDoubles, double DoublePct);
+
+/// <summary>Mutações (td-mutations.json): catálogo de traços, degraus por fase/onda, recompensa e limites de velocidade.</summary>
+public sealed record TdMutationsDef(
+    double RewardPerTrait, double RewardCap, double SpeedMin, double SpeedMax, int DoubleGapWaves, int DoubleMinMutated, int MinEligibleForOne,
+    TdMutationTraitDef[] Traits, TdMutationTierDef[] Tiers);
+
+/// <summary>Conteúdo TD completo e validado; <c>ContentHash</c> = SHA-256 hex dos 9 arquivos <c>td-*.json</c> (com <c>td-runes.json</c>, <c>td-fusion.json</c> e <c>td-mutations.json</c>).</summary>
 public sealed record TdContent(
     TdTowerDef[] Towers, TdEnemiesDef Enemies, TdWavesDef Waves, TdStagesDef Stages, TdAbilityDef[] Abilities,
-    TdMetaDef Meta, TdRunesDef Runes, string ContentHash, TdFusionDef Fusion);
+    TdMetaDef Meta, TdRunesDef Runes, string ContentHash, TdFusionDef Fusion, TdMutationsDef Mutations);
