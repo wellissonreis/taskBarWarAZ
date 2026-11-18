@@ -23,6 +23,17 @@
           <CheckBox Content="Pergunta-bônus entre as ondas (Tower Defense)" IsChecked="{Binding TdBonusQuestions}" Margin="0,0,0,4" />
           <CheckBox Content="Mostrar a renda de créditos (+X/s) abaixo do contador" IsChecked="{Binding TdShowIncome}" Margin="0,0,0,4" />
           <CheckBox Content="Modo discreto: sem brilhos nem contagem animada; +N só nos ganhos grandes" IsChecked="{Binding TdDiscreetMode}" Margin="0,0,0,4" />
+          <CheckBox Content="Alertas: avisar quando a defesa estiver em risco" IsChecked="{Binding TdAlertsEnabled}" Margin="0,0,0,4" />
+          <CheckBox Content="Pausar automaticamente antes de perder (você escolhe Salvar ou Deixar cair)" IsChecked="{Binding TdAlertsAutoPause}" Margin="0,0,0,4" />
+          <CheckBox Content="Som curto ao aparecer um alerta" IsChecked="{Binding TdAlertsSound}" Margin="0,0,0,4" />
+          <TextBlock Text="Alertas silenciados (desmarque para reativar)" Margin="0,4,0,2" />
+          <ItemsControl ItemsSource="{Binding TdAlertMutes}" Margin="12,0,0,8">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <CheckBox Content="{Binding Name}" IsChecked="{Binding Muted}" Margin="0,0,0,2" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
           <CheckBox Content="Ondas contínuas: corrida infinita, sem Preparo entre ondas (vale na próxima corrida)" IsChecked="{Binding TdContinuousWaves}" Margin="0,0,0,4" />
           <CheckBox Content="Painel de torres sempre aberto junto ao chip" IsChecked="{Binding TdTowerPanelPinned}" Margin="0,0,0,4" />
           <CheckBox Content="Iniciar as ondas automaticamente (Tower Defense)" IsChecked="{Binding TdAutoStart}" Margin="0,0,0,4" />
