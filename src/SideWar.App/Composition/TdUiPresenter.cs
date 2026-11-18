@@ -55,6 +55,27 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         Kick();
     }
 
+    /// <summary>TD.40c: proteção/alertas do host; Salvar e Deixar cair rodam na T-Game, entre ticks.</summary>
+    public TdAlertGuard? Alerts => td.Host.Alerts;
+    public void SaveTower() => td.Host.SaveTower();
+    public void LetTowerFall() => td.Host.LetTowerFall();
+    public int AlertsMutedMask => td.Host.Alerts.Settings.MutedMask;
+    public void AlertsMutedChanged(int mutedMask) => ui(UiRequest.SaveTdOptions);
+
+    private int soundRaised;
+
+    /// <summary>Som curto e baixo (sistema) a cada alerta novo, só com a opção ligada, janela visível e sem boss key; nunca ativa janela.</summary>
+    private void PlayAlertSound()
+    {
+        var guard = td.Host.Alerts;
+        int raised = guard.Raised;
+        if (raised == soundRaised) return;
+        soundRaised = raised;
+        if (!guard.Settings.Sound || bossHidden || !runtime.App.IsVisible || !controller.AlertCardOpen) return;
+        try { System.Media.SystemSounds.Asterisk.Play(); }
+        catch (Exception) { /* sem dispositivo de áudio: o alerta visual basta */ }
+    }
+
     private volatile string bossHotkey = "Ctrl+Alt+H";
     private volatile bool bossHidden;
     /// <summary>TD.28b: atalho global de minimizar tudo (configurável em Configurações &gt; Atalhos).</summary>
@@ -396,9 +417,10 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
             controller.CollapseOutside();
         }
         controller.Sync();
+        PlayAlertSound();
         Refresh(false);
         var m = td.Host.Match;
-        bool busy = runtime.App.IsVisible && (m.Phase == MatchPhase.Onda || controller.PopoverOpen || controller.CurrentTip is not null || m.CountdownRemainingSeconds > 0 || controller.QuizActive || controller.Pulsing || controller.NoticeOpen || controller.RuneCardOpen);
+        bool busy = runtime.App.IsVisible && (m.Phase == MatchPhase.Onda || controller.PopoverOpen || controller.CurrentTip is not null || m.CountdownRemainingSeconds > 0 || controller.QuizActive || controller.Pulsing || controller.NoticeOpen || controller.RuneCardOpen || controller.AlertCardOpen);
         // TD.33d: a animação do dinheiro só agenda quadros enquanto há o que animar (≈30 fps, o teto estável do TD.28c); parado/pausado/oculto = nada.
         bool money = runtime.App.IsVisible && controller.MoneyAnimating;
         deadline = money ? clock.NowTicks + (long)(MoneyTickSeconds * clock.TicksPerSecond)
