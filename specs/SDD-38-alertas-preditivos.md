@@ -35,6 +35,17 @@ Cartão crítico: **“Sua torre vai cair”**, motivo e sugestão, **“Salvar 
 
 A autorização é estado do host, fora do hash, caso não modifique regras do Core: o replay reproduz os mesmos passos e comandos efetivamente executados, sem reproduzir tempo de espera. Se for representada dentro do Core, registrar comando e estado no hash. Não usar apenas o fim de um lote de passos para inspecionar o risco.
 
+### 3.1 Gatilho geométrico da pausa crítica (correção do usuário, 2026-11-18)
+
+“A pausa no jogo é antes de perder, e quando o robô passa da torre mais perto do portal.” O gatilho principal da pausa crítica é **geométrico**; a simulação do passo fatal (acima) permanece como **rede de segurança**.
+
+- **Linha de defesa:** X lógico da torre posicionada, ativa (sem desativação) e com alvos diferentes de “none” (ataque, controle ou bloqueio) mais próxima do portal (menor X). Torre vendida, desposicionada ou desativada deixa de contar e a referência é recalculada.
+- **Sem torre de defesa posicionada:** a linha é a **distância de segurança** `LeakX + 240` unidades lógicas (20% do caminho) — `TdRiskAnalyzer.SafetyDistance`.
+- **Disparo:** antes de cada Step, qualquer inimigo vivo com `X` estritamente menor que a linha, **voadores inclusos** (a torre não precisar alcançá-lo) e divisões/réplicas do Fork Bomb/Botnet, pausa com o alerta crítico **“Nesse ritmo sua torre vai cair.” / “Um inimigo passou da sua última torre. Construa ou use uma habilidade.”** (tipo `PassedLastTower`).
+- **Salvar** reconhece os inimigos que já passaram (por id): só um inimigo **novo** passando da linha, ou o passo fatal, volta a pausar. **Deixar cair** autoriza o restante da partida corrente (nenhuma retenção, inclusive críticos comuns) até a derrota.
+- Retenção do host: nenhum Step roda, o Frame não anda, sem expiração; não usa o `Pause` do Core (pausa do usuário, modal e boss key independentes). Decisões (`Held/Saved/LetFall`, com Frame) ficam no registro do host; o replay reproduz os mesmos Steps e comandos, sem tempo de espera. Não silenciável por tipo enquanto pausar automaticamente estiver ligado.
+- A passagem de inimigo detectada **depois** do Step que o cruzou pausa antes do Step seguinte: nenhum Step adicional é executado com inimigo desreconhecido além da linha.
+
 ## 4. Cadência, interface e configurações
 
 Cooldown por tipo de 60 segundos de jogo em execução, máximo de dois alertas não fatais por onda; o fatal independe de cooldown e limite. A troca de partida limpa contadores. Um único cartão no cantinho, legível em fonte >= 14 DIP e cores da Palette, mostra motivo e ação. Dicas e avisos oferecem **Continuar**; críticos comuns oferecem também **não pausar por este tipo**, persistido por tipo. A proteção fatal não pode ser suprimida por tipo enquanto pausa automática estiver ligada. Sem expiração de cartão fatal. Ao surgir, pulsar discretamente o indicador do cantinho e exibir badge; som baixo opcional. Não ativar janela, roubar foco, mover ponteiro ou enviar notificações push. Com boss key ativa, manter oculto e jamais despausar por mostrá-lo; alertas críticos continuam protegendo a partida.
