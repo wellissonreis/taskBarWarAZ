@@ -32,6 +32,8 @@ public enum TdUiAction : byte
     RuneBranch, RuneTutorialOpen, RuneTutorialDismiss, ViewRunes, TowerCategory,
     /// <summary>TD.40c: cartão de alerta: Salvar / Deixar cair (pausa crítica da proteção), Entendi e "não pausar por este tipo".</summary>
     AlertSave, AlertFall, AlertDismiss, AlertMute,
+    /// <summary>TD.37b: fusão de torres: abrir o cartão (Arg = id da base), escolher o módulo (SArg = tipo), confirmar, voltar, fechar e dispensar a dica de primeira vez.</summary>
+    FuseOpen, FusePick, FuseConfirm, FuseBack, FuseClose, FusionTipDismiss,
 }
 
 /// <summary>Ícone do HUD desenhado por código (TD.14); o renderer mapeia para caminhos vetoriais.</summary>
@@ -62,7 +64,7 @@ public readonly record struct TdUiItem(
 /// <summary>Popover (acima da faixa): título, itens (o item 0, quando botão de fechar, fica no canto) e âncora em X (DIP da faixa).</summary>
 public sealed record TdPopoverView(string Title, TdUiItem[] Items, float Width, float Height, float AnchorX, string? IconTower = null,
     float ArrowX = -1f, float TargetHudX = -1f, bool Quick = false, TdRuneTip? Tip = null, bool RuneWindow = false,
-    TdTone AlertTone = TdTone.Normal, float Pulse = 0f)
+    TdTone AlertTone = TdTone.Normal, float Pulse = 0f, string? IconModule = null)
 {
     /// <summary>Altura (DIP) da seta do balão do tutorial (TD.15), somada ao fim da janela quando <see cref="ArrowX"/> &gt;= 0.</summary>
     public const float ArrowH = 7f;
@@ -83,7 +85,7 @@ public sealed record TdPopoverView(string Title, TdUiItem[] Items, float Width, 
     public long Signature()
     {
         var h = new HashCode();
-        h.Add(Title); h.Add(IconTower); h.Add((int)AlertTone); h.Add((int)(Pulse * 8)); h.Add(Quick); h.Add(RuneWindow); h.Add(Tip); h.Add((int)(ArrowX * 10)); h.Add((int)(TargetHudX * 10));
+        h.Add(Title); h.Add(IconTower); h.Add(IconModule); h.Add((int)AlertTone); h.Add((int)(Pulse * 8)); h.Add(Quick); h.Add(RuneWindow); h.Add(Tip); h.Add((int)(ArrowX * 10)); h.Add((int)(TargetHudX * 10));
         foreach (var it in Items)
         {
             h.Add(it.Text); h.Add(it.Right); h.Add(it.Sub); h.Add(it.Arg); h.Add(it.FontSize); h.Add((int)it.Icon); h.Add(it.Highlight); h.Add(it.Enabled); h.Add(it.Selected); h.Add((int)it.Tone); h.Add((int)(it.Fill * 100));
