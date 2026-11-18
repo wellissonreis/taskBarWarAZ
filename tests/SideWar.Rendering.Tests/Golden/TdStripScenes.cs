@@ -22,6 +22,8 @@ public enum TdStripScene
     Placing,
     AllTowers,
     NewEnemies,
+    /// <summary>TD.37b: torres fundidas no mundo (par nomeado, ordem inversa, genérico) com selo do módulo; a primeira selecionada.</summary>
+    Fused,
 }
 
 /// <summary>
@@ -43,6 +45,7 @@ public static class TdStripScenes
         TdStripScene.Placing => "td-strip-placing",
         TdStripScene.AllTowers => "td-strip-all-towers",
         TdStripScene.NewEnemies => "td-strip-new-enemies",
+        TdStripScene.Fused => "td-strip-fused",
         _ => "td-strip-unpositioned",
     };
 
@@ -50,7 +53,7 @@ public static class TdStripScenes
 
     public static string GoldenName(TdStripScene scene, int dpi) => $"{Name(scene)}-{dpi * 100 / 96}";
 
-    private static TdContent TestContent(bool newEnemies = false)
+    private static TdContent TestContent(bool newEnemies = false, bool fusion = false)
     {
         var rules = Embedded.Stages.Rules;
         var stage = Embedded.Stages.Stages.First(s => s.Id == 1) with { Waves = 1, StartingCredits = 1_000_000 };
@@ -68,6 +71,7 @@ public static class TdStripScenes
             Waves = new TdWavesDef([new TdStageWavesDef(1, [wave])]),
             Enemies = enemies,
             Towers = [.. Embedded.Towers.Select(t => t with { Cost = 10, UnlockStage = 1 })],
+            Fusion = fusion ? Embedded.Fusion with { MinStage = 1 } : Embedded.Fusion,
         };
     }
 
@@ -79,9 +83,9 @@ public static class TdStripScenes
 
     private static void Build(TdMatchState m, string tower, int x) => Do(m, new BuildTower(tower, x));
 
-    private static TdMatchState NewMatch(int width = WidthDip, bool newEnemies = false)
+    private static TdMatchState NewMatch(int width = WidthDip, bool newEnemies = false, bool fusion = false)
     {
-        var m = TdMatchState.Create(TestContent(newEnemies), 1, Rng.Seed(42, 54));
+        var m = TdMatchState.Create(TestContent(newEnemies, fusion), 1, Rng.Seed(42, 54));
         Do(m, new LayoutChanged(StripLayout.Create(width, width - 46, 88, 4, width - 80, TowerHost.Band, [new FreeZone(32, width - 32)])));
         return m;
     }
@@ -94,12 +98,25 @@ public static class TdStripScenes
 
     public static (TdMatchState Match, TdView View, double Now) Build(TdStripScene scene)
     {
-        var m = NewMatch(newEnemies: scene == TdStripScene.NewEnemies);
+        var m = NewMatch(newEnemies: scene == TdStripScene.NewEnemies, fusion: scene == TdStripScene.Fused);
         switch (scene)
         {
             case TdStripScene.AllTowers:
                 for (int i = 0; i < Embedded.Towers.Length; i++) Build(m, Embedded.Towers[i].Id, 80 + i * 72);
                 return (m, TdView.None, 100.0);
+            case TdStripScene.Fused:
+            {
+                Build(m, "frost", 150); int a = m.Towers[^1].Id;
+                Build(m, "bolt", 280); int b = m.Towers[^1].Id;
+                Build(m, "cannon", 410); int c = m.Towers[^1].Id;
+                Build(m, "balancer", 540); int d = m.Towers[^1].Id;
+                Build(m, "bolt", 670);
+                Do(m, new FuseTower(a, "bolt"));
+                Do(m, new FuseTower(b, "frost"));
+                Do(m, new FuseTower(c, "bolt"));
+                Do(m, new FuseTower(d, "scaleset"));
+                return (m, new TdView(a, 0), 100.0);
+            }
             case TdStripScene.NewEnemies:
                 Do(m, new StartWave());
                 Steps(m, 150);
