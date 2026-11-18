@@ -465,6 +465,9 @@ public sealed class TdBandRenderer : IDisposable
         float left = cx - sw / 2f, top = Ground - sh;
         Blit(c, img, cx, Ground, disabled ? (byte)110 : (byte)255);
 
+        if (t.HasModule && _content is not null && t.ModuleDefIndex < _content.Towers.Length)
+            TdFusionMark.Draw(c, _content.Towers[t.ModuleDefIndex].Id, left + sw - 7f, Ground - 11f, 11f, disabled ? (byte)110 : (byte)255);
+
         if (selected || hover)
         {
             _stroke.Color = selected ? Palette.TxtBranco : Palette.AmbarHover;
