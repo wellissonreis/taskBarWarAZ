@@ -9,7 +9,17 @@ public static class TdProfileMigrations
     /// <summary>v1 → v2: resultados completos; v2 → v3: reembolso das compras obsoletas e saneamento dos nós.</summary>
     public static MigrationRegistry Default { get; } = new MigrationRegistry()
         .Register(TdProfileData.Schema, 1, V1ToV2)
-        .Register(TdProfileData.Schema, 2, V2ToV3);
+        .Register(TdProfileData.Schema, 2, V2ToV3)
+        .Register(TdProfileData.Schema, 3, V3ToV4);
+
+    private static JsonNode V3ToV4(JsonNode root)
+    {
+        root["legacyTotal"] ??= 0;
+        root["bestRunWaves"] ??= 0;
+        root["legacyLastRun"] ??= "";
+        root["runsPlayed"] ??= 0;
+        return root;
+    }
 
     // SealsEarned é cumulativo; remover compras obsoletas reembolsa seu custo integral
     // por SealsAvailable, sem conceder selos novos nem comprar os substitutos automaticamente.

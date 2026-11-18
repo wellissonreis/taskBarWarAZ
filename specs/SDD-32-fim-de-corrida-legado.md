@@ -1,6 +1,6 @@
 # SDD-32: Fim de corrida gracioso e legado (cartão discreto, Azure Advisor, recomeço automático e runas iniciais)
 
-**Status:** PROPOSTA com **decisão de rumo do usuário** (ficha SDD-32, 2026-11-17: "fim gracioso + legado"). Detalhes de arquitetura em aberto estão na §13, **cada um com recomendação**; nenhum foi decidido aqui · **Etapa:** ciclo "TD" · **Depende de:** SDD-28 (RF-28.14 HUD, RF-28.21 patente e recorde, RF-28.24 derrota que ensina), SDD-29 (runas/teia, corrida contínua §20), SDD-14 (persistência e migração), SDD-10/11 (núcleo determinístico, ADR-026) e das fichas **TD.30a a TD.30c** (executadas antes) · **Relaciona-se com:** SDD-31 (o Azure Advisor aponta torres novas **sem depender delas**, §5) · **Não edita** SDD-28, SDD-29, SDD-31, `DECISOES.md` nem código: só especifica. Fichas de execução: **TD.32a e TD.32b** (§11), entre TD.30c e TD.31a.
+**Status:** PROPOSTA com **decisão de rumo do usuário** (ficha SDD-32, 2026-11-17: "fim gracioso + legado"). Decisões de arquitetura registradas na §13 · **Etapa:** ciclo "TD" · **Depende de:** SDD-28 (RF-28.14 HUD, RF-28.21 patente e recorde, RF-28.24 derrota que ensina), SDD-29 (runas/teia, corrida contínua §20), SDD-14 (persistência e migração), SDD-10/11 (núcleo determinístico, ADR-026) e das fichas **TD.30a a TD.30c** (executadas antes) · **Relaciona-se com:** SDD-31 (o Azure Advisor aponta torres novas **sem depender delas**, §5) · **Não edita** SDD-28, SDD-29, SDD-31, `DECISOES.md` nem código: só especifica. Fichas de execução: **TD.32a e TD.32b** (§11), entre TD.30c e TD.31a.
 
 > Todo número aqui é **valor inicial ajustável** e **não medido** (README §2.3); a aritmética do §2 é conta direta sobre o JSON, não medição. Base de código descrita: HEAD `ca25fe1`. O working tree tem alterações locais de outra ficha em `TdMatchState.Bonus.cs`, `TdSanityBot.cs`, `TdUiController*.cs`, `TdUiModel.cs`, `TdUiRenderer.cs` e testes: o estado delas **não** é tratado aqui, e a TD.32 só começa depois de commitadas (§11.3).
 
@@ -277,9 +277,11 @@ Entrega, sem UI nova:
 | **CA-32.12** | O cartão mostra "+N legado"; a aba Runas mostra o contador ("Legado 11 · ..." ou "MAX"); modo clássico e Vitória **não** creditam. |
 | **CA-32.13** | Nenhum efeito sobre fases/conteúdo: `ContentHash` igual; corrida com `LegacyRunes = 3` não pula fase, não concede estrela, selo, torre liberada nem crédito (exceto o efeito das próprias runas). |
 
-## 13. Decisões em aberto (**não decididas aqui**; cada uma com recomendação)
+## 13. Decisões (decididas conforme as recomendações, TD.32a)
 
-| DP | Pergunta | Opções | Recomendação |
+As dez recomendações abaixo estão decididas. A TD.32a usa o estado inicial e incremento do PCG como identificador derivado da seed, pois a partida recebe o gerador já inicializado; reutilizar uma seed repete o identificador. Crédito no encerramento do aplicativo e extras de interface pertencem à TD.32b.
+
+| DP | Pergunta | Opções | Decisão |
 |---|---|---|---|
 | **DP-32.1** | **Modelo do legado:** derivado do acumulado (não gasto) ou saldo que o jogador gasta? | (a) derivado `N = min(3, floor(total/6))`, não consumido; (b) saldo gasto em "runas iniciais" a escolher; (c) só pelo **recorde** (`N = min(3, floor(melhorOnda/15))`), sem acumular nem idempotência | **(a)**: sem tela nem escolha, coerente com "discreto". (c) é a alternativa mais simples se o usuário abrir mão dos "fragmentos de legado". |
 | **DP-32.2** | **Id de idempotência da corrida** | (a) seed `"{SeedState:x}-{SeedStream:x}"`; (b) contador `runsStarted` gravado ao **iniciar** a corrida; (c) data/hora de início | **(a)**: não exige gravar ao iniciar; (b) é mais robusto a seed repetida (testes/seed fixa) ao custo de uma gravação extra por corrida. |

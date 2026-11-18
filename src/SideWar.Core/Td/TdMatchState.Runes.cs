@@ -87,6 +87,18 @@ public sealed partial class TdMatchState
         }
     }
 
+    private void ApplyLegacyRunes()
+    {
+        for (int i = 0; !_options.IsClassic && i < _options.LegacyRunes; i++)
+        {
+            var frontier = Frontier;
+            var node = _content.Runes.Nodes[NodeIndex(frontier[(int)(_rng.NextUInt() % (uint)frontier.Count)])];
+            _awakened |= 1u << Slot(node.Ring, node.Sector);
+            RebuildRuneEffects();
+        }
+        _stageBaseIntegrity = Integrity;
+    }
+
     private CommandResult DoAwakenRune(string nodeId)
     {
         if (!Running) return Reject(CommandReason.InvalidPhase);

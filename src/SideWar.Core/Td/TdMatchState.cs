@@ -54,6 +54,7 @@ public sealed partial class TdMatchState
         _stage = stage;
         _waves = waves;
         _rng = rng;
+        RunId = $"{rng.State:x}-{rng.Inc:x}";
         _enemyStats = TdEnemyStats.Build(content);
         _metaNodes = new HashSet<string>(metaNodes ?? [], StringComparer.Ordinal);
         _abilityCd = new int[content.Abilities.Length];
@@ -89,10 +90,28 @@ public sealed partial class TdMatchState
         var stage = content.Stages.Stages.FirstOrDefault(s => s.Id == stageId)
             ?? throw new ArgumentOutOfRangeException(nameof(stageId), stageId, "Fase inexistente no td-stages.json.");
         var waves = content.Waves.Stages.Single(s => s.Stage == stageId).Waves;
-        return new TdMatchState(content, stage, waves, rng, unlockedMetaNodes, options);
+        if (options.LegacyRunes is < 0 or > TdLegacy.MaxStartingRunes)
+            throw new ArgumentOutOfRangeException(nameof(options), "LegacyRunes fora da faixa.");
+        var match = new TdMatchState(content, stage, waves, rng, unlockedMetaNodes, options);
+        match.ApplyLegacyRunes();
+        return match;
     }
 
     public TdContent Content => _content;
+    public string RunId { get; }
+    public int WavesReached
+    {
+        get
+        {
+            long total = 0;
+            int count = _content.Stages.Stages.Length;
+            int start = _stageNumber - _stageClears;
+            for (int i = 0; i < _stageClears; i++)
+                total += _content.Stages.Stages[(start - 1 + i) % count].Waves;
+            total += Phase is MatchPhase.Preparo or MatchPhase.Vitoria ? WaveNumber : Math.Max(0, WaveNumber - 1);
+            return (int)Math.Min(int.MaxValue, total);
+        }
+    }
     /// <summary>Id do conteúdo da fase atual (1 a 6; no ciclo infinito volta a 1).</summary>
     public int StageId => _stage.Id;
     /// <summary>Número absoluto da fase na corrida (1, 2, … 6, 7, …); sobe a cada <see cref="TdEventType.StageCleared"/>. Escala HP e destrava torres/habilidades.</summary>

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using SideWar.Core.Content.Td;
+using SideWar.Core.Td;
 
 namespace SideWar.Persistence.Profile;
 
@@ -54,6 +55,10 @@ public static class TdProfileSerializer
         var earned = Math.Max(0, p.SealsEarned);
         return p with
         {
+            LegacyTotal = Math.Clamp(p.LegacyTotal, 0, TdLegacy.MaxTotal),
+            BestRunWaves = Math.Max(0, p.BestRunWaves),
+            LegacyLastRun = p.LegacyLastRun ?? "",
+            RunsPlayed = Math.Max(0, p.RunsPlayed),
             SealsEarned = earned,
             MigratedSeals = Math.Clamp(p.MigratedSeals, 0, earned),
             Stages = stages,

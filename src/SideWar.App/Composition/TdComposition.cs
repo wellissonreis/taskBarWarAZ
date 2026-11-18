@@ -52,6 +52,7 @@ internal sealed class TdComposition
         var rng = Rng.Seed(runSeed, 54UL);
         var options = settings.Td.ContinuousWaves ? TdMatchOptions.Default : TdMatchOptions.Classic;
         int stage = recorder.SuggestedStage();
+        options = options with { LegacyRunes = options.PersistentRun ? recorder.StartingRunes : 0 };
         var match = TdMatchState.Create(content, stage, rng, recorder.Profile.PurchasedNodes, options);
         var host = new TdGameHost(clock, app, match, recorder, presence);
         var td = new TdComposition(host, recorder, content) { _options = options, _runSeed = runSeed, RunStartStage = stage };
@@ -67,6 +68,7 @@ internal sealed class TdComposition
         stageId = Math.Clamp(stageId, 1, StageCount);
         _runSeed = (ulong)DateTime.UtcNow.Ticks;
         RunStartStage = stageId;
+        _options = _options with { LegacyRunes = _options.PersistentRun ? Recorder.StartingRunes : 0 };
         Host.Restart(TdMatchState.Create(_content, stageId, Rng.Seed(_runSeed, 54UL), Recorder.Profile.PurchasedNodes, _options));
     }
 

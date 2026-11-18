@@ -186,7 +186,7 @@ public readonly record struct TdRecordOutcome(bool NewRecord, bool NewCrown, TdM
 /// <param name="ContinuousWaves">A próxima onda começa no mesmo passo em que a anterior termina (Preparo de 0 s). O Preparo inicial (antes da onda 1 da corrida) continua existindo.</param>
 /// <param name="PersistentRun">Vencer a fase segue para a próxima sem recriar o estado; depois da última, ciclos infinitos mais difíceis. Só a derrota encerra.</param>
 /// <param name="StageClearHeal">Integridade do núcleo recuperada ao concluir cada fase (limitada ao máximo).</param>
-public sealed record TdMatchOptions(bool ContinuousWaves = true, bool PersistentRun = true, int StageClearHeal = 5)
+public sealed record TdMatchOptions(bool ContinuousWaves = true, bool PersistentRun = true, int StageClearHeal = 5, int LegacyRunes = 0)
 {
     public static TdMatchOptions Default { get; } = new();
     public static TdMatchOptions Classic { get; } = new(false, false, 0);

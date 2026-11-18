@@ -8,7 +8,7 @@ namespace SideWar.Persistence.Profile;
 public sealed record TdProfileData
 {
     public const string Schema = "sidewar.td-profile";
-    public const int SchemaVersion = 3;
+    public const int SchemaVersion = 4;
 
     /// <summary>Total de selos já ganhos (1 por estrela nova, 1 por desafio, mais os iniciais da migração do idle).</summary>
     public int SealsEarned { get; init; }
@@ -25,6 +25,11 @@ public sealed record TdProfileData
 
     /// <summary>Modo infinito (pós-MVP, RF-28.11): onda máxima por seed jogada.</summary>
     public IReadOnlyList<TdInfiniteRunData> InfiniteRuns { get; init; } = [];
+
+    public int LegacyTotal { get; init; }
+    public int BestRunWaves { get; init; }
+    public string LegacyLastRun { get; init; } = "";
+    public int RunsPlayed { get; init; }
 
     public static TdProfileData Default { get; } = new();
 }

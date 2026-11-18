@@ -6,6 +6,19 @@ namespace SideWar.Persistence.Profile;
 /// <summary>Regras de selos do perfil v3 (RF-28.13), derivadas do conteúdo <c>td-meta.json</c>.</summary>
 public static class TdProfileRules
 {
+    public static TdProfileData RecordLegacy(TdProfileData profile, string runId, int waves)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(runId);
+        if (profile.LegacyLastRun == runId) return profile;
+        return profile with
+        {
+            LegacyTotal = (int)Math.Min(TdLegacy.MaxTotal, (long)Math.Max(0, profile.LegacyTotal) + TdLegacy.Fragments(waves)),
+            BestRunWaves = Math.Max(profile.BestRunWaves, waves),
+            LegacyLastRun = runId,
+            RunsPlayed = profile.RunsPlayed == int.MaxValue ? int.MaxValue : Math.Max(0, profile.RunsPlayed) + 1,
+        };
+    }
+
     /// <summary>Soma do custo dos nós comprados (id desconhecido não custa nada e é ignorado).</summary>
     public static int SealsSpent(TdProfileData p, TdMetaDef meta)
     {

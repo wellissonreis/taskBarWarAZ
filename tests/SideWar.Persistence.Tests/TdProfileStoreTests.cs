@@ -30,6 +30,40 @@ public class TdProfileStoreTests
     };
 
     [Fact]
+    public void LegacyCreditIsIdempotentAfterReloadAndRecordOnlyIncreases()
+    {
+        var (_, store) = Make();
+        var first = TdProfileRules.RecordLegacy(Full(), "run-1", 12);
+        Assert.Equal(2, first.LegacyTotal);
+        Assert.Equal(12, first.BestRunWaves);
+        Assert.True(store.Save(first));
+        var reloaded = store.Load().Profile;
+        Assert.Same(reloaded, TdProfileRules.RecordLegacy(reloaded, "run-1", 12));
+        var second = TdProfileRules.RecordLegacy(reloaded, "run-2", 5);
+        Assert.Equal(3, second.LegacyTotal);
+        Assert.Equal(12, second.BestRunWaves);
+        Assert.Equal(2, second.RunsPlayed);
+    }
+
+    [Fact]
+    public void Migration_V3ToV4_PreservesProgressAndRoundTripsLegacy()
+    {
+        var (fs, store) = Make();
+        var payload = System.Text.Json.Nodes.JsonNode.Parse(J(Full()))!.AsObject();
+        foreach (var key in new[] { "legacyTotal", "bestRunWaves", "legacyLastRun", "runsPlayed" }) payload.Remove(key);
+        fs.Files[F] = Envelope(payload.ToJsonString(), TdProfileData.Schema, 3);
+        var p = store.Load().Profile;
+        Assert.Equal(J(TdProfileSerializer.Sanitize(Full())), J(p));
+        Assert.Equal(0, p.LegacyTotal);
+        Assert.Equal(0, p.BestRunWaves);
+        Assert.Equal("", p.LegacyLastRun);
+        Assert.Equal(4, SchemaVersionOnDisk(fs.Files[F]));
+        p = p with { LegacyTotal = 12, BestRunWaves = 37, LegacyLastRun = "abc-def", RunsPlayed = 4 };
+        Assert.True(store.Save(p));
+        Assert.Equal(J(p), J(store.Load().Profile));
+    }
+
+    [Fact]
     public void Load_NoFiles_ReturnsNewProfileWithStage1Unlocked()
     {
         var (_, st) = Make();
@@ -45,7 +79,7 @@ public class TdProfileStoreTests
     {
         var (fs, st) = Make();
         Assert.True(st.Save(Full()));
-        Assert.Equal(3, SchemaVersionOnDisk(fs.Files[F]));
+        Assert.Equal(4, SchemaVersionOnDisk(fs.Files[F]));
         var r = st.Load();
         Assert.Equal(TdProfileSource.File, r.Source);
         Assert.Equal(J(TdProfileSerializer.Sanitize(Full())), J(r.Profile));
@@ -269,7 +303,7 @@ public class TdProfileStoreTests
         Assert.All(p.Stages, s => { Assert.False(s.Crown); Assert.Equal(0, s.Medals); Assert.Equal(0, s.BestScore); });
         Assert.Equal(["defense.damage1"], p.PurchasedNodes);
         Assert.Equal((ulong)7, p.InfiniteRuns.Single().Seed);
-        Assert.Equal(3, SchemaVersionOnDisk(fs.Files[F])); // gravado de volta na versão nova
+        Assert.Equal(4, SchemaVersionOnDisk(fs.Files[F])); // gravado de volta na versão nova
         Assert.Equal(J(p), J(st.Load().Profile));
     }
 
@@ -295,7 +329,7 @@ public class TdProfileStoreTests
         Assert.True(p.IdleImportDone);
         Assert.Equal(J(TdProfileSerializer.Sanitize(Full() with { SealsEarned = 30, PurchasedNodes = ["defense.damage1", "infrastructure.credits"] })), J(p));
         Assert.Equal(28, TdProfileRules.SealsAvailable(p, Meta)); // antes: 19; reembolso integral 2+3+4
-        Assert.Equal(3, SchemaVersionOnDisk(fs.Files[F]));
+        Assert.Equal(4, SchemaVersionOnDisk(fs.Files[F]));
         Assert.Equal(J(p), J(store.Load().Profile));
         Assert.True(store.Save(p));
         Assert.Equal(J(p), J(store.Load().Profile));

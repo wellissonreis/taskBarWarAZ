@@ -73,6 +73,7 @@ public sealed partial class TdMatchState
         h.AddInt64(Fragments);
         h.AddBool(_hasLeaked);
         if (!_options.IsClassic) { h.AddBool(_options.ContinuousWaves); h.AddBool(_options.PersistentRun); h.AddInt32(_stageNumber); h.AddInt32(_stageClears); } // só fora do modo clássico: os hashes antigos não mudam
+        if (!_options.IsClassic && _options.LegacyRunes > 0) h.AddInt32(_options.LegacyRunes);
         h.AddUInt64(_rng.State);
         h.AddUInt64(_rng.Inc);
         return h.Value;
