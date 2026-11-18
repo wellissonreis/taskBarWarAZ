@@ -153,7 +153,10 @@ public sealed partial class TdMatchState
     {
         int n = 0;
         for (int i = 0; i < _towers.Count; i++)
+        {
             if (_towers[i].DefIndex == defIndex) n++;
+            if (_towers[i].ModuleSlot == defIndex + 1) n++; // componentes de híbridos contam por tipo (SDD-37 RF-37.3)
+        }
         return n;
     }
 
@@ -201,7 +204,7 @@ public sealed partial class TdMatchState
     public long SellValue(int towerId)
     {
         int i = FindTower(towerId);
-        return i < 0 ? 0 : Math.Min(_towers[i].PurchasePrice, SellValueAt(_towers[i].DefIndex, TowerCount(_towers[i].DefIndex)));
+        return i < 0 ? 0 : HybridSellValue(_towers[i]);
     }
 
     /// <summary>Estrelas ganhas (0 até a Vitória; 0 na Derrota). ★1 concluir, ★2 perder ≤ 6, ★3 perder ≤ 2 (DP-28.8).</summary>
@@ -298,6 +301,7 @@ public sealed partial class TdMatchState
             PlaceTower p => DoPlace(p),
             MoveTower m => DoMove(m),
             SellTower s => DoSell(s),
+            FuseTower f => DoFuse(f),
             SetAutoStart a => DoSetAutoStart(a),
             SetTargeting g => DoSetTargeting(g),
             UseAbility u => DoUseAbility(u),

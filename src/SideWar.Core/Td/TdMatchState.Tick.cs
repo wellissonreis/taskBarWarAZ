@@ -137,8 +137,10 @@ public sealed partial class TdMatchState
             foreach (var tower in _towers)
             {
                 var def = _content.Towers[tower.DefIndex];
-                if (def.Id != "vault" || !tower.Placed || tower.DisabledTicks > 0) continue;
-                long income = (long)Stat(tower, def, "creditsPerWave", 0) + (w.Leaked ? 0 : (long)Stat(tower, def, "noLeakBonus", 0));
+                long income = ModuleVaultIncome(tower);
+                if (def.Id == "vault" && tower.Placed && tower.DisabledTicks == 0)
+                    income += (long)Stat(tower, def, "creditsPerWave", 0) + (w.Leaked ? 0 : (long)Stat(tower, def, "noLeakBonus", 0));
+                if (income <= 0) continue;
                 Credits = Simulation.Sat.Add(Credits, income);
                 Emit(TdEventType.VaultIncome, tower.Id, income);
             }

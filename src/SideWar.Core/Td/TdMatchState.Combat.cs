@@ -129,6 +129,15 @@ public sealed partial class TdMatchState
                 dmg += Stat(s, sd, "neighborDamageBonus", 0);
                 if (bolt) rng += Stat(s, sd, "boltRangeBonus", 0);
             }
+            // Módulo genérico de suporte (SDD-37 RF-37.5): +5% de dano a OUTRAS entidades posicionadas no alcance do módulo, sem autoaura.
+            for (int j = 0; j < n; j++)
+            {
+                var s = _towers[j];
+                if (j == i || !s.HasModule || s.DisabledTicks > 0 || !s.Placed || !t.Placed) continue;
+                var md = _content.Towers[s.ModuleDefIndex];
+                if (FusionRole(s.ModuleDefIndex) != "support" || FusionPair(s.DefIndex, s.ModuleDefIndex) is not null || Dist(s.X, t.X) > EffectiveRange(md)) continue;
+                dmg += _content.Fusion.Generic["support"]["damageAuraBp"] / 10000.0;
+            }
             _auraCadence[i] = cad;
             _auraDamage[i] = dmg;
             _auraRange[i] = rng;
@@ -151,6 +160,7 @@ public sealed partial class TdMatchState
             var def = _content.Towers[t.DefIndex];
             if (t.CooldownTicks > 0) t.CooldownTicks--;
             if (t.ParalyzeCdTicks > 0) t.ParalyzeCdTicks--;
+            if (t.ModuleCdTicks > 0) t.ModuleCdTicks--;
             if (t.NodeCdTicks > 0 && def.Id != "backup") t.NodeCdTicks--;
             bool disabled = t.DisabledTicks > 0;
             if (def.Id == "pipeline" && (disabled || !t.Placed || !_enemies.Any(e => e.Id == t.FocusTargetId && e.Hp > 0 && Dist(e.X, t.X) <= EffectiveRange(def) + _auraRange[ti])))
@@ -161,6 +171,7 @@ public sealed partial class TdMatchState
                 else if (def.Kind == "attack" && t.CooldownTicks == 0) FireAttack(ref t, def, ti, scale);
                 else if (def.Kind == "blocker") SpawnNodes(ref t, def, ti);
                 else if (def.Id == "aks") SpawnPods(ref t, def);
+                if (t.HasModule) TickModule(ref t, ti);
             }
             else if (def.Id == "functions")
             {
@@ -285,6 +296,7 @@ public sealed partial class TdMatchState
         _damageSource = t.Id;
         DealDamage(target, ComputeDamage(t, def, e, st, ti, 1.0, burst));
         ApplyOnHit(ref t, def, target);
+        ApplyModuleOnHit(t, def, ti, target);
         if (def.Id == "cosmos")
         {
             var hit = new HashSet<int> { e.Id };
@@ -356,12 +368,12 @@ public sealed partial class TdMatchState
         }
     }
 
-    private void ApplySlow(int idx, double mult)
+    private void ApplySlow(int idx, double mult, int ticks = -1)
     {
         var e = _enemies[idx];
         if (e.ShieldHp > 0 || _enemyStats[e.DefIndex].SlowCap <= 0) return; // escudo ou imunidade
         e.SlowMult = e.SlowTicks > 0 ? Math.Min(e.SlowMult, mult) : mult;
-        e.SlowTicks = SlowDurationTicks + Rune("frostSlowTenths") * 3; // +0,1 s = 3 ticks por décimo (runa Gelo, TD.29a)
+        e.SlowTicks = ticks >= 0 ? ticks : SlowDurationTicks + Rune("frostSlowTenths") * 3; // +0,1 s = 3 ticks por décimo (runa Gelo, TD.29a)
         _enemies[idx] = e;
     }
 
@@ -581,6 +593,7 @@ public sealed partial class TdMatchState
                 held++;
                 _damageSource = n.TowerId;
                 DealDamage(i, n.Dps / TdWorld.TicksPerSecond);
+                ApplyNodeModuleSlow(n.TowerId, i);
                 pressure += e.CoreDamage * NodeHpDrainPerCoreDamage / TdWorld.TicksPerSecond;
             }
             n.Hp -= pressure;

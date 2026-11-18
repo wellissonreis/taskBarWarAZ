@@ -47,6 +47,7 @@ public sealed partial class TdMatchState
             }
             h.AddByte(t.Targeting); h.AddInt32(t.DisabledTicks); h.AddInt32(t.FocusTargetId); h.AddInt32(t.FocusHits);
             h.AddInt32(t.ShotCount); h.AddInt32(t.ParalyzeCdTicks); h.AddInt32(t.NodeCdTicks);
+            if (t.HasModule) { h.AddInt32(t.ModuleSlot); h.AddInt64(t.ModulePrice); h.AddInt32(t.ModuleCdTicks); } // só híbridos: o hash de torres simples não muda
         }
         h.AddInt32(_enemies.Count);
         foreach (var e in _enemies)
