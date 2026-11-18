@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using SideWar.Core.Td;
 using SideWar.Persistence.Settings;
 using SideWar.Runtime.Input;
 
@@ -32,6 +33,8 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     private int tdAutoStartSeconds, tdBandHeight, tdFadePercent, tdGameSpeed = 1;
     private bool tdFadeWhenUnfocused;
     private bool tdBonusQuestions, tdContinuousWaves, tdTowerPanelPinned, tdShowIncome, tdDiscreetMode;
+    private bool tdAlertsEnabled, tdAlertsAutoPause, tdAlertsSound;
+    private int tdAlertsMutedMask;
     private string? saveError;
 
     public SettingsViewModel(AppSettings current, Func<AppSettings, bool> save)
@@ -74,6 +77,50 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     /// <summary>Esmaecer faixa e HUD ao ativar outro app (TD.14).</summary>
     public bool TdBonusQuestions { get => tdBonusQuestions; set => Set(ref tdBonusQuestions, value); }
     public bool TdShowIncome { get => tdShowIncome; set => Set(ref tdShowIncome, value); }
+    /// <summary>TD.40c: alertas preditivos, pausa automática (proteção contra derrota) e som.</summary>
+    public bool TdAlertsEnabled { get => tdAlertsEnabled; set => Set(ref tdAlertsEnabled, value); }
+    public bool TdAlertsAutoPause { get => tdAlertsAutoPause; set => Set(ref tdAlertsAutoPause, value); }
+    public bool TdAlertsSound { get => tdAlertsSound; set => Set(ref tdAlertsSound, value); }
+
+    /// <summary>Tipos silenciáveis ("não pausar por este tipo"): marcado = silenciado; desmarcar reativa o tipo.</summary>
+    public IReadOnlyList<AlertMuteItem> TdAlertMutes { get; private set; } = [];
+    public bool HasMutedAlerts => tdAlertsMutedMask != 0;
+
+    public sealed class AlertMuteItem(SettingsViewModel owner, TdAlertType type)
+    {
+        public string Name { get; } = AlertName(type);
+        public bool Muted
+        {
+            get => (owner.tdAlertsMutedMask & (1 << (int)type)) != 0;
+            set
+            {
+                int mask = value ? owner.tdAlertsMutedMask | (1 << (int)type) : owner.tdAlertsMutedMask & ~(1 << (int)type);
+                if (mask == owner.tdAlertsMutedMask) return;
+                owner.tdAlertsMutedMask = mask;
+                owner.Raise(nameof(HasMutedAlerts));
+            }
+        }
+    }
+
+    /// <summary>Nome em português de cada tipo silenciável (as proteções contra derrota não aparecem: não são silenciáveis).</summary>
+    public static string AlertName(TdAlertType type) => type switch
+    {
+        TdAlertType.CoreAtRisk => "Núcleo em risco",
+        TdAlertType.ImminentLeak => "Inimigo perto do núcleo",
+        TdAlertType.TowerDamage => "Torre tomará dano",
+        TdAlertType.FewTowers => "Poucas torres",
+        TdAlertType.IdleCredits => "Créditos acumulados",
+        TdAlertType.FlyerNoAntiAir => "Voador sem antiaérea",
+        TdAlertType.BossIncoming => "Chefe chegando",
+        TdAlertType.RuneAvailable => "Runa disponível",
+        TdAlertType.AbilityIdle => "Habilidade pronta",
+        TdAlertType.VaultBackupIdle => "Cofre ou Backup parado",
+        _ => "Phishing sem Sentinel",
+    };
+
+    private void LoadAlertMutes() => TdAlertMutes = Enum.GetValues<TdAlertType>()
+        .Where(t => t is not (TdAlertType.FatalDrop or TdAlertType.PassedLastTower)).Select(t => new AlertMuteItem(this, t)).ToArray();
+
     public bool TdDiscreetMode { get => tdDiscreetMode; set => Set(ref tdDiscreetMode, value); }
     public int TdGameSpeed { get => tdGameSpeed; set { if (Set(ref tdGameSpeed, value)) Check(nameof(TdGameSpeed), value is >= TdSettings.MinGameSpeed and <= TdSettings.MaxGameSpeed ? null : "Velocidade 1x, 2x ou 3x."); } }
     public bool TdContinuousWaves { get => tdContinuousWaves; set => Set(ref tdContinuousWaves, value); }
@@ -146,6 +193,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
             FadeWhenUnfocused = tdFadeWhenUnfocused, FadeOpacityPercent = tdFadePercent, BonusQuestions = tdBonusQuestions,
             ContinuousWaves = tdContinuousWaves, TowerPanelPinned = tdTowerPanelPinned, GameSpeed = tdGameSpeed,
             ShowIncome = tdShowIncome, DiscreetMode = tdDiscreetMode,
+            AlertsEnabled = tdAlertsEnabled, AlertsAutoPause = tdAlertsAutoPause, AlertsSound = tdAlertsSound, AlertsMutedMask = tdAlertsMutedMask,
         },
     };
 
@@ -204,6 +252,11 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         tdGameSpeed = s.Td.GameSpeed;
         tdShowIncome = s.Td.ShowIncome;
         tdDiscreetMode = s.Td.DiscreetMode;
+        tdAlertsEnabled = s.Td.AlertsEnabled;
+        tdAlertsAutoPause = s.Td.AlertsAutoPause;
+        tdAlertsSound = s.Td.AlertsSound;
+        tdAlertsMutedMask = s.Td.AlertsMutedMask;
+        LoadAlertMutes();
     }
 
     private void Check(string property, string? error)
