@@ -30,6 +30,8 @@ public enum TdUiAction : byte
     RuneWindow,
     /// <summary>TD.30e: chip da legenda de ramos (passar o mouse destaca os nós do ramo; SArg = id do tipo) e os botões do cartão "runas no primeiro dano".</summary>
     RuneBranch, RuneTutorialOpen, RuneTutorialDismiss, ViewRunes, TowerCategory,
+    /// <summary>TD.40c: cartão de alerta: Salvar / Deixar cair (pausa crítica da proteção), Entendi e "não pausar por este tipo".</summary>
+    AlertSave, AlertFall, AlertDismiss, AlertMute,
 }
 
 /// <summary>Ícone do HUD desenhado por código (TD.14); o renderer mapeia para caminhos vetoriais.</summary>
@@ -59,7 +61,8 @@ public readonly record struct TdUiItem(
 
 /// <summary>Popover (acima da faixa): título, itens (o item 0, quando botão de fechar, fica no canto) e âncora em X (DIP da faixa).</summary>
 public sealed record TdPopoverView(string Title, TdUiItem[] Items, float Width, float Height, float AnchorX, string? IconTower = null,
-    float ArrowX = -1f, float TargetHudX = -1f, bool Quick = false, TdRuneTip? Tip = null, bool RuneWindow = false)
+    float ArrowX = -1f, float TargetHudX = -1f, bool Quick = false, TdRuneTip? Tip = null, bool RuneWindow = false,
+    TdTone AlertTone = TdTone.Normal, float Pulse = 0f)
 {
     /// <summary>Altura (DIP) da seta do balão do tutorial (TD.15), somada ao fim da janela quando <see cref="ArrowX"/> &gt;= 0.</summary>
     public const float ArrowH = 7f;
@@ -80,7 +83,7 @@ public sealed record TdPopoverView(string Title, TdUiItem[] Items, float Width, 
     public long Signature()
     {
         var h = new HashCode();
-        h.Add(Title); h.Add(IconTower); h.Add(Quick); h.Add(RuneWindow); h.Add(Tip); h.Add((int)(ArrowX * 10)); h.Add((int)(TargetHudX * 10));
+        h.Add(Title); h.Add(IconTower); h.Add((int)AlertTone); h.Add((int)(Pulse * 8)); h.Add(Quick); h.Add(RuneWindow); h.Add(Tip); h.Add((int)(ArrowX * 10)); h.Add((int)(TargetHudX * 10));
         foreach (var it in Items)
         {
             h.Add(it.Text); h.Add(it.Right); h.Add(it.Sub); h.Add(it.Arg); h.Add(it.FontSize); h.Add((int)it.Icon); h.Add(it.Highlight); h.Add(it.Enabled); h.Add(it.Selected); h.Add((int)it.Tone); h.Add((int)(it.Fill * 100));
@@ -189,6 +192,12 @@ public interface ITdUiHost
     bool SimulationRunning => !Paused;
     float EndCardAvailableHeight => float.PositiveInfinity;
     void SetGameOptions(TdGameOptions options) { }
+
+    /// <summary>TD.40c: proteção/alertas do host (null = sem alertas). Salvar, Deixar cair e persistência da máscara de silenciados.</summary>
+    TdAlertGuard? Alerts => null;
+    void SaveTower() { }
+    void LetTowerFall() { }
+    void AlertsMutedChanged(int mutedMask) { }
 
     /// <summary>TD.28b: texto do atalho global de minimizar tudo (boss key), mostrado na dica do chip e em Como jogar.</summary>
     string BossHotkey => "Ctrl+Alt+H";
