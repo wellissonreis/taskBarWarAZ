@@ -100,6 +100,8 @@ public enum CommandReason : byte
     UnknownRuneNode,
     /// <summary><c>AwakenRune</c> num nó já despertado ou fora da fronteira (TD.30d).</summary>
     RuneNotInFrontier,
+    /// <summary>Limite simultâneo deste tipo de torre.</summary>
+    TowerTypeLimit,
 }
 
 /// <summary>Resultado de um comando: <c>Missing</c> = créditos que faltam (só em <see cref="CommandReason.InsufficientCredits"/>).</summary>

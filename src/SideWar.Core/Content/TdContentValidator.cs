@@ -260,6 +260,23 @@ public static class TdContentValidator
                     && t.Stats.TryGetValue("rampCapBp", out var cap) && cap >= 0
                     && t.Stats.TryGetValue("rampKeepsBetweenTargets", out var keeps) && keeps == 0, $"{o}: stats de rampa inválidos");
 
+            if (t.Stats.TryGetValue("maxPerPlayer", out var limit))
+                Req(e, limit >= 1 && limit == Math.Floor(limit), $"{o}: maxPerPlayer inválido");
+            if (t.Id == "vault")
+                Req(e, t.Kind == "economy" && t.Stats.TryGetValue("maxPerPlayer", out var vaultLimit) && vaultLimit == 2
+                    && t.Stats.TryGetValue("creditsPerWave", out var credits) && credits >= 0 && credits == Math.Floor(credits)
+                    && t.Stats.TryGetValue("noLeakBonus", out var noLeak) && noLeak >= 0 && noLeak == Math.Floor(noLeak), $"{o}: stats de economia inválidos");
+            if (t.Id == "backup")
+                Req(e, t.Kind == "support" && t.Stats.TryGetValue("reviveEverySeconds", out var revive) && revive > 0
+                    && t.Stats.TryGetValue("coreHealEverySeconds", out var heal) && heal > 0
+                    && t.Stats.TryGetValue("coreHealCapPerStage", out var healCap) && healCap >= 0 && healCap == Math.Floor(healCap), $"{o}: stats de backup inválidos");
+            if (t.Id == "aks")
+                Req(e, t.Kind == "summoner" && t.Stats.TryGetValue("pods", out var pods) && pods >= 1 && pods == Math.Floor(pods)
+                    && t.Stats.TryGetValue("podDps", out var dps) && dps > 0
+                    && t.Stats.TryGetValue("podLifeSeconds", out var life) && life > 0
+                    && t.Stats.TryGetValue("triggerEnemies", out var trigger) && trigger >= 1 && trigger == Math.Floor(trigger)
+                    && t.Stats.TryGetValue("interval", out var interval) && interval > 0, $"{o}: stats de pods inválidos");
+
             // Fraqueza declarada da torre (CA-28.4).
             Req(e, Text(t.WeaknessText), $"{o}.weaknessText: toda torre declara sua fraqueza");
             CheckTraits(e, o, t.Weak, "weak", true);

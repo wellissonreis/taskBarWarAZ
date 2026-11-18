@@ -30,7 +30,7 @@ public sealed partial class TdMatchState
             TickNodesAndZones();
             ReapAndTriggers();
             MoveEnemies();
-            if (Phase == MatchPhase.Onda) CompleteWaves();
+            if (Phase == MatchPhase.Onda) { TickBackupHealing(); CompleteWaves(); }
         }
         finally
         {
@@ -94,6 +94,7 @@ public sealed partial class TdMatchState
             }
             _enemies.RemoveAt(i);
             WaveOf(e.Wave).Alive--;
+            _stageIntegrityLoss = (int)Math.Min(int.MaxValue, (long)_stageIntegrityLoss + e.CoreDamage);
             Integrity = Math.Max(0, Integrity - e.CoreDamage);
             _hasLeaked = true;
             WaveOf(e.Wave).Leaked = true;
@@ -133,6 +134,14 @@ public sealed partial class TdMatchState
             if (!w.Leaked) bonus += _content.Runes.CreditSources.NoLeakBase + (long)_content.Runes.CreditSources.NoLeakPerWave * w.Number;
             bonus += (long)Rune("waveCredits"); // runas de Créditos (TD.29a)
             Credits = Simulation.Sat.Add(Credits, bonus);
+            foreach (var tower in _towers)
+            {
+                var def = _content.Towers[tower.DefIndex];
+                if (def.Id != "vault" || !tower.Placed || tower.DisabledTicks > 0) continue;
+                long income = (long)Stat(tower, def, "creditsPerWave", 0) + (w.Leaked ? 0 : (long)Stat(tower, def, "noLeakBonus", 0));
+                Credits = Simulation.Sat.Add(Credits, income);
+                Emit(TdEventType.VaultIncome, tower.Id, income);
+            }
             GainFragments(_content.Stages.Rules.Fragments.PerWave);
             Emit(TdEventType.WaveCompleted, w.Number, bonus);
         }

@@ -157,6 +157,7 @@ public enum TdEventType : byte
     StageCleared,
     // TD.29a: runa despertada. A = índice do nó em <c>RuneWeb</c>; B = fragmentos restantes.
     RuneAwakened,
+    VaultIncome,
 }
 
 /// <summary>Evento observável (não entra no hash). <c>A</c>/<c>B</c>: valores do evento (onda, créditos, id etc.).</summary>

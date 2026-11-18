@@ -20,6 +20,8 @@ public sealed partial class TdMatchState
     private int _stageClears;
     private long _stageStartTick;
     private int _stageBaseIntegrity;
+    private int _stageIntegrityLoss;
+    private int _backupHealsThisStage;
     private readonly List<TdStageSummary> _stageResults = [];
     private readonly TdEnemyStats[] _enemyStats;
     private readonly HashSet<string> _metaNodes;
@@ -137,7 +139,7 @@ public sealed partial class TdMatchState
     public int TotalWaves => _waves.Length;
     public int Integrity { get; private set; }
     public int IntegrityMax { get; private set; }
-    public int IntegrityLost => IntegrityMax - Integrity;
+    public int IntegrityLost => _stageIntegrityLoss;
     public long Credits { get; private set; }
     /// <summary>Teto técnico de segurança (SDD-29 §5.3): 48 torres no total, contando as SEM POSIÇÃO. Não é teto de design: o custo crescente limita antes.</summary>
     public const int TechnicalTowerLimit = 48;
@@ -394,6 +396,7 @@ public sealed partial class TdMatchState
         if (di < 0) return Reject(CommandReason.TowerNotFound);
         var def = _content.Towers[di];
         if (_stageNumber < def.UnlockStage) return Reject(CommandReason.TowerLocked);
+        if (def.Stats.TryGetValue("maxPerPlayer", out var limit) && TowerCount(di) >= limit) return Reject(CommandReason.TowerTypeLimit);
         var reason = ResolvePlacement(cmd.X, 0, out int px);
         if (reason != CommandReason.None) return Reject(reason);
         if (_towers.Count >= TechnicalTowerLimit) return Reject(CommandReason.TowerLimit);
@@ -509,7 +512,7 @@ public sealed partial class TdMatchState
     /// </summary>
     private void ClearStageAndAdvance()
     {
-        int lost = Math.Max(0, _stageBaseIntegrity - Integrity);
+        int lost = _stageIntegrityLoss;
         var stars = _content.Stages.Rules.Stars;
         int starCount = lost <= stars.ThreeStarMaxLoss ? 3 : lost <= stars.TwoStarMaxLoss ? 2 : 1;
         var summary = BuildSummary(starCount, lost);
@@ -520,6 +523,8 @@ public sealed partial class TdMatchState
 
         Integrity = Math.Min(IntegrityMax, Integrity + Math.Max(0, _options.StageClearHeal));
         _stageBaseIntegrity = Integrity;
+        _stageIntegrityLoss = 0;
+        _backupHealsThisStage = 0;
         _stageNumber++;
         var defs = _content.Stages.Stages;
         _stage = defs[(_stageNumber - 1) % defs.Length];

@@ -121,7 +121,7 @@ public sealed partial class TdMatchState
                 if (j == i) continue;
                 var s = _towers[j];
                 var sd = _content.Towers[s.DefIndex];
-                if (sd.Kind != "support" || s.DisabledTicks > 0 || !s.Placed || Dist(s.X, t.X) > EffectiveRange(sd)) continue;
+                if (sd.Id != "scaleset" || s.DisabledTicks > 0 || !s.Placed || Dist(s.X, t.X) > EffectiveRange(sd)) continue;
                 double c = BaseAura;
                 if (c > 0 && scale) c *= Stat(s, sd, "bonusMultiplierDuringScale", 1.0);
                 cad += c;
@@ -139,6 +139,7 @@ public sealed partial class TdMatchState
     private void FireTowers()
     {
         RefreshHeldTargets();
+        TickBackupRevive();
         ComputeAuras();
         bool scale = IsAbilityActive("scale");
         TickControlTowers("sentinel");
@@ -149,7 +150,7 @@ public sealed partial class TdMatchState
             var def = _content.Towers[t.DefIndex];
             if (t.CooldownTicks > 0) t.CooldownTicks--;
             if (t.ParalyzeCdTicks > 0) t.ParalyzeCdTicks--;
-            if (t.NodeCdTicks > 0) t.NodeCdTicks--;
+            if (t.NodeCdTicks > 0 && def.Id != "backup") t.NodeCdTicks--;
             bool disabled = t.DisabledTicks > 0;
             if (def.Id == "pipeline" && (disabled || !t.Placed || !_enemies.Any(e => e.Id == t.FocusTargetId && e.Hp > 0 && Dist(e.X, t.X) <= EffectiveRange(def) + _auraRange[ti])))
             { t.FocusTargetId = 0; t.FocusHits = 0; }
@@ -158,6 +159,7 @@ public sealed partial class TdMatchState
                 if (def.Id == "functions") TickFunctions(ref t, def, ti);
                 else if (def.Kind == "attack" && t.CooldownTicks == 0) FireAttack(ref t, def, ti, scale);
                 else if (def.Kind == "blocker") SpawnNodes(ref t, def, ti);
+                else if (def.Id == "aks") SpawnPods(ref t, def);
             }
             else if (def.Id == "functions")
             {
@@ -439,6 +441,53 @@ public sealed partial class TdMatchState
 
     // ---- balanceador: nós ----------------------------------------------------------------------------------------
 
+    private void TickBackupRevive()
+    {
+        for (int i = 0; i < _towers.Count; i++)
+        {
+            var t = _towers[i]; var def = _content.Towers[t.DefIndex];
+            if (def.Id != "backup" || !t.Placed || t.DisabledTicks > 0 || t.CooldownTicks > 1) continue;
+            for (int j = 0; j < _towers.Count; j++)
+            {
+                var other = _towers[j];
+                if (j == i || !other.Placed || other.DisabledTicks <= 0 || Dist(t.X, other.X) > EffectiveRange(def)) continue;
+                other.DisabledTicks = 0; _towers[j] = other;
+                t.CooldownTicks = Ticks(Stat(t, def, "reviveEverySeconds", 6)) + 1; _towers[i] = t; break;
+            }
+        }
+    }
+
+    private void TickBackupHealing()
+    {
+        for (int i = 0; i < _towers.Count; i++)
+        {
+            var t = _towers[i]; var def = _content.Towers[t.DefIndex];
+            if (def.Id != "backup" || !t.Placed || t.DisabledTicks > 0) continue;
+            t.NodeCdTicks++;
+            if (t.NodeCdTicks >= Ticks(Stat(t, def, "coreHealEverySeconds", 45)))
+            {
+                t.NodeCdTicks = 0;
+                if (Integrity < IntegrityMax && _backupHealsThisStage < Stat(t, def, "coreHealCapPerStage", 3)) { Integrity++; _backupHealsThisStage++; }
+            }
+            _towers[i] = t;
+        }
+    }
+
+    private void SpawnPods(ref TdTower t, TdTowerDef def)
+    {
+        if (t.NodeCdTicks > 0) return;
+        int count = 0; double first = double.MaxValue;
+        foreach (var e in _enemies)
+            if (!e.Flying && e.Hp > 0 && Dist(e.X, t.X) <= EffectiveRange(def)) { count++; first = Math.Min(first, e.X); }
+        if (count < Stat(t, def, "triggerEnemies", 3)) return;
+        for (int i = 0; i < (int)Stat(t, def, "pods", 3); i++)
+        {
+            _nodes.Add(new TdNode { Id = _nextNodeId++, TowerId = t.Id, X = first + 12 * i, Hp = 1, Holds = 0, Dps = Stat(t, def, "podDps", 8), LifeTicks = Ticks(Stat(t, def, "podLifeSeconds", 12)), Flags = 4 });
+            Emit(TdEventType.NodeSpawned, t.Id, (long)(first + 12 * i));
+        }
+        t.NodeCdTicks = Ticks(Stat(t, def, "interval", 20));
+    }
+
     private void SpawnNodes(ref TdTower t, TdTowerDef def, int ti)
     {
         if (t.NodeCdTicks > 0) return;
@@ -484,7 +533,7 @@ public sealed partial class TdMatchState
     private bool NodeNear(double x)
     {
         foreach (var n in _nodes)
-            if (Dist(n.X, x) <= NodeCatchRadius) return true;
+            if ((n.Flags & 4) == 0 && Dist(n.X, x) <= NodeCatchRadius) return true;
         return false;
     }
 
@@ -495,6 +544,25 @@ public sealed partial class TdMatchState
         for (int ni = 0; ni < _nodes.Count;)
         {
             var n = _nodes[ni];
+            if ((n.Flags & 4) != 0)
+            {
+                int ti = FindTower(n.TowerId);
+                if (ti >= 0)
+                {
+                    var tower = _towers[ti]; var def = _content.Towers[tower.DefIndex];
+                    int target = -1;
+                    for (int j = 0; j < _enemies.Count; j++)
+                    {
+                        var enemy = _enemies[j];
+                        if (enemy.Flying || enemy.Hp <= 0 || enemy.InvulnTicks > 0 || Dist(enemy.X, tower.X) > EffectiveRange(def)) continue;
+                        if (target < 0 || Better(TdTargeting.First, enemy, _enemies[target], tower.X)) target = j;
+                    }
+                    if (target >= 0) { _damageSource = n.TowerId; DealDamage(target, n.Dps / TdWorld.TicksPerSecond); }
+                }
+                if (--n.LifeTicks > 0) _nodes[ni++] = n;
+                else { Emit(TdEventType.NodeEnded, n.TowerId); _nodes.RemoveAt(ni); }
+                continue;
+            }
             int held = 0;
             double pressure = 0;
             for (int i = 0; i < _enemies.Count && held < n.Holds; i++)
