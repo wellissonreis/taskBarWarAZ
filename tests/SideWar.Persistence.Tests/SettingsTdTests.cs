@@ -149,4 +149,22 @@ public class SettingsTdTests
         Assert.Equal(GameMode.Td, s.GameMode);
         Assert.Equal("Ctrl+Alt+Space", s.Hotkeys.StartWave);
     }
+
+    [Fact] // TD.33d
+    public void Money_options_default_off_survive_old_files_and_round_trip()
+    {
+        Assert.False(AppSettings.Default.Td.ShowIncome);
+        Assert.False(AppSettings.Default.Td.DiscreetMode);
+        var old = ReadPayload("{\"td\":{\"autoStartEnabled\":true}}").Td; // arquivo antigo: campos ausentes = padrão
+        Assert.False(old.ShowIncome);
+        Assert.False(old.DiscreetMode);
+        var on = new AppSettings { Td = new TdSettings { ShowIncome = true, DiscreetMode = true } };
+        using var ms = new MemoryStream();
+        using (var w = new Utf8JsonWriter(ms)) SettingsSerializer.Write(w, on);
+        using var doc = JsonDocument.Parse(ms.ToArray());
+        Assert.True(doc.RootElement.GetProperty("td").GetProperty("showIncome").GetBoolean());
+        var back = SettingsSerializer.Read(doc.RootElement);
+        Assert.True(back.Td.ShowIncome);
+        Assert.True(back.Td.DiscreetMode);
+    }
 }

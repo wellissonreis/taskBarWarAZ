@@ -15,6 +15,7 @@ public sealed class TdUiGoldenTests
 
     private sealed class Host : ITdUiHost
     {
+        public TdGameOptions GameOptions { get; set; } = new();
         public bool Paused => false;
         public void TogglePause() { }
         public void OpenSettings() { }
@@ -35,7 +36,7 @@ public sealed class TdUiGoldenTests
         public bool PurchaseNode(string nodeId) => true;
     }
 
-    public enum UiScene { HudPrep, HudWave, HudMin, HudTip, Chooser, ChooserPoint, Inspector, Preview, Map, Seals, Victory, Menu, HudPlacing, Towers, Runes, Help, Defeat, QuickTowers, RuneWindow, RuneWindowTipAvailable, RuneWindowTipAwake, RuneWindowTipLocked, RunesTipAvailable, RunesTipAwake, RunesTipLocked }
+    public enum UiScene { HudMoney, HudPrep, HudWave, HudMin, HudTip, Chooser, ChooserPoint, Inspector, Preview, Map, Seals, Victory, Menu, HudPlacing, Towers, Runes, Help, Defeat, QuickTowers, RuneWindow, RuneWindowTipAvailable, RuneWindowTipAwake, RuneWindowTipLocked, RunesTipAvailable, RunesTipAwake, RunesTipLocked }
 
     public static TheoryData<UiScene, int> Cases()
     {
@@ -49,12 +50,22 @@ public sealed class TdUiGoldenTests
     {
         var (match, _, _) = TdStripScenes.Build(TdStripScene.PrepRange);
         typeof(TdMatchState).GetProperty("Credits")!.SetValue(match, 240L);
-        var ui = new TdUiController(() => match, c => match.Apply(c), new Host(), () => 0);
+        var host = new Host();
+        double now = 0;
+        var ui = new TdUiController(() => match, c => match.Apply(c), host, () => now);
         ui.Sync();
         var item = (TdUiAction a, int arg) => new TdUiItem(default, TdUiKind.Button, "", a, arg);
         switch (scene)
         {
             case UiScene.HudMin: ui.Activate(item(TdUiAction.HudMinimize, 0)); break;
+            case UiScene.HudMoney:
+                // TD.33d: contador grande no meio da contagem animada, "+N" subindo e renda ligada.
+                host.GameOptions = new TdGameOptions(ShowIncome: true);
+                ui.BuildHud();
+                typeof(TdMatchState).GetProperty("Credits")!.SetValue(match, 370L);
+                now = 0.1; ui.BuildHud();
+                now = 0.25; ui.BuildHud();
+                break;
             case UiScene.HudWave:
                 match.Apply(new StartWave());
                 for (int i = 0; i < 90; i++) match.Step();
@@ -112,7 +123,7 @@ public sealed class TdUiGoldenTests
         if (scene == UiScene.HudTip)
         {
             var tipHud = ui.BuildHud();
-            var tip = TdUiController.TooltipFor(tipHud, Array.FindIndex(tipHud.Items, i => i.Icon == SideWar.Runtime.Td.TdIcon.Heart))!;
+            var tip = TdUiController.TooltipFor(tipHud, Array.FindIndex(tipHud.Items, i => i.Action == TdUiAction.HudRestore))!;
             var (tw, th) = r.PhysicalSize(TdUiRenderer.TooltipWidthDip, r.TooltipHeightDip(tip.Text));
             var tb = new SKBitmap(new SKImageInfo(tw, th, SKColorType.Bgra8888, SKAlphaType.Premul));
             using var tc = new SKCanvas(tb);
@@ -122,7 +133,7 @@ public sealed class TdUiGoldenTests
             GoldenImage.Blit(tc, tl, 0, 0);
             return tb;
         }
-        bool hud = scene is UiScene.HudPrep or UiScene.HudWave or UiScene.HudMin or UiScene.HudPlacing;
+        bool hud = scene is UiScene.HudMoney or UiScene.HudPrep or UiScene.HudWave or UiScene.HudMin or UiScene.HudPlacing;
         if (hud)
         {
             var v = ui.BuildHud();

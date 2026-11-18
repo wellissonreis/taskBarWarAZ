@@ -20,6 +20,8 @@
           <CheckBox Content="Usar UI Automation para a barra de tarefas" IsChecked="{Binding UseUia}" Margin="0,0,0,8" />
           <CheckBox Content="Auto-escala" IsChecked="{Binding AutoScale}" Margin="0,0,0,8" />
           <CheckBox Content="Pergunta-bônus entre as ondas (Tower Defense)" IsChecked="{Binding TdBonusQuestions}" Margin="0,0,0,4" />
+          <CheckBox Content="Mostrar a renda de créditos (+X/s) abaixo do contador" IsChecked="{Binding TdShowIncome}" Margin="0,0,0,4" />
+          <CheckBox Content="Modo discreto: sem brilhos nem contagem animada; +N só nos ganhos grandes" IsChecked="{Binding TdDiscreetMode}" Margin="0,0,0,4" />
           <CheckBox Content="Ondas contínuas: corrida infinita, sem Preparo entre ondas (vale na próxima corrida)" IsChecked="{Binding TdContinuousWaves}" Margin="0,0,0,4" />
           <CheckBox Content="Painel de torres sempre aberto junto ao chip" IsChecked="{Binding TdTowerPanelPinned}" Margin="0,0,0,4" />
           <CheckBox Content="Iniciar as ondas automaticamente (Tower Defense)" IsChecked="{Binding TdAutoStart}" Margin="0,0,0,4" />

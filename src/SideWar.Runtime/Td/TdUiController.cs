@@ -240,6 +240,7 @@ public sealed partial class TdUiController
                 Changed?.Invoke();
                 break;
             case TdUiAction.Sell:
+                _money.NoteRefund(); // o reembolso não é ganho (sem "+N" nem renda)
                 _send(new SellTower(item.Arg));
                 if (Mode == TdUiMode.Towers) Changed?.Invoke(); else Close();
                 break;
@@ -473,6 +474,7 @@ public sealed partial class TdUiController
         if (BossHidden == hidden) return;
         BossHidden = hidden;
         if (hidden) { Close(); return; }
+        _moneyReset = true; // volta no valor real, sem animar a diferença acumulada
         _endShown = false;
         MaintainPinned();
         Changed?.Invoke();
@@ -593,41 +595,100 @@ public sealed partial class TdUiController
         bool showStart = live && (!m.Options.ContinuousWaves || m.Phase == MatchPhase.Preparo);
         float extras = showStart ? TdHudView.StartWidth + TdHudView.Gap : 0f;
         float x = 0f;
+        UpdateMoney(m);
+        // TD.33d: com "+N" visíveis a janela ganha uma faixa transparente no topo (só então) para eles subirem sem cobrir o contador.
+        float y0 = _money.Floats.Count > 0 ? TdHudView.FloatPad : 0f;
         if (showStart)
         {
             var (text, right, enabled, tone, tip) = StartButton(m);
             string label = m.Phase == MatchPhase.Onda ? "Próxima" : "Iniciar";
-            items.Add(new TdUiItem(new DipRect(x, 0, TdHudView.StartWidth, 28), TdUiKind.Button, label, TdUiAction.StartWave,
+            items.Add(new TdUiItem(new DipRect(x, y0, TdHudView.StartWidth, 28), TdUiKind.Button, label, TdUiAction.StartWave,
                 Enabled: enabled && !StartBlockedFor(m) && !ModalOpen, Tone: tone, Tip: StartBlockedFor(m) ? "Coloque 1 torre primeiro" : tip,
                 Icon: m.Phase == MatchPhase.Onda ? TdIcon.FastForward : TdIcon.Play));
             x += TdHudView.StartWidth + TdHudView.Gap;
         }
-        items.Add(new TdUiItem(new DipRect(x, 0, TdHudView.ChipWidth, 28), TdUiKind.Button,
-            $"{integ}/{max} {shown}/{m.TotalWaves} ¢{m.Credits}{(ModalOpen ? " ⏸" : "")}",
-            TdUiAction.HudRestore, Icon: TdIcon.Heart, Tone: integTone, Tip: coreTip + $" {stageText.Trim()} Onda {shown}/{m.TotalWaves}. Créditos ¢{m.Credits}. Clique para abrir o menu.",
+        // TD.33d: contador de créditos (item próprio, cresce para a esquerda com os dígitos); o chip fica só com integridade e onda.
+        int digits = Math.Max(_money.Real, _money.Display).ToString(System.Globalization.CultureInfo.InvariantCulture).Length;
+        float moneyW = TdHudView.MoneyWidth(digits);
+        items.Add(new TdUiItem(new DipRect(x, y0, moneyW, 28), TdUiKind.Money, _money.Display.ToString(System.Globalization.CultureInfo.InvariantCulture),
+            Sub: _money.IncomeText, Fill: _money.MilestoneGlow, Tone: TdTone.Accent,
+            Tip: $"Créditos ¢{m.Credits}: ganhos de abates, bônus e perguntas; servem para comprar torres." + (_money.IncomeText is { } inc ? $" Renda recente {inc}." : "")));
+        x += moneyW + TdHudView.Gap;
+        items.Add(new TdUiItem(new DipRect(x, y0, TdHudView.ChipWidth, 28), TdUiKind.Button,
+            $"{integ}/{max} {shown}/{m.TotalWaves}",
+            TdUiAction.HudRestore, Tone: integTone, Tip: coreTip + $" {stageText.Trim()} Onda {shown}/{m.TotalWaves}. Créditos ¢{m.Credits}. Clique para abrir o menu.",
             Highlight: needed && PulseOn));
         x += TdHudView.ChipWidth + TdHudView.Gap;
         const float bw = TdHudView.ButtonWidth;
-        items.Add(new TdUiItem(new DipRect(x, 0, bw, 28), TdUiKind.Button, "", TdUiAction.QuickTowers,
-            Enabled: !ModalOpen, Icon: TdIcon.Castle, Tip: PanelPinned ? "Torres (painel fixo: Jogo ou Configurações)" : "Torres: escolha e posicione sem pausar", Selected: QuickTowersOpen));
+        items.Add(new TdUiItem(new DipRect(x, y0, bw, 28), TdUiKind.Button, "", TdUiAction.QuickTowers,
+            Enabled: !ModalOpen, Icon: TdIcon.Castle, Tip: PanelPinned ? "Torres (painel fixo: Jogo ou Configurações)" : "Torres: escolha e posicione sem pausar", Selected: QuickTowersOpen,
+            Fill: _money.BuyGlow));
         x += bw + TdHudView.Gap;
         // TD.30c: botão Runas (estrela): ponto âmbar discreto só quando há fragmento E nó a despertar; nunca abre sozinho.
         bool runeReady = m.Fragments > 0 && m.Frontier.Count > 0;
-        items.Add(new TdUiItem(new DipRect(x, 0, bw, 28), TdUiKind.Button, "", TdUiAction.RuneWindow,
+        items.Add(new TdUiItem(new DipRect(x, y0, bw, 28), TdUiKind.Button, "", TdUiAction.RuneWindow,
             Enabled: !ModalOpen, Icon: TdIcon.Star, Selected: RuneWindowOpen, Fill: runeReady ? 1f : 0f,
             Tip: $"Runas {m.AwakenedCount}/{m.RuneWeb.Count}" + (runeReady ? $": {m.Fragments} fragmento(s) para despertar. " : ". ") + "Clique para abrir ou fechar a janela de runas."));
         x += bw + TdHudView.Gap;
         bool paused = _userPaused && live;
-        items.Add(new TdUiItem(new DipRect(x, 0, bw, 28), TdUiKind.Button, "", TdUiAction.PauseToggle,
+        items.Add(new TdUiItem(new DipRect(x, y0, bw, 28), TdUiKind.Button, "", TdUiAction.PauseToggle,
             Enabled: !ModalOpen && live, Icon: paused ? TdIcon.Play : TdIcon.Pause,
             Tone: paused ? TdTone.Accent : TdTone.Normal, Selected: paused, Tip: paused ? "Retomar o jogo" : "Pausar o jogo"));
         x += bw + TdHudView.Gap;
         // Velocidade: um botão pequeno que mostra 1x/2x/3x e alterna (o seletor completo fica na aba Jogo).
         int speed = Math.Clamp(_host.GameOptions.GameSpeed, 1, 3);
-        items.Add(new TdUiItem(new DipRect(x, 0, TdHudView.SpeedWidth, 28), TdUiKind.Button, $"{speed}x", TdUiAction.SetSpeed, speed % 3 + 1,
+        items.Add(new TdUiItem(new DipRect(x, y0, TdHudView.SpeedWidth, 28), TdUiKind.Button, $"{speed}x", TdUiAction.SetSpeed, speed % 3 + 1,
             Enabled: !ModalOpen, Tone: speed > 1 ? TdTone.Accent : TdTone.Normal, Selected: speed > 1, Tip: $"Velocidade {speed}x: clique para {speed % 3 + 1}x (todas na aba Jogo)"));
         x += TdHudView.SpeedWidth;
-        return new TdHudView(HighlightHud(items), x, 28, Minimized: true, Wave: shown, TotalWaves: m.TotalWaves);
+        return new TdHudView(HighlightHud(items), x, 28 + y0, Minimized: true, Wave: shown, TotalWaves: m.TotalWaves, Floats: _money.Floats, TopPad: y0);
+    }
+
+    // ================================================================ TD.33d: dinheiro visível (só apresentação)
+
+    private readonly TdMoneyModel _money = new();
+    private TdMatchState? _moneyMatch;
+    private bool _moneyReset;
+
+    /// <summary>Modelo de apresentação do dinheiro (valor exibido, "+N", renda, brilhos). Nada disto vai ao Core, ao log nem ao hash.</summary>
+    public TdMoneyModel Money => _money;
+
+    /// <summary>Há animação de dinheiro agendável agora (falso com boss key, pausa, modal ou tudo parado).</summary>
+    public bool MoneyAnimating => !BossHidden && _money.Animating;
+
+    private void UpdateMoney(TdMatchState m)
+    {
+        if (BossHidden) return; // oculto: nada anima nem agenda; ao voltar, Reset no valor real
+        var o = _host.GameOptions;
+        _money.Discreet = o.Discreet;
+        _money.ShowIncome = o.ShowIncome;
+        long threshold = MoneyThreshold(m);
+        double now = _now();
+        if (!ReferenceEquals(m, _moneyMatch) || _moneyReset)
+        {
+            _moneyMatch = m; _moneyReset = false;
+            _money.Reset(m.Credits, m.Frame, threshold, now);
+            return;
+        }
+        _money.Update(m.Credits, m.Frame, now, _userPaused || ModalOpen, threshold);
+    }
+
+    /// <summary>Custo da torre escolhida; sem escolha, o da mais barata desbloqueada (preço atual da curva). 0 = nenhuma.</summary>
+    private long MoneyThreshold(TdMatchState m)
+    {
+        var towers = m.Content.Towers;
+        if (_placementType is not null)
+        {
+            int i = Array.FindIndex(towers, t => t.Id == _placementType);
+            if (i >= 0) return m.NextTowerCost(i);
+        }
+        long min = 0;
+        for (int i = 0; i < towers.Length; i++)
+        {
+            if (m.StageId < towers[i].UnlockStage) continue;
+            long cost = m.NextTowerCost(i);
+            if (min == 0 || cost < min) min = cost;
+        }
+        return min;
     }
 
     /// <summary>Dica do item do HUD sob o ponto (null = sem dica). A janela do tooltip posiciona acima do item.</summary>

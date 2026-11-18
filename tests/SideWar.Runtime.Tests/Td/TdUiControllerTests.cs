@@ -273,7 +273,8 @@ public sealed class TdUiControllerTests
         var r = new Rig();
         var hud = r.Ui.BuildHud();
         Assert.True(hud.Minimized);
-        Assert.Contains(hud.Items, i => i.Icon == TdIcon.Heart && i.Text.Contains("20/20") && i.Text.Contains('¢'));
+        Assert.Contains(hud.Items, i => i.Action == TdUiAction.HudRestore && i.Text.Contains("20/20") && !i.Text.Contains('¢'));
+        Assert.Contains(hud.Items, i => i.Kind == TdUiKind.Money);
         Assert.DoesNotContain(hud.Items, i => i.Action == TdUiAction.Ability);
         Assert.All(hud.Items.Where(i => i.Kind != TdUiKind.Separator && i.SArg != "seg"), i => Assert.False(string.IsNullOrEmpty(i.Tip)));
         r.Ui.Activate(hud.Items.First(i => i.Action == TdUiAction.HudRestore));

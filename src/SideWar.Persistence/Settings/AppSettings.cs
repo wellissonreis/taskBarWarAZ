@@ -156,4 +156,10 @@ public sealed record TdSettings
 
     /// <summary>Ids das afirmações do banco já sorteadas (<c>q01;q02</c>…): não repetem até esgotar o banco (TD.17).</summary>
     public string QuestionsSeen { get; init; } = "";
+
+    /// <summary>TD.33d (RF-33.20): mostra a renda "+X/s" (média de ~10 s de jogo) abaixo do contador de créditos. Desligado por padrão.</summary>
+    public bool ShowIncome { get; init; }
+
+    /// <summary>TD.33d (RF-33.21): modo discreto, sem brilhos nem contagem animada; "+N" só nos ganhos grandes. Desligado por padrão.</summary>
+    public bool DiscreetMode { get; init; }
 }

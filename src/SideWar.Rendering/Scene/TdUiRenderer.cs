@@ -31,12 +31,45 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     public void DrawHud(SKCanvas c, TdHudView hud, int hover)
     {
         c.Clear(SKColors.Transparent);
-        RoundBox(c, new DipRect(0, 0, hud.Width, hud.Height), Palette.Td.Border, Palette.Td.Surface, 5);
+        RoundBox(c, new DipRect(0, hud.TopPad, hud.Width, hud.Height - hud.TopPad), Palette.Td.Border, Palette.Td.Surface, 5);
         for (int i = 0; i < hud.Items.Length; i++)
         {
             DrawHudItem(c, hud.Items[i], i == hover);
             if (hud.Items[i].Highlight) DrawHighlight(c, hud.Items[i].Rect);
         }
+        if (hud.Floats is { Count: > 0 } floats)
+            foreach (var it in hud.Items)
+                if (it.Kind == TdUiKind.Money) { DrawMoneyFloats(c, it.Rect, floats); break; }
+    }
+
+    /// <summary>TD.33d: "+N" (11 DIP, âmbar translúcido) sobe 12 DIP acima do contador e some; só na faixa transparente do topo da janela do chip (nunca sobre a faixa de torres).</summary>
+    private void DrawMoneyFloats(SKCanvas c, DipRect r, IReadOnlyList<TdMoneyFloat> floats)
+    {
+        foreach (var f in floats)
+            _p.Text(c, f.Text, PanelFont.JetBrainsMono, 11f, new DipRect(r.X + 2, r.Y - TdHudView.FloatPad + (TdMoneyModel.FloatRiseDip - f.Rise), r.W - 6, 14), Palette.Td.Amber.WithAlpha(f.Alpha), TextAlign.Right);
+    }
+
+    /// <summary>
+    /// TD.33d: contador de créditos. Fonte grande (<see cref="TdHudView.MoneyFontDip"/>), âmbar da Palette, alinhado à direita em fonte monoespaçada
+    /// (largura fixa por dígito: o contador não dança). <c>Fill</c> = brilho de marco de patrimônio (0..1); <c>Sub</c> = renda "+X/s".
+    /// </summary>
+    private void DrawMoney(SKCanvas c, in TdUiItem it)
+    {
+        var r = it.Rect;
+        bool glow = it.Fill > 0f;
+        var border = glow ? Palette.Td.Amber.WithAlpha((byte)(90 + 165 * it.Fill)) : Palette.Td.BorderStrong;
+        RoundBox(c, r, border, Palette.Td.Surface, 4);
+        if (glow) { var rect = new DipRect(r.X + 1, r.Y + 1, r.W - 2, r.H - 2); RoundBox(c, rect, Palette.Td.Amber.WithAlpha((byte)(120 * it.Fill)), Palette.Td.Amber.WithAlpha((byte)(46 * it.Fill)), 4); }
+        bool income = it.Sub is not null;
+        float ty = income ? r.Y + 1f : r.Y + (r.H - 20f) / 2f;
+        _p.Text(c, it.Text, PanelFont.JetBrainsMono, TdHudView.MoneyFontDip, new DipRect(r.X + 2, ty, r.W - 6, 20f), Palette.Td.Amber, TextAlign.Right);
+        if (income) _p.Text(c, it.Sub!, PanelFont.JetBrainsMono, 8f, new DipRect(r.X + 2, r.Y + 18f, r.W - 6, 10f), Palette.Td.Muted, TextAlign.Right);
+    }
+
+    /// <summary>Brilho âmbar curto em volta do botão Torres quando os créditos cruzam o custo (RF-33.21).</summary>
+    private void DrawBuyGlow(SKCanvas c, DipRect r, float intensity)
+    {
+        RoundBox(c, new DipRect(r.X - 1, r.Y - 1, r.W + 2, r.H + 2), Palette.Td.Amber.WithAlpha((byte)(60 + 195 * intensity)), Palette.Td.Amber.WithAlpha((byte)(60 * intensity)), 6);
     }
 
     /// <summary>Destaque do alvo do tutorial (TD.15): moldura âmbar de 2 DIP em volta do item real.</summary>
@@ -103,6 +136,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     {
         var r = it.Rect;
         if (it.Kind == TdUiKind.Separator) { _p.Fill(c, r, Palette.Td.BorderStrong); return; }
+        if (it.Kind == TdUiKind.Money) { DrawMoney(c, it); return; }
         if (it.Action == TdUiAction.SetSpeed)
         {
             // Botão de velocidade do chip: mostra 1x/2x/3x e alterna; âmbar quando acelerado.
@@ -133,6 +167,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         }
         if (it.Action == TdUiAction.QuickTowers)
         {
+            if (it.Fill > 0f) DrawBuyGlow(c, r, it.Fill);
             RoundBox(c, r, it.Selected ? Palette.Td.Amber : Palette.Td.BorderStrong, hover && it.Enabled ? Palette.Td.BorderStrong : Palette.Td.Button, 6);
             DrawIcon(c, TdIcon.Castle, r.X + (r.W - 16) / 2f, r.Y + (r.H - 16) / 2f, 16f, it.Enabled ? Palette.Td.Text : Palette.Td.Dim);
             DrawArrowNE(c, r.X + r.W - 9f, r.Y + 2f, 7f, Palette.Td.Amber);
@@ -151,7 +186,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             if (!enabled && it.Tone != TdTone.Dim) color = Palette.TxtRotulo;
         }
         bool chip = it.Action == TdUiAction.HudRestore;
-        if (chip) fs = 8.5f;
+        if (chip) fs = 8f;
         float iconSize = chip ? 12f : Math.Min(15f, r.H - 8f);
         float x = r.X + (chip ? 4f : 5f);
         bool iconOnly = it.Text.Length == 0;

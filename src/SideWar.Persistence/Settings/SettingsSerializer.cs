@@ -75,6 +75,8 @@ public static class SettingsSerializer
         w.WriteBoolean("towerPanelPinned", s.Td.TowerPanelPinned);
         w.WriteNumber("gameSpeed", s.Td.GameSpeed);
         w.WriteString("questionsSeen", s.Td.QuestionsSeen);
+        w.WriteBoolean("showIncome", s.Td.ShowIncome);
+        w.WriteBoolean("discreetMode", s.Td.DiscreetMode);
         w.WriteEndObject();
         w.WriteEndObject();
     }
@@ -157,6 +159,8 @@ public static class SettingsSerializer
                 TowerPanelPinned = Bool(td, "towerPanelPinned", d.Td.TowerPanelPinned),
                 GameSpeed = IntRange(td, "gameSpeed", TdSettings.MinGameSpeed, TdSettings.MaxGameSpeed, d.Td.GameSpeed),
                 QuestionsSeen = Str(td, "questionsSeen", 1024) ?? d.Td.QuestionsSeen,
+                ShowIncome = Bool(td, "showIncome", d.Td.ShowIncome),
+                DiscreetMode = Bool(td, "discreetMode", d.Td.DiscreetMode),
             },
         };
     }

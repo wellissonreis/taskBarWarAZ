@@ -7,7 +7,8 @@ namespace SideWar.Runtime.Td;
 public enum TdUiMode : byte { None, Build, Inspector, Preview, Menu, Map, End, Help, Towers, Runes }
 
 /// <summary>Tipo de item de UI: rótulo, botão, cabeçalho de seção ou separador.</summary>
-public enum TdUiKind : byte { Label, Button, Header, Separator, Badges, Bar }
+/// <remarks><c>Money</c> (TD.33d): contador de créditos do HUD, não clicável.</remarks>
+public enum TdUiKind : byte { Label, Button, Header, Separator, Badges, Bar, Money }
 
 /// <summary>Tom de cor semântico (o renderer mapeia para a paleta).</summary>
 public enum TdTone : byte { Normal, Good, Warn, Bad, Accent, Dim }
@@ -89,15 +90,28 @@ public sealed record TdPopoverView(string Title, TdUiItem[] Items, float Width, 
 /// HUD (RF-28.14, TD.14) na área à direita da faixa. Projetado para uma faixa de 64 DIP (<see cref="TdBand.HudBaseWidthDip"/>): a janela
 /// escala por <see cref="TdBand.HudScale"/>. <see cref="Minimized"/> = chip pequeno (núcleo e onda) no canto.
 /// </summary>
-public sealed record TdHudView(TdUiItem[] Items, float Width, float Height, bool Minimized = false, int Wave = 0, int TotalWaves = 0)
+public sealed record TdHudView(TdUiItem[] Items, float Width, float Height, bool Minimized = false, int Wave = 0, int TotalWaves = 0,
+    IReadOnlyList<TdMoneyFloat>? Floats = null, float TopPad = 0f)
 {
+    /// <summary>Faixa transparente (DIP) acima do chip enquanto há "+N" visíveis (TD.33d); o fundo do HUD começa em <c>TopPad</c>.</summary>
+    public const float FloatPad = 16f;
+
     public const float DefaultWidth = TdBand.HudBaseWidthDip, DefaultHeight = TdBand.HudBaseHeightDip;
 
     /// <summary>TD.28b: largura do HUD com o botão Iniciar onda (chip + painel + iniciar); a janela ancora a borda esquerda nesta largura.</summary>
     /// <summary>TD.29b: chip compacto (alvo ≤ ~220 DIP em repouso); Iniciar cresce para a esquerda do grupo fixo.</summary>
     /// <summary>TD.30c: com o botão Runas o grupo fixo continua em 220 DIP (chip 108, quatro botões de 24 e quatro vãos de 4).</summary>
-    public const float ChipWidth = 108f, ChipHeight = 28f, Gap = 4f, ButtonWidth = 24f, SpeedWidth = 24f, StartWidth = 66f;
-    public const float RestWidth = ChipWidth + Gap + ButtonWidth + Gap + ButtonWidth + Gap + ButtonWidth + Gap + SpeedWidth;
+    /// <summary>
+    /// TD.33d: o contador de créditos (fonte <see cref="MoneyFontDip"/>, âmbar, números tabulares) sai do chip e ganha item próprio; o chip passa a mostrar só
+    /// integridade e onda. O grupo continua em 220 DIP até 4 dígitos de créditos (<see cref="MoneyMinWidth"/>); cada dígito a mais cresce para a ESQUERDA
+    /// (como o Iniciar), então o grupo fixo à direita nunca se move.
+    /// </summary>
+    public const float ChipWidth = 58f, ChipHeight = 28f, Gap = 4f, ButtonWidth = 24f, SpeedWidth = 24f, StartWidth = 66f;
+    public const float MoneyFontDip = 16f, MoneyMinWidth = 46f, MoneyDigitWidth = 9.6f, MoneyMinDigits = 4;
+    public const float RestWidth = MoneyMinWidth + Gap + ChipWidth + Gap + ButtonWidth + Gap + ButtonWidth + Gap + ButtonWidth + Gap + SpeedWidth;
+
+    /// <summary>Largura (DIP) do contador de créditos para um valor com esse número de dígitos.</summary>
+    public static float MoneyWidth(int digits) => MoneyMinWidth + Math.Max(0, digits - (int)MoneyMinDigits) * MoneyDigitWidth;
     public const float FullWidth = RestWidth + Gap + StartWidth;
 
     /// <summary>Índice do item sob o ponto (qualquer item com texto/dica, inclusive não clicável) ou -1: base do tooltip.</summary>
@@ -142,7 +156,9 @@ public sealed record TdHudView(TdUiItem[] Items, float Width, float Height, bool
         {
             h.Add(it.Text); h.Add(it.Right); h.Add(it.Enabled); h.Add(it.Selected); h.Add(it.Highlight); h.Add((int)it.Tone); h.Add((int)(it.Fill * 100)); h.Add((int)it.Icon); h.Add((int)it.RightIcon);
         }
-        h.Add(Minimized); h.Add(Wave); h.Add(TotalWaves);
+        h.Add(Minimized); h.Add(Wave); h.Add(TotalWaves); h.Add(TopPad);
+        if (Floats is { Count: > 0 })
+            foreach (var f in Floats) { h.Add(f.Text); h.Add((int)(f.Rise * 2f)); h.Add(f.Alpha / 16); }
         return h.ToHashCode();
     }
 }
@@ -155,7 +171,7 @@ public sealed record TdTooltipView(string Text, float AnchorX, float AnchorTop);
 /// <param name="GameSpeed">TD.28c: velocidade do jogo 1, 2 ou 3 (Steps por tick no host).</param>
 /// <param name="PanelPinned">TD.28b: painel rápido de torres sempre aberto junto ao chip.</param>
 public sealed record TdGameOptions(int BandHeight = 64, bool AutoStart = false, bool Sound = false, int Volume = 60, bool Questions = true, bool Fade = true,
-    bool Continuous = true, bool PanelPinned = false, int GameSpeed = 1);
+    bool Continuous = true, bool PanelPinned = false, int GameSpeed = 1, bool ShowIncome = false, bool Discreet = false);
 
 public interface ITdUiHost
 {

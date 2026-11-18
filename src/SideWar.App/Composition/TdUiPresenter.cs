@@ -21,7 +21,7 @@ namespace SideWar.App.Composition;
 /// </summary>
 internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
 {
-    private const double TickSeconds = 0.1, KickSeconds = 0.03;
+    private const double TickSeconds = 0.1, KickSeconds = 0.03, MoneyTickSeconds = 1.0 / 30.0;
 
     private readonly GameThread game;
     private readonly GameRuntime runtime;
@@ -50,7 +50,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     public void LoadGameOptions(SideWar.Persistence.Settings.AppSettings settings)
     {
         gameOptions = new(settings.Td.BandHeightDip, settings.Td.AutoStartEnabled, settings.Audio.Enabled, (int)Math.Round(settings.Audio.Volume * 100), settings.Td.BonusQuestions, settings.Td.FadeWhenUnfocused,
-            settings.Td.ContinuousWaves, settings.Td.TowerPanelPinned, settings.Td.GameSpeed);
+            settings.Td.ContinuousWaves, settings.Td.TowerPanelPinned, settings.Td.GameSpeed, settings.Td.ShowIncome, settings.Td.DiscreetMode);
         bossHotkey = settings.Hotkeys.ToggleVisibility;
         Kick();
     }
@@ -353,7 +353,10 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         Refresh(false);
         var m = td.Host.Match;
         bool busy = runtime.App.IsVisible && (m.Phase == MatchPhase.Onda || controller.PopoverOpen || controller.CurrentTip is not null || m.CountdownRemainingSeconds > 0 || controller.QuizActive || controller.Pulsing || controller.NoticeOpen);
-        deadline = busy ? clock.NowTicks + (long)(TickSeconds * clock.TicksPerSecond) : null;
+        // TD.33d: a animação do dinheiro só agenda quadros enquanto há o que animar (≈30 fps, o teto estável do TD.28c); parado/pausado/oculto = nada.
+        bool money = runtime.App.IsVisible && controller.MoneyAnimating;
+        deadline = money ? clock.NowTicks + (long)(MoneyTickSeconds * clock.TicksPerSecond)
+            : busy ? clock.NowTicks + (long)(TickSeconds * clock.TicksPerSecond) : null;
     }
 
     private void Refresh(bool force)
