@@ -776,7 +776,18 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         }
         if (v.RuneWindow) { DrawRuneWindow(c, v, hover); return; }
         bool modal = v.Width == 720 && v.Height == 480 && !v.HasArrow;
-        _p.Box(c, new DipRect(0, 0, v.Width, boxH), modal ? Palette.Td.Border : v.HasArrow ? Palette.Ambar : Palette.BordaForte, modal ? Palette.Td.Background : Palette.BgPainel);
+        bool alert = v.AlertTone != TdTone.Normal;
+        var edge = alert ? ToneColor(v.AlertTone) : modal ? Palette.Td.Border : v.HasArrow ? Palette.Ambar : Palette.BordaForte;
+        _p.Box(c, new DipRect(0, 0, v.Width, boxH), edge, modal ? Palette.Td.Background : Palette.BgPainel);
+        if (alert && v.Pulse > 0f)
+        {
+            // TD.40c: pulso discreto da borda (sem tomar foco; zero com o modo discreto).
+            var glow = edge.WithAlpha((byte)(60 + 150 * v.Pulse));
+            _p.Fill(c, new DipRect(1, 1, v.Width - 2, 2), glow);
+            _p.Fill(c, new DipRect(1, boxH - 3, v.Width - 2, 2), glow);
+            _p.Fill(c, new DipRect(1, 3, 2, boxH - 6), glow);
+            _p.Fill(c, new DipRect(v.Width - 3, 3, 2, boxH - 6), glow);
+        }
         if (modal)
         {
             _p.Fill(c, new DipRect(1, 1, v.Width - 2, 43), Palette.Td.Surface);
@@ -801,8 +812,8 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             DrawTowerIcon(c, v.IconTower, 4, 2, HeaderIconDip, 255);
             titleX += 22;
         }
-        float titleSize = v.Title == "CORRIDA ENCERRADA" ? 14f : 10.5f;
-        _p.Text(c, v.Title, PanelFont.JetBrainsMono, titleSize, new DipRect(titleX, 3, v.Width - 40 - (titleX - TdUiController.Pad - 2), 18), Palette.TxtPrincipal);
+        float titleSize = v.Title == "CORRIDA ENCERRADA" || alert ? 14f : 10.5f;
+        _p.Text(c, v.Title, PanelFont.JetBrainsMono, titleSize, new DipRect(titleX, 3, v.Width - 40 - (titleX - TdUiController.Pad - 2), 18), alert ? edge : Palette.TxtPrincipal);
         _p.Fill(c, new DipRect(1, TdUiController.HeaderH, v.Width - 2, 1), Palette.BordaPainel);
         for (int i = 0; i < v.Items.Length; i++)
         {
