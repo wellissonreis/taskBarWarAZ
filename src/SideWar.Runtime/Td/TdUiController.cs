@@ -46,6 +46,7 @@ public sealed partial class TdUiController
     private double _noticeUntil;
     private int _seenStages = -1;
     private bool _pinnedOpen;
+    private bool _outsideCollapsed;
     /// <summary>TD.28b: atalho global "minimizar tudo" ativo: nenhum cartão, painel ou modal é aberto e a pergunta-bônus espera.</summary>
     public bool BossHidden { get; private set; }
     private bool PanelPinned => _host.GameOptions.PanelPinned;
@@ -197,6 +198,7 @@ public sealed partial class TdUiController
     public void Activate(in TdUiItem item)
     {
         if (!item.Clickable) return;
+        _outsideCollapsed = false;
         if (_restartArmed && item.Action != TdUiAction.Restart && (EndCardOpen || item.Action is TdUiAction.Menu or TdUiAction.Settings)) _restartArmed = false;
         Touch();
         NoteAction(item.Action);
@@ -454,6 +456,16 @@ public sealed partial class TdUiController
         _notice = null;
     }
 
+    /// <summary>Recolhe expansões após interação fora do jogo, sem cancelar pausa do usuário nem o auto-reinício.</summary>
+    public void CollapseOutside()
+    {
+        _outsideCollapsed = true;
+        _returnToEnd = false;
+        _rcPending = false;
+        _tipText = null;
+        Close();
+    }
+
     private void Close()
     {
         if (_returnToEnd && Mode == TdUiMode.Runes && !BossHidden)
@@ -507,7 +519,7 @@ public sealed partial class TdUiController
     private void MaintainPinned()
     {
         var m = _match();
-        bool want = PanelPinned && !BossHidden && m.Phase is not (MatchPhase.Vitoria or MatchPhase.Derrota);
+        bool want = PanelPinned && !_outsideCollapsed && !BossHidden && m.Phase is not (MatchPhase.Vitoria or MatchPhase.Derrota);
         if (want && !QuickTowersOpen && !RuneWindowOpen && Mode == TdUiMode.None) { OpenQuickTowers(); _pinnedOpen = true; }
         else if (!want && _pinnedOpen && QuickTowersOpen && !BuildActive) Close();
     }
@@ -784,7 +796,7 @@ public sealed partial class TdUiController
     public TdPopoverView? BuildPopover()
     {
         var m = _match();
-        if (BossHidden) return null;
+        if (BossHidden || _outsideCollapsed) return null;
         if (!BuildActive && (Mode == TdUiMode.None || QuickTowersOpen) && _quizQ is not null && QuizPhaseOk(m)) return BuildQuiz(m);
         if (!BuildActive && NoticeOpen && (Mode == TdUiMode.None || QuickTowersOpen)) return BuildNotice();
         if (!BuildActive && RuneCardOpen && (Mode == TdUiMode.None || QuickTowersOpen)) return BuildRuneCard();

@@ -29,6 +29,8 @@ public sealed class TdUiWindow : OverlayChildWindow
         classIsModal = false;
         NativeFocus.BlockActivation(Handle);
     }
+    public void ForgetPreviousFocus() => previousFocus = 0;
+    public static nint ForegroundWindow => NativeFocus.Foreground();
     public void RestoreFocus()
     {
         if (previousFocus != 0) NativeFocus.Activate(previousFocus);

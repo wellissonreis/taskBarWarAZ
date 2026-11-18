@@ -103,6 +103,9 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     private int hudHover = -1, popHover = -1;
     private long hudSig = long.MinValue, popSig = long.MinValue;
     private PixelRect popBounds;
+    private GlobalClickObserver? clickObserver;
+    private nint expansionForeground;
+    private bool expansionTracked;
     private bool buildApplied, escApplied, disposed, quickApplied;
     private long? deadline;
 
@@ -207,12 +210,19 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
 
     public void Setup()
     {
+        clickObserver = new GlobalClickObserver((x, y) =>
+        {
+            // O hook só captura a posição; a alteração ocorre depois, no laço da T-Game.
+            try { game.Post(() => CollapseIfOutside(x, y)); }
+            catch (InvalidOperationException) { /* T-Game já encerrada. */ }
+        });
         hudWindow = game.Scene.GetOrCreateTdHud();
         scrimWindow = game.Scene.CreateTdScrim();
         scrimWindow.LeftUp += (_, _) => { Present(); controller.Cancel(); };
         popWindow = game.Scene.GetOrCreateTdPopover();
         popWindow.KeyDown += ModalKey;
         tipWindow = game.Scene.GetOrCreateTdTooltip();
+        tipWindow.ClickableAt = (_, _) => TdTooltipView.AcceptsPointer(tipFirstTime);
         hudWindow.Moved += (x, y) =>
         {
             Present();
@@ -259,6 +269,17 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         ApplyFade();
         Refresh(true);
         Kick();
+    }
+
+    private void CollapseIfOutside(int x, int y)
+    {
+        if (disposed || bossHidden || (!expansionTracked && controller.CurrentTip is null) || game.Dock.Current is not { } layout) return;
+        static bool Inside(PixelRect r, int x, int y) => x >= r.Left && x < r.Right && y >= r.Top && y < r.Bottom;
+        if (Inside(layout.Scene, x, y) || (hudWindow is { IsVisible: true } && Inside(hudWindow.Bounds, x, y))
+            || (popWindow is { IsVisible: true } && Inside(popWindow.Bounds, x, y))
+            || (tipWindow is { IsVisible: true } && Inside(tipWindow.Bounds, x, y))) return;
+        popWindow?.ForgetPreviousFocus();
+        controller.CollapseOutside();
     }
 
     /// <summary>DPI do monitor / 96 (pixels por DIP real).</summary>
@@ -369,6 +390,11 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     {
         if (disposed) return;
         if (bossHidden) { deadline = null; return; }
+        if (expansionTracked && TdUiWindow.ForegroundWindow != expansionForeground)
+        {
+            popWindow?.ForgetPreviousFocus();
+            controller.CollapseOutside();
+        }
         controller.Sync();
         Refresh(false);
         var m = td.Host.Match;
@@ -435,6 +461,9 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
             if (runtime.App.IsVisible) driver.ForceDraw(); // evento de mouse: desenha já (o laço pode não acordar a tempo)
         }
         if (controller.BuildActive != buildApplied) { buildApplied = controller.BuildActive; game.Mode.SetBuildMode(buildApplied); }
+        bool expanded = controller.PopoverOpen || controller.BuildActive || (popWindow.IsVisible && pop is not null);
+        if (expanded && !expansionTracked) expansionForeground = TdUiWindow.ForegroundWindow;
+        expansionTracked = expanded;
         bool esc = controller.PopoverOpen;
         if (esc != escApplied) { escApplied = esc; hotkeys()?.SetEscapeActive(esc); }
     }
@@ -535,6 +564,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         hudCanvas.Dispose();
         popCanvas.Dispose();
         tipCanvas.Dispose();
+        clickObserver?.Dispose();
         focus.Changed -= ApplyFade;
     }
 }

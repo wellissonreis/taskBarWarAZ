@@ -167,7 +167,11 @@ public sealed record TdHudView(TdUiItem[] Items, float Width, float Height, bool
 }
 
 /// <summary>Dica (tooltip) do item sob o mouse: texto completo e âncora (centro X e topo, em DIP do HUD) para a janela posicionar acima.</summary>
-public sealed record TdTooltipView(string Text, float AnchorX, float AnchorTop);
+public sealed record TdTooltipView(string Text, float AnchorX, float AnchorTop)
+{
+    // Dicas de hover não podem interceptar o cursor que as mantém visíveis.
+    public static bool AcceptsPointer(bool firstTime) => firstTime;
+}
 
 /// <summary>Visão do perfil/meta para o Mapa e a árvore (implementada no App sobre o perfil TD; o Runtime não conhece a Persistência).</summary>
 /// <param name="Continuous">TD.28b: ondas contínuas (corrida infinita); desligado = modo clássico. Vale na próxima corrida.</param>

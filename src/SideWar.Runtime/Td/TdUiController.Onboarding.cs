@@ -94,7 +94,7 @@ public sealed partial class TdUiController
     public bool OnboardingEnabled => _onb is not null;
 
     /// <summary>Texto da dica de 1ª vez em exibição (null = nenhuma). Some sozinha em <see cref="TipSeconds"/> ou ao clicar.</summary>
-    public string? CurrentTip => Step == TdTutorialStep.HudOpen ? "Toque no chip para abrir" : _tipText;
+    public string? CurrentTip => _outsideCollapsed ? null : Step == TdTutorialStep.HudOpen ? "Toque no chip para abrir" : _tipText;
 
     /// <summary>Passo atual do tutorial (None = tutorial concluído, pulado ou fora da fase 1).</summary>
     public TdTutorialStep Step => ComputeStep(_match());
@@ -238,7 +238,7 @@ public sealed partial class TdUiController
     }
 
     /// <summary>Abre o cartão "Como jogar" (item da bandeja e do menu do HUD).</summary>
-    public void OpenHowTo() => SetMode(TdUiMode.Help);
+    public void OpenHowTo() { _outsideCollapsed = false; SetMode(TdUiMode.Help); }
 
     /// <summary>Clique na dica (ou em qualquer ação do jogador): a dica some.</summary>
     public void DismissTip()

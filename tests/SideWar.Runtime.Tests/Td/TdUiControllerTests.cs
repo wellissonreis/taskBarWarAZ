@@ -74,6 +74,47 @@ public sealed class TdUiControllerTests
     }
 
     [Fact]
+    public void Outside_collapse_closes_build_and_runes_without_reopening_pinned_panel()
+    {
+        var r = new Rig();
+        r.Host.SetGameOptions(new TdGameOptions(PanelPinned: true));
+        r.Ui.Sync();
+        Assert.True(r.Ui.QuickTowersOpen);
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.ChooseTower, SArg: "bolt"));
+        Assert.True(r.Ui.BuildActive);
+        r.Ui.CollapseOutside();
+        for (int i = 0; i < 5; i++) r.Ui.Sync();
+        Assert.False(r.Ui.BuildActive);
+        Assert.Null(r.Ui.BuildPopover());
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.RuneWindow));
+        Assert.True(r.Ui.RuneWindowOpen);
+        r.Ui.CollapseOutside();
+        r.Ui.Sync();
+        Assert.False(r.Ui.RuneWindowOpen);
+        Assert.Null(r.Ui.BuildPopover());
+    }
+
+    [Fact]
+    public void Hover_tooltip_does_not_intercept_pointer_and_tower_selection_stays_stable()
+    {
+        var r = new Rig();
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.QuickTowers));
+        var tower = r.Ui.BuildPopover()!.Items.First(i => i.Action == TdUiAction.ChooseTower && i.Enabled);
+        for (int frame = 0; frame < 20; frame++)
+        {
+            r.Ui.Hover(tower);
+            r.Ui.Sync();
+            Assert.False(TdTooltipView.AcceptsPointer(firstTime: false));
+            Assert.Equal(TdUiMode.Build, r.Ui.Mode);
+            Assert.True(r.Ui.QuickTowersOpen);
+            Assert.Equal(tower.SArg, r.Ui.BuildPopover()!.Items.First(i => i.Action == TdUiAction.ChooseTower && i.SArg == tower.SArg).SArg);
+        }
+        Assert.True(TdTooltipView.AcceptsPointer(firstTime: true));
+        r.Ui.Activate(tower);
+        for (int frame = 0; frame < 20; frame++) { r.Ui.Sync(); Assert.True(r.Ui.BuildActive); }
+    }
+
+    [Fact]
     public void Persistent_defeat_countdown_restarts_at_eight_seconds_and_view_runes_cancels()
     {
         var r = new Rig();
