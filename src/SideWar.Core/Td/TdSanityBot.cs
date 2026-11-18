@@ -54,11 +54,11 @@ public static class TdSanityBot
     public static StripLayout TypicalLayout() =>
         StripLayout.Create(1920, 1920, 0f, 0f, 1920, TowerHost.Taskbar, [new FreeZone(100, 520), new FreeZone(640, 1180), new FreeZone(1300, 1800)]);
 
-    public static TdBotResult Run(TdContent content, int stage, TdBotProfile profile, ulong seed, string? script = null)
+    public static TdBotResult Run(TdContent content, int stage, TdBotProfile profile, ulong seed, string? script = null, bool awaken = true)
     {
         ArgumentNullException.ThrowIfNull(content);
         var state = TdMatchState.Create(content, stage, Rng.Seed(seed, 54));
-        var bot = new Runner(state, script is null ? TdBotPlans.For(stage, profile) : TdBotPlans.Parse(script), profile);
+        var bot = new Runner(state, script is null ? TdBotPlans.For(stage, profile) : TdBotPlans.Parse(script), profile) { Awaken = awaken };
         return bot.Play(seed);
     }
 
@@ -67,11 +67,11 @@ public static class TdSanityBot
     /// mantidos), jogada até derrota ou <paramref name="maxStages"/> fases concluídas (6 = a campanha; mais = ciclo infinito). A cada fase o bot
     /// carrega o roteiro da fase de conteúdo (só construir/runas: mira e venda do roteiro de fase única dependem de ids que a corrida já mudou).
     /// </summary>
-    public static TdRunBotResult RunContinuous(TdContent content, int startStage, TdBotProfile profile, ulong seed, int maxStages = 6)
+    public static TdRunBotResult RunContinuous(TdContent content, int startStage, TdBotProfile profile, ulong seed, int maxStages = 6, bool awaken = true)
     {
         ArgumentNullException.ThrowIfNull(content);
         var state = TdMatchState.Create(content, startStage, Rng.Seed(seed, 54), null, TdMatchOptions.Default);
-        var bot = new Runner(state, RunPlan(startStage, profile), profile) { RunMaxStages = maxStages };
+        var bot = new Runner(state, RunPlan(startStage, profile), profile) { RunMaxStages = maxStages, Awaken = awaken };
         return bot.PlayRun(seed, startStage);
     }
 
@@ -82,6 +82,7 @@ public static class TdSanityBot
         private readonly TdMatchState _s;
         private Step[] _plan;
         public int RunMaxStages { get; init; }
+        public bool Awaken { get; init; } = true;
         private readonly TdBotProfile _profile;
         private int _next;
         private int _rejected;
@@ -178,7 +179,7 @@ public static class TdSanityBot
 
         private void Spend()
         {
-            while (_s.Fragments > 0 && _s.Frontier.Count > 0 && _s.Apply(new AwakenRune(_s.Frontier[0])).IsOk) { } // teia: despertar sempre que houver fragmento
+            while (Awaken && _s.Fragments > 0 && _s.Frontier.Count > 0 && _s.Apply(new AwakenRune(_s.Frontier[0])).IsOk) { } // teia: despertar sempre que houver fragmento
             while (_next < _plan.Length)
             {
                 var st = _plan[_next];
