@@ -39,6 +39,10 @@ public struct TdTower
     public int X { get; set; }
     /// <summary>false = SEM POSIÇÃO (ADR-034): a zona sumiu após <c>LayoutChanged</c>; não atira, não dá aura.</summary>
     public bool Placed { get; set; }
+    internal int[]? RangeSeenIds { get; set; }
+    internal int BurstLeft { get; set; }
+    internal int BurstGapTicks { get; set; }
+    internal int BurstTargetId { get; set; }
     public int CooldownTicks { get; set; }
     public byte Targeting { get; set; }
     /// <summary>Ticks restantes desativada (drenagem do parasita / criptografia do Ransomware, RF-28.7/28.8).</summary>

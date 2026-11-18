@@ -13,7 +13,7 @@ public static class TdContentValidator
     private static readonly string[] RequiredEnemies = ["grunt", "runner", "swarm", "armored", "tank", "flyer", "regen", "leech"];
     private static readonly string[] RequiredBosses = ["ransomware", "botnet", "zeroday"];
     private static readonly string[] RequiredAbilities = ["scale", "firewall", "snapshot"];
-    private static readonly string[] TowerKinds = ["attack", "blocker", "support"];
+    private static readonly string[] TowerKinds = ["attack", "blocker", "support", "control", "economy", "summoner"];
     private static readonly string[] TowerTargets = ["ground", "both", "none"];
     private static readonly string[] Targetings = ["first", "last", "strong", "weak", "close"];
     private static readonly string[] AutoStartModes = ["off", "countdown"];
@@ -206,6 +206,7 @@ public static class TdContentValidator
         {
             var o = $"td-towers.{t.Id}";
             Req(e, Text(t.Name) && Text(t.Flavor) && Text(t.Role), $"{o}: name, flavor e role não podem ser vazios");
+            Req(e, new[] { "attack", "control", "support", "economy" }.Contains(t.Category), $"{o}.category inválida '{t.Category}'");
             Req(e, TowerKinds.Contains(t.Kind), $"{o}.kind inválido '{t.Kind}'");
             Req(e, TowerTargets.Contains(t.Targets), $"{o}.targets inválido '{t.Targets}'");
             Req(e, t.Cost > 0, $"{o}.cost deve ser > 0");
@@ -217,11 +218,30 @@ public static class TdContentValidator
                 Req(e, t.DefaultTargeting is not null && Targetings.Contains(t.DefaultTargeting), $"{o}.defaultTargeting inválido");
                 Req(e, t.Targets != "none", $"{o}: torre de ataque não pode ter targets 'none'");
             }
+            else if (t.Kind == "control" && t.Targets != "none")
+            {
+                Req(e, t.DefaultTargeting is not null && Targetings.Contains(t.DefaultTargeting), $"{o}.defaultTargeting inválido");
+                Req(e, t.Interval > 0, $"{o}.interval deve ser > 0");
+            }
             else
             {
                 Req(e, t.DefaultTargeting is null, $"{o}.defaultTargeting deve ser nulo (ignora mira)");
             }
-            Req(e, (t.Kind == "support") == (t.Targets == "none"), $"{o}: targets 'none' é exclusivo de suporte");
+            Req(e, t.Kind switch
+            {
+                "support" or "economy" or "summoner" => t.Targets == "none",
+                "blocker" => t.Targets == "ground",
+                "control" => true,
+                _ => t.Targets != "none"
+            }, $"{o}: targets incompatível com kind");
+            if (t.Id == "functions")
+                Req(e, t.Stats.TryGetValue("burstShots", out var shots) && shots >= 1 && shots == Math.Floor(shots)
+                    && t.Stats.TryGetValue("burstGapTicks", out var gap) && gap >= 1 && gap == Math.Floor(gap)
+                    && t.Stats.TryGetValue("rearmSeconds", out var rearm) && rearm > 0, $"{o}: stats de rajada inválidos");
+            if (t.Id == "cdn")
+                Req(e, t.Stats.TryGetValue("minRange", out var min) && min >= 0 && min < t.Range, $"{o}: minRange inválido");
+            if (t.Id == "policy")
+                Req(e, t.Stats.TryGetValue("armorRemoveBp", out var bp) && bp is >= 0 and <= 10000, $"{o}: armorRemoveBp inválido");
 
             // Fraqueza declarada da torre (CA-28.4).
             Req(e, Text(t.WeaknessText), $"{o}.weaknessText: toda torre declara sua fraqueza");

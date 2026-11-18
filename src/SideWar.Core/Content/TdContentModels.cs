@@ -7,7 +7,7 @@ namespace SideWar.Core.Content.Td;
 public sealed record TdTowerDef(
     string Id, string Name, string Flavor, string Role, string Kind, string Targets, string? DefaultTargeting,
     long Cost, double Range, double Damage, double Interval, int UnlockStage, Dictionary<string, double> Stats,
-    string[] Strong, string[] Weak, string WeaknessText);
+    string[] Strong, string[] Weak, string WeaknessText, string Category = "attack");
 
 /// <summary>Inimigo comum (RF-28.7). <c>Counters</c>: torres ("bolt") ou ramos ("bolt.A") que o contra-atacam.</summary>
 public sealed record TdEnemyDef(

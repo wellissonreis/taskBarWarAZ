@@ -36,6 +36,12 @@ public sealed partial class TdMatchState
         {
             h.AddInt32(t.Id); h.AddInt32(t.DefIndex); h.AddInt64(t.PurchasePrice); h.AddInt32(t.X); h.AddBool(t.Placed);
             h.AddInt32(t.CooldownTicks);
+            if (_content.Towers[t.DefIndex].Id == "functions")
+            {
+                h.AddInt32(t.BurstLeft); h.AddInt32(t.BurstGapTicks); h.AddInt32(t.BurstTargetId);
+                h.AddInt32(t.RangeSeenIds?.Length ?? 0);
+                if (t.RangeSeenIds is not null) foreach (int id in t.RangeSeenIds) h.AddInt32(id);
+            }
             h.AddByte(t.Targeting); h.AddInt32(t.DisabledTicks); h.AddInt32(t.FocusTargetId); h.AddInt32(t.FocusHits);
             h.AddInt32(t.ShotCount); h.AddInt32(t.ParalyzeCdTicks); h.AddInt32(t.NodeCdTicks);
         }

@@ -148,13 +148,63 @@ public sealed partial class TdMatchState
             if (t.ParalyzeCdTicks > 0) t.ParalyzeCdTicks--;
             if (t.NodeCdTicks > 0) t.NodeCdTicks--;
             bool disabled = t.DisabledTicks > 0;
-            if (disabled) t.DisabledTicks--;
             if (!disabled && t.Placed)
             {
-                if (def.Kind == "attack" && t.CooldownTicks == 0) FireAttack(ref t, def, ti, scale);
+                if (def.Id == "functions") TickFunctions(ref t, def, ti);
+                else if (def.Kind == "attack" && t.CooldownTicks == 0) FireAttack(ref t, def, ti, scale);
                 else if (def.Kind == "blocker") SpawnNodes(ref t, def, ti);
             }
+            else if (def.Id == "functions")
+            {
+                int x = t.X;
+                double range = EffectiveRange(def) + _auraRange[ti];
+                t.RangeSeenIds = _enemies.Where(e => e.Hp > 0 && Dist(e.X, x) <= range).Select(e => e.Id).Order().ToArray();
+                t.BurstLeft = 0; t.BurstGapTicks = 0; t.BurstTargetId = 0;
+            }
             _towers[ti] = t;
+        }
+        for (int i = 0; i < _towers.Count; i++)
+        {
+            var t = _towers[i];
+            if (t.DisabledTicks > 0) { t.DisabledTicks--; _towers[i] = t; }
+        }
+    }
+
+    private void TickFunctions(ref TdTower t, TdTowerDef def, int ti)
+    {
+        double range = EffectiveRange(def) + _auraRange[ti];
+        int towerX = t.X;
+        var inside = _enemies.Where(e => e.Hp > 0 && Dist(e.X, towerX) <= range).Select(e => e.Id).Order().ToArray();
+        if (t.BurstGapTicks > 0) t.BurstGapTicks--;
+        if (t.BurstLeft == 0 && t.CooldownTicks == 0)
+        {
+            int target = -1;
+            for (int i = 0; i < _enemies.Count; i++)
+            {
+                var e = _enemies[i];
+                if (e.Hp <= 0 || e.InvulnTicks > 0 || Dist(e.X, t.X) > range || (t.RangeSeenIds is not null && Array.BinarySearch(t.RangeSeenIds, e.Id) >= 0)) continue;
+                if (target < 0 || Better(TdTargeting.First, e, _enemies[target], t.X)) target = i;
+            }
+            if (target >= 0)
+            {
+                t.BurstTargetId = _enemies[target].Id;
+                t.BurstLeft = (int)Stat(t, def, "burstShots", 3);
+                t.CooldownTicks = Ticks(Stat(t, def, "rearmSeconds", 3));
+            }
+        }
+        t.RangeSeenIds = inside;
+        if (t.BurstLeft > 0 && t.BurstGapTicks == 0)
+        {
+            int targetId = t.BurstTargetId;
+            int target = _enemies.FindIndex(e => e.Id == targetId && e.Hp > 0 && e.InvulnTicks == 0 && Dist(e.X, towerX) <= range);
+            if (target < 0) { t.BurstLeft = 0; t.BurstTargetId = 0; return; }
+            var enemy = _enemies[target];
+            _damageSource = t.Id;
+            DealDamage(target, ComputeDamage(t, def, enemy, _enemyStats[enemy.DefIndex], ti, 1, 1));
+            t.ShotCount++;
+            t.BurstLeft--;
+            t.BurstGapTicks = t.BurstLeft > 0 ? (int)Stat(t, def, "burstGapTicks", 4) : 0;
+            if (t.BurstLeft == 0) t.BurstTargetId = 0;
         }
     }
 
@@ -278,6 +328,14 @@ public sealed partial class TdMatchState
         if (st.BlockedReduction > 0 && Dist(tower.X, target.X) <= st.ActRange) raw *= 1.0 - st.BlockedReduction;
         double armor = Math.Max(0.0, target.Armor - (target.CorrodeTicks > 0 ? target.CorrodeAmount : 0.0));
         armor *= 1.0 - Math.Clamp(Stat(tower, def, "armorPenetration", 0), 0.0, 1.0);
+        double removal = 0;
+        foreach (var policy in _towers)
+        {
+            var pd = _content.Towers[policy.DefIndex];
+            if (pd.Id == "policy" && policy.Placed && policy.DisabledTicks == 0 && Dist(policy.X, target.X) <= EffectiveRange(pd))
+                removal = Math.Max(removal, Stat(policy, pd, "armorRemoveBp", 0) / 10000.0);
+        }
+        armor *= 1.0 - Math.Clamp(removal, 0, 1);
         return Math.Max(1.0, Math.Floor(raw - armor + 1e-9));
     }
 
@@ -291,7 +349,7 @@ public sealed partial class TdMatchState
             var e = _enemies[i];
             if (e.Hp <= 0 || e.InvulnTicks > 0) continue;
             if (e.Flying && def.Targets != "both") continue;
-            if (Dist(e.X, tower.X) > range) continue;
+            if (Dist(e.X, tower.X) > range || Dist(e.X, tower.X) < Stat(tower, def, "minRange", 0)) continue;
             if (best < 0 || Better(mode, e, _enemies[best], tower.X)) best = i;
         }
         return best;
