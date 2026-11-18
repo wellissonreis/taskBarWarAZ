@@ -33,6 +33,8 @@ public sealed class TdBandRenderer : IDisposable
     private readonly SKPath _cross = Poly(-1.5f, -4, 1.5f, -4, 1.5f, -1.5f, 4, -1.5f, 4, 1.5f, 1.5f, 1.5f, 1.5f, 4, -1.5f, 4, -1.5f, 1.5f, -4, 1.5f, -4, -1.5f, -1.5f, -1.5f);
     private readonly SKPath _bolt = Poly(1.5f, -5, -3, 0.5f, 0, 0.5f, -1.5f, 5, 3, -0.5f, 0, -0.5f);
     private readonly SKPaint _img = new() { IsAntialias = false };
+    private readonly TdMutationMarks _marks = new();
+    private string[] _mutIds = [];
     private readonly SpriteAtlas _atlas;
     private readonly bool _ownsAtlas;
     private SKImage?[] _towerImg = [], _chipImg = [], _enemyImg = [];
@@ -125,6 +127,7 @@ public sealed class TdBandRenderer : IDisposable
         var bosses = content.Enemies.Bosses;
         _enemyDefs = normal.Length + bosses.Length;
         _traits = new byte[_enemyDefs];
+        _mutIds = [.. content.Mutations.Traits.Select(t => t.Id)];
         for (int i = 0; i < normal.Length; i++) _traits[i] = TraitBits(normal[i].Traits);
         for (int i = 0; i < bosses.Length; i++) _traits[normal.Length + i] = TraitBits(bosses[i].Traits);
         ReleaseSprites();
@@ -296,6 +299,7 @@ public sealed class TdBandRenderer : IDisposable
             SKColor border = e.IsBoss ? Palette.Perigo : flying ? Palette.Gelo : (bits & ArmoredBit) != 0 ? Palette.Ambar
                 : (bits & RegenBit) != 0 ? Palette.Menta : (bits & DrainBit) != 0 ? Palette.Td.EnemyDrain : Palette.Td.EnemySolo;
             Blit(c, img, x, foot);
+            if (e.Mutations != 0 && !e.IsBoss) _marks.Draw(c, e.Mutations, _mutIds, x, foot, sw, sh, e.ShieldHp > 0);
             if ((bits & StealthBit) != 0)
             {
                 _stroke.Color = Palette.Td.TintCyan;
@@ -573,5 +577,6 @@ public sealed class TdBandRenderer : IDisposable
         _text.Dispose();
         _diamond.Dispose(); _triangle.Dispose(); _cross.Dispose(); _bolt.Dispose();
         _dash.Dispose();
+        _marks.Dispose();
     }
 }

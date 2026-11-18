@@ -219,6 +219,14 @@ public static class Palette
         public static readonly SKColor TintOrange = new(0xff, 0x8a, 0x3d);
         public static readonly SKColor TintRed = new(0xff, 0x3b, 0x3b);
         public static readonly SKColor TintViolet = new(0x9a, 0x6c, 0xff);
+
+        // Marcas das mutações de inimigos (SDD-37, TD.37d): uma cor por traço; a forma também identifica (nunca só cor).
+        public static readonly SKColor MutFast = new(0xff, 0x8a, 0x3d);
+        public static readonly SKColor MutTank = new(0xff, 0x6b, 0x6b);
+        public static readonly SKColor MutFly = new(0xc9, 0xe8, 0xff);
+        public static readonly SKColor MutSlow = new(0xb8, 0x9c, 0xff);
+        public static readonly SKColor MutShield = new(0x4c, 0xc2, 0xff);
+        public static readonly SKColor MutArmor = new(0xff, 0xd0, 0x70);
     }
 
     /// <summary>Hover: canal x 1,08, arredondado, teto 255 (RF-20.1).</summary>

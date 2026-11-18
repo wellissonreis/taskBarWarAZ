@@ -24,6 +24,8 @@ public enum TdStripScene
     NewEnemies,
     /// <summary>TD.37b: torres fundidas no mundo (par nomeado, ordem inversa, genérico) com selo do módulo; a primeira selecionada.</summary>
     Fused,
+    /// <summary>TD.37d: inimigos mutantes na faixa (Tank Rápido, Voador Tank Lento, escudo, blindado+lento...) lado a lado com a marca de cada traço.</summary>
+    Mutants,
 }
 
 /// <summary>
@@ -46,6 +48,7 @@ public static class TdStripScenes
         TdStripScene.AllTowers => "td-strip-all-towers",
         TdStripScene.NewEnemies => "td-strip-new-enemies",
         TdStripScene.Fused => "td-strip-fused",
+        TdStripScene.Mutants => "td-strip-mutants",
         _ => "td-strip-unpositioned",
     };
 
@@ -53,12 +56,13 @@ public static class TdStripScenes
 
     public static string GoldenName(TdStripScene scene, int dpi) => $"{Name(scene)}-{dpi * 100 / 96}";
 
-    private static TdContent TestContent(bool newEnemies = false, bool fusion = false)
+    private static TdContent TestContent(bool newEnemies = false, bool fusion = false, bool mutants = false)
     {
         var rules = Embedded.Stages.Rules;
         var stage = Embedded.Stages.Stages.First(s => s.Id == 1) with { Waves = 1, StartingCredits = 1_000_000 };
         TdWaveGroupDef G(string id, int count, double offset) => new(id, count, offset, 1.5);
         var wave = new TdWaveDef(1, false, 1.0, [G("grunt", 1, 0), G("runner", 1, 1), G("flyer", 1, 2), G("armored", 1, 3), G("regen", 1, 4), G("leech", 1, 5), G("ransomware", 1, 6)]);
+        if (mutants) wave = new TdWaveDef(1, false, 1.0, [G("grunt", 1, 0), G("tank", 1, 0.9), G("swarm", 1, 1.8), G("armored", 1, 2.7), G("runner", 1, 3.6), G("flyer", 1, 4.5), G("grunt", 1, 5.4)]);
         if (newEnemies) wave = new TdWaveDef(1, false, 1.0, [G("fork", 1, 0), G("trojan", 1, 1), G("phishing", 1, 2)]);
         var enemies = Embedded.Enemies with
         {
@@ -83,9 +87,9 @@ public static class TdStripScenes
 
     private static void Build(TdMatchState m, string tower, int x) => Do(m, new BuildTower(tower, x));
 
-    private static TdMatchState NewMatch(int width = WidthDip, bool newEnemies = false, bool fusion = false)
+    private static TdMatchState NewMatch(int width = WidthDip, bool newEnemies = false, bool fusion = false, bool mutants = false)
     {
-        var m = TdMatchState.Create(TestContent(newEnemies, fusion), 1, Rng.Seed(42, 54));
+        var m = TdMatchState.Create(TestContent(newEnemies, fusion, mutants), 1, Rng.Seed(42, 54));
         Do(m, new LayoutChanged(StripLayout.Create(width, width - 46, 88, 4, width - 80, TowerHost.Band, [new FreeZone(32, width - 32)])));
         return m;
     }
@@ -98,7 +102,7 @@ public static class TdStripScenes
 
     public static (TdMatchState Match, TdView View, double Now) Build(TdStripScene scene)
     {
-        var m = NewMatch(newEnemies: scene == TdStripScene.NewEnemies, fusion: scene == TdStripScene.Fused);
+        var m = NewMatch(newEnemies: scene == TdStripScene.NewEnemies, fusion: scene == TdStripScene.Fused, mutants: scene == TdStripScene.Mutants);
         switch (scene)
         {
             case TdStripScene.AllTowers:
@@ -116,6 +120,23 @@ public static class TdStripScenes
                 Do(m, new FuseTower(c, "bolt"));
                 Do(m, new FuseTower(d, "scaleset"));
                 return (m, new TdView(a, 0), 100.0);
+            }
+            case TdStripScene.Mutants:
+            {
+                Do(m, new StartWave());
+                Steps(m, 30 * 7);
+                // máscaras na ordem do catálogo (fast, durable, flying, slow, shielded, armored); o Core já testa a escolha, aqui só fixamos a arte
+                ushort[] masks = [0b000011, 0b001110, 0b010000, 0b101000, 0b000010, 0b000100, 0b000001];
+                var list = (List<TdEnemy>)typeof(TdMatchState).GetField("_enemies", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(m)!;
+                for (int i = 0; i < list.Count && i < masks.Length; i++)
+                {
+                    var e = list[i];
+                    e.Mutations = masks[i];
+                    e.Flying = e.Flying || (masks[i] & 0b100) != 0;
+                    if ((masks[i] & 0b10000) != 0) e.ShieldHp = e.MaxHp * 0.35;
+                    list[i] = e;
+                }
+                return (m, TdView.None, 100.0);
             }
             case TdStripScene.NewEnemies:
                 Do(m, new StartWave());
