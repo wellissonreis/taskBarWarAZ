@@ -4,8 +4,8 @@ namespace SideWar.Runtime.Td;
 public enum TdRuneState : byte { Locked, Available, Awake }
 
 /// <summary>
-/// Balão do nó sob o mouse (TD.30c), na modal e na janela de runas do HUD: nome, etiqueta, efeito e ação. O tipo só aparece quando o nó está
-/// despertado (<see cref="TypeIndex"/> = -1 caso contrário): disponível mostra "?" e o texto "O tipo desta runa é revelado ao despertar".
+/// Balão do nó sob o mouse (TD.30c, revisto na TD.30e), na modal e na janela de runas do HUD: nome do ramo, etiqueta, efeito e ação. O tipo é
+/// SEMPRE visível (<see cref="TypeIndex"/> = índice em <c>Runes.Types</c>) em qualquer estado: o jogador precisa ver a árvore para montar estratégia.
 /// A posição do nó (<see cref="NodeX"/>/<see cref="NodeY"/>, DIP do popover) ancora o balão.
 /// </summary>
 public sealed record TdRuneTip(string NodeId, TdRuneState State, int TypeIndex, string Name, string Tag, string Text, string Action, TdTone ActionTone,

@@ -54,6 +54,9 @@ public interface ITdOnboardingStore
     bool TipSeen(string id);
     void MarkTipSeen(string id);
 
+    /// <summary>TD.30e: esquece uma dica de 1ª vez ("Refazer tutorial" reativa o cartão de runas). Padrão: nada (armazenamentos de teste).</summary>
+    void ClearTip(string id) { }
+
     /// <summary>TD.17: pergunta-bônus V/F ligada (td.bonusQuestions). Padrão das implementações de teste: desligada.</summary>
     bool BonusQuestions => false;
 }
@@ -229,6 +232,7 @@ public sealed partial class TdUiController
         _quizExampleDone = false;
         _hudPhase = 0;
         _hurtUntil = _hurtNextAt = double.NegativeInfinity;
+        ResetRuneCard(clearSeen: true);
         _onb.SetTutorialDone(false);
         Close();
         _host.StartStage(1);

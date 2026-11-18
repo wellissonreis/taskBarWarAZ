@@ -178,6 +178,13 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         ui(UiRequest.SaveOnboarding);
     }
 
+    public void ClearTip(string id)
+    {
+        if (!tipsSeen.Remove(id)) return;
+        tipsSeenText = string.Join(';', tipsSeen.Order(StringComparer.Ordinal));
+        ui(UiRequest.SaveOnboarding);
+    }
+
     /// <summary>TD.14: aplica a opacidade de ausência (faixa, HUD, popover e dica) e o teto de 8 fps do render.</summary>
     private void ApplyFade()
     {
@@ -352,7 +359,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         controller.Sync();
         Refresh(false);
         var m = td.Host.Match;
-        bool busy = runtime.App.IsVisible && (m.Phase == MatchPhase.Onda || controller.PopoverOpen || controller.CurrentTip is not null || m.CountdownRemainingSeconds > 0 || controller.QuizActive || controller.Pulsing || controller.NoticeOpen);
+        bool busy = runtime.App.IsVisible && (m.Phase == MatchPhase.Onda || controller.PopoverOpen || controller.CurrentTip is not null || m.CountdownRemainingSeconds > 0 || controller.QuizActive || controller.Pulsing || controller.NoticeOpen || controller.RuneCardOpen);
         // TD.33d: a animação do dinheiro só agenda quadros enquanto há o que animar (≈30 fps, o teto estável do TD.28c); parado/pausado/oculto = nada.
         bool money = runtime.App.IsVisible && controller.MoneyAnimating;
         deadline = money ? clock.NowTicks + (long)(MoneyTickSeconds * clock.TicksPerSecond)

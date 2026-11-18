@@ -50,7 +50,7 @@ public sealed partial class TdUiController
     public bool NoticeOpen => _noticeText is not null && !BossHidden && _now() < _noticeUntil;
     public string? NoticeText => NoticeOpen ? _noticeText : null;
     /// <summary>Qualquer popover pequeno ancorado ao chip: painel rápido, pergunta-bônus, aviso de fase ou cartão de fim. Nunca ativa janela.</summary>
-    public bool CornerPopover => QuickTowersOpen || RuneWindowOpen || EndCardOpen || NoticeOpen || ((Mode == TdUiMode.None || QuickTowersOpen) && QuizActive);
+    public bool CornerPopover => QuickTowersOpen || RuneWindowOpen || EndCardOpen || NoticeOpen || RuneCardOpen || ((Mode == TdUiMode.None || QuickTowersOpen) && QuizActive);
     private int _chosenX = -1;       // X lógico já escolhido (passo "escolher a torre"); -1 = ainda no passo do ponto
     private int _moveTowerId;        // > 0: reposicionando uma torre SEM POSIÇÃO (sem escolha de tipo)
     private int _ghostX = -1;
@@ -72,6 +72,8 @@ public sealed partial class TdUiController
     /// <summary>Id do nó sob o mouse (balão e destaque); nulo quando o mouse sai.</summary>
     public string? HoverRune => _hoverRune;
     private string? _lastRune;
+    private string? _hoverBranch;
+    private bool _legendHint;
     private int _runeCount;
     private readonly HashSet<string> _runeKnown = [];
     private int _towerPage;
@@ -174,6 +176,8 @@ public sealed partial class TdUiController
     {
         string? rune = item is { Action: TdUiAction.SelectRune, SArg: { } rid } ? rid : null;
         if (rune != _hoverRune) { _hoverRune = rune; Changed?.Invoke(); }
+        string? branch = item is { Action: TdUiAction.RuneBranch, SArg: { } bid } ? bid : null;
+        if (branch != _hoverBranch) { _hoverBranch = branch; if (branch is not null) _legendHint = false; Changed?.Invoke(); }
         if (BuildActive) return;
         int def = -1;
         if (Mode == TdUiMode.Build && item is { Action: TdUiAction.ChooseTower, SArg: { } id })
@@ -206,6 +210,12 @@ public sealed partial class TdUiController
                 if (RuneWindowOpen) Close();
                 else if (!ModalOpen && _match().Phase is not (MatchPhase.Vitoria or MatchPhase.Derrota)) OpenRuneWindow();
                 break;
+            case TdUiAction.RuneTutorialOpen:
+                DismissRuneCard();
+                if (!ModalOpen && !RuneWindowOpen && _match().Phase is not (MatchPhase.Vitoria or MatchPhase.Derrota)) OpenRuneWindow(fromCard: true);
+                Changed?.Invoke();
+                break;
+            case TdUiAction.RuneTutorialDismiss: DismissRuneCard(); Changed?.Invoke(); break;
             case TdUiAction.QuickTowers:
                 if (QuickTowersOpen) Close();
                 else if (!ModalOpen && _match().Phase is not (MatchPhase.Vitoria or MatchPhase.Derrota)) OpenQuickTowers();
@@ -321,8 +331,9 @@ public sealed partial class TdUiController
             _seenStages = m.StageResults.Count;
             _noticeText = null;
             _userPaused = false;
-            _selectedRune = _lastRune = _hoverRune = null;
+            _selectedRune = _lastRune = _hoverRune = _hoverBranch = null;
             RuneWindowOpen = false;
+            ResetRuneCard(clearSeen: false);
             _runeCount = m.AwakenedCount;
             _runeKnown.Clear();
             foreach (var rn in m.RuneWeb) if (m.IsAwakened(rn.Id)) _runeKnown.Add(rn.Id);
@@ -340,6 +351,7 @@ public sealed partial class TdUiController
         SyncNotice(m);
         SyncOnboarding(m);
         SyncQuiz(m);
+        SyncRuneCard(m);
         UpdateModalPause();
         if (m.Phase is MatchPhase.Vitoria or MatchPhase.Derrota)
         {
@@ -423,7 +435,9 @@ public sealed partial class TdUiController
         ResetBuild();
         QuickTowersOpen = false;
         RuneWindowOpen = false;
-        _hoverRune = null;
+        _hoverRune = _hoverBranch = null;
+        _legendHint = false;
+        _rcShown = false; // um cartão ainda pendente continua esperando a vez
         _pinnedOpen = false;
         _noticeText = null;
         _endCorner = false;
@@ -437,12 +451,14 @@ public sealed partial class TdUiController
     }
 
     /// <summary>TD.30c: abre a janela de runas do HUD (fecha o painel de torres, um por vez; o jogo segue rodando).</summary>
-    private void OpenRuneWindow()
+    private void OpenRuneWindow(bool fromCard = false)
     {
         ResetBuild();
         QuickTowersOpen = false;
         _pinnedOpen = false;
-        _hoverRune = null;
+        _hoverRune = _hoverBranch = null;
+        _legendHint = fromCard;
+        _rcShown = _rcPending = false; // o jogador foi às runas: o aviso cumpriu o papel
         Mode = TdUiMode.None;
         RuneWindowOpen = true;
         UpdateModalPause();
@@ -739,6 +755,7 @@ public sealed partial class TdUiController
         if (BossHidden) return null;
         if (!BuildActive && (Mode == TdUiMode.None || QuickTowersOpen) && _quizQ is not null && QuizPhaseOk(m)) return BuildQuiz(m);
         if (!BuildActive && NoticeOpen && (Mode == TdUiMode.None || QuickTowersOpen)) return BuildNotice();
+        if (!BuildActive && RuneCardOpen && (Mode == TdUiMode.None || QuickTowersOpen)) return BuildRuneCard();
         if (QuickTowersOpen) return BuildQuickTowers(m);
         if (RuneWindowOpen && Mode == TdUiMode.None) return BuildRuneWindow(m);
         if (BuildActive) return null;
@@ -810,16 +827,21 @@ public sealed partial class TdUiController
     public static int PackRune(int typeIndex, int ring, int sector) => (typeIndex << 8) | (ring << 4) | sector;
     public static (int Type, int Ring, int Sector) UnpackRune(int arg) => (arg >> 8, (arg >> 4) & 15, arg & 15);
 
-    /// <summary>Tamanhos (DIP) do nó despertado, disponível e bloqueado: modal (Main.dc.html) e janela do HUD (HUDRunas.dc.html).</summary>
+    /// <summary>Tamanhos (DIP) do nó despertado, disponível e bloqueado: modal e janela do HUD. TD.30e: o bloqueado cresce para o glifo do ramo ficar legível.</summary>
     private readonly record struct RuneSizes(float On, float Available, float Locked, float MinHit);
-    private static readonly RuneSizes ModalRune = new(30f, 24f, 12f, 22f), HudRune = new(22f, 18f, 8f, 16f);
+    private static readonly RuneSizes ModalRune = new(30f, 26f, 22f, 22f), HudRune = new(20f, 19f, 17f, 16f);
 
     public const float RuneWindowWidth = 288f, RuneWebWidth = 268f, RuneWebHeight = 168f;
+    public const float ModalWebHeight = 318f, ModalLegendHeight = 32f, HudLegendHeight = 30f;
+
+    /// <summary>Etiqueta de ramo para o nome acessível do nó.</summary>
+    private static string RuneStateWord(TdRuneState st) => st switch { TdRuneState.Awake => "despertada", TdRuneState.Available => "disponível", _ => "bloqueada" };
 
     /// <summary>
-    /// Nós da teia REAL do Core (32 nós, 4 anéis × 8 setores; posição normalizada X/Y do conteúdo mapeada na área). Despertada: tipo e glifo
-    /// do ramo; disponível: "?" (o tipo fica OCULTO até despertar, nem o item carrega o índice); bloqueada: ponto. O <c>Rect</c> é a área
-    /// de acerto (mínimo <see cref="RuneSizes.MinHit"/>) e o diâmetro visual vai em <c>FontSize</c>. Devolve despertadas e o balão do nó sob o mouse.
+    /// Nós da teia REAL do Core (32 nós, 4 anéis × 8 setores; posição normalizada X/Y do conteúdo mapeada na área). TD.30e: o RAMO de todo nó é
+    /// visível em qualquer estado (o <c>Arg</c> carrega o índice do tipo; o renderer desenha o glifo): despertada cheia, disponível tracejada,
+    /// bloqueada esmaecida. <c>Selected</c> marca os nós do ramo sob o mouse na legenda. O <c>Rect</c> é a área de acerto (mínimo
+    /// <see cref="RuneSizes.MinHit"/>) e o diâmetro visual vai em <c>FontSize</c>. Devolve despertadas e o balão do nó sob o mouse (sempre nome do ramo + efeito).
     /// </summary>
     private (int Total, TdRuneTip? Tip) AddRuneNodes(List<TdUiItem> items, TdMatchState m, DipRect area, RuneSizes sz)
     {
@@ -831,32 +853,58 @@ public sealed partial class TdUiController
         foreach (var n in m.RuneWeb)
         {
             bool on = m.IsAwakened(n.Id), av = !on && frontier.Contains(n.Id);
-            int ti = on ? Array.FindIndex(types, t => t.Id == n.Type) : -1;
+            int ti = Math.Max(0, Array.FindIndex(types, t => t.Id == n.Type));
+            var st = on ? TdRuneState.Awake : av ? TdRuneState.Available : TdRuneState.Locked;
             if (on) total++;
             float vis = on ? sz.On : av ? sz.Available : sz.Locked, hit = Math.Max(vis, sz.MinHit);
             float cx = area.X + (float)n.X * area.W, cy = area.Y + (float)n.Y * area.H;
-            string label = on ? $"{types[ti].Name}, despertada" : av ? "Runa oculta, disponível" : "Runa bloqueada";
-            items.Add(new(new DipRect(cx - hit / 2, cy - hit / 2, hit, hit), TdUiKind.Button, label, TdUiAction.SelectRune,
-                PackRune(Math.Max(ti, 0), n.Ring, n.Sector), SArg: n.Id, Right: n.Id == _lastRune ? "last" : null,
-                Fill: on ? RuneOn : av ? RuneAvailable : RuneLocked, Selected: false, FontSize: vis));
+            items.Add(new(new DipRect(cx - hit / 2, cy - hit / 2, hit, hit), TdUiKind.Button, $"{types[ti].Name}, {RuneStateWord(st)}", TdUiAction.SelectRune,
+                PackRune(ti, n.Ring, n.Sector), SArg: n.Id, Right: n.Id == _lastRune ? "last" : null,
+                Fill: on ? RuneOn : av ? RuneAvailable : RuneLocked, Selected: _hoverBranch is not null && _hoverBranch == n.Type, FontSize: vis));
             if (n.Id != _hoverRune) continue;
-            tip = on
-                ? new TdRuneTip(n.Id, TdRuneState.Awake, ti, "Runa de " + types[ti].Name, "DESPERTADA", types[ti].Text, "Efeito ativo", TdTone.Good, cx, cy, vis)
-                : av
-                    ? new TdRuneTip(n.Id, TdRuneState.Available, -1, "Runa oculta", "DISPONÍVEL", "O tipo desta runa é revelado ao despertar.",
-                        frag > 0 ? "Clique para despertar · 1 fragmento" : "Sem fragmentos", frag > 0 ? TdTone.Accent : TdTone.Bad, cx, cy, vis)
-                    : new TdRuneTip(n.Id, TdRuneState.Locked, -1, "Runa bloqueada", "BLOQUEADA", "Desperte uma runa vizinha para liberar este ponto.", "", TdTone.Dim, cx, cy, vis);
+            string name = "Runa de " + types[ti].Name;
+            tip = st switch
+            {
+                TdRuneState.Awake => new TdRuneTip(n.Id, st, ti, name, "DESPERTADA", types[ti].Text, "Efeito ativo", TdTone.Good, cx, cy, vis),
+                TdRuneState.Available => new TdRuneTip(n.Id, st, ti, name, "DISPONÍVEL", types[ti].Text,
+                    frag > 0 ? "Clique para despertar · 1 fragmento" : "Sem fragmentos", frag > 0 ? TdTone.Accent : TdTone.Bad, cx, cy, vis),
+                _ => new TdRuneTip(n.Id, st, ti, name, "BLOQUEADA", types[ti].Text, "Desperte uma vizinha antes", TdTone.Dim, cx, cy, vis),
+            };
         }
         return (total, tip);
     }
 
     /// <summary>
-    /// Aba Runas da modal (Main.dc.html): teia de 688×356 com FRAGMENTOS no canto esquerdo, contador no direito, dica embaixo e o balão do nó
-    /// sob o mouse (desenhado pelo renderer, dentro da janela). Lê só o <see cref="TdMatchState"/>; o despertar envia <see cref="AwakenRune"/>.
+    /// Legenda de ramos (TD.30e): um chip por tipo com glifo, nome e n/total despertadas (<c>Right</c>). Passar o mouse destaca os nós do ramo na teia
+    /// (<see cref="HoverBranch"/>); <c>Highlight</c> acende todos enquanto o tutorial do 1º dano está ensinando. Mesma linha na modal e no HUD.
+    /// </summary>
+    private void AddRuneLegend(List<TdUiItem> items, TdMatchState m, float x, float y, float w, float h)
+    {
+        var types = m.Content.Runes.Types;
+        const float gap = 4f;
+        float cw = (w - (types.Length - 1) * gap) / types.Length;
+        for (int i = 0; i < types.Length; i++)
+        {
+            int total = 0;
+            foreach (var n in m.RuneWeb) if (n.Type == types[i].Id) total++;
+            items.Add(new(new DipRect(x + i * (cw + gap), y, cw, h), TdUiKind.Button, types[i].Name, TdUiAction.RuneBranch, i, SArg: types[i].Id,
+                Right: $"{m.AwakenedOfType(types[i].Id)}/{total}", Highlight: LegendHighlight, Selected: _hoverBranch == types[i].Id));
+        }
+    }
+
+    /// <summary>Ramo da legenda sob o mouse (destaque dos nós); nulo fora da legenda.</summary>
+    public string? HoverBranch => _hoverBranch;
+
+    /// <summary>A legenda de ramos está acesa porque a janela de runas foi aberta pelo cartão do tutorial (some ao passar o mouse num chip ou fechar).</summary>
+    public bool LegendHighlight => _legendHint && RuneWindowOpen;
+
+    /// <summary>
+    /// Aba Runas da modal (Main.dc.html): teia de 688×318 com FRAGMENTOS no canto esquerdo, contador no direito, dica embaixo, a legenda de ramos
+    /// abaixo da teia e o balão do nó sob o mouse (desenhado pelo renderer, dentro da janela). Lê só o <see cref="TdMatchState"/>; o despertar envia <see cref="AwakenRune"/>.
     /// </summary>
     private TdRuneTip? AddRuneWeb(List<TdUiItem> items, TdMatchState m)
     {
-        var area = new DipRect(16, 102, 688, 356);
+        var area = new DipRect(16, 102, 688, ModalWebHeight);
         items.Add(new(area, TdUiKind.Label, "", SArg: "webbg"));
         var (total, tip) = AddRuneNodes(items, m, area, ModalRune);
         bool done = m.Frontier.Count == 0;
@@ -864,8 +912,9 @@ public sealed partial class TdUiController
         items.Add(new(new DipRect(area.X + 14, area.Y + 12, 200, 24), TdUiKind.Label, frag.ToString(System.Globalization.CultureInfo.InvariantCulture), SArg: "rfrag"));
         items.Add(new(new DipRect(area.X + area.W - 214, area.Y + 12, 200, 34), TdUiKind.Label, $"{total}/{m.RuneWeb.Count} runas", SArg: "rtot"));
         items.Add(new(new DipRect(area.X + 14, area.Y + area.H - 24, area.W - 28, 16), TdUiKind.Label,
-            done ? "Teia completa." : frag > 0 ? "Passe o mouse numa runa para ver o efeito. Clique numa runa tracejada para despertar." : "Sem fragmentos: conquiste mais para continuar a teia.",
+            done ? "Teia completa." : frag > 0 ? "Clique numa runa tracejada para despertar." : "Sem fragmentos: conquiste mais.",
             SArg: "rhint"));
+        AddRuneLegend(items, m, area.X, area.Y + area.H + 6f, area.W, ModalLegendHeight);
         return tip;
     }
 
@@ -884,16 +933,25 @@ public sealed partial class TdUiController
         var (total, tip) = AddRuneNodes(items, m, area, HudRune);
         items.Add(new(new DipRect(10, 8, 150, 24), TdUiKind.Label, $"{total}/{m.RuneWeb.Count}", SArg: "rcount"));
         items.Add(new(new DipRect(RuneWindowWidth - 10 - 24 - 6 - 54, 9, 54, 22), TdUiKind.Label, m.Fragments.ToString(System.Globalization.CultureInfo.InvariantCulture), SArg: "rpill"));
-        float fy = area.Y + area.H + 8;
+        // TD.30e: a legenda de ramos cabe (8 chips compactos em 268 DIP) e a janela cresce só HudLegendHeight + 4.
+        AddRuneLegend(items, m, area.X, area.Y + area.H + 4f, area.W, HudLegendHeight);
+        float fy = area.Y + area.H + 4f + HudLegendHeight + 6f;
         items.Add(new(new DipRect(10, fy, 168, 30), TdUiKind.Label, "Passe o mouse para ver; clique para despertar.", SArg: "rhintw"));
         items.Add(new(new DipRect(RuneWindowWidth - 10 - 100, fy, 100, 30), TdUiKind.Button, "Teia completa", TdUiAction.ModalTab, (int)TdUiMode.Runes, SArg: "rlink"));
         float boxH = fy + 30 + 10;
         // Seta: aponta para o centro do botão Runas (a janela e o HUD ancoram na mesma borda direita).
-        var hud = BuildHud();
-        float arrowX = RuneWindowWidth - 12;
-        foreach (var it in hud.Items)
-            if (it.Action == TdUiAction.RuneWindow) { arrowX = RuneWindowWidth - (hud.Width - (it.Rect.X + it.Rect.W / 2f)); break; }
+        float arrowX = RuneButtonArrowX(RuneWindowWidth);
         return new TdPopoverView("Runas", [.. items], RuneWindowWidth, boxH + TdPopoverView.ArrowH, 0, ArrowX: Math.Clamp(arrowX, 14f, RuneWindowWidth - 14f), Tip: tip, RuneWindow: true);
+    }
+
+    /// <summary>X da seta de um popover de <paramref name="width"/> DIP ancorado na borda direita do HUD, apontando para o centro do botão Runas.</summary>
+    private float RuneButtonArrowX(float width)
+    {
+        var hud = BuildHud();
+        float arrowX = width - 12;
+        foreach (var it in hud.Items)
+            if (it.Action == TdUiAction.RuneWindow) { arrowX = width - (hud.Width - (it.Rect.X + it.Rect.W / 2f)); break; }
+        return arrowX;
     }
 
     /// <summary>Composição do Main.dc.html para Runas, Torres, Jogo e Como jogar (modal 720×480, conteúdo a partir de y=100).</summary>

@@ -273,6 +273,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             return;
         }
         if (it.Action == TdUiAction.SelectRune) { DrawRuneNode(c, it, hover); return; }
+        if (it.Action == TdUiAction.RuneBranch) { DrawRuneChip(c, it, hover, true); return; }
         if (it.Action == TdUiAction.SetSpeed)
         {
             // Seletor segmentado completo (aba Jogo): selecionado âmbar com texto escuro.
@@ -431,7 +432,6 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     }
 
     private static readonly SKPath StarPath = SKPath.ParseSvgPathData("M12 2.5l2.7 6 6.5.7-4.9 4.4 1.4 6.4L12 16.8 6.3 20l1.4-6.4-4.9-4.4 6.5-.7z")!;
-    private static readonly SKPath QuestionPath = SKPath.ParseSvgPathData("M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14M12 17.5h.01")!;
 
     private void DrawStar(SKCanvas c, float cxDip, float cyDip, float sizeDip, float strokeUnits)
     {
@@ -509,6 +509,9 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         DrawStar(c, cx, cy, core / 2f, big ? 1.6f : 2f);
     }
 
+    /// <summary>Cores do nó bloqueado: o glifo do ramo esmaecido continua legível (contraste ≥ 3:1 contra o fundo do nó; teste em TdRuneTypesVisibleRenderTests).</summary>
+    public static readonly SKColor LockedGlyphColor = Palette.Td.Dim, LockedNodeFill = Palette.Td.Border;
+
     private void DrawRuneNode(SKCanvas c, in TdUiItem it, bool hovered)
     {
         var r = it.Rect;
@@ -516,6 +519,10 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         float cx = r.X + r.W / 2f, cy = r.Y + r.H / 2f;
         float vis = it.FontSize > 0f ? it.FontSize : r.W;
         if (hovered) vis *= 1.2f; // hover: o nó cresce 20%
+        int type = UnpackType(it.Arg);
+        float gs = vis * (vis >= 24f ? 0.52f : 0.62f), gx = cx - gs / 2f, gy = cy - gs / 2f;
+        // legenda: nós do ramo em destaque (brilho leve), em qualquer estado
+        if (it.Selected) DrawPebble(c, cx, cy, vis + 9f, Palette.Td.Amber.WithAlpha(70), default, true);
         if (on)
         {
             bool last = it.Right == "last";
@@ -523,33 +530,48 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             if (last) DrawPebble(c, cx, cy, vis + 5f, Palette.Td.Amber.WithAlpha(120), default, false);
             DrawPebble(c, cx, cy, vis + 3f, Palette.Td.Amber.WithAlpha(40), default, true);
             DrawPebble(c, cx, cy, vis, Palette.Td.Amber.WithAlpha(190), Palette.Td.Button, false);
-            DrawRuneGlyph(c, UnpackType(it.Arg), cx - vis * 0.26f, cy - vis * 0.26f, vis * 0.52f, Palette.Td.Amber, 2.2f);
+            DrawRuneGlyph(c, type, gx, gy, gs, Palette.Td.Amber, 2.2f);
         }
         else if (av)
         {
             if (hovered) DrawPebble(c, cx, cy, vis + 6f, Palette.Td.Amber.WithAlpha(34), default, true);
             DrawPebble(c, cx, cy, vis, Palette.Td.Amber, hovered ? Palette.Td.Button : Palette.Td.Background, false, dashed: true);
-            DrawQuestion(c, cx - vis * 0.26f, cy - vis * 0.26f, vis * 0.52f, Palette.Td.Amber.WithAlpha(200));
+            DrawRuneGlyph(c, type, gx, gy, gs, Palette.Td.Amber, 2.2f);
         }
         else
         {
             if (hovered) DrawPebble(c, cx, cy, vis + 8f, Palette.Td.Amber.WithAlpha(34), default, true);
-            using var f = new SKPaint { IsAntialias = true, Color = Palette.Td.Border };
-            using var l = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, Color = hovered ? Palette.Td.Dim : Palette.Td.BorderStrong, StrokeWidth = Math.Max(1, _p.Px(1)) };
+            using var f = new SKPaint { IsAntialias = true, Color = LockedNodeFill };
+            using var l = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, Color = hovered || it.Selected ? Palette.Td.Dim : Palette.Td.BorderStrong, StrokeWidth = Math.Max(1, _p.Px(1)) };
             c.DrawCircle(_p.Px(cx), _p.Px(cy), _p.Px(vis / 2f), f);
             c.DrawCircle(_p.Px(cx), _p.Px(cy), _p.Px(vis / 2f), l);
+            DrawRuneGlyph(c, type, gx, gy, gs, it.Selected ? Palette.Td.Amber : LockedGlyphColor, 2.2f);
         }
     }
 
-    private void DrawQuestion(SKCanvas c, float xDip, float yDip, float sizeDip, SKColor color)
+    /// <summary>
+    /// Chip da legenda de ramos (TD.30e): glifo do ramo, nome e n/total. Modal (<paramref name="big"/>): glifo à esquerda, nome e contagem em duas linhas;
+    /// HUD: glifo sobre a contagem (chip estreito). Passar o mouse acende a borda; <c>Selected</c> = ramo em destaque.
+    /// </summary>
+    private void DrawRuneChip(SKCanvas c, in TdUiItem it, bool hover, bool big)
     {
-        c.Save();
-        c.Translate(_p.Px(xDip), _p.Px(yDip));
-        float k = _p.Px(sizeDip) / 24f;
-        c.Scale(k, k);
-        using var paint = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, Color = color, StrokeWidth = 2.4f, StrokeCap = SKStrokeCap.Round, StrokeJoin = SKStrokeJoin.Round };
-        c.DrawPath(QuestionPath, paint);
-        c.Restore();
+        var r = it.Rect;
+        bool lit = it.Selected || hover || it.Highlight; // Highlight: o tutorial do 1º dano acende a legenda inteira
+        RoundBox(c, r, lit ? Palette.Td.Amber : Palette.Td.BorderStrong, lit ? Palette.Td.Button : Palette.Td.Surface, 6);
+        int type = Math.Clamp(it.Arg, 0, RunePaths.Length - 1);
+        bool any = it.Right is { Length: > 0 } cnt && cnt[0] != '0';
+        var glyph = any || lit ? Palette.Td.Amber : Palette.Td.Dim;
+        if (big)
+        {
+            DrawRuneGlyph(c, type, r.X + 7f, r.Y + (r.H - 16f) / 2f, 16f, glyph, 2.2f);
+            _p.Text(c, it.Text, PanelFont.JetBrainsMono, 10f, new DipRect(r.X + 27f, r.Y + 3f, r.W - 29f, 13f), Palette.Td.Text);
+            _p.Text(c, it.Right ?? "", PanelFont.JetBrainsMono, 10f, new DipRect(r.X + 27f, r.Y + 17f, r.W - 29f, 13f), any ? Palette.Td.Amber : Palette.Td.Muted);
+        }
+        else
+        {
+            DrawRuneGlyph(c, type, r.X + (r.W - 12f) / 2f, r.Y + 3f, 12f, glyph, 2.2f);
+            _p.Text(c, it.Right ?? "", PanelFont.JetBrainsMono, 9f, new DipRect(r.X, r.Y + 17f, r.W, 12f), any ? Palette.Td.Amber : Palette.Td.Muted, TextAlign.Center);
+        }
     }
 
     // "Pebble" do design (46% 54% 50% 50% / 55% 48% 52% 45%): oval levemente irregular; halo/seleção sem fundo.
@@ -614,9 +636,9 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         {
             float cx = x + pad + 17, cy = y + pad + 17;
             if (on) DrawPebble(c, cx, cy, 34, Palette.Td.Amber.WithAlpha(180), Palette.Td.Button, false);
-            else DrawPebble(c, cx, cy, 34, Palette.Td.BorderStrong, Palette.Td.Background, false, dashed: true);
-            if (on) DrawRuneGlyph(c, Math.Clamp(tip.TypeIndex, 0, RunePaths.Length - 1), cx - 9, cy - 9, 18f, Palette.Td.Amber, 2f);
-            else DrawQuestion(c, cx - 9, cy - 9, 18f, Palette.Td.Dim);
+            else if (av) DrawPebble(c, cx, cy, 34, Palette.Td.Amber, Palette.Td.Background, false, dashed: true);
+            else DrawPebble(c, cx, cy, 34, Palette.Td.BorderStrong, LockedNodeFill, false);
+            DrawRuneGlyph(c, Math.Clamp(tip.TypeIndex, 0, RunePaths.Length - 1), cx - 9, cy - 9, 18f, on || av ? Palette.Td.Amber : LockedGlyphColor, 2f);
             tx += 46f;
         }
         _p.Text(c, tip.Name, PanelFont.JetBrainsMono, fs, new DipRect(tx, ty, w - (tx - x) - pad, line), Palette.Td.Text);
@@ -660,6 +682,11 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             var it = v.Items[i];
             var r = it.Rect;
             if (it.Action == TdUiAction.SelectRune) { DrawRuneNode(c, it, i == hover); continue; }
+            if (it.Action == TdUiAction.RuneBranch)
+            {
+                DrawRuneChip(c, it, i == hover, false);
+                continue;
+            }
             if (it.Action == TdUiAction.Close)
             {
                 if (i == hover) RoundBox(c, r, Palette.Td.BorderStrong, Palette.Td.BorderStrong, 5);

@@ -1,5 +1,7 @@
 using SideWar.Core.Td;
 using SideWar.Rendering.Panel;
+using SideWar.Rendering.Scene;
+using SideWar.Rendering.Theme;
 using SideWar.Rendering.Text;
 using SideWar.Runtime.Input;
 using SideWar.Runtime.Td;
@@ -36,7 +38,17 @@ public sealed class TdUiGoldenTests
         public bool PurchaseNode(string nodeId) => true;
     }
 
-    public enum UiScene { HudMoney, HudPrep, HudWave, HudMin, HudTip, Chooser, ChooserPoint, Inspector, Preview, Map, Seals, Victory, Menu, HudPlacing, Towers, Runes, Help, Defeat, QuickTowers, RuneWindow, RuneWindowTipAvailable, RuneWindowTipAwake, RuneWindowTipLocked, RunesTipAvailable, RunesTipAwake, RunesTipLocked }
+    private sealed class Store : ITdOnboardingStore
+    {
+        private readonly HashSet<string> _seen = [];
+        public bool TutorialDone => true;
+        public void SetTutorialDone(bool done) { }
+        public bool TipSeen(string id) => _seen.Contains(id);
+        public void MarkTipSeen(string id) => _seen.Add(id);
+        public void ClearTip(string id) => _seen.Remove(id);
+    }
+
+    public enum UiScene { HudMoney, HudPrep, HudWave, HudMin, HudTip, Chooser, ChooserPoint, Inspector, Preview, Map, Seals, Victory, Menu, HudPlacing, Towers, Runes, Help, Defeat, QuickTowers, RuneWindow, RuneWindowTipAvailable, RuneWindowTipAwake, RuneWindowTipLocked, RunesTipAvailable, RunesTipAwake, RunesTipLocked, RunesBranch, RuneWindowBranch, RuneCard, RuneWindowFromCard }
 
     public static TheoryData<UiScene, int> Cases()
     {
@@ -52,7 +64,7 @@ public sealed class TdUiGoldenTests
         typeof(TdMatchState).GetProperty("Credits")!.SetValue(match, 240L);
         var host = new Host();
         double now = 0;
-        var ui = new TdUiController(() => match, c => match.Apply(c), host, () => now);
+        var ui = new TdUiController(() => match, c => match.Apply(c), host, () => now, scene is UiScene.RuneCard or UiScene.RuneWindowFromCard ? new Store() : null);
         ui.Sync();
         var item = (TdUiAction a, int arg) => new TdUiItem(default, TdUiKind.Button, "", a, arg);
         switch (scene)
@@ -98,6 +110,21 @@ public sealed class TdUiGoldenTests
                 }
                 break;
             }
+            case UiScene.RunesBranch or UiScene.RuneWindowBranch:
+            {
+                typeof(TdMatchState).GetProperty("Fragments")!.SetValue(match, 5L);
+                for (int i = 0; i < 4; i++) match.Apply(new AwakenRune(match.Frontier[0]));
+                typeof(TdMatchState).GetProperty("Fragments")!.SetValue(match, 2L);
+                ui.Sync();
+                if (scene == UiScene.RunesBranch) ui.Activate(item(TdUiAction.ModalTab, (int)TdUiMode.Runes)); else ui.Activate(item(TdUiAction.RuneWindow, 0));
+                ui.Hover(ui.BuildPopover()!.Items.First(i => i.Action == TdUiAction.RuneBranch && i.SArg == "frost"));
+                break;
+            }
+            case UiScene.RuneCard or UiScene.RuneWindowFromCard:
+                typeof(TdMatchState).GetProperty("Integrity")!.SetValue(match, match.Integrity - 1);
+                ui.Sync();
+                if (scene == UiScene.RuneWindowFromCard) ui.Activate(ui.BuildPopover()!.Items.First(i => i.Action == TdUiAction.RuneTutorialOpen));
+                break;
             case UiScene.Help: ui.OpenHowTo(); break;
             case UiScene.Defeat:
                 typeof(TdMatchState).GetProperty("Phase")!.SetValue(match, MatchPhase.Derrota); ui.Sync(); break;
@@ -152,7 +179,8 @@ public sealed class TdUiGoldenTests
         using var pc = new SKCanvas(pb);
         pc.Clear(Backdrop);
         using var pl = new SKBitmap(new SKImageInfo(pw, ph, SKColorType.Bgra8888, SKAlphaType.Premul));
-        int hoverIndex = ui.HoverRune is { } hr ? Array.FindIndex(p.Items, i => i.SArg == hr && i.Action == TdUiAction.SelectRune) : 1;
+        int hoverIndex = ui.HoverRune is { } hr ? Array.FindIndex(p.Items, i => i.SArg == hr && i.Action == TdUiAction.SelectRune)
+            : ui.HoverBranch is { } hb ? Array.FindIndex(p.Items, i => i.SArg == hb && i.Action == TdUiAction.RuneBranch) : 1;
         using (var plc = new SKCanvas(pl)) r.DrawPopover(plc, p, hoverIndex);
         GoldenImage.Blit(pc, pl, 0, 0);
         return pb;
@@ -188,6 +216,58 @@ public sealed class TdUiGoldenTests
         using var bmp = Render(UiScene.HudPrep, effDpi, text: true);
         string? failure = GoldenImage.Verify($"td-ui-hud-band{bandHeightDip}", bmp);
         Assert.True(failure is null, failure);
+    }
+
+    private static double Luminance(SKColor c)
+    {
+        static double Ch(byte v) { double x = v / 255.0; return x <= 0.03928 ? x / 12.92 : Math.Pow((x + 0.055) / 1.055, 2.4); }
+        return 0.2126 * Ch(c.Red) + 0.7152 * Ch(c.Green) + 0.0722 * Ch(c.Blue);
+    }
+
+    private static double Contrast(SKColor a, SKColor b)
+    {
+        double la = Luminance(a), lb = Luminance(b);
+        return (Math.Max(la, lb) + 0.05) / (Math.Min(la, lb) + 0.05);
+    }
+
+    [Fact]
+    public void Locked_rune_glyph_keeps_at_least_3_to_1_contrast_against_its_node_and_the_web()
+    {
+        Assert.True(Contrast(TdUiRenderer.LockedGlyphColor, TdUiRenderer.LockedNodeFill) >= 3.0, $"{Contrast(TdUiRenderer.LockedGlyphColor, TdUiRenderer.LockedNodeFill):0.00}");
+        Assert.True(Contrast(TdUiRenderer.LockedGlyphColor, Palette.Td.Background) >= 3.0);
+        Assert.True(Contrast(Palette.Td.Amber, Palette.Td.Background) >= 3.0);
+    }
+
+    /// <summary>Todo nó (despertado, disponível e bloqueado) desenha o glifo do ramo: há pixels da cor do glifo dentro do nó, sem ponto vazio.</summary>
+    [Theory]
+    [InlineData(UiScene.RunesBranch)]
+    [InlineData(UiScene.RuneWindow)]
+    public void Every_rune_node_draws_its_branch_glyph_in_every_state(UiScene scene)
+    {
+        var (ui, _) = Setup(scene);
+        var pop = ui.BuildPopover()!;
+        using var typo = new Typography();
+        using var r = new TdUiRenderer(typo, 96) { TextEnabled = true };
+        var (pw, ph) = r.PhysicalSize(pop.Width, pop.Height);
+        using var bmp = new SKBitmap(new SKImageInfo(pw, ph, SKColorType.Bgra8888, SKAlphaType.Premul));
+        using (var c = new SKCanvas(bmp)) { c.Clear(Backdrop); r.DrawPopover(c, pop, -1); }
+        int checkedStates = 0;
+        foreach (float fill in new[] { TdUiController.RuneOn, TdUiController.RuneAvailable, TdUiController.RuneLocked })
+        {
+            var node = pop.Items.First(i => i.Action == TdUiAction.SelectRune && i.Fill == fill && !i.Selected);
+            var want = fill == TdUiController.RuneLocked ? TdUiRenderer.LockedGlyphColor : Palette.Td.Amber;
+            float cx = node.Rect.X + node.Rect.W / 2f, cy = node.Rect.Y + node.Rect.H / 2f, rad = node.FontSize * 0.3f;
+            int hits = 0;
+            for (int y = (int)(cy - rad); y <= (int)(cy + rad); y++)
+                for (int x = (int)(cx - rad); x <= (int)(cx + rad); x++)
+                {
+                    var px = bmp.GetPixel(x, y);
+                    if (Math.Abs(px.Red - want.Red) + Math.Abs(px.Green - want.Green) + Math.Abs(px.Blue - want.Blue) < 90) hits++;
+                }
+            Assert.True(hits >= 6, $"{scene} fill={fill}: {hits}");
+            checkedStates++;
+        }
+        Assert.Equal(3, checkedStates);
     }
 
     [Fact]

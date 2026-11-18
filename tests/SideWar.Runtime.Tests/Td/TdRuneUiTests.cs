@@ -189,7 +189,8 @@ public sealed class TdRuneUiTests
         var avail = r.Node(i => i.Fill == TdUiController.RuneAvailable);
         r.Ui.Hover(avail);
         var t = r.Ui.BuildPopover()!.Tip!;
-        Assert.Equal(("DISPONÍVEL", "Runa oculta", "Sem fragmentos"), (t.Tag, t.Name, t.Action));
+        Assert.Equal(("DISPONÍVEL", "Sem fragmentos"), (t.Tag, t.Action));
+        Assert.StartsWith("Runa de ", t.Name);
         Assert.Equal(TdTone.Bad, t.ActionTone);
         r.Fragments(2);
         t = r.Ui.BuildPopover()!.Tip!;
@@ -205,30 +206,108 @@ public sealed class TdRuneUiTests
     }
 
     [Fact]
-    public void Rune_type_stays_hidden_until_awakened()
+    public void Rune_type_is_visible_in_every_state_in_the_window_and_in_the_modal()
     {
         var r = new Rig();
         var types = r.Match.Content.Runes.Types;
+        r.Fragments(1);
         r.Ui.Activate(r.Rune);
+        r.Ui.Activate(r.Node(i => i.Fill == TdUiController.RuneAvailable)); // um desperto, para ver os três estados
         foreach (var scene in new[] { "window", "modal" })
         {
             if (scene == "modal") r.Click(TdUiAction.ModalTab, (int)TdUiMode.Runes);
-            var avail = r.Node(i => i.Fill == TdUiController.RuneAvailable);
-            Assert.Equal(0, TdUiController.UnpackRune(avail.Arg).Type); // o item não carrega o tipo
-            foreach (var t in types) Assert.DoesNotContain(t.Name, avail.Text);
-            r.Ui.Hover(avail);
-            var tip = r.Ui.BuildPopover()!.Tip!;
-            Assert.Equal(-1, tip.TypeIndex);
-            Assert.Equal("O tipo desta runa é revelado ao despertar.", tip.Text);
-            foreach (var t in types) { Assert.DoesNotContain(t.Name, tip.Name); Assert.DoesNotContain(t.Text, tip.Text); }
-            r.Ui.Hover(null);
+            foreach (var fill in new[] { TdUiController.RuneOn, TdUiController.RuneAvailable, TdUiController.RuneLocked })
+            {
+                var node = r.Node(i => i.Fill == fill);
+                int ti = TdUiController.UnpackRune(node.Arg).Type;
+                var type = types[ti];
+                var def = r.Match.RuneWeb.Single(n => n.Id == node.SArg);
+                Assert.Equal(def.Type, type.Id);                 // o item carrega o ramo REAL do nó, em qualquer estado
+                Assert.StartsWith(type.Name + ", ", node.Text);
+                r.Ui.Hover(node);
+                var tip = r.Ui.BuildPopover()!.Tip!;
+                Assert.Equal(ti, tip.TypeIndex);
+                Assert.Equal("Runa de " + type.Name, tip.Name);
+                Assert.Equal(type.Text, tip.Text);               // nome do ramo + efeito sempre
+                r.Ui.Hover(null);
+            }
         }
+    }
+
+    [Fact]
+    public void Tooltip_has_state_tag_and_action_for_each_state_and_no_hidden_texts()
+    {
+        var r = new Rig();
+        r.Click(TdUiAction.ModalTab, (int)TdUiMode.Runes);
+        r.Ui.Hover(r.Node(i => i.Fill == TdUiController.RuneLocked));
+        var t = r.Ui.BuildPopover()!.Tip!;
+        Assert.Equal(("BLOQUEADA", "Desperte uma vizinha antes", TdTone.Dim), (t.Tag, t.Action, t.ActionTone));
+        r.Ui.Hover(r.Node(i => i.Fill == TdUiController.RuneAvailable));
+        t = r.Ui.BuildPopover()!.Tip!;
+        Assert.Equal(("DISPONÍVEL", "Sem fragmentos"), (t.Tag, t.Action));
         r.Fragments(1);
-        r.Ui.Activate(r.Node(i => i.Fill == TdUiController.RuneAvailable));
-        var awake = r.Node(i => i.Fill == TdUiController.RuneOn);
-        Assert.Contains(types, t => awake.Text.StartsWith(t.Name, StringComparison.Ordinal));
-        r.Ui.Hover(awake);
-        Assert.True(r.Ui.BuildPopover()!.Tip!.TypeIndex >= 0);
+        Assert.Equal("Clique para despertar · 1 fragmento", r.Ui.BuildPopover()!.Tip!.Action);
+        foreach (var it in r.Ui.BuildPopover()!.Items)
+        {
+            Assert.DoesNotContain("oculta", it.Text, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("revelado", it.Text, StringComparison.OrdinalIgnoreCase);
+        }
+        Assert.DoesNotContain("Runa oculta", t.Name);
+    }
+
+    [Fact]
+    public void Legend_lists_every_branch_with_awakened_over_total_in_the_modal_and_in_the_window()
+    {
+        var r = new Rig();
+        var types = r.Match.Content.Runes.Types;
+        r.Fragments(3);
+        r.Ui.Activate(r.Rune);
+        var avail = r.Node(i => i.Fill == TdUiController.RuneAvailable);
+        r.Ui.Activate(avail);
+        string awakeType = r.Match.RuneWeb.Single(n => n.Id == avail.SArg).Type;
+        foreach (var scene in new[] { "window", "modal" })
+        {
+            if (scene == "modal") r.Click(TdUiAction.ModalTab, (int)TdUiMode.Runes);
+            var pop = r.Ui.BuildPopover()!;
+            var chips = pop.Items.Where(i => i.Action == TdUiAction.RuneBranch).ToArray();
+            Assert.Equal(types.Length, chips.Length);
+            foreach (var c in chips)
+            {
+                int total = r.Match.RuneWeb.Count(n => n.Type == c.SArg);
+                int awake = c.SArg == awakeType ? 1 : 0;
+                Assert.Equal($"{awake}/{total}", c.Right);
+                Assert.Equal(types[c.Arg].Id, c.SArg);
+                Assert.Equal(types[c.Arg].Name, c.Text);
+                Assert.True(c.Rect.X >= 0 && c.Rect.X + c.Rect.W <= pop.Width && c.Rect.Y + c.Rect.H <= pop.Height, scene);
+            }
+            Assert.Equal(32, chips.Sum(c => int.Parse(c.Right!.Split((char)47)[1], System.Globalization.CultureInfo.InvariantCulture)));
+            Assert.All(pop.Items.Where(i => i.Action != TdUiAction.RuneBranch).Select(i => i.Rect),
+                rc => Assert.True(rc.X + rc.W <= pop.Width + 0.01f && rc.Y + rc.H <= pop.Height + 0.01f));
+        }
+    }
+
+    [Fact]
+    public void Hovering_a_legend_chip_highlights_only_that_branch_nodes_and_clears_on_leave()
+    {
+        var r = new Rig();
+        foreach (var scene in new[] { "window", "modal" })
+        {
+            if (scene == "window") r.Ui.Activate(r.Rune); else r.Click(TdUiAction.ModalTab, (int)TdUiMode.Runes);
+            var chip = r.Ui.BuildPopover()!.Items.First(i => i.Action == TdUiAction.RuneBranch && i.SArg == "frost");
+            Assert.All(r.Ui.BuildPopover()!.Items.Where(i => i.Action == TdUiAction.SelectRune), n => Assert.False(n.Selected));
+            int before = r.Changes;
+            r.Ui.Hover(chip);
+            Assert.True(r.Changes > before);
+            Assert.Equal("frost", r.Ui.HoverBranch);
+            var pop = r.Ui.BuildPopover()!;
+            var frostIds = r.Match.RuneWeb.Where(n => n.Type == "frost").Select(n => n.Id).ToHashSet();
+            Assert.NotEmpty(frostIds);
+            foreach (var n in pop.Items.Where(i => i.Action == TdUiAction.SelectRune)) Assert.Equal(frostIds.Contains(n.SArg!), n.Selected);
+            Assert.True(pop.Items.Single(i => i.Action == TdUiAction.RuneBranch && i.SArg == "frost").Selected);
+            r.Ui.Hover(null);
+            Assert.Null(r.Ui.HoverBranch);
+            Assert.All(r.Ui.BuildPopover()!.Items.Where(i => i.Action == TdUiAction.SelectRune), n => Assert.False(n.Selected));
+        }
     }
 
     [Fact]
