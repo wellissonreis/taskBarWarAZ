@@ -102,6 +102,7 @@ public struct TdEnemy
     public int ParalyzeTicks { get; set; }
     /// <summary>Imunidade breve a nova paralisia após uma terminar (cap contra "stun lock").</summary>
     public int ParalyzeGraceTicks { get; set; }
+    public int PushGraceTicks { get; set; }
     public int InvulnTicks { get; set; }
     public double VulnBonus { get; set; }
     public int VulnTicks { get; set; }

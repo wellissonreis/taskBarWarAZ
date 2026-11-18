@@ -26,7 +26,7 @@ public sealed class TdContentTests
     public void Embedded_IsValid()
     {
         var c = TdContentLoader.LoadEmbedded();
-        Assert.Equal(8, c.Towers.Length);
+        Assert.Equal(12, c.Towers.Length);
         Assert.Equal(8, c.Enemies.Enemies.Length);
         Assert.Equal(3, c.Enemies.Bosses.Length);
         Assert.Equal(6, c.Stages.Stages.Length);

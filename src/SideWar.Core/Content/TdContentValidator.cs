@@ -243,6 +243,23 @@ public static class TdContentValidator
             if (t.Id == "policy")
                 Req(e, t.Stats.TryGetValue("armorRemoveBp", out var bp) && bp is >= 0 and <= 10000, $"{o}: armorRemoveBp inválido");
 
+            if (t.Id == "cosmos")
+                Req(e, t.Stats.TryGetValue("chainJumps", out var jumps) && jumps >= 0 && jumps == Math.Floor(jumps)
+                    && t.Stats.TryGetValue("chainRadius", out var radius) && radius > 0
+                    && t.Stats.TryGetValue("chainFalloffBp", out var falloff) && falloff is >= 0 and <= 10000, $"{o}: stats de cadeia inválidos");
+            if (t.Id == "sentinel")
+                Req(e, t.Stats.TryGetValue("markBonusBp", out var mark) && mark >= 0
+                    && t.Stats.TryGetValue("markSeconds", out var duration) && duration > 0
+                    && t.Stats.TryGetValue("markMax", out var max) && max == 1, $"{o}: stats de marca inválidos");
+            if (t.Id == "queue")
+                Req(e, t.Stats.TryGetValue("pushbackUnits", out var push) && push > 0
+                    && t.Stats.TryGetValue("bossPushbackFactorBp", out var boss) && boss is >= 0 and <= 10000
+                    && t.Stats.TryGetValue("pushGraceSeconds", out var grace) && grace > 0, $"{o}: stats de empurrão inválidos");
+            if (t.Id == "pipeline")
+                Req(e, t.Stats.TryGetValue("rampPerHitBp", out var ramp) && ramp >= 0
+                    && t.Stats.TryGetValue("rampCapBp", out var cap) && cap >= 0
+                    && t.Stats.TryGetValue("rampKeepsBetweenTargets", out var keeps) && keeps == 0, $"{o}: stats de rampa inválidos");
+
             // Fraqueza declarada da torre (CA-28.4).
             Req(e, Text(t.WeaknessText), $"{o}.weaknessText: toda torre declara sua fraqueza");
             CheckTraits(e, o, t.Weak, "weak", true);

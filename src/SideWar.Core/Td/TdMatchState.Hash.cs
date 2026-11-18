@@ -51,7 +51,7 @@ public sealed partial class TdMatchState
             h.AddInt32(e.Id); h.AddInt32(e.Wave); h.AddInt32(e.DefIndex); h.AddBool(e.IsBoss);
             h.AddDouble(e.X); h.AddDouble(e.Speed); h.AddDouble(e.Hp); h.AddDouble(e.MaxHp); h.AddDouble(e.Armor);
             h.AddInt64(e.Gold); h.AddInt32(e.CoreDamage); h.AddBool(e.Flying);
-            h.AddDouble(e.SlowMult); h.AddInt32(e.SlowTicks); h.AddInt32(e.ParalyzeTicks); h.AddInt32(e.ParalyzeGraceTicks);
+            h.AddDouble(e.SlowMult); h.AddInt32(e.SlowTicks); h.AddInt32(e.ParalyzeTicks); h.AddInt32(e.ParalyzeGraceTicks); h.AddInt32(e.PushGraceTicks);
             h.AddInt32(e.InvulnTicks); h.AddDouble(e.VulnBonus); h.AddInt32(e.VulnTicks); h.AddDouble(e.CorrodeAmount);
             h.AddInt32(e.CorrodeTicks); h.AddInt32(e.SinceDamageTicks); h.AddInt32(e.AbilityCdTicks); h.AddByte(e.Triggers);
         }

@@ -427,7 +427,8 @@ public sealed partial class TdMatchState
         int i = FindTower(cmd.TowerId);
         if (i < 0) return Reject(CommandReason.TowerNotFound);
         var t = _towers[i];
-        if (_content.Towers[t.DefIndex].Kind != "attack" || !Enum.IsDefined(cmd.Mode)) return Reject(CommandReason.NotAvailable);
+        var def = _content.Towers[t.DefIndex];
+        if ((def.Kind != "attack" && !(def.Kind == "control" && def.Targets != "none")) || !Enum.IsDefined(cmd.Mode)) return Reject(CommandReason.NotAvailable);
         t.Targeting = (byte)cmd.Mode;
         _towers[i] = t;
         Emit(TdEventType.TowerTargeting, t.Id, (long)cmd.Mode);

@@ -64,6 +64,7 @@ public sealed partial class TdMatchState
             if (e.SlowTicks > 0 && --e.SlowTicks == 0) e.SlowMult = 1.0;
             if (e.ParalyzeTicks > 0) { if (--e.ParalyzeTicks == 0) e.ParalyzeGraceTicks = ParalysisGraceTicks; }
             else if (e.ParalyzeGraceTicks > 0) e.ParalyzeGraceTicks--;
+            if (e.PushGraceTicks > 0) e.PushGraceTicks--;
             if (e.InvulnTicks > 0) e.InvulnTicks--;
             if (e.VulnTicks > 0 && --e.VulnTicks == 0) e.VulnBonus = 0;
             if (e.CorrodeTicks > 0 && --e.CorrodeTicks == 0) e.CorrodeAmount = 0;
@@ -140,6 +141,8 @@ public sealed partial class TdMatchState
         RefreshHeldTargets();
         ComputeAuras();
         bool scale = IsAbilityActive("scale");
+        TickControlTowers("sentinel");
+        TickControlTowers("queue");
         for (int ti = 0; ti < _towers.Count; ti++)
         {
             var t = _towers[ti];
@@ -148,6 +151,8 @@ public sealed partial class TdMatchState
             if (t.ParalyzeCdTicks > 0) t.ParalyzeCdTicks--;
             if (t.NodeCdTicks > 0) t.NodeCdTicks--;
             bool disabled = t.DisabledTicks > 0;
+            if (def.Id == "pipeline" && (disabled || !t.Placed || !_enemies.Any(e => e.Id == t.FocusTargetId && e.Hp > 0 && Dist(e.X, t.X) <= EffectiveRange(def) + _auraRange[ti])))
+            { t.FocusTargetId = 0; t.FocusHits = 0; }
             if (!disabled && t.Placed)
             {
                 if (def.Id == "functions") TickFunctions(ref t, def, ti);
@@ -167,6 +172,46 @@ public sealed partial class TdMatchState
         {
             var t = _towers[i];
             if (t.DisabledTicks > 0) { t.DisabledTicks--; _towers[i] = t; }
+        }
+    }
+
+    private void TickControlTowers(string kind)
+    {
+        for (int i = 0; i < _towers.Count; i++)
+        {
+            var t = _towers[i];
+            var def = _content.Towers[t.DefIndex];
+            if (def.Id != kind || !t.Placed || t.DisabledTicks > 0 || t.CooldownTicks > 1) continue;
+            int target = PickTarget(t, def, EffectiveRange(def) + _auraRange[i]);
+            if (target < 0) continue;
+            var e = _enemies[target];
+            if (kind == "queue")
+            {
+                if (e.PushGraceTicks > 0 || _held.Contains(e.Id)) continue;
+                double amount = Stat(t, def, "pushbackUnits", 60);
+                if (e.IsBoss) amount *= Stat(t, def, "bossPushbackFactorBp", 5000) / 10000.0;
+                double oldX = e.X;
+                e.X = Math.Min(TdWorld.PathLength, e.X + amount);
+                for (int j = 0; j < _towers.Count; j++)
+                {
+                    var functions = _towers[j];
+                    var fd = _content.Towers[functions.DefIndex];
+                    if (fd.Id != "functions" || !functions.Placed) continue;
+                    double range = EffectiveRange(fd) + _auraRange[j];
+                    if (Dist(oldX, functions.X) <= range || Dist(e.X, functions.X) > range) continue;
+                    functions.RangeSeenIds = (functions.RangeSeenIds ?? []).Append(e.Id).Distinct().Order().ToArray();
+                    _towers[j] = functions;
+                }
+                e.PushGraceTicks = Ticks(Stat(t, def, "pushGraceSeconds", 3));
+            }
+            else
+            {
+                e.VulnBonus = Math.Max(e.VulnTicks > 0 ? e.VulnBonus : 0, Stat(t, def, "markBonusBp", 2500) / 10000.0);
+                e.VulnTicks = Math.Max(e.VulnTicks, Ticks(Stat(t, def, "markSeconds", 4)));
+            }
+            _enemies[target] = e;
+            t.CooldownTicks = Ticks(def.Interval) + 1;
+            _towers[i] = t;
         }
     }
 
@@ -218,7 +263,7 @@ public sealed partial class TdMatchState
 
         // Foco (Rajada) e super hit (Desligamento): passo 2 da ordem do dano.
         double burst = 1.0;
-        double perHit = Stat(t, def, "focusBonusPerHit", 0);
+        double perHit = def.Id == "pipeline" ? Stat(t, def, "rampPerHitBp", 0) / 10000.0 : Stat(t, def, "focusBonusPerHit", 0);
         if (perHit > 0)
         {
             if (t.FocusTargetId != e.Id)
@@ -226,7 +271,7 @@ public sealed partial class TdMatchState
                 if (Stat(t, def, "focusKeepsBetweenTargets", 0) <= 0) t.FocusHits = 0;
                 t.FocusTargetId = e.Id;
             }
-            burst *= 1.0 + Math.Min(Stat(t, def, "focusBonusCap", 0), t.FocusHits * perHit);
+            burst *= 1.0 + Math.Min(def.Id == "pipeline" ? Stat(t, def, "rampCapBp", 0) / 10000.0 : Stat(t, def, "focusBonusCap", 0), t.FocusHits * perHit);
             if (t.FocusHits < ResetFocusCap) t.FocusHits++;
         }
         t.ShotCount++;
@@ -236,6 +281,27 @@ public sealed partial class TdMatchState
         _damageSource = t.Id;
         DealDamage(target, ComputeDamage(t, def, e, st, ti, 1.0, burst));
         ApplyOnHit(ref t, def, target);
+        if (def.Id == "cosmos")
+        {
+            var hit = new HashSet<int> { e.Id };
+            double x = e.X, factor = 1;
+            int jumps = (int)Stat(t, def, "chainJumps", 3);
+            for (int jump = 0; jump < jumps; jump++)
+            {
+                int next = -1; double distance = double.MaxValue;
+                for (int j = 0; j < _enemies.Count; j++)
+                {
+                    var candidate = _enemies[j];
+                    double d = Dist(x, candidate.X);
+                    if (candidate.Hp <= 0 || candidate.InvulnTicks > 0 || hit.Contains(candidate.Id) || (candidate.Flying && def.Targets != "both") || d > Stat(t, def, "chainRadius", 60)) continue;
+                    if (d < distance || (d == distance && (next < 0 || candidate.Id < _enemies[next].Id))) { next = j; distance = d; }
+                }
+                if (next < 0) break;
+                var other = _enemies[next]; hit.Add(other.Id); x = other.X;
+                factor *= Stat(t, def, "chainFalloffBp", 8000) / 10000.0;
+                DealDamage(next, ComputeDamage(t, def, other, _enemyStats[other.DefIndex], ti, factor, 1));
+            }
+        }
 
         double splashFactor = Stat(t, def, "splashFactor", 0);
         double radius = Stat(t, def, "splashRadius", 0) * Stat(t, def, "splashRadiusMultiplier", 1.0);
@@ -348,6 +414,7 @@ public sealed partial class TdMatchState
         {
             var e = _enemies[i];
             if (e.Hp <= 0 || e.InvulnTicks > 0) continue;
+            if (def.Id == "queue" && (e.PushGraceTicks > 0 || _held.Contains(e.Id))) continue;
             if (e.Flying && def.Targets != "both") continue;
             if (Dist(e.X, tower.X) > range || Dist(e.X, tower.X) < Stat(tower, def, "minRange", 0)) continue;
             if (best < 0 || Better(mode, e, _enemies[best], tower.X)) best = i;
