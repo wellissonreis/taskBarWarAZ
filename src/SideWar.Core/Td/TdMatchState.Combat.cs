@@ -62,6 +62,7 @@ public sealed partial class TdMatchState
             if (e.Hp <= 0) continue;
             var st = _enemyStats[e.DefIndex];
             if (e.SlowTicks > 0 && --e.SlowTicks == 0) e.SlowMult = 1.0;
+            if (e.SentinelMarkTicks > 0) e.SentinelMarkTicks--;
             if (e.ParalyzeTicks > 0) { if (--e.ParalyzeTicks == 0) e.ParalyzeGraceTicks = ParalysisGraceTicks; }
             else if (e.ParalyzeGraceTicks > 0) e.ParalyzeGraceTicks--;
             if (e.PushGraceTicks > 0) e.PushGraceTicks--;
@@ -210,6 +211,7 @@ public sealed partial class TdMatchState
             {
                 e.VulnBonus = Math.Max(e.VulnTicks > 0 ? e.VulnBonus : 0, Stat(t, def, "markBonusBp", 2500) / 10000.0);
                 e.VulnTicks = Math.Max(e.VulnTicks, Ticks(Stat(t, def, "markSeconds", 4)));
+                if (_enemyStats[e.DefIndex].RevealRange > 0) e.SentinelMarkTicks = Ticks(Stat(t, def, "markSeconds", 4));
             }
             _enemies[target] = e;
             t.CooldownTicks = Ticks(def.Interval) + 1;
@@ -221,7 +223,7 @@ public sealed partial class TdMatchState
     {
         double range = EffectiveRange(def) + _auraRange[ti];
         int towerX = t.X;
-        var inside = _enemies.Where(e => e.Hp > 0 && Dist(e.X, towerX) <= range).Select(e => e.Id).Order().ToArray();
+        var inside = _enemies.Where(e => e.Hp > 0 && VisibleToTower(e, def) && Dist(e.X, towerX) <= range).Select(e => e.Id).Order().ToArray();
         if (t.BurstGapTicks > 0) t.BurstGapTicks--;
         if (t.BurstLeft == 0 && t.CooldownTicks == 0)
         {
@@ -229,7 +231,7 @@ public sealed partial class TdMatchState
             for (int i = 0; i < _enemies.Count; i++)
             {
                 var e = _enemies[i];
-                if (e.Hp <= 0 || e.InvulnTicks > 0 || Dist(e.X, t.X) > range || (t.RangeSeenIds is not null && Array.BinarySearch(t.RangeSeenIds, e.Id) >= 0)) continue;
+                if (e.Hp <= 0 || e.InvulnTicks > 0 || !VisibleToTower(e, def) || Dist(e.X, t.X) > range || (t.RangeSeenIds is not null && Array.BinarySearch(t.RangeSeenIds, e.Id) >= 0)) continue;
                 if (target < 0 || Better(TdTargeting.First, e, _enemies[target], t.X)) target = i;
             }
             if (target >= 0)
@@ -243,7 +245,7 @@ public sealed partial class TdMatchState
         if (t.BurstLeft > 0 && t.BurstGapTicks == 0)
         {
             int targetId = t.BurstTargetId;
-            int target = _enemies.FindIndex(e => e.Id == targetId && e.Hp > 0 && e.InvulnTicks == 0 && Dist(e.X, towerX) <= range);
+            int target = _enemies.FindIndex(e => e.Id == targetId && e.Hp > 0 && e.InvulnTicks == 0 && VisibleToTower(e, def) && Dist(e.X, towerX) <= range);
             if (target < 0) { t.BurstLeft = 0; t.BurstTargetId = 0; return; }
             var enemy = _enemies[target];
             _damageSource = t.Id;
@@ -295,7 +297,7 @@ public sealed partial class TdMatchState
                 {
                     var candidate = _enemies[j];
                     double d = Dist(x, candidate.X);
-                    if (candidate.Hp <= 0 || candidate.InvulnTicks > 0 || hit.Contains(candidate.Id) || (candidate.Flying && def.Targets != "both") || d > Stat(t, def, "chainRadius", 60)) continue;
+                    if (candidate.Hp <= 0 || candidate.InvulnTicks > 0 || !VisibleToTower(candidate, def) || hit.Contains(candidate.Id) || (candidate.Flying && def.Targets != "both") || d > Stat(t, def, "chainRadius", 60)) continue;
                     if (d < distance || (d == distance && (next < 0 || candidate.Id < _enemies[next].Id))) { next = j; distance = d; }
                 }
                 if (next < 0) break;
@@ -357,7 +359,7 @@ public sealed partial class TdMatchState
     private void ApplySlow(int idx, double mult)
     {
         var e = _enemies[idx];
-        if (_enemyStats[e.DefIndex].SlowCap <= 0) return; // imune (Zero-day)
+        if (e.ShieldHp > 0 || _enemyStats[e.DefIndex].SlowCap <= 0) return; // escudo ou imunidade
         e.SlowMult = e.SlowTicks > 0 ? Math.Min(e.SlowMult, mult) : mult;
         e.SlowTicks = SlowDurationTicks + Rune("frostSlowTenths") * 3; // +0,1 s = 3 ticks por décimo (runa Gelo, TD.29a)
         _enemies[idx] = e;
@@ -375,7 +377,9 @@ public sealed partial class TdMatchState
     {
         var e = _enemies[idx];
         if (e.InvulnTicks > 0 || dmg <= 0) return;
-        e.Hp -= dmg;
+        double absorbed = Math.Min(e.ShieldHp, dmg);
+        e.ShieldHp -= absorbed;
+        e.Hp -= dmg - absorbed;
         e.LastHitTowerId = _damageSource;
         e.SinceDamageTicks = 0;
         _enemies[idx] = e;
@@ -416,6 +420,7 @@ public sealed partial class TdMatchState
         {
             var e = _enemies[i];
             if (e.Hp <= 0 || e.InvulnTicks > 0) continue;
+            if (!VisibleToTower(e, def)) continue;
             if (def.Id == "queue" && (e.PushGraceTicks > 0 || _held.Contains(e.Id))) continue;
             if (e.Flying && def.Targets != "both") continue;
             if (Dist(e.X, tower.X) > range || Dist(e.X, tower.X) < Stat(tower, def, "minRange", 0)) continue;
@@ -423,6 +428,9 @@ public sealed partial class TdMatchState
         }
         return best;
     }
+
+    private bool VisibleToTower(in TdEnemy enemy, TdTowerDef tower) =>
+        _enemyStats[enemy.DefIndex].RevealRange <= 0 || tower.Id == "sentinel" || enemy.SentinelMarkTicks > 0 || enemy.X - LeakX <= _enemyStats[enemy.DefIndex].RevealRange;
 
     private static bool Better(TdTargeting mode, in TdEnemy e, in TdEnemy b, double towerX)
     {
@@ -478,7 +486,7 @@ public sealed partial class TdMatchState
         if (t.NodeCdTicks > 0) return;
         int count = 0; double first = double.MaxValue;
         foreach (var e in _enemies)
-            if (!e.Flying && e.Hp > 0 && Dist(e.X, t.X) <= EffectiveRange(def)) { count++; first = Math.Min(first, e.X); }
+            if (!e.Flying && e.Hp > 0 && VisibleToTower(e, def) && Dist(e.X, t.X) <= EffectiveRange(def)) { count++; first = Math.Min(first, e.X); }
         if (count < Stat(t, def, "triggerEnemies", 3)) return;
         for (int i = 0; i < (int)Stat(t, def, "pods", 3); i++)
         {
@@ -554,7 +562,7 @@ public sealed partial class TdMatchState
                     for (int j = 0; j < _enemies.Count; j++)
                     {
                         var enemy = _enemies[j];
-                        if (enemy.Flying || enemy.Hp <= 0 || enemy.InvulnTicks > 0 || Dist(enemy.X, tower.X) > EffectiveRange(def)) continue;
+                        if (enemy.Flying || enemy.Hp <= 0 || enemy.InvulnTicks > 0 || !VisibleToTower(enemy, def) || Dist(enemy.X, tower.X) > EffectiveRange(def)) continue;
                         if (target < 0 || Better(TdTargeting.First, enemy, _enemies[target], tower.X)) target = j;
                     }
                     if (target >= 0) { _damageSource = n.TowerId; DealDamage(target, n.Dps / TdWorld.TicksPerSecond); }
@@ -638,6 +646,18 @@ public sealed partial class TdMatchState
                 Emit(TdEventType.EnemyKilled, e.Id, e.Gold);
                 _killsByTower[e.LastHitTowerId] = _killsByTower.GetValueOrDefault(e.LastHitTowerId) + 1;
                 WaveOf(e.Wave).Alive--;
+                var deadStats = _enemyStats[e.DefIndex];
+                if (deadStats.Replicator && !e.IsReplica)
+                {
+                    var wave = WaveOf(e.Wave);
+                    for (int k = 0; k < 2 && _enemies.Count < _content.Stages.Rules.MaxEnemiesOnField; k++)
+                    {
+                        var copy = MakeEnemy(e.DefIndex, e.Wave, Math.Min(TdWorld.PathLength, e.X + k * 2));
+                        copy.MaxHp = e.MaxHp * deadStats.CopyHpFraction;
+                        copy.Hp = copy.MaxHp; copy.IsReplica = true; copy.Gold = 0;
+                        _enemies.Add(copy); wave.Alive++;
+                    }
+                }
                 continue;
             }
             var st = _enemyStats[e.DefIndex];
@@ -677,7 +697,7 @@ public sealed partial class TdMatchState
         return new TdEnemy
         {
             Id = _nextEnemyId++, Wave = wave, DefIndex = defIndex, IsBoss = st.IsBoss, X = x, Speed = st.Speed,
-            Hp = hp, MaxHp = hp, Armor = st.Armor, Gold = st.Gold, CoreDamage = st.CoreDamage, Flying = st.Flying,
+            Hp = hp, MaxHp = hp, ShieldHp = st.ShieldHp, Armor = st.Armor, Gold = st.Gold, CoreDamage = st.CoreDamage, Flying = st.Flying,
             SlowMult = 1.0, AbilityCdTicks = st.ActInitialCdTicks,
         };
     }

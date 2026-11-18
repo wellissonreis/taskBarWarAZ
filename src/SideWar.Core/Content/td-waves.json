@@ -36,7 +36,7 @@
       "stage": 3,
       "waves": [
         {"number": 1, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 6, "offset": 0.0, "interval": 1.43}, {"enemy": "runner", "count": 2, "offset": 13.4, "interval": 1.04}]},
-        {"number": 2, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "swarm", "count": 4, "offset": 0.0, "interval": 0.45}]},
+        {"number": 2, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "swarm", "count": 4, "offset": 0.0, "interval": 0.45}, {"enemy": "fork", "count": 2, "offset": 25.0, "interval": 1.5}]},
         {"number": 3, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 6, "offset": 0.0, "interval": 1.43}, {"enemy": "swarm", "count": 4, "offset": 13.4, "interval": 0.45}]},
         {"number": 4, "rest": true, "bonusFactor": 1.5, "groups": [{"enemy": "grunt", "count": 4, "offset": 0.0, "interval": 1.43}, {"enemy": "runner", "count": 2, "offset": 9.1, "interval": 1.04}]},
         {"number": 5, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 6, "offset": 0.0, "interval": 1.43}, {"enemy": "tank", "count": 2, "offset": 13.4, "interval": 3.25}]},
@@ -53,7 +53,7 @@
       "stage": 4,
       "waves": [
         {"number": 1, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 4, "offset": 0.0, "interval": 1.1}, {"enemy": "flyer", "count": 4, "offset": 5.9, "interval": 1.2}]},
-        {"number": 2, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 4, "offset": 0.0, "interval": 1.1}, {"enemy": "flyer", "count": 6, "offset": 5.9, "interval": 1.2}]},
+        {"number": 2, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 4, "offset": 0.0, "interval": 1.1}, {"enemy": "flyer", "count": 6, "offset": 5.9, "interval": 1.2}, {"enemy": "fork", "count": 2, "offset": 25.0, "interval": 1.5}, {"enemy": "trojan", "count": 2, "offset": 25.0, "interval": 1.5}]},
         {"number": 3, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 8, "offset": 0.0, "interval": 1.1}, {"enemy": "runner", "count": 3, "offset": 10.3, "interval": 0.8}, {"enemy": "flyer", "count": 4, "offset": 14.2, "interval": 1.2}]},
         {"number": 4, "rest": true, "bonusFactor": 1.5, "groups": [{"enemy": "flyer", "count": 4, "offset": 0.0, "interval": 1.2}]},
         {"number": 5, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "armored", "count": 3, "offset": 0.0, "interval": 1.6}, {"enemy": "flyer", "count": 9, "offset": 6.3, "interval": 1.2}]},
@@ -72,7 +72,7 @@
       "stage": 5,
       "waves": [
         {"number": 1, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 6, "offset": 0.0, "interval": 1.1}, {"enemy": "runner", "count": 3, "offset": 10.3, "interval": 0.8}]},
-        {"number": 2, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 5, "offset": 0.0, "interval": 1.1}, {"enemy": "regen", "count": 2, "offset": 8.1, "interval": 1.8}]},
+        {"number": 2, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 5, "offset": 0.0, "interval": 1.1}, {"enemy": "regen", "count": 2, "offset": 8.1, "interval": 1.8}, {"enemy": "fork", "count": 2, "offset": 25.0, "interval": 1.5}, {"enemy": "trojan", "count": 2, "offset": 25.0, "interval": 1.5}, {"enemy": "phishing", "count": 2, "offset": 25.0, "interval": 1.5}]},
         {"number": 3, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "runner", "count": 3, "offset": 0.0, "interval": 0.8}, {"enemy": "swarm", "count": 7, "offset": 4.7, "interval": 0.35}, {"enemy": "regen", "count": 3, "offset": 9.0, "interval": 1.8}]},
         {"number": 4, "rest": true, "bonusFactor": 1.5, "groups": [{"enemy": "grunt", "count": 5, "offset": 0.0, "interval": 1.1}, {"enemy": "regen", "count": 2, "offset": 8.1, "interval": 1.8}]},
         {"number": 5, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 7, "offset": 0.0, "interval": 1.1}, {"enemy": "leech", "count": 2, "offset": 10.3, "interval": 1.8}]},
@@ -91,7 +91,7 @@
       "stage": 6,
       "waves": [
         {"number": 1, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 2, "offset": 0.0, "interval": 1.1}, {"enemy": "runner", "count": 2, "offset": 10.3, "interval": 0.8}, {"enemy": "flyer", "count": 1, "offset": 16.6, "interval": 1.2}]},
-        {"number": 2, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "swarm", "count": 4, "offset": 0.0, "interval": 0.35}, {"enemy": "armored", "count": 2, "offset": 5.7, "interval": 1.6}, {"enemy": "regen", "count": 1, "offset": 16.8, "interval": 1.8}]},
+        {"number": 2, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "swarm", "count": 4, "offset": 0.0, "interval": 0.35}, {"enemy": "armored", "count": 2, "offset": 5.7, "interval": 1.6}, {"enemy": "regen", "count": 1, "offset": 16.8, "interval": 1.8}, {"enemy": "fork", "count": 2, "offset": 25.0, "interval": 1.5}, {"enemy": "trojan", "count": 2, "offset": 25.0, "interval": 1.5}, {"enemy": "phishing", "count": 2, "offset": 25.0, "interval": 1.5}]},
         {"number": 3, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "tank", "count": 2, "offset": 0.0, "interval": 2.5}, {"enemy": "leech", "count": 2, "offset": 9.0, "interval": 1.8}, {"enemy": "flyer", "count": 3, "offset": 15.9, "interval": 1.2}]},
         {"number": 4, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "runner", "count": 5, "offset": 0.0, "interval": 0.8}, {"enemy": "armored", "count": 3, "offset": 9.5, "interval": 1.6}, {"enemy": "regen", "count": 2, "offset": 20.6, "interval": 1.8}]},
         {"number": 5, "rest": true, "bonusFactor": 1.5, "groups": [{"enemy": "grunt", "count": 4, "offset": 0.0, "interval": 1.1}, {"enemy": "flyer", "count": 2, "offset": 10.3, "interval": 1.2}]},

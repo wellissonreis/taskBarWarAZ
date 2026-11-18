@@ -7,6 +7,65 @@ namespace SideWar.Core.Tests;
 
 public sealed class TdAzureTowersTests
 {
+    [Fact]
+    public void ForkCreatesTwoNonReplicatingCopiesAtFortyPercent()
+    {
+        var s = Arena("fork");
+        Assert.True(s.Apply(new StartWave()).IsOk); Steps(s, 1);
+        var enemies = (List<TdEnemy>)s.Enemies;
+        var parent = enemies[0]; parent.Hp = 0; parent.X = 1000; parent.Speed = 0; enemies[0] = parent; Steps(s, 1);
+        Assert.Equal(2, enemies.Count);
+        Assert.All(enemies, e => { Assert.True(e.IsReplica); Assert.Equal(parent.MaxHp * 0.4, e.Hp); });
+        Assert.Equal(2, enemies[1].X - enemies[0].X, 6);
+        for (int i = 0; i < enemies.Count; i++) { var copy = enemies[i]; copy.Hp = 0; enemies[i] = copy; }
+        Steps(s, 1); Assert.Empty(enemies);
+    }
+
+    [Fact]
+    public void TrojanShieldAbsorbsDamageAndPreventsSlowUntilBroken()
+    {
+        var s = Arena("trojan"); Build(s, "frost", 1100);
+        Assert.True(s.Apply(new StartWave()).IsOk); Steps(s, 1);
+        Assert.Equal(111, s.Enemies[0].ShieldHp); Assert.Equal(s.Enemies[0].MaxHp, s.Enemies[0].Hp);
+        Assert.Equal(0, s.Enemies[0].SlowTicks);
+        var enemies = (List<TdEnemy>)s.Enemies; var enemy = enemies[0]; enemy.Speed = 0; enemies[0] = enemy;
+        Steps(s, 27 * 14);
+        Assert.Equal(0, s.Enemies[0].ShieldHp); Assert.True(s.Enemies[0].SlowTicks > 0);
+        Assert.True(s.Enemies[0].Hp < s.Enemies[0].MaxHp);
+    }
+
+    [Fact]
+    public void PhishingIsHiddenUntilSentinelMarksIt()
+    {
+        var s = Arena("phishing"); Build(s, "bolt", 1100);
+        Assert.True(s.Apply(new StartWave()).IsOk); Steps(s, 1);
+        Assert.Equal(s.Enemies[0].MaxHp, s.Enemies[0].Hp);
+        Build(s, "sentinel", 1090); Steps(s, 1);
+        Assert.True(s.Enemies[0].SentinelMarkTicks > 0);
+        Assert.True(s.Enemies[0].Hp < s.Enemies[0].MaxHp);
+    }
+
+    [Fact]
+    public void NewEnemiesHaveCountersAndDeterministicState()
+    {
+        var c = TdContentLoader.LoadEmbedded();
+        foreach (var trait in new[] { "replicator", "shielded", "stealth" })
+        {
+            Assert.Contains(c.Towers, t => t.Strong.Contains(trait));
+            Assert.Contains(c.Towers, t => t.Weak.Contains(trait));
+        }
+        foreach (var id in new[] { "fork", "trojan", "phishing" })
+        {
+            var runs = Enumerable.Range(0, 5).Select(_ => Arena(id, 2)).ToArray();
+            foreach (var s in runs) { Build(s, "sentinel", 1100); Build(s, "bolt", 1050); Assert.True(s.Apply(new StartWave()).IsOk); }
+            for (int i = 0; i < 250; i++)
+            {
+                foreach (var s in runs) s.Step();
+                Assert.All(runs, s => Assert.Equal(runs[0].ComputeStateHash(), s.ComputeStateHash()));
+            }
+        }
+    }
+
     [Theory]
     [InlineData(0, 3)]
     [InlineData(1, 5)]
@@ -286,6 +345,45 @@ public sealed class TdAzureTowersTests
         var last = enemies[0]; last.Hp = 0; enemies[0] = last; Steps(s, 1);
         Assert.Equal(2, s.Stars);
         Assert.Equal(3, s.IntegrityLost);
+        Assert.Equal(TdScoring.Compute(s.IntegrityMax - s.IntegrityLost, s.CombatSeconds, s.EarlyCalls, s.Credits, s.Stars, false), s.Result.Score);
+    }
+
+    [Fact]
+    public void BackupRevivesTowerDisabledByRealLeech()
+    {
+        var s = Arena("leech"); Build(s, "backup", 1040); Build(s, "bolt", 1100);
+        Assert.True(s.Apply(new StartWave()).IsOk); Steps(s, 30);
+        Assert.Contains(s.Events, e => e.Type == TdEventType.TowerDisabled && e.A == s.Towers[1].Id);
+        Assert.Equal(0, s.Towers[1].DisabledTicks);
+    }
+
+    [Fact]
+    public void BackupHealsAtMostThreeTimesPerStage()
+    {
+        var s = Arena("grunt", 2); Build(s, "backup", 1000);
+        Assert.True(s.Apply(new StartWave()).IsOk); Steps(s, 2);
+        var enemies = (List<TdEnemy>)s.Enemies;
+        var leaker = enemies[0]; leaker.X = 0; leaker.CoreDamage = 6; enemies[0] = leaker;
+        var other = enemies[1]; other.Speed = 0; enemies[1] = other;
+        Steps(s, 1); int damaged = s.Integrity;
+        Steps(s, 45 * 30 * 5);
+        Assert.Equal(damaged + 3, s.Integrity);
+        Assert.Equal(6, s.IntegrityLost);
+    }
+
+    [Fact]
+    public void AksCooldownIsTwentySeconds()
+    {
+        var s = Arena("grunt", 3); Build(s, "aks", 1100);
+        Assert.True(s.Apply(new StartWave()).IsOk); Steps(s, 3);
+        var enemies = (List<TdEnemy>)s.Enemies;
+        for (int i = 0; i < enemies.Count; i++) { var e = enemies[i]; e.Speed = 0; e.X = 1100; enemies[i] = e; }
+        while (!s.Events.Any(e => e.Type == TdEventType.NodeSpawned)) Steps(s, 1);
+        long first = s.Tick; Steps(s, 599);
+        Assert.Equal(3, s.Events.Count(e => e.Type == TdEventType.NodeSpawned));
+        Steps(s, 1);
+        Assert.Equal(first + 600, s.Tick);
+        Assert.Equal(6, s.Events.Count(e => e.Type == TdEventType.NodeSpawned));
     }
 
     [Fact]

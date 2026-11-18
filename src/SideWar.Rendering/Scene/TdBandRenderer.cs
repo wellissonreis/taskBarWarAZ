@@ -22,7 +22,7 @@ namespace SideWar.Rendering.Scene;
 public sealed class TdBandRenderer : IDisposable
 {
 
-    private const byte FlyingBit = 1, ArmoredBit = 2, RegenBit = 4, DrainBit = 8;
+    private const byte FlyingBit = 1, ArmoredBit = 2, RegenBit = 4, DrainBit = 8, ReplicatorBit = 16, ShieldedBit = 32, StealthBit = 64;
 
     private readonly Typography _typography;
     private readonly SKPaint _fill = new() { IsAntialias = true, Style = SKPaintStyle.Fill };
@@ -194,6 +194,9 @@ public sealed class TdBandRenderer : IDisposable
             else if (t == "armored") b |= ArmoredBit;
             else if (t == "regen") b |= RegenBit;
             else if (t == "drain") b |= DrainBit;
+            else if (t == "replicator") b |= ReplicatorBit;
+            else if (t == "shielded") b |= ShieldedBit;
+            else if (t == "stealth") b |= StealthBit;
         }
         return b;
     }
@@ -293,6 +296,13 @@ public sealed class TdBandRenderer : IDisposable
             SKColor border = e.IsBoss ? Palette.Perigo : flying ? Palette.Gelo : (bits & ArmoredBit) != 0 ? Palette.Ambar
                 : (bits & RegenBit) != 0 ? Palette.Menta : (bits & DrainBit) != 0 ? Palette.Td.EnemyDrain : Palette.Td.EnemySolo;
             Blit(c, img, x, foot);
+            if ((bits & StealthBit) != 0)
+            {
+                _stroke.Color = Palette.Td.TintCyan;
+                _stroke.PathEffect = _dash;
+                c.DrawRoundRect(x - sw / 2f - 1f, foot - sh - 1f, sw + 2f, sh + 2f, 2, 2, _stroke);
+                _stroke.PathEffect = null;
+            }
 
             // pino de traço no canto superior direito (forma redundante com a tinta: não depende só de cor)
             float px = x + sw / 2f - 1f, py = foot - sh + 1.5f;
@@ -313,6 +323,9 @@ public sealed class TdBandRenderer : IDisposable
             }
             else if ((bits & RegenBit) != 0) Pip(c, _triangle, px, py, border);
             else if ((bits & DrainBit) != 0) Pip(c, _cross, px, py, border);
+            else if ((bits & ReplicatorBit) != 0) Pip(c, _cross, px, py, Palette.Td.TintViolet);
+            else if ((bits & ShieldedBit) != 0) Pip(c, _diamond, px, py, Palette.Td.TintAmber);
+            else if ((bits & StealthBit) != 0) Pip(c, _triangle, px, py, Palette.Td.TintCyan);
 
             if (e.ParalyzeTicks > 0)
             {

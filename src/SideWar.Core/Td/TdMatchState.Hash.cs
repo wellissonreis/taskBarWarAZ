@@ -53,6 +53,9 @@ public sealed partial class TdMatchState
         {
             h.AddInt32(e.Id); h.AddInt32(e.Wave); h.AddInt32(e.DefIndex); h.AddBool(e.IsBoss);
             h.AddDouble(e.X); h.AddDouble(e.Speed); h.AddDouble(e.Hp); h.AddDouble(e.MaxHp); h.AddDouble(e.Armor);
+            if (_enemyStats[e.DefIndex].Replicator) h.AddBool(e.IsReplica);
+            if (_enemyStats[e.DefIndex].ShieldHp > 0) h.AddDouble(e.ShieldHp);
+            if (_enemyStats[e.DefIndex].RevealRange > 0) h.AddInt32(e.SentinelMarkTicks);
             h.AddInt64(e.Gold); h.AddInt32(e.CoreDamage); h.AddBool(e.Flying);
             h.AddDouble(e.SlowMult); h.AddInt32(e.SlowTicks); h.AddInt32(e.ParalyzeTicks); h.AddInt32(e.ParalyzeGraceTicks); h.AddInt32(e.PushGraceTicks);
             h.AddInt32(e.InvulnTicks); h.AddDouble(e.VulnBonus); h.AddInt32(e.VulnTicks); h.AddDouble(e.CorrodeAmount);

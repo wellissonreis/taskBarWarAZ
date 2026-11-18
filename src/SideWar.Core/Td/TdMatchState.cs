@@ -562,6 +562,10 @@ internal sealed class TdEnemyStats
     public int CoreDamage { get; init; }
     public bool Flying { get; init; }
     public bool Armored { get; init; }
+    public bool Replicator { get; init; }
+    public double CopyHpFraction { get; init; }
+    public double ShieldHp { get; init; }
+    public double RevealRange { get; init; }
     /// <summary>Lentidão máxima permitida (0 = imune; 1 = sem teto). Piso de velocidade = 1 − SlowCap.</summary>
     public double SlowCap { get; init; } = 1.0;
     public bool ParalysisImmune { get; init; }
@@ -594,6 +598,8 @@ internal sealed class TdEnemyStats
             {
                 Id = e.Id, IsBoss = false, Hp = e.Hp, Speed = e.Speed, Armor = e.Armor, Gold = e.Gold, CoreDamage = e.CoreDamage,
                 Flying = e.Traits.Contains("flying"), Armored = e.Traits.Contains("armored"),
+                Replicator = e.Traits.Contains("replicator"), CopyHpFraction = P(p, "copyHpFraction"),
+                ShieldHp = P(p, "shieldHp"), RevealRange = P(p, "revealRange"),
                 RegenPct = P(p, "regenPctPerSecond"), RegenDelayTicks = T(P(p, "regenDelaySeconds")),
                 ActRange = P(p, "drainRangeUnits"), ActDisableTicks = drain ? T(P(p, "disableSeconds")) : 0,
                 ActCdTicks = drain ? T(P(p, "disableSeconds")) : 0,

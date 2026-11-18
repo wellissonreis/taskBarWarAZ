@@ -8,7 +8,7 @@ namespace SideWar.Core.Content.Td;
 /// </summary>
 public static class TdContentValidator
 {
-    public static readonly string[] Traits = ["basic", "fast", "swarm", "armored", "durable", "flying", "regen", "drain", "boss"];
+    public static readonly string[] Traits = ["basic", "fast", "swarm", "armored", "durable", "flying", "regen", "drain", "boss", "replicator", "shielded", "stealth"];
     private static readonly string[] RequiredTowers = ["bolt", "frost", "cannon", "balancer", "scaleset"];
     private static readonly string[] RequiredEnemies = ["grunt", "runner", "swarm", "armored", "tank", "flyer", "regen", "leech"];
     private static readonly string[] RequiredBosses = ["ransomware", "botnet", "zeroday"];
@@ -188,6 +188,9 @@ public static class TdContentValidator
 
     private static void TraitParams(List<string> e, string owner, string[] traits, Dictionary<string, double> p, bool boss)
     {
+        if (traits.Contains("shielded")) Req(e, p.TryGetValue("shieldHp", out var shield) && double.IsFinite(shield) && shield > 0, $"{owner}: shieldHp deve ser > 0");
+        if (traits.Contains("stealth")) Req(e, p.TryGetValue("revealRange", out var reveal) && double.IsFinite(reveal) && reveal > 0, $"{owner}: revealRange deve ser > 0");
+        if (traits.Contains("replicator")) Req(e, p.TryGetValue("copyHpFraction", out var fraction) && fraction > 0 && fraction <= 1, $"{owner}: copyHpFraction deve estar em (0, 1]");
         if (traits.Contains("regen"))
             Req(e, p.TryGetValue("regenPctPerSecond", out var r) && r > 0 && r <= 1, $"{owner}: traço 'regen' exige params.regenPctPerSecond em (0, 1]");
         if (traits.Contains("drain") && !boss)

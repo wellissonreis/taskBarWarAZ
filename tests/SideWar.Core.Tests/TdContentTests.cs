@@ -27,7 +27,7 @@ public sealed class TdContentTests
     {
         var c = TdContentLoader.LoadEmbedded();
         Assert.Equal(15, c.Towers.Length);
-        Assert.Equal(8, c.Enemies.Enemies.Length);
+        Assert.Equal(11, c.Enemies.Enemies.Length);
         Assert.Equal(3, c.Enemies.Bosses.Length);
         Assert.Equal(6, c.Stages.Stages.Length);
         Assert.Equal(3, c.Abilities.Length);
@@ -89,7 +89,7 @@ public sealed class TdContentTests
     [Fact(DisplayName = "TD.1 Validator rejects a tower without declared weakness or with an unknown trait")]
     public void Validator_RejectsTowerWithoutWeakness()
     {
-        AssertError(With("td-towers.json", "\"weak\": [\"swarm\"], \"weaknessText\"", "\"weak\": [], \"weaknessText\""), "td-towers.bolt.weak");
+        AssertError(With("td-towers.json", "\"weak\": [\"swarm\", \"replicator\"], \"weaknessText\"", "\"weak\": [], \"weaknessText\""), "td-towers.bolt.weak");
         AssertError(With("td-towers.json", "\"weak\": [\"flying\"], \"weaknessText\": \"Não segura", "\"weak\": [\"fogo\"], \"weaknessText\": \"Não segura"), "traço desconhecido 'fogo'");
         AssertError(With("td-towers.json", "\"weaknessText\": \"Dano quase nulo: não mata sozinha; chefes resistem ao controle.\"", "\"weaknessText\": \"\""), "td-towers.frost.weaknessText");
     }

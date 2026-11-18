@@ -93,6 +93,9 @@ public struct TdEnemy
     public double Speed { get; set; }
     public double Hp { get; set; }
     public double MaxHp { get; set; }
+    public double ShieldHp { get; set; }
+    public bool IsReplica { get; set; }
+    public int SentinelMarkTicks { get; set; }
     public double Armor { get; set; }
     public long Gold { get; set; }
     public int CoreDamage { get; set; }
