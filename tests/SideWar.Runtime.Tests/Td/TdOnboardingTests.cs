@@ -207,16 +207,37 @@ public sealed class TdOnboardingTests
     // ------------------------------------------------------------ Como jogar
 
     [Fact]
-    public void OpenHowTo_from_tray_and_redo_restarts_stage_1_with_tutorial_on()
+    public void Redo_tutorial_preserves_the_current_match()
     {
-        var r = new Rig(tutorialDone: true);
+        var r = new Rig(stage: 2, tutorialDone: true);
+        r.BuildBolt();
+        r.Click(TdUiAction.StartWave);
+        r.StepWave(30);
+        typeof(TdMatchState).GetProperty("Fragments")!.SetValue(r.Match, 4L);
+        string rune = r.Match.Frontier[0];
+        Assert.True(r.Match.Apply(new AwakenRune(rune)).IsOk);
+        var match = r.Match;
+        var hash = match.ComputeStateHash();
+        var credits = match.Credits;
+        var wave = match.WaveNumber;
+        Assert.NotEmpty(match.Towers);
+        Assert.True(wave > 0);
         r.Ui.OpenHowTo();
         Assert.Equal(TdUiMode.Help, r.Ui.Mode);
         r.Click(TdUiAction.RedoTutorial);
         Assert.False(r.Store.Done);
-        Assert.Contains("stage1", r.Host.Calls);
+        Assert.DoesNotContain(r.Host.Calls, call => call.StartsWith("stage", StringComparison.Ordinal));
+        Assert.Same(match, r.Match);
+        Assert.Equal(hash, match.ComputeStateHash());
+        Assert.Equal(2, match.StageId);
+        Assert.Equal(credits, match.Credits);
+        Assert.Equal(wave, match.WaveNumber);
+        Assert.Equal(3, match.Fragments);
+        Assert.True(match.IsAwakened(rune));
+        Assert.NotEmpty(match.Towers);
         Assert.Equal(TdUiMode.None, r.Ui.Mode);
-        Assert.Equal(TdTutorialStep.HudOpen, r.Ui.Step);
+        Assert.Equal(TdTutorialStep.Runes, r.Ui.Step);
+        Assert.NotNull(r.Ui.BuildPopover());
     }
 
     // ------------------------------------------------------------ dicas de 1ª vez

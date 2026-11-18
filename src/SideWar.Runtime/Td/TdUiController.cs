@@ -772,7 +772,8 @@ public sealed partial class TdUiController
             TdUiMode.Runes => Finish("Teia de runas", Placeholder(), 0),
             _ => null,
         };
-        return view is null ? null : EndCardOpen ? DecoratePopover(m, view) : Modalize(DecoratePopover(m, view));
+        return view is null ? Step == TdTutorialStep.HudOpen ? null : DecoratePopover(m, null)
+            : EndCardOpen ? DecoratePopover(m, view) : Modalize(DecoratePopover(m, view));
     }
 
     /// <summary>Descrição curta (design Partida.dc.html; demais torres com texto equivalente do conteúdo) mostrada no painel rápido.</summary>

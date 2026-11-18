@@ -223,7 +223,7 @@ public sealed partial class TdUiController
         Changed?.Invoke();
     }
 
-    /// <summary>"Refazer tutorial": zera os passos, marca o tutorial como não concluído e recomeça a fase 1 (partida limpa).</summary>
+    /// <summary>"Refazer tutorial": zera os passos de orientação sobre a partida atual.</summary>
     private void RedoTutorial()
     {
         if (_onb is null) return;
@@ -235,7 +235,6 @@ public sealed partial class TdUiController
         ResetRuneCard(clearSeen: true);
         _onb.SetTutorialDone(false);
         Close();
-        _host.StartStage(1);
     }
 
     /// <summary>Abre o cartão "Como jogar" (item da bandeja e do menu do HUD).</summary>
