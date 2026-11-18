@@ -1,0 +1,22 @@
+{
+  "rewardPerTrait": 1.15,
+  "rewardCap": 1.3,
+  "speedMin": 15,
+  "speedMax": 120,
+  "doubleGapWaves": 5,
+  "doubleMinMutated": 2,
+  "minEligibleForOne": 5,
+  "traits": [
+    {"id": "fast", "name": "Rápido", "label": "Rápido", "minStage": 3, "hpMult": 1.0, "speedMult": 1.5, "armorAdd": 0, "shieldPct": 0, "flying": false, "excludes": ["slow"]},
+    {"id": "durable", "name": "Tank", "label": "Tank", "minStage": 3, "hpMult": 1.7, "speedMult": 1.0, "armorAdd": 0, "shieldPct": 0, "flying": false, "excludes": []},
+    {"id": "flying", "name": "Voador", "label": "Voador", "minStage": 4, "hpMult": 1.0, "speedMult": 1.0, "armorAdd": 0, "shieldPct": 0, "flying": true, "excludes": []},
+    {"id": "slow", "name": "Lento", "label": "Lento", "minStage": 3, "hpMult": 1.0, "speedMult": 0.7, "armorAdd": 0, "shieldPct": 0, "flying": false, "excludes": ["fast"]},
+    {"id": "shielded", "name": "Escudado", "label": "Escudo", "minStage": 4, "hpMult": 1.0, "speedMult": 1.0, "armorAdd": 0, "shieldPct": 0.35, "flying": false, "excludes": []},
+    {"id": "armored", "name": "Blindado", "label": "Blindado", "minStage": 5, "hpMult": 1.0, "speedMult": 1.0, "armorAdd": 12, "shieldPct": 0, "flying": false, "excludes": []}
+  ],
+  "tiers": [
+    {"minStage": 3, "minWaves": 20, "maxMutatedPct": 0.10, "maxDoubles": 0, "doublePct": 0},
+    {"minStage": 5, "minWaves": 45, "maxMutatedPct": 0.20, "maxDoubles": 1, "doublePct": 0},
+    {"minStage": 7, "minWaves": 80, "maxMutatedPct": 0.30, "maxDoubles": -1, "doublePct": 0.25}
+  ]
+}
