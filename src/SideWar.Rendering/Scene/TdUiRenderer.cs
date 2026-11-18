@@ -1,5 +1,6 @@
 using TdArtMap = SideWar.Rendering.Scene.TdArtMap;
 using TdSpriteBaker = SideWar.Rendering.Scene.TdSpriteBaker;
+using TdFusionMark = SideWar.Rendering.Scene.TdFusionMark;
 using SideWar.Rendering.Sprites;
 using SideWar.Rendering.Text;
 using SideWar.Rendering.Theme;
@@ -349,6 +350,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
                 float photo = Math.Min(r.H - 8f, 34f);
                 RoundBox(c, new DipRect(r.X + 6, r.Y + (r.H - photo - 2) / 2, photo + 2, photo + 2), Palette.Td.BorderStrong, Palette.Td.Background, 5);
                 DrawTowerIcon(c, it.SArg, r.X + 7, r.Y + (r.H - photo) / 2, photo, 255);
+                if (it.Sub is not null) TdFusionMark.Draw(c, it.Sub, _p.Px(r.X + 7 + photo - 12f), _p.Px(r.Y + (r.H - photo) / 2 + photo - 13f), _p.Px(14f));
                 tx = r.X + photo + 16;
             }
             else if (it.Icon != TdIcon.None) { DrawIcon(c, it.Icon, tx, r.Y + (r.H - 14) / 2, 14, fg); tx += 22; }
@@ -810,6 +812,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         if (v.IconTower is not null)
         {
             DrawTowerIcon(c, v.IconTower, 4, 2, HeaderIconDip, 255);
+            if (v.IconModule is not null) TdFusionMark.Draw(c, v.IconModule, _p.Px(4 + HeaderIconDip - 7f), _p.Px(2 + HeaderIconDip - 8f), _p.Px(9f));
             titleX += 22;
         }
         float titleSize = v.Title == "CORRIDA ENCERRADA" || alert ? 14f : 10.5f;
