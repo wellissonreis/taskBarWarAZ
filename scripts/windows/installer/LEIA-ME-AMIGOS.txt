@@ -1,0 +1,42 @@
+SIDEWAR - TESTE COM AMIGOS
+==========================
+
+O que e: um jogo de defesa (tower defense) que roda como uma faixa discreta sobre a
+barra de tarefas do Windows, para jogar enquanto voce trabalha. Versao de teste.
+
+Requisitos: Windows 11 (ou Windows 10 recente) x64. Nao precisa instalar .NET.
+
+INSTALAR
+1. Extraia o ZIP inteiro numa pasta qualquer (clique direito > Extrair tudo).
+2. De dois cliques em Instalar.cmd. Nao precisa de administrador.
+3. Responda S ou N para "iniciar junto com o Windows".
+4. Abra o SideWar pelo Menu Iniciar (procure "SideWar").
+O app e copiado para %LOCALAPPDATA%\Programs\SideWar. Nada alem disso e alterado
+(so os atalhos do Menu Iniciar e, se voce quiser, da Inicializacao).
+
+AVISO DO WINDOWS (SmartScreen)
+O app nao e assinado digitalmente. O Windows pode mostrar "O Windows protegeu seu
+computador". Clique em "Mais informacoes" e depois em "Executar assim mesmo".
+Se o ZIP vier bloqueado, clique direito no ZIP > Propriedades > marque "Desbloquear".
+
+ABRIR E FECHAR
+- Abrir: Menu Iniciar > SideWar. A faixa aparece sobre a barra de tarefas.
+- Fechar: clique direito no icone da bandeja (perto do relogio) > Sair.
+
+TECLAS DE ATALHO (globais)
+- Ctrl+Alt+H : "boss key" - esconde/mostra tudo na hora (a partida segue, o desenho para).
+- Ctrl+Alt+G : alterna modo interativo.
+- Ctrl+Alt+P : pausa.
+- Ctrl+Alt+Space : inicia a proxima onda.
+
+ONDE FICAM OS DADOS
+%LOCALAPPDATA%\SideWar  (configuracoes, progresso, sessao e logs).
+O jogo nao usa a internet e nao envia nada para ninguem.
+
+DESINSTALAR
+Execute Desinstalar.cmd (em %LOCALAPPDATA%\Programs\SideWar). Ele fecha o jogo, remove
+os atalhos e a pasta, e pergunta se quer apagar tambem seus dados e progresso.
+
+FEEDBACK
+Mande para quem te passou o pacote: o que achou, bugs, travamentos, e se atrapalhou
+o trabalho. Se der erro, anexe os arquivos de %LOCALAPPDATA%\SideWar\logs.
