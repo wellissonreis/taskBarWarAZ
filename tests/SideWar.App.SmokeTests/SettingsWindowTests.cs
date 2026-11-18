@@ -1,3 +1,6 @@
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using SideWar.App.Windows;
 using SideWar.Persistence.Settings;
 using Xunit;
@@ -48,6 +51,28 @@ public class SettingsWindowTests
             w.Close();
             Assert.Equal(0, saves);
             Assert.Equal(1, closed);
+        });
+    }
+
+    [Fact]
+    public void General_settings_scroll_with_wheel_and_reach_last_options()
+    {
+        Sta(() =>
+        {
+            var w = new SettingsWindow(new SettingsViewModel(AppSettings.Default, _ => true));
+            w.Height = 300;
+            w.Show();
+            w.UpdateLayout();
+            var scroll = (ScrollViewer)w.FindName("GeneralScroll");
+            Assert.True(scroll.ScrollableHeight > 0);
+            scroll.RaiseEvent(new MouseWheelEventArgs(Mouse.PrimaryDevice, 0, -120)
+                { RoutedEvent = UIElement.MouseWheelEvent });
+            w.UpdateLayout();
+            Assert.True(scroll.VerticalOffset > 0);
+            scroll.ScrollToEnd();
+            w.UpdateLayout();
+            Assert.Equal(scroll.ScrollableHeight, scroll.VerticalOffset, 1);
+            w.Close();
         });
     }
 

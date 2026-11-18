@@ -1,5 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Media;
+using SideWar.Rendering.Theme;
 using SideWar.Persistence.Settings;
 
 namespace SideWar.App.Windows;
@@ -15,6 +17,13 @@ public partial class SettingsWindow : Window
     public SettingsWindow(SettingsViewModel viewModel, Action? onClosed = null)
     {
         InitializeComponent();
+        Resources["SettingsErrorBrush"] = Brush(Palette.Perigo);
+        Resources["SettingsMutedBrush"] = Brush(Palette.BordaForte);
+        var area = SystemParameters.WorkArea;
+        Width = Math.Min(Width, area.Width);
+        Height = Math.Min(Height, area.Height);
+        Left = area.Right - Width;
+        Top = area.Bottom - Height;
         ViewModel = viewModel;
         this.onClosed = onClosed;
         DataContext = viewModel;
@@ -49,6 +58,9 @@ public partial class SettingsWindow : Window
         viewModel.PropertyChanged += (_, _) => Refresh();
         Refresh();
     }
+
+    private static SolidColorBrush Brush(SkiaSharp.SKColor color) =>
+        new(Color.FromArgb(color.Alpha, color.Red, color.Green, color.Blue));
 
     public SettingsViewModel ViewModel { get; }
 
