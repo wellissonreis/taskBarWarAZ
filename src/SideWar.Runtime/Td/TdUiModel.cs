@@ -29,7 +29,7 @@ public enum TdUiAction : byte
     /// <summary>TD.30c: botão Runas do HUD (abre/fecha a janela de runas ancorada no chip, sem pausar e sem tomar foco).</summary>
     RuneWindow,
     /// <summary>TD.30e: chip da legenda de ramos (passar o mouse destaca os nós do ramo; SArg = id do tipo) e os botões do cartão "runas no primeiro dano".</summary>
-    RuneBranch, RuneTutorialOpen, RuneTutorialDismiss, ViewRunes,
+    RuneBranch, RuneTutorialOpen, RuneTutorialDismiss, ViewRunes, TowerCategory,
 }
 
 /// <summary>Ícone do HUD desenhado por código (TD.14); o renderer mapeia para caminhos vetoriais.</summary>
@@ -42,6 +42,7 @@ public enum TdIcon : byte
     Castle, Pause,
     /// <summary>TD.30c: estrela/runa (botão Runas do HUD).</summary>
     Star,
+    Functions, Cosmos, Sentinel, Vault, Backup, Cdn, Queue, Policy, Aks, Pipeline,
 }
 
 /// <summary>

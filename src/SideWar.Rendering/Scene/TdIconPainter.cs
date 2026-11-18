@@ -22,6 +22,40 @@ internal static class TdIconPainter
         SKPoint P(float px, float py) => new(x + px * u, y + py * u);
         switch (icon)
         {
+            case TdIcon.Functions:
+                c.DrawLine(P(4, 2), P(2, 8), line); c.DrawLine(P(2, 8), P(4, 14), line);
+                c.DrawLine(P(12, 2), P(14, 8), line); c.DrawLine(P(14, 8), P(12, 14), line);
+                Poly(c, line, P(9, 2), P(5, 9), P(8, 9), P(7, 14), P(11, 7), P(8, 7)); break;
+            case TdIcon.Cosmos:
+                c.DrawLine(P(3, 4), P(8, 12), line); c.DrawLine(P(8, 12), P(13, 4), line);
+                c.DrawCircle(P(3, 4), 2 * u, fill); c.DrawCircle(P(8, 12), 2 * u, fill); c.DrawCircle(P(13, 4), 2 * u, fill); break;
+            case TdIcon.Sentinel:
+                c.DrawOval(SKRect.Create(P(1, 4).X, P(1, 4).Y, 14 * u, 8 * u), line);
+                c.DrawCircle(P(8, 8), 2 * u, line); c.DrawLine(P(8, 1), P(8, 4), line); c.DrawLine(P(8, 12), P(8, 15), line); break;
+            case TdIcon.Vault:
+                c.DrawRect(SKRect.Create(P(2, 2).X, P(2, 2).Y, 12 * u, 11 * u), line);
+                c.DrawCircle(P(8, 7.5f), 3 * u, line); c.DrawLine(P(4, 13), P(4, 15), line); c.DrawLine(P(12, 13), P(12, 15), line); break;
+            case TdIcon.Backup:
+                c.DrawArc(SKRect.Create(P(2, 2).X, P(2, 2).Y, 12 * u, 12 * u), -60, 290, false, line);
+                Poly(c, fill, P(11, 0.5f), P(15, 5), P(9, 5)); c.DrawCircle(P(8, 8), 1.5f * u, fill); break;
+            case TdIcon.Cdn:
+                c.DrawCircle(P(8, 8), 6.5f * u, line); c.DrawOval(SKRect.Create(P(5, 1.5f).X, P(5, 1.5f).Y, 6 * u, 13 * u), line);
+                c.DrawLine(P(2, 8), P(14, 8), line); break;
+            case TdIcon.Queue:
+                c.DrawRect(SKRect.Create(P(6, 2).X, P(6, 2).Y, 8 * u, 3 * u), line);
+                c.DrawRect(SKRect.Create(P(6, 7).X, P(6, 7).Y, 8 * u, 3 * u), line);
+                c.DrawLine(P(14, 13), P(2, 13), line); c.DrawLine(P(2, 13), P(5, 10), line); break;
+            case TdIcon.Policy:
+                Poly(c, line, P(8, 1), P(14, 3), P(13, 10), P(8, 15), P(3, 10), P(2, 3));
+                c.DrawLine(P(5, 8), P(7, 10), line); c.DrawLine(P(7, 10), P(11, 5), line); break;
+            case TdIcon.Aks:
+                Poly(c, line, P(8, 1), P(14, 4.5f), P(14, 11.5f), P(8, 15), P(2, 11.5f), P(2, 4.5f));
+                c.DrawCircle(P(8, 5), u, fill); c.DrawCircle(P(5, 10), u, fill); c.DrawCircle(P(11, 10), u, fill); break;
+            case TdIcon.Pipeline:
+                c.DrawLine(P(2, 13), P(2, 10), line); c.DrawLine(P(2, 10), P(6, 10), line);
+                c.DrawLine(P(6, 10), P(6, 7), line); c.DrawLine(P(6, 7), P(10, 7), line);
+                c.DrawLine(P(10, 7), P(10, 3), line); c.DrawLine(P(10, 3), P(14, 3), line);
+                c.DrawLine(P(14, 3), P(12, 1), line); c.DrawLine(P(14, 3), P(12, 5), line); break;
             case TdIcon.Bolt:
                 Poly(c, line, P(9, 1), P(3, 9), P(7, 9), P(6, 15), P(13, 6), P(9, 6)); break;
             case TdIcon.Frost:

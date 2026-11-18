@@ -330,9 +330,9 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             // TD.28c: foto da torre (sprite do design) no tile, no lugar do ícone vetorial; apagada se bloqueada/sem crédito
             float photo = size - 8f;
             DrawTowerIcon(c, it.SArg ?? "", r.X + 7 + (size - photo) / 2, r.Y + (r.H - photo) / 2, photo, it.Enabled ? (byte)255 : (byte)110);
-            _p.Text(c, it.Text, PanelFont.JetBrainsMono, 12, new DipRect(r.X + 60, r.Y + 8, 150, 16), it.Enabled ? Palette.Td.Text : Palette.Td.Muted);
+            _p.Text(c, it.Text, PanelFont.JetBrainsMono, 14, new DipRect(r.X + 60, r.Y + 8, 150, 18), it.Enabled ? Palette.Td.Text : Palette.Td.Muted);
             if (it.Sub is not null) DrawWrapped(c, it.Sub, new DipRect(r.X + 210, r.Y + 9, Math.Max(20, r.W - 290), r.H - 12), Palette.Td.Muted);
-            if (it.Right is not null) _p.Text(c, it.Right, PanelFont.JetBrainsMono, 12, new DipRect(r.X + r.W - 78, r.Y + 10, 66, 16), it.Enabled ? Palette.Td.Amber : Palette.Td.Dim, TextAlign.Right);
+            if (it.Right is not null) _p.Text(c, it.Right, PanelFont.JetBrainsMono, 14, new DipRect(r.X + r.W - 78, r.Y + 10, 66, 18), it.Enabled ? Palette.Td.Amber : Palette.Td.Dim, TextAlign.Right);
             return;
         }
         if (it.Kind == TdUiKind.Button)
@@ -757,14 +757,20 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             {
                 var it = v.Items[i];
                 var r = it.Rect;
+                if (it.Action == TdUiAction.TowerCategory)
+                {
+                    RoundBox(c, r, it.Selected ? Palette.Td.Amber : Palette.Td.BorderStrong, i == hover ? Palette.Td.Button : Palette.Td.Card, 4);
+                    _p.Text(c, it.Text, PanelFont.JetBrainsMono, 11, r, it.Selected ? Palette.Td.Amber : Palette.Td.Text, TextAlign.Center);
+                    continue;
+                }
                 var col = it.SArg switch { "bolt" => Palette.Td.Bolt, "frost" => Palette.Td.Frost, "cannon" => Palette.Td.Cannon, _ => Palette.Td.Dim };
                 if (!it.Enabled) col = col.WithAlpha(115);
                 RoundBox(c, r, it.Selected ? Palette.Td.Amber : Palette.Td.BorderStrong, i == hover && it.Enabled ? Palette.Td.Button : Palette.Td.Card, 8);
                 RoundBox(c, new DipRect(r.X + 8, r.Y + 8, 36, 36), Palette.Td.BorderStrong, col.WithAlpha(36), 6);
                 DrawTowerIcon(c, it.SArg ?? "", r.X + 12, r.Y + 12, 28f, it.Enabled ? (byte)255 : (byte)110);
-                _p.Text(c, it.Text, PanelFont.JetBrainsMono, 11, new DipRect(r.X + 54, r.Y + 7, r.W - 130, 14), it.Enabled ? Palette.Td.Text : Palette.Td.Muted);
-                _p.Text(c, it.Right ?? "", PanelFont.JetBrainsMono, 11, new DipRect(r.X + r.W - 76, r.Y + 7, 66, 14), it.Enabled ? Palette.Td.Amber : Palette.Td.Dim, TextAlign.Right);
-                if (it.Sub is not null) DrawWrapped(c, it.Sub, new DipRect(r.X + 54, r.Y + 24, r.W - 64, 24), it.Enabled ? Palette.Td.Muted : Palette.Td.Dim);
+                _p.Text(c, it.Text, PanelFont.JetBrainsMono, 14, new DipRect(r.X + 54, r.Y + 5, r.W - 130, 18), it.Enabled ? Palette.Td.Text : Palette.Td.Muted);
+                if (it.Right is not null) _p.Text(c, it.Right, PanelFont.JetBrainsMono, 14, new DipRect(r.X + r.W - 76, r.Y + 5, 66, 18), it.Enabled ? Palette.Td.Amber : Palette.Td.Dim, TextAlign.Right);
+                if (it.Sub is not null) DrawWrappedSized(c, it.Sub, new DipRect(r.X + 54, r.Y + 25, r.W - 64, 24), it.Enabled ? Palette.Td.Muted : Palette.Td.Dim, 14);
                 if (it.Highlight) DrawHighlight(c, r);
             }
             return;
@@ -932,6 +938,18 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     // Ícone da torre (sprite do design, TdArtMap) pré-escalado por altura física e cacheado: desenhado em pixels inteiros.
     private void DrawTowerIcon(SKCanvas c, string towerId, float xDip, float yDip, float heightDip, byte alpha)
     {
+        var vectorIcon = towerId switch
+        {
+            "functions" => TdIcon.Functions, "cosmos" => TdIcon.Cosmos, "sentinel" => TdIcon.Sentinel,
+            "vault" => TdIcon.Vault, "backup" => TdIcon.Backup, "cdn" => TdIcon.Cdn,
+            "queue" => TdIcon.Queue, "policy" => TdIcon.Policy, "aks" => TdIcon.Aks,
+            "pipeline" => TdIcon.Pipeline, _ => TdIcon.None,
+        };
+        if (vectorIcon != TdIcon.None)
+        {
+            TdIconPainter.Draw(c, vectorIcon, _p.Px(xDip), _p.Px(yDip), _p.Px(heightDip), Palette.Td.Text.WithAlpha(alpha), Palette.Td.Amber.WithAlpha(alpha));
+            return;
+        }
         if (!TdArtMap.TryTower(towerId, out var e)) return;
         int hpx = Math.Max(1, (int)MathF.Round(_p.Px(heightDip)));
         if (!_icons.TryGetValue((towerId, hpx), out var img))

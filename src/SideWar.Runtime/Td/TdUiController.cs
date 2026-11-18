@@ -302,6 +302,7 @@ public sealed partial class TdUiController
             case TdUiAction.AutoStartToggle:
                 _send(new SetAutoStart(_match().AutoStart == AutoStartMode.Off ? AutoStartMode.Countdown : AutoStartMode.Off, 15));
                 Changed?.Invoke(); break;
+            case TdUiAction.TowerCategory: _towerCategory = item.SArg ?? "attack"; Changed?.Invoke(); break;
             case TdUiAction.TowerPage: _towerPage = Math.Max(0, _towerPage + item.Arg); Changed?.Invoke(); break;
             case TdUiAction.OpenTower: OpenInspector(item.Arg); break;
             case TdUiAction.Reposition:
@@ -731,7 +732,7 @@ public sealed partial class TdUiController
         long min = 0;
         for (int i = 0; i < towers.Length; i++)
         {
-            if (m.StageId < towers[i].UnlockStage) continue;
+            if (m.UnlockedTowerStage < towers[i].UnlockStage) continue;
             long cost = m.NextTowerCost(i);
             if (min == 0 || cost < min) min = cost;
         }
@@ -819,6 +820,8 @@ public sealed partial class TdUiController
     };
 
     public const float QuickWidth = 340f, QuickHeader = 28f, QuickCardH = 52f;
+    private string _towerCategory = "attack";
+    private static readonly (string Id, string Name)[] TowerCategories = [("attack", "Ataque"), ("control", "Controle"), ("support", "Suporte"), ("economy", "Economia")];
 
     /// <summary>Painel rápido (Partida.dc.html): cartão por torre com sprite, nome, descrição curta e preço âmbar; clicar escolhe sem pausar.</summary>
     private TdPopoverView BuildQuickTowers(TdMatchState m)
@@ -827,19 +830,27 @@ public sealed partial class TdUiController
         float w = QuickWidth;
         bool tut = _onb is not null && ComputeStep(m) == TdTutorialStep.Tower;
         bool marked = false;
+        int tabs = 0;
+        foreach (var (id, name) in TowerCategories)
+        {
+            if (!m.Content.Towers.Any(t => t.Category == id && t.UnlockStage <= m.UnlockedTowerStage)) continue;
+            items.Add(new TdUiItem(new DipRect(8 + tabs++ * 81, QuickHeader, 77, 24), TdUiKind.Button, name, TdUiAction.TowerCategory, SArg: id, Selected: _towerCategory == id));
+        }
+        int row = 0;
         for (int i = 0; i < m.Content.Towers.Length; i++)
         {
             var d = m.Content.Towers[i];
+            if (d.Category != _towerCategory || m.UnlockedTowerStage < d.UnlockStage) continue;
             long price = m.NextTowerCost(i);
-            bool locked = m.StageId < d.UnlockStage;
+            bool locked = m.UnlockedTowerStage < d.UnlockStage;
             bool enabled = !locked && m.Credits >= price;
             bool hl = tut && !marked && enabled;
             if (hl) marked = true;
-            items.Add(new TdUiItem(new DipRect(8, QuickHeader + i * (QuickCardH + 4), w - 16, QuickCardH), TdUiKind.Button, d.Name,
+            items.Add(new TdUiItem(new DipRect(8, QuickHeader + 28 + row++ * (QuickCardH + 4), w - 16, QuickCardH), TdUiKind.Button, d.Name,
                 TdUiAction.ChooseTower, SArg: d.Id, Right: locked ? $"fase {d.UnlockStage}" : $"${price}", Sub: TowerBlurb(d), Enabled: enabled,
                 Selected: _placementType == d.Id, Highlight: hl));
         }
-        float h = QuickHeader + m.Content.Towers.Length * (QuickCardH + 4) + 4;
+        float h = QuickHeader + 28 + row * (QuickCardH + 4) + 4;
         return new TdPopoverView(BuildActive ? "TORRES   Toque na faixa" : "TORRES   Escolha uma torre", [.. items], w, h, 0, Quick: true);
     }
 
@@ -1190,7 +1201,7 @@ public sealed partial class TdUiController
         for (int i = 0; i < towers.Length; i++)
         {
             var d = towers[i];
-            bool locked = m.StageId < d.UnlockStage;
+            bool locked = m.UnlockedTowerStage < d.UnlockStage;
             int owned = m.TowerCount(i);
             long price = m.NextTowerCost(i); // custo crescente por tipo (SDD-29 §5.1)
             bool poor = m.Credits < price;

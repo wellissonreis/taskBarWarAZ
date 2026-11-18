@@ -7,6 +7,25 @@ namespace SideWar.Core.Tests;
 
 public sealed class TdAzureTowersTests
 {
+    [Theory]
+    [InlineData(0, 3)]
+    [InlineData(1, 5)]
+    [InlineData(2, 7)]
+    [InlineData(3, 10)]
+    [InlineData(4, 13)]
+    [InlineData(5, 15)]
+    public void TowerUnlockUsesProfileRatherThanStartingStage(int completed, int expected)
+    {
+        var content = TdContentLoader.LoadEmbedded();
+        var options = TdMatchOptions.Classic with { HighestCompletedStage = completed };
+        var early = TdMatchState.Create(content, 1, Rng.Seed(1, 54), null, options);
+        var late = TdMatchState.Create(content, 6, Rng.Seed(1, 54), null, options);
+        Assert.Equal(expected, content.Towers.Count(t => t.UnlockStage <= early.UnlockedTowerStage));
+        Assert.Equal(early.UnlockedTowerStage, late.UnlockedTowerStage);
+        if (completed < 5)
+            Assert.Equal(SideWar.Core.Simulation.CommandReason.TowerLocked, late.Apply(new BuildTower("vault", 1100)).Reason);
+    }
+
     private static TdMatchState Arena(string enemy, int count = 1, double armor = 0)
     {
         var c = TdContentLoader.LoadEmbedded();

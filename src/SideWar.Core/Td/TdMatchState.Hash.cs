@@ -13,6 +13,7 @@ public sealed partial class TdMatchState
         var h = StateHasher.Create();
         h.AddString(_content.ContentHash);
         h.AddInt32(_stage.Id);
+        if (_options.HighestCompletedStage is int highestCompleted) h.AddInt32(highestCompleted);
         h.AddByte((byte)Phase);
         h.AddInt64(Tick);
         h.AddInt64(Frame);

@@ -118,6 +118,10 @@ public sealed partial class TdMatchState
     public int StageId => _stage.Id;
     /// <summary>Número absoluto da fase na corrida (1, 2, … 6, 7, …); sobe a cada <see cref="TdEventType.StageCleared"/>. Escala HP e destrava torres/habilidades.</summary>
     public int StageNumber => _stageNumber;
+    /// <summary>Maior fase liberada pelo perfil e pelas fases concluídas nesta corrida.</summary>
+    public int UnlockedTowerStage => _options.HighestCompletedStage is int highest
+        ? Math.Max(highest + 1, _stageClears > 0 ? Math.Min(_stageNumber, _content.Stages.Stages.Length) : 1)
+        : _stageNumber;
     /// <summary>Volta completa pelas fases do conteúdo (0 até concluir a última).</summary>
     public int Cycle => (_stageNumber - 1) / _content.Stages.Stages.Length;
     public TdMatchOptions Options => _options;
@@ -395,7 +399,7 @@ public sealed partial class TdMatchState
         int di = cmd.TowerId is null ? -1 : TowerDefIndex(cmd.TowerId);
         if (di < 0) return Reject(CommandReason.TowerNotFound);
         var def = _content.Towers[di];
-        if (_stageNumber < def.UnlockStage) return Reject(CommandReason.TowerLocked);
+        if (UnlockedTowerStage < def.UnlockStage) return Reject(CommandReason.TowerLocked);
         if (def.Stats.TryGetValue("maxPerPlayer", out var limit) && TowerCount(di) >= limit) return Reject(CommandReason.TowerTypeLimit);
         var reason = ResolvePlacement(cmd.X, 0, out int px);
         if (reason != CommandReason.None) return Reject(reason);
