@@ -1,6 +1,6 @@
 # SDD-37: Fusão de torres e mutações de inimigos
 
-**Status:** PROPOSTA, somente especificação · **Etapa:** ciclo TD · **Depende de:** SDD-28, SDD-29 §20, SDD-31, SDD-33 quando implementada, Core TD e conteúdo versionado · **Fichas:** TD.37a–e (§10). Valores iniciais propostos, não medidos; sujeitos a playtest.
+**Status:** PROPOSTA com decisões DP-37.1–8 fechadas (2026-11-18); TD.37a em implementação · **Etapa:** ciclo TD · **Depende de:** SDD-28, SDD-29 §20, SDD-31, SDD-33 quando implementada, Core TD e conteúdo versionado · **Fichas:** TD.37a–e (§10). Valores iniciais propostos, não medidos; sujeitos a playtest.
 
 ## 1. Objetivo e contexto
 
@@ -90,9 +90,11 @@ Os fatores são hipóteses iniciais: módulo de ataque 35%, suporte 5%, mutaçõ
 - **CA-37.7:** mesmas seed, conteúdo e comandos geram agendas e `StateHash` iguais; replay cobre fusão, venda, mutação com escudo e simultaneidade; incompatibilidade antiga é explícita e RNG principal permanece estável.
 - **CA-37.8:** TD.37e publica resultados e parâmetros efetivos com as medições de §7; sem dados, valores permanecem marcados não medidos.
 
-## 9. Riscos e decisões em aberto
+## 9. Riscos e decisões (todas DECIDIDAS em 2026-11-18)
 
-| ID | Questão | Recomendação |
+Todas as recomendações abaixo foram adotadas como decisão para as fichas TD.37a–e; reabrir só com pedido do usuário.
+
+| ID | Questão | Decisão (recomendação aplicada em 2026-11-18, antes da TD.37a) |
 |---|---|---|
 | DP-37.1 | Ordem da fusão e mesmo tipo | **Ordenada e A+A permitido**: base dita comportamento, módulo traz efeito limitado; preview torna diferença explícita. |
 | DP-37.2 | Liberação e pacing | **Fase absoluta 3 e marcos de §4**, calibrar com duração real; não acelerar ondas. |
