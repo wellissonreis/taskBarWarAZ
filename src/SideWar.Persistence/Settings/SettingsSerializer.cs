@@ -62,6 +62,9 @@ public static class SettingsSerializer
         w.WriteEndObject();
         w.WriteString("gameMode", s.GameMode.ToString());
         w.WriteStartObject("td");
+        w.WriteBoolean("alertsEnabled", s.Td.AlertsEnabled);
+        w.WriteBoolean("alertsAutoPause", s.Td.AlertsAutoPause);
+        w.WriteBoolean("alertsSound", s.Td.AlertsSound);
         w.WriteBoolean("autoStartEnabled", s.Td.AutoStartEnabled);
         w.WriteBoolean("autoRestart", s.Td.AutoRestart);
         w.WriteNumber("autoStartSeconds", s.Td.AutoStartSeconds);
@@ -147,6 +150,9 @@ public static class SettingsSerializer
             GameMode = EnumVal(p, "gameMode", d.GameMode),
             Td = new TdSettings
             {
+                AlertsEnabled = Bool(td, "alertsEnabled", d.Td.AlertsEnabled),
+                AlertsAutoPause = Bool(td, "alertsAutoPause", d.Td.AlertsAutoPause),
+                AlertsSound = Bool(td, "alertsSound", d.Td.AlertsSound),
                 AutoStartEnabled = Bool(td, "autoStartEnabled", d.Td.AutoStartEnabled),
                 AutoRestart = Bool(td, "autoRestart", d.Td.AutoRestart),
                 AutoStartSeconds = IntRange(td, "autoStartSeconds", TdSettings.MinAutoStartSeconds, TdSettings.MaxAutoStartSeconds, d.Td.AutoStartSeconds),

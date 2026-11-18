@@ -104,6 +104,13 @@ public sealed record TaskbarSettings
 /// <summary>Opções da partida TD (SDD-28 RF-28.3). Auto-início desligado por padrão; contagem de 5 a 60 s.</summary>
 public sealed record TdSettings
 {
+    /// <summary>Exibe alertas preditivos; independente da proteção automática.</summary>
+    public bool AlertsEnabled { get; init; } = true;
+    /// <summary>Pausa diante de alertas críticos.</summary>
+    public bool AlertsAutoPause { get; init; } = true;
+    /// <summary>Som opcional dos alertas.</summary>
+    public bool AlertsSound { get; init; }
+
     public const int MinAutoStartSeconds = 5;
     public const int MaxAutoStartSeconds = 60;
     public const int AutoRestartSeconds = 8;

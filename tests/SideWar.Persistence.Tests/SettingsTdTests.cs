@@ -10,6 +10,24 @@ public class SettingsTdTests
 {
     private static readonly DateTime Now = new(2026, 11, 16, 12, 0, 0, DateTimeKind.Utc);
 
+    [Fact]
+    public void Alert_options_migrate_and_roundtrip_independently()
+    {
+        var old = ReadPayload("{\"td\":{\"autoRestart\":true}}").Td;
+        Assert.True(old.AlertsEnabled);
+        Assert.True(old.AlertsAutoPause);
+        Assert.False(old.AlertsSound);
+        Assert.True(old.AutoRestart);
+
+        var fs = new FakeFileSystem();
+        var store = new SettingsStore(fs, "/data", utcNow: () => Now);
+        Assert.True(store.Save(new AppSettings { Td = new TdSettings { AlertsEnabled = false, AlertsAutoPause = true, AlertsSound = true } }));
+        var result = store.Load().Settings.Td;
+        Assert.False(result.AlertsEnabled);
+        Assert.True(result.AlertsAutoPause);
+        Assert.True(result.AlertsSound);
+    }
+
     private static AppSettings ReadPayload(string json)
     {
         using var doc = JsonDocument.Parse(json);
