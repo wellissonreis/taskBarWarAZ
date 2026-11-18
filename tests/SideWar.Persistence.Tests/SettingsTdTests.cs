@@ -195,4 +195,15 @@ public class SettingsTdTests
         Assert.True(back.Td.ShowIncome);
         Assert.True(back.Td.DiscreetMode);
     }
+
+    [Fact] // TD.40b2
+    public void Alert_muted_mask_defaults_to_zero_survives_old_files_and_round_trips()
+    {
+        Assert.Equal(0, ReadPayload("{\"td\":{\"alertsEnabled\":true}}").Td.AlertsMutedMask);
+        var on = new AppSettings { Td = new TdSettings { AlertsMutedMask = 0b1010 } };
+        using var ms = new MemoryStream();
+        using (var w = new Utf8JsonWriter(ms)) SettingsSerializer.Write(w, on);
+        using var doc = JsonDocument.Parse(ms.ToArray());
+        Assert.Equal(0b1010, SettingsSerializer.Read(doc.RootElement).Td.AlertsMutedMask);
+    }
 }

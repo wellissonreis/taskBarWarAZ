@@ -110,6 +110,8 @@ public sealed record TdSettings
     public bool AlertsAutoPause { get; init; } = true;
     /// <summary>Som opcional dos alertas.</summary>
     public bool AlertsSound { get; init; }
+    /// <summary>Tipos de alerta (índice do <c>TdAlertType</c> = bit) em que o usuário escolheu "não pausar por este tipo".</summary>
+    public int AlertsMutedMask { get; init; }
 
     public const int MinAutoStartSeconds = 5;
     public const int MaxAutoStartSeconds = 60;
