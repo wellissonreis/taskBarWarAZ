@@ -4,7 +4,8 @@ SIDEWAR - TESTE COM AMIGOS
 O que e: um jogo de defesa (tower defense) que roda como uma faixa discreta sobre a
 barra de tarefas do Windows, para jogar enquanto voce trabalha. Versao de teste.
 
-Requisitos: Windows 11 (ou Windows 10 recente) x64. Nao precisa instalar .NET.
+Requisitos: Windows 10 22H2 x64 (minimo 10.0.19041) ou Windows 11 x64.
+Windows 10 ainda nao foi testado em maquina real. Nao precisa instalar .NET.
 
 INSTALAR
 1. Extraia o ZIP inteiro numa pasta qualquer (clique direito > Extrair tudo).

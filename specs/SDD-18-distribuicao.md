@@ -92,10 +92,9 @@ Arquivo `src/SideWar.App/Properties/PublishProfiles/win-x64.pubxml`:
 
 ### RF-18.7: Requisitos mínimos
 
-- Windows 11 22H2 (build 22621) ou superior, x64.
+- Windows 10 22H2 x64 (mínimo 10.0.19041) ou Windows 11 x64; Windows 10 ainda não testado em máquina real.
 - GPU com driver WDDM.
 - 150 MB de disco.
-- Windows 10 **não** é suportado oficialmente.
 
 ## 6. Requisitos não funcionais
 

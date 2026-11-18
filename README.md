@@ -1,11 +1,11 @@
 # SideWar Desktop
 
-Jogo idle sobre a barra de tarefas do Windows 11. A etapa E0 contém somente a fundação da solução; o overlay e a simulação ainda não estão implementados. As fichas em [specs/PLANO.md](specs/PLANO.md) definem a execução.
+Jogo idle sobre a barra de tarefas do Windows 10 e 11. A etapa E0 contém somente a fundação da solução; o overlay e a simulação ainda não estão implementados. As fichas em [specs/PLANO.md](specs/PLANO.md) definem a execução.
 
 ## Pré-requisitos
 
 - WSL2: .NET SDK 10.0.x (mínimo 10.0.400), `rsync`, Bash e interop habilitado.
-- Windows 11 22H2 ou superior: .NET SDK 10.0.x (mínimo 10.0.400, `dotnet.exe` no PATH) e PowerShell 7 (`pwsh.exe`).
+- Windows 10 22H2 x64 (mínimo 10.0.19041) ou Windows 11 x64: .NET SDK 10.0.x (mínimo 10.0.400, `dotnet.exe` no PATH) e PowerShell 7 (`pwsh.exe`).
 - Opcionais: Windows Performance Toolkit (WPR/WPA) e PerfView para as etapas de desempenho.
 
 O `global.json` usa `latestFeature`, sem versões preview. As dependências diretas têm versões fixas em `Directory.Packages.props`. Não há chamadas de rede no produto; restore do SDK/NuGet requer acesso aos respectivos servidores.

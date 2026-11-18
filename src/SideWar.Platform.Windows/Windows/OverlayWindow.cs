@@ -64,7 +64,8 @@ public abstract class OverlayWindow : IDisposable
                 if (handle.IsNull) throw Win32Error.LastError($"CreateWindowEx({className})");
             }
             SetDwm(DWMWINDOWATTRIBUTE.DWMWA_TRANSITIONS_FORCEDISABLED, 1);
-            SetDwm(DWMWINDOWATTRIBUTE.DWMWA_WINDOW_CORNER_PREFERENCE, (int)DWM_WINDOW_CORNER_PREFERENCE.DWMWCP_DONOTROUND);
+            if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000))
+                SetDwm(DWMWINDOWATTRIBUTE.DWMWA_WINDOW_CORNER_PREFERENCE, (int)DWM_WINDOW_CORNER_PREFERENCE.DWMWCP_DONOTROUND);
             SetDwm(DWMWINDOWATTRIBUTE.DWMWA_EXCLUDED_FROM_PEEK, 1);
             Surface = new LayeredSurface((nint)handle.Value);
             View = new PanelViewState();
@@ -200,7 +201,7 @@ public abstract class OverlayWindow : IDisposable
     }
 
     private unsafe void SetDwm(DWMWINDOWATTRIBUTE attribute, int value) =>
-        PInvoke.DwmSetWindowAttribute(handle, attribute, &value, sizeof(int)).ThrowOnFailure();
+        _ = PInvoke.DwmSetWindowAttribute(handle, attribute, &value, sizeof(int));
 
     private void CheckAccess()
     {

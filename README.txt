@@ -6,10 +6,9 @@ Este pacote contém o executável SideWar.exe e estes arquivos de texto.
 
 REQUISITOS (RF-18.7)
 
-- Windows 11 22H2 (build 22621) ou superior, x64.
+- Windows 10 22H2 x64 (mínimo 10.0.19041) ou Windows 11 x64; Windows 10 ainda não testado em máquina real.
 - Placa de vídeo com driver WDDM.
 - 150 MB de espaço em disco.
-- Windows 10 não é suportado oficialmente.
 - Não é preciso instalar o .NET: o runtime vem dentro do pacote (publicação self-contained).
 
 
