@@ -56,6 +56,7 @@ public sealed partial class TdMatchState
             h.AddDouble(e.X); h.AddDouble(e.Speed); h.AddDouble(e.Hp); h.AddDouble(e.MaxHp); h.AddDouble(e.Armor);
             if (_enemyStats[e.DefIndex].Replicator) h.AddBool(e.IsReplica);
             if (_enemyStats[e.DefIndex].ShieldHp > 0) h.AddDouble(e.ShieldHp);
+            if (e.Mutations != 0) { h.AddInt32(e.Mutations); if (_enemyStats[e.DefIndex].ShieldHp <= 0) h.AddDouble(e.ShieldHp); } // só mutados: escudo adicionado também entra
             if (_enemyStats[e.DefIndex].RevealRange > 0) h.AddInt32(e.SentinelMarkTicks);
             h.AddInt64(e.Gold); h.AddInt32(e.CoreDamage); h.AddBool(e.Flying);
             h.AddDouble(e.SlowMult); h.AddInt32(e.SlowTicks); h.AddInt32(e.ParalyzeTicks); h.AddInt32(e.ParalyzeGraceTicks); h.AddInt32(e.PushGraceTicks);
@@ -67,7 +68,7 @@ public sealed partial class TdMatchState
         {
             h.AddInt32(w.Number); h.AddInt64(w.StartTick); h.AddInt32(w.NextSpawn); h.AddInt32(w.Alive); h.AddBool(w.Leaked);
             h.AddInt32(w.Spawns.Length);
-            foreach (var s in w.Spawns) { h.AddInt64(s.DueTick); h.AddInt32(s.EnemyIndex); }
+            foreach (var s in w.Spawns) { h.AddInt64(s.DueTick); h.AddInt32(s.EnemyIndex); if (s.Mutations != 0) { h.AddByte(1); h.AddInt32(s.Mutations); } }
         }
         h.AddInt32(_nodes.Count);
         foreach (var n in _nodes)
@@ -86,6 +87,7 @@ public sealed partial class TdMatchState
         h.AddInt64(Fragments);
         h.AddBool(_hasLeaked);
         if (!_options.IsClassic) { h.AddBool(_options.ContinuousWaves); h.AddBool(_options.PersistentRun); h.AddInt32(_stageNumber); h.AddInt32(_stageClears); } // só fora do modo clássico: os hashes antigos não mudam
+        if (!_options.IsClassic) { h.AddUInt64(_mutSeed); h.AddInt32(_runWaves); foreach (int d in _mutDebut) h.AddInt32(d); } // mutações (SDD-37): semente derivada, ondas iniciadas e estreias
         if (!_options.IsClassic && _options.LegacyRunes > 0) h.AddInt32(_options.LegacyRunes);
         h.AddUInt64(_rng.State);
         h.AddUInt64(_rng.Inc);

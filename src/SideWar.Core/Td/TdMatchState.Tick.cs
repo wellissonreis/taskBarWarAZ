@@ -50,7 +50,7 @@ public sealed partial class TdMatchState
             {
                 if (_enemies.Count >= rules.MaxEnemiesOnField) return; // teto de 44 em campo (SDD-12): o spawn espera
                 var sp = w.Spawns[w.NextSpawn++];
-                _enemies.Add(MakeEnemy(sp.EnemyIndex, w.Number, TdWorld.PathLength));
+                _enemies.Add(MakeEnemy(sp.EnemyIndex, w.Number, TdWorld.PathLength, sp.Mutations));
                 w.Alive++;
             }
         }

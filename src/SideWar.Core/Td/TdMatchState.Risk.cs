@@ -22,7 +22,7 @@ public sealed partial class TdMatchState
             for (int i = wave.NextSpawn; i < wave.Spawns.Length && wave.Spawns[i].DueTick <= Tick + 1 - wave.StartTick; i++)
             {
                 var stats = _enemyStats[wave.Spawns[i].EnemyIndex];
-                AddRisk(wave.Spawns[i].EnemyIndex, TdWorld.PathLength, stats.Speed, stats.CoreDamage, true, false, 0);
+                AddRisk(wave.Spawns[i].EnemyIndex, TdWorld.PathLength, wave.Spawns[i].Mutations == 0 ? stats.Speed : SpawnSpeed(wave.Spawns[i]), stats.CoreDamage, true, false, 0);
             }
         return damage;
 

@@ -13,6 +13,7 @@ public sealed partial class TdMatchState
         c._abilityCd = (int[])_abilityCd.Clone();
         c._abilityActive = (int[])_abilityActive.Clone();
         c._abilityUses = (int[])_abilityUses.Clone();
+        c._mutDebut = (int[])_mutDebut.Clone();
         c._towers = [.. _towers];
         c._enemies = [.. _enemies];
         c._active = [.. _active.Select(w => w.Copy())];

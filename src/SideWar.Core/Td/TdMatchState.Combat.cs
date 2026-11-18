@@ -703,15 +703,16 @@ public sealed partial class TdMatchState
         Emit(TdEventType.BossSplit, boss.Id, splits * st.SplitCount);
     }
 
-    private TdEnemy MakeEnemy(int defIndex, int wave, double x)
+    private TdEnemy MakeEnemy(int defIndex, int wave, double x, ushort mutations = 0)
     {
         var st = _enemyStats[defIndex];
         double hp = st.IsBoss ? st.Hp : ScaledHp(st.Hp, wave);
-        return new TdEnemy
+        var e = new TdEnemy
         {
             Id = _nextEnemyId++, Wave = wave, DefIndex = defIndex, IsBoss = st.IsBoss, X = x, Speed = st.Speed,
             Hp = hp, MaxHp = hp, ShieldHp = st.ShieldHp, Armor = st.Armor, Gold = st.Gold, CoreDamage = st.CoreDamage, Flying = st.Flying,
             SlowMult = 1.0, AbilityCdTicks = st.ActInitialCdTicks,
         };
+        return mutations == 0 || st.IsBoss ? e : ApplyMutations(e, st, mutations);
     }
 }

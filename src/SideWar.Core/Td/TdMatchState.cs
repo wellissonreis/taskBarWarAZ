@@ -36,6 +36,10 @@ public sealed partial class TdMatchState
     private HashSet<int> _held = [];
     private List<TdEvent> _events = [];
     private Rng _rng;
+    // Mutações (SDD-37 §4): semente derivada (não consome o RNG principal), ondas iniciadas na corrida e estreia (onda absoluta) por traço.
+    private readonly ulong _mutSeed;
+    private int _runWaves;
+    private int[] _mutDebut;
     private SideWar.Core.Simulation.StripLayout? _layout;
     private int _nextTowerId = 1;
     private int _nextEnemyId = 1;
@@ -56,6 +60,8 @@ public sealed partial class TdMatchState
         _stage = stage;
         _waves = waves;
         _rng = rng;
+        _mutSeed = MutationSeed(rng.State, rng.Inc);
+        _mutDebut = new int[content.Mutations.Traits.Length];
         RunId = $"{rng.State:x}-{rng.Inc:x}";
         _enemyStats = TdEnemyStats.Build(content);
         _metaNodes = new HashSet<string>(metaNodes ?? [], StringComparer.Ordinal);
@@ -458,9 +464,11 @@ public sealed partial class TdMatchState
     private void BeginWave(int w)
     {
         var def = _waves[w - 1];
-        var spawns = new List<(long Due, int Seq, int Index, bool Boss)>();
+        var spawns = new List<(long Due, int Seq, int Index, bool Boss, ushort Mut)>();
         double jitter = _content.Stages.Rules.SpawnJitter;
         int seq = 0;
+        _runWaves++;
+        var plan = PlanMutations(_runWaves, _stageNumber, def, _mutDebut);
         foreach (var g in def.Groups)
         {
             int idx = Array.FindIndex(_enemyStats, s => s.Id == g.Enemy);
@@ -469,10 +477,10 @@ public sealed partial class TdMatchState
                 double r = _rng.NextUInt() / 4294967296.0;
                 double sec = g.Offset + i * g.Interval + (2.0 * r - 1.0) * jitter * g.Interval;
                 long due = Math.Max(0L, (long)Math.Round(sec * TdWorld.TicksPerSecond, MidpointRounding.ToEven));
-                spawns.Add((due, seq++, idx, _enemyStats[idx].IsBoss));
+                spawns.Add((due, seq, idx, _enemyStats[idx].IsBoss, plan[seq])); seq++;
             }
         }
-        var ordered = spawns.OrderBy(s => s.Due).ThenBy(s => s.Seq).Select(s => new TdSpawn(s.Due, s.Index, s.Boss)).ToArray();
+        var ordered = spawns.OrderBy(s => s.Due).ThenBy(s => s.Seq).Select(s => new TdSpawn(s.Due, s.Index, s.Boss, s.Mut)).ToArray();
         _active.Add(new TdActiveWave(w, Tick, ordered, def.BonusFactor));
         WaveNumber = w;
         Phase = MatchPhase.Onda;
@@ -584,6 +592,8 @@ internal sealed class TdEnemyStats
     public double Split1 { get; init; }
     public double Split2 { get; init; }
     public int SplitCount { get; init; }
+    /// <summary>Traços nativos do conteúdo (compatibilidade com mutações).</summary>
+    public string[] NativeTraits { get; init; } = [];
     public int InvulnTicks { get; init; }
     public double Inv1 { get; init; }
     public double Inv2 { get; init; }
@@ -601,7 +611,7 @@ internal sealed class TdEnemyStats
             list.Add(new()
             {
                 Id = e.Id, IsBoss = false, Hp = e.Hp, Speed = e.Speed, Armor = e.Armor, Gold = e.Gold, CoreDamage = e.CoreDamage,
-                Flying = e.Traits.Contains("flying"), Armored = e.Traits.Contains("armored"),
+                Flying = e.Traits.Contains("flying"), Armored = e.Traits.Contains("armored"), NativeTraits = e.Traits,
                 Replicator = e.Traits.Contains("replicator"), CopyHpFraction = P(p, "copyHpFraction"),
                 ShieldHp = P(p, "shieldHp"), RevealRange = P(p, "revealRange"),
                 RegenPct = P(p, "regenPctPerSecond"), RegenDelayTicks = T(P(p, "regenDelaySeconds")),
@@ -616,7 +626,7 @@ internal sealed class TdEnemyStats
             list.Add(new()
             {
                 Id = b.Id, IsBoss = true, Hp = b.Hp, Speed = b.Speed, Armor = b.Armor, Gold = b.Gold, CoreDamage = b.CoreDamage,
-                Flying = b.Traits.Contains("flying"), Armored = b.Traits.Contains("armored"),
+                Flying = b.Traits.Contains("flying"), Armored = b.Traits.Contains("armored"), NativeTraits = b.Traits,
                 SlowCap = b.SlowCap, ParalysisImmune = b.ParalysisImmune,
                 RegenPct = P(p, "regenPctPerSecond"), RegenDelayTicks = T(P(p, "regenDelaySeconds")),
                 ActRange = P(p, "encryptRangeUnits"), ActDisableTicks = enc ? T(P(p, "encryptSeconds")) : 0,
