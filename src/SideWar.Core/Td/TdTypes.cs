@@ -109,6 +109,8 @@ public struct TdEnemy
     public long Gold { get; set; }
     public int CoreDamage { get; set; }
     public bool Flying { get; set; }
+    /// <summary>Máscara dos traços de mutação ADICIONADOS (SDD-37 RF-37.7; bit = índice em <c>td-mutations.json</c>). 0 = sem mutação. Réplicas e chefes sempre 0.</summary>
+    public ushort Mutations { get; set; }
     public double SlowMult { get; set; }
     public int SlowTicks { get; set; }
     public int ParalyzeTicks { get; set; }
@@ -131,7 +133,7 @@ public struct TdEnemy
 }
 
 /// <summary>Spawn agendado: <c>DueTick</c> relativo ao início da onda (ticks de mundo).</summary>
-public readonly record struct TdSpawn(long DueTick, int EnemyIndex, bool IsBoss);
+public readonly record struct TdSpawn(long DueTick, int EnemyIndex, bool IsBoss, ushort Mutations = 0);
 
 /// <summary>Onda em andamento (várias podem se sobrepor, RF-28.3).</summary>
 public sealed class TdActiveWave
@@ -152,6 +154,8 @@ public sealed class TdActiveWave
     public int Alive { get; internal set; }
     public bool Leaked { get; internal set; }
     public bool SpawnsDone => NextSpawn >= Spawns.Length;
+    /// <summary>Agenda efetiva da onda (inclui os traços de mutação escolhidos por spawn).</summary>
+    public IReadOnlyList<TdSpawn> Agenda => Spawns;
     internal TdActiveWave Copy() => new(Number, StartTick, Spawns, BonusFactor) { NextSpawn = NextSpawn, Alive = Alive, Leaked = Leaked };
     public int SpawnCount => Spawns.Length;
 }
