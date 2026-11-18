@@ -54,7 +54,7 @@ public sealed partial class TdUiController
     public bool NoticeOpen => _noticeText is not null && !BossHidden && _now() < _noticeUntil;
     public string? NoticeText => NoticeOpen ? _noticeText : null;
     /// <summary>Qualquer popover pequeno ancorado ao chip: painel rápido, pergunta-bônus, aviso de fase ou cartão de fim. Nunca ativa janela.</summary>
-    public bool CornerPopover => QuickTowersOpen || RuneWindowOpen || EndCardOpen || NoticeOpen || RuneCardOpen || ((Mode == TdUiMode.None || QuickTowersOpen) && QuizActive);
+    public bool CornerPopover => QuickTowersOpen || RuneWindowOpen || EndCardOpen || NoticeOpen || RuneCardOpen || AlertCardOpen || ((Mode == TdUiMode.None || QuickTowersOpen) && QuizActive);
     private int _chosenX = -1;       // X lógico já escolhido (passo "escolher a torre"); -1 = ainda no passo do ponto
     private int _moveTowerId;        // > 0: reposicionando uma torre SEM POSIÇÃO (sem escolha de tipo)
     private int _ghostX = -1;
@@ -222,6 +222,7 @@ public sealed partial class TdUiController
                 if (!ModalOpen && !RuneWindowOpen && _match().Phase is not (MatchPhase.Vitoria or MatchPhase.Derrota)) OpenRuneWindow(fromCard: true);
                 Changed?.Invoke();
                 break;
+            case TdUiAction.AlertSave or TdUiAction.AlertFall or TdUiAction.AlertDismiss or TdUiAction.AlertMute: ActivateAlert(item.Action); break;
             case TdUiAction.RuneTutorialDismiss: DismissRuneCard(); Changed?.Invoke(); break;
             case TdUiAction.QuickTowers:
                 if (QuickTowersOpen) Close();
@@ -363,6 +364,7 @@ public sealed partial class TdUiController
         SyncOnboarding(m);
         SyncQuiz(m);
         SyncRuneCard(m);
+        SyncAlertCard();
         UpdateModalPause();
         if (m.Phase is MatchPhase.Vitoria or MatchPhase.Derrota)
         {
@@ -460,6 +462,7 @@ public sealed partial class TdUiController
     public void CollapseOutside()
     {
         _outsideCollapsed = true;
+        if (!AlertCritical) _acHidden = true; // a pausa crítica exige escolha explícita: não recolhe
         _returnToEnd = false;
         _rcPending = false;
         _tipText = null;
@@ -796,7 +799,10 @@ public sealed partial class TdUiController
     public TdPopoverView? BuildPopover()
     {
         var m = _match();
-        if (BossHidden || _outsideCollapsed) return null;
+        if (BossHidden) return null;
+        if (AlertCritical) return BuildAlertCard();
+        if (_outsideCollapsed) return null;
+        if (AlertWarningOpen) return BuildAlertCard();
         if (!BuildActive && (Mode == TdUiMode.None || QuickTowersOpen) && _quizQ is not null && QuizPhaseOk(m)) return BuildQuiz(m);
         if (!BuildActive && NoticeOpen && (Mode == TdUiMode.None || QuickTowersOpen)) return BuildNotice();
         if (!BuildActive && RuneCardOpen && (Mode == TdUiMode.None || QuickTowersOpen)) return BuildRuneCard();
