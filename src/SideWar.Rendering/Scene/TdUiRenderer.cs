@@ -352,12 +352,15 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
                 tx = r.X + photo + 16;
             }
             else if (it.Icon != TdIcon.None) { DrawIcon(c, it.Icon, tx, r.Y + (r.H - 14) / 2, 14, fg); tx += 22; }
-            _p.Text(c, it.Text, PanelFont.JetBrainsMono, r.H >= 34 ? 12 : 10, new DipRect(tx, r.Y + Math.Max(2, (r.H - 13) / 2), r.W - (tx - r.X) - 10, 13), fg);
+            float bfs = it.FontSize > 0f ? it.FontSize : r.H >= 34 ? 12 : 10, bh = it.FontSize > 0f ? it.FontSize * 1.3f : 13;
+            _p.Text(c, it.Text, PanelFont.JetBrainsMono, bfs, new DipRect(tx, r.Y + Math.Max(2, (r.H - bh) / 2), r.W - (tx - r.X) - 10, bh), fg);
             if (it.Right is not null) _p.Text(c, it.Right, PanelFont.JetBrainsMono, 10, new DipRect(r.X + 10, r.Y + Math.Max(2, (r.H - 13) / 2), r.W - 20, 13), Palette.Td.Amber, TextAlign.Right);
             return;
         }
         DrawItem(c, it, hover, 720, false);
     }
+
+    private static SKColor ModalToneColor(TdTone t) => t switch { TdTone.Warn or TdTone.Accent => Palette.Td.Amber, TdTone.Bad => Palette.Td.Red, TdTone.Good => Palette.Td.Green, TdTone.Dim => Palette.Td.Muted, _ => Palette.Td.Text };
 
     private void DrawModalLabel(SKCanvas c, in TdUiItem it)
     {
@@ -378,6 +381,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
                 _p.Text(c, it.Text, PanelFont.JetBrainsMono, 16, r, Palette.Td.Text, TextAlign.Center);
                 return;
             case "c13": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 11, r, Palette.Td.Muted, TextAlign.Center); return;
+            case "rewrap": DrawWrappedSized(c, it.Text, r, ModalToneColor(it.Tone), it.FontSize > 0f ? it.FontSize : TdUiController.RunEndFont); return;
             case "webbg": return; // desenhada antes dos itens (DrawRuneWeb)
             case "optname": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 12, r, Palette.Td.Text); return;
             case "c11l": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 9, r, Palette.Td.Muted); return;
@@ -737,8 +741,8 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         RoundBox(c, new DipRect(r.X + 12, r.Y + 12, 32, 32), Palette.Td.Amber.WithAlpha(36), Palette.Td.Amber.WithAlpha(36), 6);
         DrawIcon(c, TdIcon.Medal, r.X + 20, r.Y + 20, 16, Palette.Td.Amber);
         int colon = it.Text.IndexOf(':');
-        _p.Text(c, "Patente", PanelFont.JetBrainsMono, 9, new DipRect(r.X + 54, r.Y + 11, 120, 12), Palette.Td.Muted);
-        _p.Text(c, colon > 0 ? it.Text[(colon + 1)..].Trim() : it.Text, PanelFont.JetBrainsMono, 13, new DipRect(r.X + 54, r.Y + 25, 150, 18), Palette.Td.Amber);
+        _p.Text(c, "Patente", PanelFont.JetBrainsMono, 10, new DipRect(r.X + 54, r.Y + 9, 120, 13), Palette.Td.Muted);
+        _p.Text(c, colon > 0 ? it.Text[(colon + 1)..].Trim() : it.Text, PanelFont.JetBrainsMono, it.FontSize >= 14f ? it.FontSize : 13, new DipRect(r.X + 54, r.Y + 23, 220, 20), Palette.Td.Amber);
         if (it.Right is not null) _p.Text(c, it.Right, PanelFont.JetBrainsMono, 9, new DipRect(r.X + r.W - 190, r.Y + 17, 178, 12), Palette.Td.Muted, TextAlign.Right);
         _p.Fill(c, new DipRect(r.X + 12, r.Y + 50, r.W - 24, 6), Palette.Td.Background);
         _p.Fill(c, new DipRect(r.X + 12, r.Y + 50, Math.Max(2, (r.W - 24) * it.Fill), 6), Palette.Td.Amber);
@@ -978,7 +982,14 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             }
             else line = test;
         }
-        if (line.Length > 0) _p.Text(c, line, PanelFont.JetBrainsMono, size, new DipRect(box.X, box.Y + n * lineH, box.W, lineH), color);
+        if (line.Length > 0)
+        {
+            string fullLine = line;
+            // última linha: o que não cabe vira reticências (nunca sai da caixa nem invade o bloco seguinte)
+            while (line.Length > 1 && font.MeasureText(line) > max) line = line[..^1].TrimEnd();
+            if (line.Length < fullLine.Length) line = line.Length > 1 ? line[..^1].TrimEnd() + "…" : "…";
+            _p.Text(c, line, PanelFont.JetBrainsMono, size, new DipRect(box.X, box.Y + n * lineH, box.W, lineH), color);
+        }
     }
 
     // Duas linhas no máximo (quebra por palavra; reticências no excesso): RNF-28.3 pede a fraqueza completa legível.
