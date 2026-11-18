@@ -22,6 +22,7 @@ internal static class TdMechanicsContent
             ["td-enemies.json"] = Encoding.UTF8.GetBytes(Enemies + "\n"),
             ["td-fusion.json"] = Encoding.UTF8.GetBytes(Fusion + "\n"),
             ["td-meta.json"] = Encoding.UTF8.GetBytes(Meta + "\n"),
+            ["td-mutations.json"] = TdContentLoader.ReadEmbedded()["td-mutations.json"], // mutações (TD.37c): só entram com 20+ ondas na corrida, fora dos testes de mecânica
             ["td-runes.json"] = TdContentLoader.ReadEmbedded()["td-runes.json"], // regras e efeitos das runas atuais (TD.21)
             ["td-stages.json"] = Encoding.UTF8.GetBytes(Stages + "\n"),
             ["td-towers.json"] = Encoding.UTF8.GetBytes(Towers + "\n"),
