@@ -1110,6 +1110,12 @@ public sealed partial class TdUiController
         for (int i = 0; i < modes.Length; i++)
             items.Add(new(new DipRect(16 + i * 136, 52, 132, 36), TdUiKind.Button, labels[i],
                 TdUiAction.ModalTab, (int)modes[i], Selected: Mode == modes[i]));
+        if (Mode == TdUiMode.End && view.Width == 720f && view.Height == 480f)
+        {
+            // TD.41: cartão de fim de corrida já vem em coordenadas da modal (blocos medidos, sem reescala).
+            items.AddRange(view.Items);
+            return new TdPopoverView($"{view.Title}   ¢{_match().Credits}", [.. items], 720, 480, 0);
+        }
         float factor = Math.Min(1f, 402f / Math.Max(1, view.Height));
         int towerRow = 0, categoryColumn = 0;
         if (Mode is TdUiMode.Menu or TdUiMode.Towers or TdUiMode.Help or TdUiMode.Runes)
@@ -1411,7 +1417,7 @@ public sealed partial class TdUiController
 
     private TdPopoverView BuildEnd(TdMatchState m)
     {
-        if (m.Phase == MatchPhase.Derrota && m.Options.PersistentRun) return BuildRunEnd(m);
+        if (m.Phase == MatchPhase.Derrota && m.Options.PersistentRun) return BuildRunEnd(m, !EndCardOpen);
         var s = new Stack(260f);
         bool won = m.Phase == MatchPhase.Vitoria;
         var r = m.Result;
@@ -1448,19 +1454,33 @@ public sealed partial class TdUiController
         return Finish(title, s, 0);
     }
 
-    private TdPopoverView BuildRunEnd(TdMatchState m)
+    /// <summary>TD.41: fonte (DIP) dos textos do cartão de fim de corrida e posição/margens do layout da modal 720×480.</summary>
+    public const float RunEndFont = 14f, RunEndModalMargin = 16f, RunEndModalTop = 100f, RunEndRankH = 62f;
+
+    /// <summary>
+    /// Cartão de fim de corrida em blocos empilhados e medidos (altura = linhas × fonte × fator + folga; nenhum bloco invade o seguinte).
+    /// <paramref name="modal"/>: coordenadas da modal 720×480 (conteúdo a partir de y=100, margem 16, botões lado a lado);
+    /// senão o cartão de 260 DIP do cantinho. Vazamentos/razão/advisor ficam em até 2 linhas (reticências no excesso).
+    /// </summary>
+    private TdPopoverView BuildRunEnd(TdMatchState m, bool modal)
     {
-        var s = new Stack(260f);
-        void Line(string text, TdTone tone = TdTone.Normal, float height = 20f)
+        float w = modal ? 720f : 260f;
+        var s = new Stack(w);
+        float x = modal ? RunEndModalMargin : Pad, bw = w - 2 * x, gap = modal ? 8f : 2f;
+        if (modal) s.Y = RunEndModalTop;
+        void Line(string text, TdTone tone = TdTone.Normal, int maxLines = 4)
         {
-            s.Add(TdUiKind.Label, text, height, tone: tone);
-            s.Items[^1] = s.Items[^1] with { FontSize = 14f };
+            int lines = Math.Min(maxLines, QuizLines(text, bw, RunEndFont));
+            float h = lines * RunEndFont * QuizLineFactor + 2f;
+            s.Items.Add(new TdUiItem(new DipRect(x, s.Y, bw, h), TdUiKind.Label, text, Tone: tone, FontSize: RunEndFont, SArg: modal ? "rewrap" : null));
+            s.Y += h + gap;
         }
         int waves = m.WavesReached;
-        Line($"Onda {waves} (fase {m.StageNumber})", TdTone.Normal);
+        Line($"Onda {waves} (fase {m.StageNumber})");
         Line(waves > _host.PreviousBestRunWaves ? "NOVO RECORDE" : $"Recorde {_host.PreviousBestRunWaves}", TdTone.Accent);
-        s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, s.Width - 2 * Pad, 24), TdUiKind.Bar, $"Patente: {TdRank.DisplayName(_host.Rank.Current)}", Tone: TdTone.Accent, Fill: (float)_host.Rank.Fraction, FontSize: 14f));
-        s.Y += 26;
+        float rankH = modal ? RunEndRankH : 24f;
+        s.Items.Add(new TdUiItem(new DipRect(x, s.Y, bw, rankH), TdUiKind.Bar, $"Patente: {TdRank.DisplayName(_host.Rank.Current)}", Tone: TdTone.Accent, Fill: (float)_host.Rank.Fraction, FontSize: RunEndFont));
+        s.Y += rankH + (modal ? gap : 2f);
         int earned = TdLegacy.Fragments(waves);
         int nextRunes = TdLegacy.StartingRunes(_host.LegacyTotal);
         Line($"+{earned} legado", TdTone.Good);
@@ -1469,22 +1489,35 @@ public sealed partial class TdUiController
         if (leaks.Length > 0)
         {
             string Name(TdLeakStat l) => l.IsBoss ? m.Content.Enemies.Bosses.FirstOrDefault(e => e.Id == l.EnemyId)?.Name ?? l.EnemyId : m.Content.Enemies.Enemies.FirstOrDefault(e => e.Id == l.EnemyId)?.Name ?? l.EnemyId;
-            Line("Vazou: " + string.Join(", ", leaks.Select(l => $"{Name(l)} x{l.Count}")), height: 40f);
+            Line("Vazou: " + string.Join(", ", leaks.Select(l => $"{Name(l)} x{l.Count}")), maxLines: 2);
         }
         var (_, reason, _, _) = DefeatTexts(m);
-        Line(reason, TdTone.Bad, 40f);
+        Line(reason, TdTone.Bad, 2);
         int unlocked = Enumerable.Range(1, _host.StageCount).Where(_host.StageUnlocked).DefaultIfEmpty(1).Max();
         var advice = TdAdvisor.Suggest(m.Content, m.Leaks, unlocked);
         if (advice is not null)
         {
             string tower = m.Content.Towers.First(t => t.Id == advice.TowerId).Name;
-            Line($"Advisor: {tower} contra {advice.Trait}.", TdTone.Accent, 40f);
+            Line($"Advisor: {tower} contra {advice.Trait}.", TdTone.Accent, 2);
         }
         if (_restartArmed) Line($"Recomecando em {Math.Max(0, (int)Math.Ceiling(_restartRemaining))} s");
+        if (modal)
+        {
+            float bwHalf = (bw - 8f) / 2f;
+            s.Items.Add(new TdUiItem(new DipRect(x, s.Y, bwHalf, 40f), TdUiKind.Button, "Recomecar", TdUiAction.Restart, Tone: TdTone.Good, FontSize: RunEndFont));
+            s.Items.Add(new TdUiItem(new DipRect(x + bwHalf + 8f, s.Y, bwHalf, 40f), TdUiKind.Button, "Ver runas", TdUiAction.ViewRunes, FontSize: RunEndFont));
+            s.Y += 40f + gap;
+            var items = new List<TdUiItem>(s.Items.Count + 1)
+            {
+                new(new DipRect(674, 4, 36, 36), TdUiKind.Button, "X", TdUiAction.Close),
+            };
+            items.AddRange(s.Items);
+            return new TdPopoverView("CORRIDA ENCERRADA", [.. items], 720, 480, 0);
+        }
         s.Add(TdUiKind.Button, "Recomecar", 36, TdUiAction.Restart, tone: TdTone.Good);
-        s.Items[^1] = s.Items[^1] with { FontSize = 14f };
+        s.Items[^1] = s.Items[^1] with { FontSize = RunEndFont };
         s.Add(TdUiKind.Button, "Ver runas", 36, TdUiAction.ViewRunes);
-        s.Items[^1] = s.Items[^1] with { FontSize = 14f };
+        s.Items[^1] = s.Items[^1] with { FontSize = RunEndFont };
         if (s.Y + Pad > _host.EndCardAvailableHeight)
         {
             int rank = s.Items.FindIndex(i => i.Kind == TdUiKind.Bar);
