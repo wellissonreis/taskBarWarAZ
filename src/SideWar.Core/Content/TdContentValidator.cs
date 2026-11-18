@@ -37,6 +37,7 @@ public static class TdContentValidator
         Meta(c.Meta, c.Abilities, e);
         Runes(c.Runes, e);
         Fusion(c, e);
+        Mutations(c.Mutations, e);
         return e;
     }
 
@@ -535,6 +536,49 @@ public static class TdContentValidator
                 case "periodicDamage": Req(e, P("intervalSeconds") > 0 && P("damagePct") > 0 && m!.Damage > 0, $"{o}: periodicDamage exige intervalSeconds, damagePct > 0 e módulo com dano"); break;
                 case "periodicSlow": Req(e, P("intervalSeconds") > 0 && m!.Stats.GetValueOrDefault("slowFactor") > 0, $"{o}: periodicSlow exige intervalSeconds > 0 e módulo com slowFactor"); break;
             }
+        }
+    }
+
+    // ---------------------------------------------------------------- mutações de inimigos (SDD-37 §4)
+
+    /// <summary>Máximo de traços (a máscara por inimigo é um <c>ushort</c>).</summary>
+    public const int MaxMutationTraits = 16;
+
+    private static void Mutations(TdMutationsDef m, List<string> e)
+    {
+        const string f = "td-mutations";
+        Req(e, m.RewardPerTrait >= 1 && m.RewardCap >= 1 && m.RewardCap <= 2, $"{f}: rewardPerTrait >= 1 e rewardCap em [1, 2]");
+        Req(e, m.SpeedMin > 0 && m.SpeedMax > m.SpeedMin, $"{f}: speedMin > 0 e speedMax > speedMin");
+        Req(e, m.DoubleGapWaves >= 1 && m.DoubleMinMutated >= 2 && m.MinEligibleForOne >= 1, $"{f}: doubleGapWaves >= 1, doubleMinMutated >= 2 e minEligibleForOne >= 1");
+        Req(e, m.Traits.Length is >= 2 and <= MaxMutationTraits, $"{f}.traits: de 2 a {MaxMutationTraits} traços");
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var t in m.Traits)
+            Req(e, Text(t.Id) && ids.Add(t.Id), $"{f}.traits: id vazio ou duplicado '{t.Id}'");
+        foreach (var t in m.Traits)
+        {
+            var o = $"{f}.traits.{t.Id}";
+            Req(e, Text(t.Name) && Text(t.Label), $"{o}: name e label não podem ser vazios");
+            Req(e, t.MinStage >= 1, $"{o}.minStage deve ser >= 1");
+            Req(e, t.HpMult > 0 && t.SpeedMult > 0 && t.ArmorAdd >= 0 && t.ShieldPct >= 0, $"{o}: hpMult e speedMult > 0; armorAdd e shieldPct >= 0");
+            Req(e, t.HpMult != 1 || t.SpeedMult != 1 || t.ArmorAdd > 0 || t.ShieldPct > 0 || t.Flying, $"{o}: traço sem efeito");
+            foreach (var x in t.Excludes)
+            {
+                Req(e, x != t.Id && ids.Contains(x), $"{o}.excludes: '{x}' inexistente ou o próprio traço");
+                var other = m.Traits.FirstOrDefault(y => y.Id == x);
+                Req(e, other is null || other.Excludes.Contains(t.Id), $"{o}.excludes: exclusão com '{x}' deve ser simétrica");
+            }
+        }
+        Req(e, m.Tiers.Length >= 1, $"{f}.tiers: pelo menos um degrau");
+        for (int i = 0; i < m.Tiers.Length; i++)
+        {
+            var t = m.Tiers[i];
+            var o = $"{f}.tiers[{i}]";
+            Req(e, t.MinStage >= 1 && t.MinWaves >= 0, $"{o}: minStage >= 1 e minWaves >= 0");
+            Req(e, t.MaxMutatedPct is > 0 and <= 0.3, $"{o}.maxMutatedPct deve estar em (0, 0,3] (pelo menos 70% sem mutação)");
+            Req(e, t.MaxDoubles >= -1 && t.DoublePct is >= 0 and <= 0.25, $"{o}: maxDoubles >= -1 e doublePct em [0, 0,25]");
+            if (i > 0)
+                Req(e, t.MinStage >= m.Tiers[i - 1].MinStage && t.MinWaves >= m.Tiers[i - 1].MinWaves && t.MaxMutatedPct >= m.Tiers[i - 1].MaxMutatedPct,
+                    $"{o}: degraus devem ser crescentes (fase, ondas e percentual)");
         }
     }
 }
