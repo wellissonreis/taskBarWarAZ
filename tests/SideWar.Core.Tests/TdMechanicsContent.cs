@@ -20,6 +20,7 @@ internal static class TdMechanicsContent
         {
             ["td-abilities.json"] = Encoding.UTF8.GetBytes(Abilities + "\n"),
             ["td-enemies.json"] = Encoding.UTF8.GetBytes(Enemies + "\n"),
+            ["td-fusion.json"] = Encoding.UTF8.GetBytes(Fusion + "\n"),
             ["td-meta.json"] = Encoding.UTF8.GetBytes(Meta + "\n"),
             ["td-runes.json"] = TdContentLoader.ReadEmbedded()["td-runes.json"], // regras e efeitos das runas atuais (TD.21)
             ["td-stages.json"] = Encoding.UTF8.GetBytes(Stages + "\n"),
@@ -31,6 +32,16 @@ internal static class TdMechanicsContent
         // Fontes de crédito congeladas (valores da TD.22): a recalibração da TD.29a de td-runes.json não mexe nos testes de mecânica.
         return content with { Runes = content.Runes with { CreditSources = new TdCreditSourcesDef(80, 60, 5, 40, 2, 40, 3, 120) } };
     }
+
+    // Fusão reduzida às 5 torres do conteúdo congelado (a validação exige papel para toda torre); os testes de fusão usam o conteúdo embarcado.
+    private const string Fusion = """
+{
+  "minStage": 3, "resolveOrder": ["base", "module", "aura"],
+  "roles": {"attack": ["bolt", "cannon"], "control": ["frost", "balancer"], "support": ["scaleset"], "economy": []},
+  "generic": {"attack": {"intervalSeconds": 3, "damagePct": 0.35}, "control": {"intervalSeconds": 3, "slowFactor": 0.85, "slowSeconds": 2}, "support": {"damageAuraBp": 500}, "economy": {"incomePct": 0.5}},
+  "pairs": [{"base": "frost", "module": "bolt", "name": "Gelo elétrico", "effect": "hitDamage", "params": {"damagePct": 0.35}}]
+}
+""";
 
     private const string Abilities = """
 [
