@@ -139,7 +139,7 @@ public sealed class TdScoreTests
     [Fact(DisplayName = "RF-28.21 Defeat has no crown, medals or score")]
     public void Defeat_NoRewards()
     {
-        var r = TdSanityBot.Run(Real, 1, TdBotProfile.SemContra, 100);
+        var r = TdSanityBot.Run(Real, 2, TdBotProfile.SemContra, 100);
         Assert.Equal(MatchPhase.Derrota, r.Phase);
         Assert.False(r.Match.Crown);
         Assert.Equal(TdMedals.None, r.Match.Medals);

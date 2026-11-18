@@ -1,7 +1,7 @@
 {
   "enemies": [
     { "id": "grunt",   "name": "Requisição",      "flavor": "O tráfego básico de qualquer serviço.", "hp": 40,  "speed": 40, "armor": 0, "gold": 6,  "coreDamage": 1, "introStage": 1, "traits": ["basic"],   "counters": ["bolt", "cannon"], "params": {} },
-    { "id": "runner",  "name": "Ping",            "flavor": "Rápido demais para defesas lentas.", "hp": 36,  "speed": 105, "armor": 0, "gold": 7,  "coreDamage": 1, "introStage": 1, "traits": ["fast"],    "counters": ["balancer", "frost", "bolt"], "params": {} },
+    { "id": "runner",  "name": "Ping",            "flavor": "Rápido demais para defesas lentas.", "hp": 36,  "speed": 90, "armor": 0, "gold": 7,  "coreDamage": 1, "introStage": 1, "traits": ["fast"],    "counters": ["balancer", "frost", "bolt"], "params": {} },
     { "id": "swarm",   "name": "Rajada",          "flavor": "Dezenas de pacotes minúsculos de uma vez.", "hp": 150,  "speed": 50, "armor": 0, "gold": 3,  "coreDamage": 1, "introStage": 3, "traits": ["swarm"],   "counters": ["cannon", "balancer", "bolt"], "params": {} },
     { "id": "armored", "name": "Pacote blindado", "flavor": "Dano fraco por tiro some na armadura.", "hp": 130, "speed": 32, "armor": 38, "gold": 12, "coreDamage": 2, "introStage": 2, "traits": ["armored"], "counters": ["cannon", "bolt", "frost"], "params": {} },
     { "id": "tank",    "name": "Tráfego pesado",  "flavor": "Testa o DPS total da defesa.", "hp": 420, "speed": 24, "armor": 2, "gold": 20, "coreDamage": 3, "introStage": 3, "traits": ["durable"], "counters": ["bolt", "cannon", "scaleset"], "params": {} },

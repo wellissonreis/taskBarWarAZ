@@ -35,7 +35,7 @@ public sealed class TdSanityBotTests
         return sb.ToString();
     }
 
-    private const ulong GoldenOptimizedStage3 = 12827909422465120495UL;
+    private const ulong GoldenOptimizedStage3 = 1455555630456412858UL;
     private const int Seeds = 20;
     private static readonly Lazy<TdBotResult[]> Matrix = new(() =>
     {
@@ -80,11 +80,22 @@ public sealed class TdSanityBotTests
         }
     }
 
-    [Fact(DisplayName = "TD.10 Cada fase exige o contra do seu conceito: quem o ignora perde (CA-28.6)")]
+    [Fact(DisplayName = "TD.10 Fases 2 a 6 exigem o contra do seu conceito: quem o ignora perde (CA-28.6)")]
     public void IgnoringTheCounter_Loses()
     {
-        for (int stage = 1; stage <= 6; stage++)
+        for (int stage = 2; stage <= 6; stage++)
             Assert.True(WinRate(stage, TdBotProfile.SemContra) == 0, $"fase {stage}: SemContra venceu {WinRate(stage, TdBotProfile.SemContra):P0}");
+    }
+
+    [Fact(DisplayName = "TD.35 Três torres alcançam pelo menos a onda 9 nas fases iniciais")]
+    public void ThreeTowers_SurviveEarlyWaves()
+    {
+        for (int stage = 1; stage <= 3; stage++)
+        {
+            string script = stage == 1 ? "+bolt@900 +frost@800 +bolt@600" : "+bolt@900 +cannon@700 +bolt@550";
+            for (ulong seed = 100; seed < 105; seed++)
+                Assert.True(TdSanityBot.Run(Content, stage, TdBotProfile.Medio, seed, script).WaveReached >= 9, $"fase {stage}, seed {seed}");
+        }
     }
 
     [Fact(DisplayName = "TD.10 Duração de partida de 7,5 a 15 min (DP-28.10) para quem vence, e as ondas terminam")]

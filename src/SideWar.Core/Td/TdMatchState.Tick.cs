@@ -39,7 +39,7 @@ public sealed partial class TdMatchState
     }
 
     /// <summary>Multiplicador de HP por volta completa depois da fase 6 (corrida infinita, TD.28a).</summary>
-    public const double CycleHpGrowth = 1.25;
+    public const double CycleHpGrowth = 1.4;
 
     private void SpawnDue()
     {
@@ -63,7 +63,7 @@ public sealed partial class TdMatchState
         double hp = baseHp;
         for (int i = 1; i < wave; i++) hp *= r.HpWaveGrowth;
         hp *= 1.0 + r.HpStageStep * (_stageNumber - 1);
-        for (int c = Cycle; c > 0; c--) hp *= CycleHpGrowth; // infinito: cada volta completa pelas fases fica 25% mais dura (multiplicação iterativa, ADR-026)
+        for (int c = Cycle; c > 0; c--) hp *= CycleHpGrowth; // infinito: cada volta completa pelas fases fica 40% mais dura (multiplicação iterativa, ADR-026)
         return hp;
     }
 
