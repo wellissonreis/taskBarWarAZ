@@ -138,6 +138,24 @@ public sealed class TdUiControllerTests
         v.Items.First(i => i.Action == a && (sarg is null || i.SArg == sarg));
 
     [Fact]
+    public void Categories_filter_horizontal_slots_and_recover_after_match_change()
+    {
+        var r = new Rig { Match = Create(6) };
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.QuickTowers));
+        var panel = r.Ui.BuildPopover()!;
+        var slots = panel.Items.Where(i => i.Action == TdUiAction.ChooseTower).ToArray();
+        Assert.Equal(6, slots.Length);
+        Assert.All(slots, i => { Assert.Equal(slots[0].Rect.Y, i.Rect.Y); Assert.Equal(44, i.Rect.W); Assert.NotNull(i.Tip); });
+        r.Ui.Activate(Find(panel, TdUiAction.TowerCategory, "economy"));
+        Assert.Single(r.Ui.BuildPopover()!.Items, i => i.Action == TdUiAction.ChooseTower);
+        r.Match = Create(1);
+        panel = r.Ui.BuildPopover()!;
+        Assert.DoesNotContain(panel.Items, i => i.Action == TdUiAction.TowerCategory && i.SArg == "economy");
+        Assert.Contains(panel.Items, i => i.Action == TdUiAction.TowerCategory && i.SArg == "attack" && i.Selected);
+        Assert.Contains(panel.Items, i => i.Action == TdUiAction.ChooseTower && i.SArg == "bolt");
+    }
+
+    [Fact]
     public void Quick_towers_builds_without_pausing_and_stays_open()
     {
         var r = new Rig();
@@ -278,8 +296,9 @@ public sealed class TdUiControllerTests
         r.Ui.ClickPoint(300);
         var pop = r.Ui.BuildPopover()!;
         Assert.Equal("$112", Find(pop, TdUiAction.ChooseTower, "bolt").Right);  // 2ª torre do tipo: 90 x 1,25 = 112,5 -> 112
-        Assert.Equal("$90", Find(pop, TdUiAction.ChooseTower, "frost").Right);  // outro tipo: preço base
         Assert.Contains("x1", Find(pop, TdUiAction.ChooseTower, "bolt").Text);
+        r.Ui.Activate(Find(pop, TdUiAction.TowerCategory, "control"));
+        Assert.Equal("$90", Find(r.Ui.BuildPopover()!, TdUiAction.ChooseTower, "frost").Right);
     }
 
     [Fact]
@@ -487,10 +506,11 @@ public sealed class TdUiControllerTests
     {
         var r = new Rig();
         r.Ui.ClickPoint(300);
+        typeof(TdMatchState).GetProperty("Credits")!.SetValue(r.Match, 0L);
         var pop = r.Ui.BuildPopover()!;
-        var disabled = pop.Items.First(i => i.SArg == "balancer");
+        var disabled = pop.Items.First(i => i.SArg == "bolt");
         Assert.Equal(-1, pop.HitTest(disabled.Rect.X + 2, disabled.Rect.Y + 2));
-        var ok = pop.Items.First(i => i.SArg == "bolt");
+        var ok = pop.Items.First(i => i.Action == TdUiAction.TowerCategory);
         Assert.True(pop.HitTest(ok.Rect.X + 2, ok.Rect.Y + 2) >= 0);
     }
 

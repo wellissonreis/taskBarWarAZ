@@ -752,7 +752,6 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         {
             // Painel rápido (Partida.dc.html): cartão por torre com tile (sprite real), nome, descrição curta e preço âmbar.
             RoundBox(c, new DipRect(0, 0, v.Width, v.Height), Palette.Td.BorderStrong, Palette.Td.Background, 8);
-            _p.Text(c, v.Title, PanelFont.JetBrainsMono, 10, new DipRect(12, 10, v.Width - 24, 14), Palette.Td.Muted);
             for (int i = 0; i < v.Items.Length; i++)
             {
                 var it = v.Items[i];
@@ -763,14 +762,10 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
                     _p.Text(c, it.Text, PanelFont.JetBrainsMono, 11, r, it.Selected ? Palette.Td.Amber : Palette.Td.Text, TextAlign.Center);
                     continue;
                 }
-                var col = it.SArg switch { "bolt" => Palette.Td.Bolt, "frost" => Palette.Td.Frost, "cannon" => Palette.Td.Cannon, _ => Palette.Td.Dim };
-                if (!it.Enabled) col = col.WithAlpha(115);
-                RoundBox(c, r, it.Selected ? Palette.Td.Amber : Palette.Td.BorderStrong, i == hover && it.Enabled ? Palette.Td.Button : Palette.Td.Card, 8);
-                RoundBox(c, new DipRect(r.X + 8, r.Y + 8, 36, 36), Palette.Td.BorderStrong, col.WithAlpha(36), 6);
-                DrawTowerIcon(c, it.SArg ?? "", r.X + 12, r.Y + 12, 28f, it.Enabled ? (byte)255 : (byte)110);
-                _p.Text(c, it.Text, PanelFont.JetBrainsMono, 14, new DipRect(r.X + 54, r.Y + 5, r.W - 130, 18), it.Enabled ? Palette.Td.Text : Palette.Td.Muted);
-                if (it.Right is not null) _p.Text(c, it.Right, PanelFont.JetBrainsMono, 14, new DipRect(r.X + r.W - 76, r.Y + 5, 66, 18), it.Enabled ? Palette.Td.Amber : Palette.Td.Dim, TextAlign.Right);
-                if (it.Sub is not null) DrawWrappedSized(c, it.Sub, new DipRect(r.X + 54, r.Y + 25, r.W - 64, 24), it.Enabled ? Palette.Td.Muted : Palette.Td.Dim, 14);
+                var border = it.Arg switch { 1 => Palette.Td.Frost, 2 => Palette.Td.Green, 3 => Palette.Td.Amber, _ => Palette.Td.Cannon };
+                RoundBox(c, r, border, i == hover && it.Enabled ? Palette.Td.Button : Palette.Td.Card, 8);
+                DrawTowerIcon(c, it.SArg ?? "", r.X + 8, r.Y + 4, 28f, it.Enabled ? (byte)255 : (byte)110);
+                if (it.Right is not null) _p.Text(c, it.Right, PanelFont.JetBrainsMono, 14, new DipRect(r.X, r.Y + 38, r.W, 18), it.Enabled ? Palette.Td.Amber : Palette.Td.Dim, TextAlign.Center);
                 if (it.Highlight) DrawHighlight(c, r);
             }
             return;

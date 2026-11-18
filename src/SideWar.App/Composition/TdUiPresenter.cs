@@ -226,6 +226,12 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         {
             Present();
             int h = pop?.HitTest(x / PopScale, y / PopScale) ?? -1;
+            if (h < 0 && pop is not null)
+                for (int i = pop.Items.Length - 1; i >= 0; i--)
+                {
+                    var item = pop.Items[i]; var rect = item.Rect;
+                    if (item.Tip is not null && x / PopScale >= rect.X && x / PopScale < rect.X + rect.W && y / PopScale >= rect.Y && y / PopScale < rect.Y + rect.H) { h = i; break; }
+                }
             if (h == popHover) return;
             popHover = h;
             controller.Hover(h >= 0 ? pop!.Items[h] : null);
@@ -266,6 +272,13 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     private void ModalKey(int key)
     {
         if (key == 27) { controller.Cancel(); return; }
+        if (controller.QuickTowersOpen && key is >= 49 and <= 52 && pop is not null)
+        {
+            string[] categories = ["attack", "control", "support", "economy"];
+            var category = pop.Items.FirstOrDefault(i => i.Action == TdUiAction.TowerCategory && i.SArg == categories[key - 49]);
+            if (category.Action == TdUiAction.TowerCategory) controller.Activate(category);
+            return;
+        }
         if (key is >= 49 and <= 53)
         {
             TdUiMode[] modes = [TdUiMode.Build, TdUiMode.Runes, TdUiMode.Towers, TdUiMode.Menu, TdUiMode.Help];
@@ -430,6 +443,11 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     private void RefreshTooltip(DockLayoutResult c, PixelRect hudBounds)
     {
         var tip = hud is null || tipWindow is null ? null : TdUiController.TooltipFor(hud, tipIndex);
+        if (tip is null && pop is not null && popHover >= 0 && popHover < pop.Items.Length && pop.Items[popHover].Tip is { } popTip)
+        {
+            var rect = pop.Items[popHover].Rect;
+            tip = new TdTooltipView(popTip, (popBounds.Left - hudBounds.Left) / UiScale + rect.X + rect.W / 2, 0);
+        }
         // Dica de 1ª vez (TD.15): ocupa a janela do tooltip quando não há dica de hover.
         bool firstTime = tip is null && controller.CurrentTip is not null;
         if (firstTime) tip = new TdTooltipView(controller.CurrentTip!, hud!.Width / 2f, 0f);
