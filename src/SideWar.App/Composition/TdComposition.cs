@@ -77,6 +77,10 @@ internal sealed class TdComposition
     {
         _options = settings.Td.ContinuousWaves ? TdMatchOptions.Default : TdMatchOptions.Classic;
         Host.GameSpeed = settings.Td.GameSpeed;
+        Host.Alerts.Settings.Enabled = settings.Td.AlertsEnabled;
+        Host.Alerts.Settings.AutoPause = settings.Td.AlertsAutoPause;
+        Host.Alerts.Settings.Sound = settings.Td.AlertsSound;
+        Host.Alerts.Settings.MutedMask = settings.Td.AlertsMutedMask;
         Host.ApplyAutoStart(settings.Td.AutoStartEnabled, settings.Td.AutoStartSeconds);
     }
 }

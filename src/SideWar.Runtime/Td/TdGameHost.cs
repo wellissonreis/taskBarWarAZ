@@ -43,6 +43,7 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
     private readonly ITdMatchObserver? _observer;
     private readonly ITdPresence? _presence;
     private readonly FixedStepper _stepper = new();
+    private readonly TdAlertGuard _guard = new();
     private readonly Queue<IGameCommand> _pending = new();
     private readonly List<TdLogEntry> _log = [];
     private readonly Queue<(IGameCommand Command, CommandResult Result)> _results = new();
@@ -69,6 +70,15 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
     /// </summary>
     public int GameSpeed { get; set; } = 1;
 
+    /// <summary>TD.40b2: proteção contra derrota, alertas e suas opções (SDD-38).</summary>
+    public TdAlertGuard Alerts => _guard;
+
+    /// <summary>Salvar: o jogador age; a proteção reavalia antes de cada Step. Pede na T-Game (entre ticks).</summary>
+    public void SaveTower() => _guard.Save(Match);
+
+    /// <summary>Deixar cair: autoriza a derrota da partida corrente.</summary>
+    public void LetTowerFall() => _guard.LetFall(Match);
+
     public TdMatchState Match { get; private set; }
     public bool IsShutdown { get; private set; }
 
@@ -89,7 +99,7 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
     private bool NeedsSteps => Match.Phase == MatchPhase.Onda
         || (Match.Phase == MatchPhase.Preparo && Match.AutoStart == AutoStartMode.Countdown);
 
-    private bool Running => !IsShutdown && _app.SimulationRunning && !Match.Paused && NeedsSteps;
+    private bool Running => !IsShutdown && _app.SimulationRunning && !Match.Paused && !_guard.Holding && NeedsSteps;
 
     public long? NextDeadline
     {
@@ -136,6 +146,7 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
         _pending.Clear();
         _log.Clear();
         _endReported = false;
+        _guard.Reset();
         _stepper.Reset(_clock.NowTicks / _clock.TicksPerSecond, simRunning: false);
     }
 
@@ -152,9 +163,11 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
         int steps = ticks * Math.Clamp(GameSpeed, 1, 3);
         for (int i = 0; i < steps && NeedsSteps; i++)
         {
+            if (running && _guard.Blocks(Match)) break; // protege ANTES de cada Step (lotes 2x/3x incluídos)
             Match.Step();
             StepsExecuted++;
         }
+        if (running && Match.Phase == MatchPhase.Onda) _guard.Evaluate(Match);
         _lastWake = now;
         _started = true;
 
