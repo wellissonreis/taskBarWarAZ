@@ -15,6 +15,9 @@ public interface ITdMatchObserver
 
     /// <summary>Uma vez por partida, ao entrar em Vitória ou Derrota.</summary>
     void OnMatchEnded(TdMatchState match, TdMatchResult result);
+
+    /// <summary>Registra uma corrida ainda em andamento ao encerrar o aplicativo.</summary>
+    void OnMatchAbandoned(TdMatchState match) { }
 }
 
 /// <summary>
@@ -169,6 +172,9 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
 
     public void Shutdown()
     {
+        if (IsShutdown) return;
+        if (Match.Options.PersistentRun && Match.Phase is MatchPhase.Preparo or MatchPhase.Onda)
+            _observer?.OnMatchAbandoned(Match);
         IsShutdown = true;
         _pending.Clear();
     }

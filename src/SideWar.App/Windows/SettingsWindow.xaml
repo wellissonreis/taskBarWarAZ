@@ -25,6 +25,7 @@
           <CheckBox Content="Ondas contínuas: corrida infinita, sem Preparo entre ondas (vale na próxima corrida)" IsChecked="{Binding TdContinuousWaves}" Margin="0,0,0,4" />
           <CheckBox Content="Painel de torres sempre aberto junto ao chip" IsChecked="{Binding TdTowerPanelPinned}" Margin="0,0,0,4" />
           <CheckBox Content="Iniciar as ondas automaticamente (Tower Defense)" IsChecked="{Binding TdAutoStart}" Margin="0,0,0,4" />
+          <CheckBox Content="Recomecar automaticamente" IsChecked="{Binding TdAutoRestart}" Margin="0,0,0,4" />
           <TextBlock Text="Segundos de contagem do auto-início (5–60)" />
           <TextBox Text="{Binding TdAutoStartSeconds, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding TdAutoStart}" Width="80" HorizontalAlignment="Left" Margin="0,2,0,8" />
           <TextBlock Text="Tamanho da faixa Tower Defense (DIP, 32–96; aplica ao salvar, sem reiniciar)" />

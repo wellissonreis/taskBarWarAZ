@@ -63,6 +63,7 @@ public static class SettingsSerializer
         w.WriteString("gameMode", s.GameMode.ToString());
         w.WriteStartObject("td");
         w.WriteBoolean("autoStartEnabled", s.Td.AutoStartEnabled);
+        w.WriteBoolean("autoRestart", s.Td.AutoRestart);
         w.WriteNumber("autoStartSeconds", s.Td.AutoStartSeconds);
         w.WriteNumber("bandHeightDip", s.Td.BandHeightDip);
         w.WriteBoolean("hudMinimized", s.Td.HudMinimized);
@@ -147,6 +148,7 @@ public static class SettingsSerializer
             Td = new TdSettings
             {
                 AutoStartEnabled = Bool(td, "autoStartEnabled", d.Td.AutoStartEnabled),
+                AutoRestart = Bool(td, "autoRestart", d.Td.AutoRestart),
                 AutoStartSeconds = IntRange(td, "autoStartSeconds", TdSettings.MinAutoStartSeconds, TdSettings.MaxAutoStartSeconds, d.Td.AutoStartSeconds),
                 BandHeightDip = IntRange(td, "bandHeightDip", TdSettings.MinBandHeightDip, TdSettings.MaxBandHeightDip, d.Td.BandHeightDip),
                 HudMinimized = Bool(td, "hudMinimized", d.Td.HudMinimized),

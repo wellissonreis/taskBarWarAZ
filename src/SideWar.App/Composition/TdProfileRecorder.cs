@@ -33,6 +33,8 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
     public int LegacyTotal => Profile.LegacyTotal;
     public int BestRunWaves => Profile.BestRunWaves;
     public int StartingRunes => TdLegacy.StartingRunes(LegacyTotal);
+    public int PreviousBestRunWaves { get; private set; }
+    public int PreviousLegacyTotal { get; private set; }
 
     /// <summary>Quantas gravações falharam (diagnóstico; a partida segue).</summary>
     public int SaveFailures { get; private set; }
@@ -115,10 +117,19 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
         if (match.Options.PersistentRun && match.Phase == MatchPhase.Derrota)
         {
             if (Profile.LegacyLastRun == match.RunId) return;
+            PreviousBestRunWaves = Profile.BestRunWaves;
+            PreviousLegacyTotal = Profile.LegacyTotal;
             Profile = TdProfileRules.RecordLegacy(Profile, match.RunId, match.WavesReached);
         }
         Profile = TdProfileRules.RecordMatch(Profile, _meta, match.StageId, result, _stageCount, out var outcome);
         LastOutcome = outcome;
+        Save();
+    }
+
+    public void OnMatchAbandoned(TdMatchState match)
+    {
+        if (!match.Options.PersistentRun || match.Phase is not (MatchPhase.Preparo or MatchPhase.Onda) || Profile.LegacyLastRun == match.RunId) return;
+        Profile = TdProfileRules.RecordLegacy(Profile, match.RunId, match.WavesReached);
         Save();
     }
 }

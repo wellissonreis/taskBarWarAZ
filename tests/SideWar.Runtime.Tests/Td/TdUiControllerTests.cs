@@ -23,6 +23,7 @@ public sealed class TdUiControllerTests
         public TdGameOptions GameOptions { get; private set; } = new();
         public void SetGameOptions(TdGameOptions options) => GameOptions = options;
         public bool Paused { get; set; }
+        public float EndCardAvailableHeight { get; set; } = float.PositiveInfinity;
         public List<string> Calls { get; } = [];
         public void TogglePause() => Calls.Add("pause");
         public void OpenSettings() => Calls.Add("settings");
@@ -70,6 +71,67 @@ public sealed class TdUiControllerTests
         var m = TdMatchState.Create(TdContentLoader.LoadEmbedded(), stage, Rng.Seed(7, 54));
         m.Apply(new LayoutChanged(StripLayout.Create(Width, Width - 46, 88, 4, Width - 80, TowerHost.Band, [new FreeZone(32, Width - 32)])));
         return m;
+    }
+
+    [Fact]
+    public void Persistent_defeat_countdown_restarts_at_eight_seconds_and_view_runes_cancels()
+    {
+        var r = new Rig();
+        r.Match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 1, Rng.Seed(7, 54), null, TdMatchOptions.Default);
+        r.Match.Apply(new LayoutChanged(StripLayout.Create(Width, Width - 46, 88, 4, Width - 80, TowerHost.Band, [new FreeZone(32, Width - 32)])));
+        for (int i = 0; i < 30 * 3000 && r.Match.Phase is MatchPhase.Onda or MatchPhase.Preparo; i++)
+        {
+            if (r.Match.Phase == MatchPhase.Preparo) r.Match.Apply(new StartWave());
+            r.Match.Step();
+        }
+        Assert.Equal(MatchPhase.Derrota, r.Match.Phase);
+        r.Host.SetGameOptions(new TdGameOptions(AutoRestart: true));
+        r.Ui.Sync();
+        var card = r.Ui.BuildPopover()!;
+        Assert.Equal("CORRIDA ENCERRADA", card.Title);
+        Assert.Contains(card.Items, x => x.Text == "Recomecando em 8 s");
+        r.Now = 2; r.Ui.Sync();
+        r.Host.Paused = true;
+        r.Now = 12; r.Ui.Sync();
+        r.Host.Paused = false;
+        r.Ui.SetBossHidden(true);
+        r.Now = 22; r.Ui.Sync();
+        r.Ui.SetBossHidden(false);
+        r.Ui.Sync();
+        r.Now = 27; r.Ui.Sync();
+        Assert.DoesNotContain("stage1", r.Host.Calls);
+        r.Now = 28; r.Ui.Sync();
+        Assert.Contains("stage1", r.Host.Calls);
+
+        var second = new Rig { Match = r.Match };
+        second.Host.SetGameOptions(new TdGameOptions(AutoRestart: true));
+        second.Ui.Sync();
+        second.Ui.Activate(Find(second.Ui.BuildPopover()!, TdUiAction.ViewRunes));
+        second.Now = 20; second.Ui.Sync();
+        Assert.DoesNotContain("stage1", second.Host.Calls);
+        Assert.Contains(second.Ui.BuildPopover()!.Items, x => x.Text.StartsWith("Legado", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Persistent_defeat_card_sheds_rank_bar_then_leaks_when_space_is_limited()
+    {
+        var r = new Rig { Match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 1, Rng.Seed(7, 54), null, TdMatchOptions.Default) };
+        r.Match.Apply(new LayoutChanged(StripLayout.Create(Width, Width - 46, 88, 4, Width - 80, TowerHost.Band, [new FreeZone(32, Width - 32)])));
+        for (int i = 0; i < 30 * 3000 && r.Match.Phase is MatchPhase.Onda or MatchPhase.Preparo; i++)
+        {
+            if (r.Match.Phase == MatchPhase.Preparo) r.Match.Apply(new StartWave());
+            r.Match.Step();
+        }
+        r.Ui.Sync();
+        var full = r.Ui.BuildPopover()!;
+        Assert.Contains(full.Items, x => x.Kind == TdUiKind.Bar);
+        Assert.Contains(full.Items, x => x.Text.StartsWith("Vazou:", StringComparison.Ordinal));
+        r.Host.EndCardAvailableHeight = full.Height - 1;
+        var smaller = r.Ui.BuildPopover()!;
+        Assert.DoesNotContain(smaller.Items, x => x.Kind == TdUiKind.Bar);
+        Assert.Contains(smaller.Items, x => x.Text.StartsWith("Vazou:", StringComparison.Ordinal));
+        r.Host.EndCardAvailableHeight = full.Height - 10;
+        Assert.DoesNotContain(r.Ui.BuildPopover()!.Items, x => x.Text.StartsWith("Vazou:", StringComparison.Ordinal));
     }
 
     private static TdUiItem Find(TdPopoverView v, TdUiAction a, string? sarg = null) =>

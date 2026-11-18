@@ -35,6 +35,9 @@ public sealed partial class TdUiController
     private bool _confirmRestart;
     public bool QuickTowersOpen { get; private set; }
     private bool _endCorner;
+    private bool _restartArmed, _returnToEnd;
+    private double _restartRemaining, _restartLast;
+    private const double RestartSeconds = 8.0;
     /// <summary>Cartão automático de fim de fase no cantinho (sem modal, sem foco); clicar no chip abre a modal central.</summary>
     public bool EndCardOpen => Mode == TdUiMode.End && _endCorner;
     /// <summary>TD.28b: aviso discreto "Fase N ✓" ao concluir uma fase da corrida; some sozinho em <see cref="StageNoticeSeconds"/> s, sem foco, sem pausa.</summary>
@@ -194,6 +197,7 @@ public sealed partial class TdUiController
     public void Activate(in TdUiItem item)
     {
         if (!item.Clickable) return;
+        if (_restartArmed && item.Action != TdUiAction.Restart && (EndCardOpen || item.Action is TdUiAction.Menu or TdUiAction.Settings)) _restartArmed = false;
         Touch();
         NoteAction(item.Action);
         switch (item.Action)
@@ -206,6 +210,7 @@ public sealed partial class TdUiController
             case TdUiAction.QuizFalse: AnswerQuiz(false); break;
             case TdUiAction.QuizClose: CloseQuiz(); break;
             case TdUiAction.Close: Close(); break;
+            case TdUiAction.ViewRunes: _returnToEnd = true; SetMode(TdUiMode.Runes); break;
             case TdUiAction.RuneWindow:
                 if (RuneWindowOpen) Close();
                 else if (!ModalOpen && _match().Phase is not (MatchPhase.Vitoria or MatchPhase.Derrota)) OpenRuneWindow();
@@ -270,11 +275,11 @@ public sealed partial class TdUiController
                 // TD.30c: clicar num nó disponível gasta 1 fragmento (o Core desperta exatamente esse nó); bloqueado/despertado só seleciona.
                 _selectedRune = item.SArg;
                 var rm = _match();
-                if (rm.Fragments > 0 && !rm.IsAwakened(item.SArg) && rm.Frontier.Contains(item.SArg)) _send(new AwakenRune(item.SArg));
+                if (rm.Phase is MatchPhase.Preparo or MatchPhase.Onda && rm.Fragments > 0 && !rm.IsAwakened(item.SArg) && rm.Frontier.Contains(item.SArg)) _send(new AwakenRune(item.SArg));
                 Changed?.Invoke(); break;
             }
             case TdUiAction.AwakenRune:
-                if (_selectedRune is not null && _match().Fragments > 0 && _match().Frontier.Contains(_selectedRune)) _send(new AwakenRune(_selectedRune));
+                if (_match().Phase is MatchPhase.Preparo or MatchPhase.Onda && _selectedRune is not null && _match().Fragments > 0 && _match().Frontier.Contains(_selectedRune)) _send(new AwakenRune(_selectedRune));
                 Changed?.Invoke(); break;
             case TdUiAction.GameOption:
             {
@@ -315,7 +320,7 @@ public sealed partial class TdUiController
             case TdUiAction.Exit: _host.RequestExit(); break;
             case TdUiAction.RestartPrompt: _confirmRestart = true; Changed?.Invoke(); break;
             case TdUiAction.RestartCancel: _confirmRestart = false; Changed?.Invoke(); break;
-            case TdUiAction.Restart: { int stage = _match().Options.PersistentRun ? _host.RunStartStage : _match().StageId; Close(); _host.StartStage(stage); break; }
+            case TdUiAction.Restart: { var match = _match(); int stage = match.Options.PersistentRun ? (match.Phase == MatchPhase.Derrota ? 1 : _host.RunStartStage) : match.StageId; _restartArmed = false; Close(); _host.StartStage(stage); break; }
             case TdUiAction.NextStage: { int stage = _match().StageId + 1; Close(); _host.StartStage(stage); break; }
         }
     }
@@ -329,6 +334,9 @@ public sealed partial class TdUiController
             bool first = _lastMatch is null;
             _lastMatch = m;
             _seenStages = m.StageResults.Count;
+            _restartArmed = false;
+            _restartRemaining = 0;
+            _returnToEnd = false;
             _noticeText = null;
             _userPaused = false;
             _selectedRune = _lastRune = _hoverRune = _hoverBranch = null;
@@ -363,6 +371,21 @@ public sealed partial class TdUiController
                 ResetBuild();
                 SetMode(TdUiMode.End);
                 _endCorner = true;
+                if (m.Phase == MatchPhase.Derrota && m.Options.PersistentRun && _host.GameOptions.AutoRestart && _restartRemaining <= 0)
+                {
+                    _restartArmed = true;
+                    _restartRemaining = RestartSeconds;
+                    _restartLast = _now();
+                }
+            }
+            if (_restartArmed)
+            {
+                double now = _now();
+                double elapsed = Math.Max(0, now - _restartLast);
+                _restartLast = now;
+                if (!BossHidden && !ModalOpen && !m.Paused && _host.SimulationRunning) _restartRemaining -= elapsed;
+                if (_restartRemaining <= 0) { _restartArmed = false; Close(); _host.StartStage(1); }
+                Changed?.Invoke();
             }
             return;
         }
@@ -432,6 +455,13 @@ public sealed partial class TdUiController
 
     private void Close()
     {
+        if (_returnToEnd && Mode == TdUiMode.Runes && !BossHidden)
+        {
+            _returnToEnd = false;
+            SetMode(TdUiMode.End);
+            _endCorner = true;
+            return;
+        }
         ResetBuild();
         QuickTowersOpen = false;
         RuneWindowOpen = false;
@@ -488,6 +518,7 @@ public sealed partial class TdUiController
     public void SetBossHidden(bool hidden)
     {
         if (BossHidden == hidden) return;
+        _restartLast = _now();
         BossHidden = hidden;
         if (hidden) { Close(); return; }
         _moneyReset = true; // volta no valor real, sem animar a diferença acumulada
@@ -916,6 +947,9 @@ public sealed partial class TdUiController
             done ? "Teia completa." : frag > 0 ? "Clique numa runa tracejada para despertar." : "Sem fragmentos: conquiste mais.",
             SArg: "rhint"));
         AddRuneLegend(items, m, area.X, area.Y + area.H + 6f, area.W, ModalLegendHeight);
+        int totalLegacy = _host.LegacyTotal;
+        string legacy = TdLegacy.StartingRunes(totalLegacy) >= TdLegacy.MaxStartingRunes ? "Legado MAX" : $"Legado {totalLegacy} · proxima: +1 runa em {TdLegacy.FragmentsPerRune - totalLegacy % TdLegacy.FragmentsPerRune}";
+        items.Add(new(new DipRect(area.X + 220, area.Y + 12, 300, 22), TdUiKind.Label, legacy, FontSize: 14f));
         return tip;
     }
 
@@ -1337,6 +1371,7 @@ public sealed partial class TdUiController
 
     private TdPopoverView BuildEnd(TdMatchState m)
     {
+        if (m.Phase == MatchPhase.Derrota && m.Options.PersistentRun) return BuildRunEnd(m);
         var s = new Stack(260f);
         bool won = m.Phase == MatchPhase.Vitoria;
         var r = m.Result;
@@ -1371,5 +1406,75 @@ public sealed partial class TdUiController
         s.Add(TdUiKind.Button, won ? "Jogar de novo" : m.Options.PersistentRun ? "Reiniciar" : "Reiniciar fase", 38, TdUiAction.Restart);
         s.Add(TdUiKind.Button, "Mapa", 38, TdUiAction.MapOpen);
         return Finish(title, s, 0);
+    }
+
+    private TdPopoverView BuildRunEnd(TdMatchState m)
+    {
+        var s = new Stack(260f);
+        void Line(string text, TdTone tone = TdTone.Normal, float height = 20f)
+        {
+            s.Add(TdUiKind.Label, text, height, tone: tone);
+            s.Items[^1] = s.Items[^1] with { FontSize = 14f };
+        }
+        int waves = m.WavesReached;
+        Line($"Onda {waves} (fase {m.StageNumber})", TdTone.Normal);
+        Line(waves > _host.PreviousBestRunWaves ? "NOVO RECORDE" : $"Recorde {_host.PreviousBestRunWaves}", TdTone.Accent);
+        s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, s.Width - 2 * Pad, 24), TdUiKind.Bar, $"Patente: {TdRank.DisplayName(_host.Rank.Current)}", Tone: TdTone.Accent, Fill: (float)_host.Rank.Fraction, FontSize: 14f));
+        s.Y += 26;
+        int earned = TdLegacy.Fragments(waves);
+        int nextRunes = TdLegacy.StartingRunes(_host.LegacyTotal);
+        Line($"+{earned} legado", TdTone.Good);
+        if (nextRunes > TdLegacy.StartingRunes(_host.PreviousLegacyTotal)) Line($"Proxima corrida: {nextRunes} runa", TdTone.Good);
+        var leaks = m.Leaks.OrderByDescending(l => l.Count).ThenByDescending(l => l.Damage).Take(3).ToArray();
+        if (leaks.Length > 0)
+        {
+            string Name(TdLeakStat l) => l.IsBoss ? m.Content.Enemies.Bosses.FirstOrDefault(e => e.Id == l.EnemyId)?.Name ?? l.EnemyId : m.Content.Enemies.Enemies.FirstOrDefault(e => e.Id == l.EnemyId)?.Name ?? l.EnemyId;
+            Line("Vazou: " + string.Join(", ", leaks.Select(l => $"{Name(l)} x{l.Count}")), height: 40f);
+        }
+        var (_, reason, _, _) = DefeatTexts(m);
+        Line(reason, TdTone.Bad, 40f);
+        int unlocked = Enumerable.Range(1, _host.StageCount).Where(_host.StageUnlocked).DefaultIfEmpty(1).Max();
+        var advice = TdAdvisor.Suggest(m.Content, m.Leaks, unlocked);
+        if (advice is not null)
+        {
+            string tower = m.Content.Towers.First(t => t.Id == advice.TowerId).Name;
+            Line($"Advisor: {tower} contra {advice.Trait}.", TdTone.Accent, 40f);
+        }
+        if (_restartArmed) Line($"Recomecando em {Math.Max(0, (int)Math.Ceiling(_restartRemaining))} s");
+        s.Add(TdUiKind.Button, "Recomecar", 36, TdUiAction.Restart, tone: TdTone.Good);
+        s.Items[^1] = s.Items[^1] with { FontSize = 14f };
+        s.Add(TdUiKind.Button, "Ver runas", 36, TdUiAction.ViewRunes);
+        s.Items[^1] = s.Items[^1] with { FontSize = 14f };
+        if (s.Y + Pad > _host.EndCardAvailableHeight)
+        {
+            int rank = s.Items.FindIndex(i => i.Kind == TdUiKind.Bar);
+            if (rank >= 0)
+            {
+                var rect = s.Items[rank].Rect;
+                s.Items[rank] = s.Items[rank] with { Kind = TdUiKind.Label, Rect = new DipRect(rect.X, rect.Y, rect.W, 20) };
+                for (int i = rank + 1; i < s.Items.Count; i++)
+                {
+                    rect = s.Items[i].Rect;
+                    s.Items[i] = s.Items[i] with { Rect = new DipRect(rect.X, rect.Y - 4, rect.W, rect.H) };
+                }
+                s.Y -= 4;
+            }
+        }
+        if (s.Y + Pad > _host.EndCardAvailableHeight)
+        {
+            int leak = s.Items.FindIndex(i => i.Text.StartsWith("Vazou:", StringComparison.Ordinal));
+            if (leak >= 0)
+            {
+                float cut = s.Items[leak].Rect.H + 2;
+                s.Items.RemoveAt(leak);
+                for (int i = leak; i < s.Items.Count; i++)
+                {
+                    var rect = s.Items[i].Rect;
+                    s.Items[i] = s.Items[i] with { Rect = new DipRect(rect.X, rect.Y - cut, rect.W, rect.H) };
+                }
+                s.Y -= cut;
+            }
+        }
+        return Finish("CORRIDA ENCERRADA", s, 0);
     }
 }

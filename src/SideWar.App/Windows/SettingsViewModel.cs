@@ -28,6 +28,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     private string toggleInteractive = "", toggleVisibility = "", togglePause = "", startWave = "";
     private GameMode gameMode;
     private bool tdAutoStart;
+    private bool tdAutoRestart;
     private int tdAutoStartSeconds, tdBandHeight, tdFadePercent, tdGameSpeed = 1;
     private bool tdFadeWhenUnfocused;
     private bool tdBonusQuestions, tdContinuousWaves, tdTowerPanelPinned, tdShowIncome, tdDiscreetMode;
@@ -66,6 +67,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     /// <summary>Auto-início das ondas TD (padrão desligado).</summary>
     public GameMode GameMode { get => gameMode; set => Set(ref gameMode, value); }
     public bool TdAutoStart { get => tdAutoStart; set => Set(ref tdAutoStart, value); }
+    public bool TdAutoRestart { get => tdAutoRestart; set => Set(ref tdAutoRestart, value); }
     public int TdAutoStartSeconds { get => tdAutoStartSeconds; set { if (Set(ref tdAutoStartSeconds, value)) Check(nameof(TdAutoStartSeconds), value is >= TdSettings.MinAutoStartSeconds and <= TdSettings.MaxAutoStartSeconds ? null : "Entre 5 e 60 segundos."); } }
     /// <summary>Altura da faixa TD em DIP (32 a 96); presets Pequeno 40 / Médio 64 / Grande 88. Vale ao reiniciar o SideWar.</summary>
     public int TdBandHeight { get => tdBandHeight; set { if (Set(ref tdBandHeight, value)) Check(nameof(TdBandHeight), value is >= TdSettings.MinBandHeightDip and <= TdSettings.MaxBandHeightDip ? null : "Altura entre 32 e 96 DIP."); } }
@@ -140,7 +142,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         Taskbar = original.Taskbar with { UseUia = useUia },
         Td = original.Td with
         {
-            AutoStartEnabled = tdAutoStart, AutoStartSeconds = tdAutoStartSeconds, BandHeightDip = tdBandHeight,
+            AutoStartEnabled = tdAutoStart, AutoRestart = tdAutoRestart, AutoStartSeconds = tdAutoStartSeconds, BandHeightDip = tdBandHeight,
             FadeWhenUnfocused = tdFadeWhenUnfocused, FadeOpacityPercent = tdFadePercent, BonusQuestions = tdBonusQuestions,
             ContinuousWaves = tdContinuousWaves, TowerPanelPinned = tdTowerPanelPinned, GameSpeed = tdGameSpeed,
             ShowIncome = tdShowIncome, DiscreetMode = tdDiscreetMode,
@@ -191,6 +193,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         startWave = s.Hotkeys.StartWave;
         gameMode = s.GameMode;
         tdAutoStart = s.Td.AutoStartEnabled;
+        tdAutoRestart = s.Td.AutoRestart;
         tdAutoStartSeconds = s.Td.AutoStartSeconds;
         tdBandHeight = s.Td.BandHeightDip;
         tdFadeWhenUnfocused = s.Td.FadeWhenUnfocused;

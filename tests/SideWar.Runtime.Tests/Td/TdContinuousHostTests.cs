@@ -167,7 +167,7 @@ public sealed class TdContinuousHostTests
     }
 
     [Fact]
-    public void Defeat_card_in_the_corner_restarts_a_new_run_from_the_run_start_stage()
+    public void Defeat_card_in_the_corner_restarts_a_new_run_from_stage_one()
     {
         var r = new Rig(content: Base);
         r.Host.RunStartStage = 3;
@@ -177,9 +177,9 @@ public sealed class TdContinuousHostTests
         r.Ui.Sync();
         Assert.True(r.Ui.EndCardOpen);
         var restart = r.Ui.BuildPopover()!.Items.First(i => i.Action == TdUiAction.Restart);
-        Assert.Equal("Reiniciar", restart.Text);
+        Assert.Equal("Recomecar", restart.Text);
         r.Ui.Activate(restart);
-        Assert.Equal("stage3", Assert.Single(r.Host.Calls));
+        Assert.Equal("stage1", Assert.Single(r.Host.Calls));
     }
 
     [Fact]

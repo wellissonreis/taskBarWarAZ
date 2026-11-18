@@ -199,7 +199,7 @@ internal sealed class AppComposition : IDisposable
                 if (gameSide.TdOptions is { } o)
                     SaveSettings(settings with
                     {
-                        Td = settings.Td with { BandHeightDip = o.BandHeight, AutoStartEnabled = o.AutoStart, BonusQuestions = o.Questions, FadeWhenUnfocused = o.Fade, ContinuousWaves = o.Continuous, TowerPanelPinned = o.PanelPinned, GameSpeed = o.GameSpeed, ShowIncome = o.ShowIncome, DiscreetMode = o.Discreet },
+                        Td = settings.Td with { BandHeightDip = o.BandHeight, AutoStartEnabled = o.AutoStart, AutoRestart = o.AutoRestart, BonusQuestions = o.Questions, FadeWhenUnfocused = o.Fade, ContinuousWaves = o.Continuous, TowerPanelPinned = o.PanelPinned, GameSpeed = o.GameSpeed, ShowIncome = o.ShowIncome, DiscreetMode = o.Discreet },
                         Audio = settings.Audio with { Enabled = o.Sound, Volume = o.Volume / 100.0 },
                     });
                 break;

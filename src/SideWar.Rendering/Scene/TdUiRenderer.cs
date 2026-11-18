@@ -406,7 +406,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             return;
         }
         var col = it.Tone switch { TdTone.Warn or TdTone.Accent => Palette.Td.Amber, TdTone.Bad => Palette.Td.Red, TdTone.Good => Palette.Td.Green, TdTone.Dim => Palette.Td.Muted, _ => Palette.Td.Text };
-        _p.Text(c, it.Text, PanelFont.JetBrainsMono, 12, r, col);
+        _p.Text(c, it.Text, PanelFont.JetBrainsMono, it.FontSize > 0 ? it.FontSize : 12, r, col);
     }
 
     // ---- Teia de runas (Main.dc.html): glifos por tipo na ordem do conteúdo (Alcance, Raio, Créditos, Gelo, Núcleo, Canhão, Recarga, Escudo).
@@ -796,7 +796,8 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             DrawTowerIcon(c, v.IconTower, 4, 2, HeaderIconDip, 255);
             titleX += 22;
         }
-        _p.Text(c, v.Title, PanelFont.JetBrainsMono, 10.5f, new DipRect(titleX, 5, v.Width - 40 - (titleX - TdUiController.Pad - 2), 14), Palette.TxtPrincipal);
+        float titleSize = v.Title == "CORRIDA ENCERRADA" ? 14f : 10.5f;
+        _p.Text(c, v.Title, PanelFont.JetBrainsMono, titleSize, new DipRect(titleX, 3, v.Width - 40 - (titleX - TdUiController.Pad - 2), 18), Palette.TxtPrincipal);
         _p.Fill(c, new DipRect(1, TdUiController.HeaderH, v.Width - 2, 1), Palette.BordaPainel);
         for (int i = 0; i < v.Items.Length; i++)
         {

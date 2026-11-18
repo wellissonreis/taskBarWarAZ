@@ -15,10 +15,21 @@ public sealed class TdGameHostTests
 
     private sealed class Observer : ITdMatchObserver
     {
-        public int EventBatches, Ended;
+        public int EventBatches, Ended, Abandoned;
         public TdMatchResult? Last;
         public void OnEvents(TdMatchState match, IReadOnlyList<TdEvent> events) => EventBatches++;
         public void OnMatchEnded(TdMatchState match, TdMatchResult result) { Ended++; Last = result; }
+        public void OnMatchAbandoned(TdMatchState match) => Abandoned++;
+    }
+
+    [Fact]
+    public void Shutdown_reports_an_active_persistent_run_only_once()
+    {
+        var match = TdMatchState.Create(Content, 1, Rng.Seed(1, 54), null, TdMatchOptions.Default);
+        var r = new Rig(match: match);
+        r.Host.Shutdown();
+        r.Host.Shutdown();
+        Assert.Equal(1, r.Obs.Abandoned);
     }
 
     private sealed class Rig

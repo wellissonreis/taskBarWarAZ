@@ -29,7 +29,7 @@ public enum TdUiAction : byte
     /// <summary>TD.30c: botão Runas do HUD (abre/fecha a janela de runas ancorada no chip, sem pausar e sem tomar foco).</summary>
     RuneWindow,
     /// <summary>TD.30e: chip da legenda de ramos (passar o mouse destaca os nós do ramo; SArg = id do tipo) e os botões do cartão "runas no primeiro dano".</summary>
-    RuneBranch, RuneTutorialOpen, RuneTutorialDismiss,
+    RuneBranch, RuneTutorialOpen, RuneTutorialDismiss, ViewRunes,
 }
 
 /// <summary>Ícone do HUD desenhado por código (TD.14); o renderer mapeia para caminhos vetoriais.</summary>
@@ -173,11 +173,16 @@ public sealed record TdTooltipView(string Text, float AnchorX, float AnchorTop);
 /// <param name="GameSpeed">TD.28c: velocidade do jogo 1, 2 ou 3 (Steps por tick no host).</param>
 /// <param name="PanelPinned">TD.28b: painel rápido de torres sempre aberto junto ao chip.</param>
 public sealed record TdGameOptions(int BandHeight = 64, bool AutoStart = false, bool Sound = false, int Volume = 60, bool Questions = true, bool Fade = true,
-    bool Continuous = true, bool PanelPinned = false, int GameSpeed = 1, bool ShowIncome = false, bool Discreet = false);
+    bool Continuous = true, bool PanelPinned = false, int GameSpeed = 1, bool ShowIncome = false, bool Discreet = false, bool AutoRestart = false);
 
 public interface ITdUiHost
 {
     TdGameOptions GameOptions => new();
+    int LegacyTotal => 0;
+    int PreviousLegacyTotal => 0;
+    int PreviousBestRunWaves => 0;
+    bool SimulationRunning => !Paused;
+    float EndCardAvailableHeight => float.PositiveInfinity;
     void SetGameOptions(TdGameOptions options) { }
 
     /// <summary>TD.28b: texto do atalho global de minimizar tudo (boss key), mostrado na dica do chip e em Como jogar.</summary>

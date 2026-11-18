@@ -106,6 +106,8 @@ public sealed record TdSettings
 {
     public const int MinAutoStartSeconds = 5;
     public const int MaxAutoStartSeconds = 60;
+    public const int AutoRestartSeconds = 8;
+    public bool AutoRestart { get; init; }
 
     public bool AutoStartEnabled { get; init; }
     public int AutoStartSeconds { get; init; } = 15;

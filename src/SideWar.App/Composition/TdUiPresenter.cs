@@ -50,7 +50,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     public void LoadGameOptions(SideWar.Persistence.Settings.AppSettings settings)
     {
         gameOptions = new(settings.Td.BandHeightDip, settings.Td.AutoStartEnabled, settings.Audio.Enabled, (int)Math.Round(settings.Audio.Volume * 100), settings.Td.BonusQuestions, settings.Td.FadeWhenUnfocused,
-            settings.Td.ContinuousWaves, settings.Td.TowerPanelPinned, settings.Td.GameSpeed, settings.Td.ShowIncome, settings.Td.DiscreetMode);
+            settings.Td.ContinuousWaves, settings.Td.TowerPanelPinned, settings.Td.GameSpeed, settings.Td.ShowIncome, settings.Td.DiscreetMode, settings.Td.AutoRestart);
         bossHotkey = settings.Hotkeys.ToggleVisibility;
         Kick();
     }
@@ -468,6 +468,13 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     // ---------------------------------------------------------------- ITdUiHost
 
     string ITdUiHost.BossHotkey => bossHotkey;
+    int ITdUiHost.LegacyTotal => td.Recorder.LegacyTotal;
+    int ITdUiHost.PreviousLegacyTotal => td.Recorder.PreviousLegacyTotal;
+    int ITdUiHost.PreviousBestRunWaves => td.Recorder.PreviousBestRunWaves;
+    bool ITdUiHost.SimulationRunning => runtime.App.SimulationRunning;
+    float ITdUiHost.EndCardAvailableHeight => game.Dock.Current is { } layout
+        ? Math.Max(0, (layout.Scene.Top + TdBand.HeadroomRealDip(bandHeight) * Scale - layout.Monitor.WorkArea.Top) / UiScale - TdHudView.DefaultHeight - 4)
+        : float.PositiveInfinity;
     int ITdUiHost.RunStartStage => td.RunStartStage;
 
     public bool Paused => (runtime.App.PauseReasons & Runtime.Timing.PauseReason.User) != 0;

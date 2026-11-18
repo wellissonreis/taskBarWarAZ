@@ -348,6 +348,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     /// <summary>Encerramento passo 2 (RF-07.10): pausa e grava sincronamente. Chamar na T-Game.</summary>
     public bool SaveForShutdown()
     {
+        td?.Host.Shutdown();
         runtime.Dispatch(runtime.App.SetPause(Runtime.Timing.PauseReason.User));
         var (session, profile) = persistence.Encode(runtime, card);
         return persistence.Write(session, profile);

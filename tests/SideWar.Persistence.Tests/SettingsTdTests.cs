@@ -17,6 +17,16 @@ public class SettingsTdTests
     }
 
     [Fact]
+    public void AutoRestart_defaults_off_and_roundtrips()
+    {
+        Assert.False(ReadPayload("{\"td\":{}}").Td.AutoRestart);
+        var fs = new FakeFileSystem();
+        var store = new SettingsStore(fs, "/data", utcNow: () => Now);
+        Assert.True(store.Save(new AppSettings { Td = new TdSettings { AutoRestart = true } }));
+        Assert.True(store.Load().Settings.Td.AutoRestart);
+    }
+
+    [Fact]
     public void Defaults_keep_idle_and_autostart_off()
     {
         var s = AppSettings.Default;
