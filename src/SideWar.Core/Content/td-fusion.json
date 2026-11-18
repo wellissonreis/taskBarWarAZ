@@ -1,0 +1,27 @@
+{
+  "minStage": 3,
+  "resolveOrder": ["base", "module", "aura"],
+  "roles": {
+    "attack": ["bolt", "cannon", "functions", "cdn", "cosmos", "pipeline"],
+    "control": ["frost", "balancer", "policy", "sentinel", "queue"],
+    "support": ["scaleset", "backup", "aks"],
+    "economy": ["vault"]
+  },
+  "generic": {
+    "attack": {"intervalSeconds": 3, "damagePct": 0.35},
+    "control": {"intervalSeconds": 3, "slowFactor": 0.85, "slowSeconds": 2},
+    "support": {"damageAuraBp": 500},
+    "economy": {"incomePct": 0.5}
+  },
+  "pairs": [
+    {"base": "frost", "module": "bolt", "name": "Gelo elétrico", "effect": "hitDamage", "params": {"damagePct": 0.35}},
+    {"base": "bolt", "module": "frost", "name": "Raio gélido", "effect": "hitSlow", "params": {}},
+    {"base": "cannon", "module": "bolt", "name": "Canhão elétrico", "effect": "hitDamage", "params": {"damagePct": 0.35}},
+    {"base": "bolt", "module": "cannon", "name": "Raio explosivo", "effect": "hitSplash", "params": {}},
+    {"base": "bolt", "module": "cosmos", "name": "Raio encadeado", "effect": "hitChain", "params": {"jumps": 1, "damagePct": 0.4}},
+    {"base": "cannon", "module": "policy", "name": "Canhão de ruptura", "effect": "hitCorrode", "params": {"armorPct": 0.25, "seconds": 3}},
+    {"base": "balancer", "module": "frost", "name": "Bloqueio gelado", "effect": "nodeSlow", "params": {}},
+    {"base": "scaleset", "module": "bolt", "name": "Aura elétrica", "effect": "periodicDamage", "params": {"intervalSeconds": 3, "damagePct": 0.35, "rangeFromModule": 0}},
+    {"base": "vault", "module": "frost", "name": "Cofre gélido", "effect": "periodicSlow", "params": {"intervalSeconds": 3, "rangeFromModule": 1}}
+  ]
+}

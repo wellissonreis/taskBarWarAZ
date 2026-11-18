@@ -36,6 +36,7 @@ public static class TdContentValidator
         Abilities(c.Abilities, stageCount, c.Meta, e);
         Meta(c.Meta, c.Abilities, e);
         Runes(c.Runes, e);
+        Fusion(c, e);
         return e;
     }
 
@@ -473,5 +474,67 @@ public static class TdContentValidator
         Req(e, cs.StartingCreditsBonus >= 0 && cs.WaveBonusBase >= 0 && cs.WaveBonusPerWave >= 0 && cs.NoLeakBase >= 0 && cs.NoLeakPerWave >= 0
                && cs.BonusQuestionBase >= 0 && cs.BonusQuestionPerWave >= 0 && cs.BossCredits >= 0,
             $"{f}.creditSources: todos os valores devem ser >= 0");
+    }
+
+    // ---------------------------------------------------------------- fusão de torres (SDD-37)
+
+    public static readonly string[] FusionRoles = ["attack", "control", "support", "economy"];
+    public static readonly string[] FusionEffects = ["hitDamage", "hitSlow", "hitSplash", "hitChain", "hitCorrode", "nodeSlow", "periodicDamage", "periodicSlow"];
+
+    private static void Fusion(TdContent c, List<string> e)
+    {
+        var f = c.Fusion;
+        var towers = c.Towers.ToDictionary(t => t.Id, StringComparer.Ordinal);
+        Req(e, f.MinStage >= 1 && f.MinStage <= c.Stages.Stages.Length, "td-fusion.minStage referencia fase inexistente");
+        Req(e, f.ResolveOrder is ["base", "module", "aura"], "td-fusion.resolveOrder deve ser [base, module, aura]");
+
+        var roleOf = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var (role, ids) in f.Roles)
+        {
+            Req(e, FusionRoles.Contains(role), $"td-fusion.roles: papel desconhecido '{role}'");
+            foreach (var id in ids)
+            {
+                Req(e, towers.ContainsKey(id), $"td-fusion.roles.{role}: torre inexistente '{id}'");
+                Req(e, roleOf.TryAdd(id, role), $"td-fusion.roles: torre '{id}' em mais de um papel");
+            }
+        }
+        foreach (var t in c.Towers)
+            Req(e, roleOf.ContainsKey(t.Id), $"td-fusion.roles: torre '{t.Id}' sem papel");
+        foreach (var t in c.Towers)
+            if (roleOf.GetValueOrDefault(t.Id) == "attack")
+                Req(e, t.Damage > 0, $"td-fusion.roles.attack: '{t.Id}' sem dano positivo não pode ser módulo de ataque");
+
+        double G(string role, string key) => f.Generic.TryGetValue(role, out var d) && d.TryGetValue(key, out var v) ? v : 0;
+        Req(e, G("attack", "intervalSeconds") > 0 && G("attack", "damagePct") > 0, "td-fusion.generic.attack: intervalSeconds e damagePct devem ser > 0");
+        Req(e, G("control", "intervalSeconds") > 0 && G("control", "slowFactor") is > 0 and < 1 && G("control", "slowSeconds") > 0, "td-fusion.generic.control: intervalSeconds, slowSeconds > 0 e slowFactor em (0, 1)");
+        Req(e, G("support", "damageAuraBp") > 0, "td-fusion.generic.support: damageAuraBp deve ser > 0");
+        Req(e, G("economy", "incomePct") is > 0 and <= 1, "td-fusion.generic.economy: incomePct deve estar em (0, 1]");
+
+        var seen = new HashSet<(string, string)>();
+        foreach (var p in f.Pairs)
+        {
+            var o = $"td-fusion.pairs.{p.Base}+{p.Module}";
+            bool bOk = towers.TryGetValue(p.Base ?? "", out var b);
+            bool mOk = towers.TryGetValue(p.Module ?? "", out var m);
+            Req(e, bOk && mOk, $"{o}: torre inexistente");
+            Req(e, Text(p.Name), $"{o}.name não pode ser vazio");
+            Req(e, seen.Add((p.Base ?? "", p.Module ?? "")), $"{o}: par duplicado");
+            Req(e, FusionEffects.Contains(p.Effect), $"{o}.effect desconhecido '{p.Effect}'");
+            foreach (var (k, v) in p.Params)
+                Req(e, v > 0 || (k == "rangeFromModule" && v >= 0), $"{o}.params.{k} deve ser positivo");
+            double P(string k) => p.Params.GetValueOrDefault(k);
+            if (!bOk || !mOk) continue;
+            switch (p.Effect)
+            {
+                case "hitDamage": Req(e, P("damagePct") > 0 && b!.Kind == "attack" && m!.Damage > 0, $"{o}: hitDamage exige damagePct > 0, base de ataque e módulo com dano"); break;
+                case "hitSlow": Req(e, b!.Kind == "attack" && m!.Stats.GetValueOrDefault("slowFactor") > 0, $"{o}: hitSlow exige base de ataque e módulo com slowFactor"); break;
+                case "hitSplash": Req(e, b!.Kind == "attack" && m!.Stats.GetValueOrDefault("splashRadius") > 0 && m.Stats.GetValueOrDefault("splashFactor") > 0, $"{o}: hitSplash exige base de ataque e módulo com splashRadius/splashFactor"); break;
+                case "hitChain": Req(e, P("jumps") >= 1 && P("jumps") == Math.Floor(P("jumps")) && P("damagePct") > 0 && b!.Kind == "attack" && m!.Stats.GetValueOrDefault("chainRadius") > 0, $"{o}: hitChain exige jumps inteiro >= 1, damagePct > 0, base de ataque e módulo com chainRadius"); break;
+                case "hitCorrode": Req(e, P("armorPct") is > 0 and <= 1 && P("seconds") > 0 && b!.Kind == "attack", $"{o}: hitCorrode exige armorPct em (0, 1], seconds > 0 e base de ataque"); break;
+                case "nodeSlow": Req(e, b!.Kind == "blocker" && m!.Stats.GetValueOrDefault("slowFactor") > 0, $"{o}: nodeSlow exige base blocker e módulo com slowFactor"); break;
+                case "periodicDamage": Req(e, P("intervalSeconds") > 0 && P("damagePct") > 0 && m!.Damage > 0, $"{o}: periodicDamage exige intervalSeconds, damagePct > 0 e módulo com dano"); break;
+                case "periodicSlow": Req(e, P("intervalSeconds") > 0 && m!.Stats.GetValueOrDefault("slowFactor") > 0, $"{o}: periodicSlow exige intervalSeconds > 0 e módulo com slowFactor"); break;
+            }
+        }
     }
 }

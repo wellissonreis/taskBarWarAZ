@@ -16,4 +16,5 @@ namespace SideWar.Core.Content.Td;
 [JsonSerializable(typeof(TdAbilityDef[]))]
 [JsonSerializable(typeof(TdMetaDef))]
 [JsonSerializable(typeof(TdRunesDef))]
+[JsonSerializable(typeof(TdFusionDef))]
 internal sealed partial class TdContentJsonContext : JsonSerializerContext;

@@ -89,7 +89,23 @@ public sealed record TdCreditSourcesDef(
 /// <summary>Teia de runas (td-runes.json): 32 nós fixos (4 anéis × 8 setores), 8 tipos e as fontes de crédito da §6.</summary>
 public sealed record TdRunesDef(TdCreditSourcesDef CreditSources, TdRuneTypeDef[] Types, TdRuneNodeDef[] Nodes);
 
-/// <summary>Conteúdo TD completo e validado; <c>ContentHash</c> = SHA-256 hex dos 7 arquivos <c>td-*.json</c> (com <c>td-runes.json</c>).</summary>
+// ---------------------------------------------------------------- fusão de torres (SDD-37 §3)
+
+/// <summary>
+/// Par nomeado ORDENADO base+módulo (SDD-37 RF-37.1/§3). <c>Effect</c>: hitDamage | hitSlow | hitSplash | hitChain | hitCorrode | nodeSlow | periodicDamage | periodicSlow.
+/// <c>Params</c> (todos positivos): damagePct, jumps, armorPct, seconds, intervalSeconds, rangeFromModule (1 = alcance do módulo; 0 = da base).
+/// </summary>
+public sealed record TdFusionPairDef(string Base, string Module, string Name, string Effect, Dictionary<string, double> Params);
+
+/// <summary>
+/// Fusão (td-fusion.json): fase mínima, ordem de resolução documentada (base, módulo, aura), papéis por torre (attack, control, support, economy),
+/// módulo genérico por papel (RF-37.5) e pares nomeados.
+/// </summary>
+public sealed record TdFusionDef(
+    int MinStage, string[] ResolveOrder, Dictionary<string, string[]> Roles,
+    Dictionary<string, Dictionary<string, double>> Generic, TdFusionPairDef[] Pairs);
+
+/// <summary>Conteúdo TD completo e validado; <c>ContentHash</c> = SHA-256 hex dos 8 arquivos <c>td-*.json</c> (com <c>td-runes.json</c> e <c>td-fusion.json</c>).</summary>
 public sealed record TdContent(
     TdTowerDef[] Towers, TdEnemiesDef Enemies, TdWavesDef Waves, TdStagesDef Stages, TdAbilityDef[] Abilities,
-    TdMetaDef Meta, TdRunesDef Runes, string ContentHash);
+    TdMetaDef Meta, TdRunesDef Runes, string ContentHash, TdFusionDef Fusion);

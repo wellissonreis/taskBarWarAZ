@@ -15,7 +15,7 @@ public static class TdContentLoader
 {
     /// <summary>Arquivos obrigatórios, em ordem alfabética ordinal (ordem do hash).</summary>
     public static readonly IReadOnlyList<string> FileNames =
-        ["td-abilities.json", "td-enemies.json", "td-meta.json", "td-runes.json", "td-stages.json", "td-towers.json", "td-waves.json"];
+        ["td-abilities.json", "td-enemies.json", "td-fusion.json", "td-meta.json", "td-runes.json", "td-stages.json", "td-towers.json", "td-waves.json"];
 
     public static TdContent LoadEmbedded()
     {
@@ -76,6 +76,7 @@ public static class TdContentLoader
         var ctx = TdContentJsonContext.Default;
         var abilities = Read("td-abilities.json", ctx.TdAbilityDefArray);
         var enemies = Read("td-enemies.json", ctx.TdEnemiesDef);
+        var fusion = Read("td-fusion.json", ctx.TdFusionDef);
         var meta = Read("td-meta.json", ctx.TdMetaDef);
         var runes = Read("td-runes.json", ctx.TdRunesDef);
         var stages = Read("td-stages.json", ctx.TdStagesDef);
@@ -84,7 +85,7 @@ public static class TdContentLoader
         if (errors.Count > 0)
             return new TdContentLoadResult(null, errors);
 
-        var content = new TdContent(towers!, enemies!, waves!, stages!, abilities!, meta!, runes!, ComputeHash(files));
+        var content = new TdContent(towers!, enemies!, waves!, stages!, abilities!, meta!, runes!, ComputeHash(files), fusion!);
         try
         {
             errors.AddRange(TdContentValidator.Validate(content));
