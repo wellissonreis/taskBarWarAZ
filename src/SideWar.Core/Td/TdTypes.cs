@@ -54,6 +54,15 @@ public struct TdTower
     public int ParalyzeCdTicks { get; set; }
     /// <summary>Recarga do próximo nó do balanceador.</summary>
     public int NodeCdTicks { get; set; }
+    /// <summary>Segunda componente (módulo) da fusão (SDD-37): 0 = torre simples; n = índice de definição + 1. Entra no hash só quando &gt; 0.</summary>
+    public int ModuleSlot { get; set; }
+    /// <summary>Preço efetivamente pago pelo módulo (teto antiarbitragem da venda, por componente).</summary>
+    public long ModulePrice { get; set; }
+    /// <summary>Recarga da ação periódica do módulo (temporizador separado do da base).</summary>
+    public int ModuleCdTicks { get; set; }
+    public readonly bool HasModule => ModuleSlot > 0;
+    /// <summary>Índice de definição do módulo (-1 sem módulo).</summary>
+    public readonly int ModuleDefIndex => ModuleSlot - 1;
 }
 
 /// <summary>Nó bloqueador do balanceador (RF-28.5): retém até <c>Holds</c> inimigos de solo e causa <c>Dps</c>/s.</summary>
@@ -162,6 +171,8 @@ public enum TdEventType : byte
     // TD.29a: runa despertada. A = índice do nó em <c>RuneWeb</c>; B = fragmentos restantes.
     RuneAwakened,
     VaultIncome,
+    // TD.37a: fusão de torres. A = id da torre; B = custo pago pelo módulo.
+    TowerFused,
 }
 
 /// <summary>Evento observável (não entra no hash). <c>A</c>/<c>B</c>: valores do evento (onda, créditos, id etc.).</summary>

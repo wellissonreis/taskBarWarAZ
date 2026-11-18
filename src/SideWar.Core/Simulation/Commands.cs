@@ -102,6 +102,12 @@ public enum CommandReason : byte
     RuneNotInFrontier,
     /// <summary>Limite simultâneo deste tipo de torre.</summary>
     TowerTypeLimit,
+    /// <summary><c>FuseTower</c> antes da fase de liberação da fusão (SDD-37 RF-37.4).</summary>
+    FusionLocked,
+    /// <summary><c>FuseTower</c> numa torre que já é híbrida: não há terceira componente (SDD-37 RF-37.1).</summary>
+    AlreadyFused,
+    /// <summary><c>FuseTower</c> numa torre SEM POSIÇÃO (SDD-37 RF-37.2).</summary>
+    NotPlaced,
 }
 
 /// <summary>Resultado de um comando: <c>Missing</c> = créditos que faltam (só em <see cref="CommandReason.InsufficientCredits"/>).</summary>

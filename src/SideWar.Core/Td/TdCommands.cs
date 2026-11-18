@@ -57,3 +57,9 @@ public sealed record Resume : IGameCommand;
 /// consumo de <c>Rng</c>. Rejeitado sem custo se o nó não existe, já está desperto ou fora da fronteira, ou sem fragmento. Aceito em pausa; sem devolução.
 /// </summary>
 public sealed record AwakenRune(string NodeId) : IGameCommand;
+
+/// <summary>
+/// Fusão (SDD-37 RF-37.2): compra a componente <paramref name="ComponentTypeId"/> e a coloca como módulo sobre a torre <paramref name="BaseId"/> (mesmo nó, mesmo Id).
+/// Atômico: rejeição não altera créditos, contagens, RNG nem estado. Só em Preparo ou Onda (inclusive pausa de menu).
+/// </summary>
+public sealed record FuseTower(int BaseId, string ComponentTypeId) : IGameCommand;
