@@ -54,7 +54,7 @@ if (Test-Path $builtExe) { Rename-Item -LiteralPath $builtExe -NewName 'SideWar.
 $exe = Join-Path $publishDir 'SideWar.exe'
 if (-not (Test-Path $exe)) { throw "SideWar.exe ausente em $publishDir" }
 
-# 3. Pasta do pacote (RF-18.3): SideWar.exe + LICENSE.txt + THIRD-PARTY-NOTICES.txt + README.txt da raiz.
+# 3. Pasta do pacote (RF-18.3): SideWar.exe + LICENSE.txt + THIRD-PARTY-NOTICES.txt + README.txt da raiz + instalador.
 # Sem .pdb (libSkiaSharp.pdb fica fora) e sem portable.flag.
 $releaseDir = Join-Path $root 'artifacts/release'
 $staging = Join-Path $releaseDir 'staging'
@@ -64,6 +64,13 @@ Copy-Item -LiteralPath $exe -Destination $staging
 foreach ($f in 'LICENSE.txt', 'THIRD-PARTY-NOTICES.txt', 'README.txt') {
     $src = Join-Path $root $f
     if (-not (Test-Path -LiteralPath $src)) { throw "$f ausente na raiz do repositório" }
+    Copy-Item -LiteralPath $src -Destination $staging
+}
+# Instalador para testadores (scripts/windows/installer): Instalar.cmd, Desinstalar.cmd, Install.ps1, LEIA-ME-AMIGOS.txt.
+$installerDir = Join-Path $PSScriptRoot 'installer'
+foreach ($f in 'Instalar.cmd', 'Desinstalar.cmd', 'Install.ps1', 'LEIA-ME-AMIGOS.txt') {
+    $src = Join-Path $installerDir $f
+    if (-not (Test-Path -LiteralPath $src)) { throw "$f ausente em scripts/windows/installer" }
     Copy-Item -LiteralPath $src -Destination $staging
 }
 $pdbs = @(Get-ChildItem -LiteralPath $staging -Recurse -Filter '*.pdb')
