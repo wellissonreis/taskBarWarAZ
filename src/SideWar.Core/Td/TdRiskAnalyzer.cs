@@ -35,4 +35,30 @@ public static class TdRiskAnalyzer
         }
         return seconds;
     }
+
+    /// <summary>Sem torre de defesa posicionada, o gatilho é um inimigo a esta distância lógica (20% do caminho) da borda do portal.</summary>
+    public const double SafetyDistance = 240.0;
+
+    /// <summary>
+    /// Linha de defesa: X lógico da torre posicionada, ativa (não desativada) e que ataca/controla/bloqueia (alvos diferentes de "none")
+    /// mais próxima do portal (menor X). Sem torre assim, a linha é <c>LeakX + SafetyDistance</c>. Venda ou desativação mudam a referência.
+    /// </summary>
+    public static double DefenseLineX(TdMatchState match)
+    {
+        double line = double.PositiveInfinity;
+        foreach (var t in match.Towers)
+            if (t.Placed && t.DisabledTicks <= 0 && match.Content.Towers[t.DefIndex].Targets != "none") line = Math.Min(line, t.X);
+        return double.IsPositiveInfinity(line) ? match.LeakX + SafetyDistance : line;
+    }
+
+    /// <summary>Ids (em ordem de lista) dos inimigos vivos, voadores inclusos, que já passaram da linha de defesa. Só leitura.</summary>
+    public static IReadOnlyList<int> PastDefenseLine(TdMatchState match)
+    {
+        var ids = new List<int>();
+        if (match.Phase != MatchPhase.Onda) return ids;
+        double line = DefenseLineX(match);
+        foreach (var e in match.Enemies)
+            if (e.Hp > 0 && e.X < line) ids.Add(e.Id);
+        return ids;
+    }
 }
