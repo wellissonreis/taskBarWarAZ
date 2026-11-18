@@ -233,6 +233,7 @@ public sealed partial class TdUiController
         _hudPhase = 0;
         _hurtUntil = _hurtNextAt = double.NegativeInfinity;
         ResetRuneCard(clearSeen: true);
+        ResetMutations(clearSeen: true);
         _onb.SetTutorialDone(false);
         Close();
     }
@@ -540,6 +541,7 @@ public sealed partial class TdUiController
         }
         Card(TdIcon.Coin, $"Venda na aba Torres: devolve {Math.Round(m.Content.Stages.Rules.SellRefund * 100):0}%.");
         Card(TdIcon.Scale, "Habilidades recarregam sozinhas.");
+        Card(TdIcon.Alert, MutationHelpText);
         Card(TdIcon.Question, "Responda V ou F: ganhe bônus.");
         Card(TdIcon.Crown, "Vença sem perder núcleo: coroa.");
         Card(TdIcon.Medal, "Medalhas e patente: seus recordes.");

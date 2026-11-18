@@ -54,7 +54,7 @@ public sealed partial class TdUiController
     public bool NoticeOpen => _noticeText is not null && !BossHidden && _now() < _noticeUntil;
     public string? NoticeText => NoticeOpen ? _noticeText : null;
     /// <summary>Qualquer popover pequeno ancorado ao chip: painel rápido, pergunta-bônus, aviso de fase ou cartão de fim. Nunca ativa janela.</summary>
-    public bool CornerPopover => QuickTowersOpen || RuneWindowOpen || EndCardOpen || NoticeOpen || RuneCardOpen || AlertCardOpen || FuseCardOpen || FusionTipOpen || ((Mode == TdUiMode.None || QuickTowersOpen) && QuizActive);
+    public bool CornerPopover => QuickTowersOpen || RuneWindowOpen || EndCardOpen || NoticeOpen || RuneCardOpen || AlertCardOpen || FuseCardOpen || FusionTipOpen || MutationWarnOpen || ((Mode == TdUiMode.None || QuickTowersOpen) && QuizActive);
     private int _chosenX = -1;       // X lógico já escolhido (passo "escolher a torre"); -1 = ainda no passo do ponto
     private int _moveTowerId;        // > 0: reposicionando uma torre SEM POSIÇÃO (sem escolha de tipo)
     private int _ghostX = -1;
@@ -226,6 +226,7 @@ public sealed partial class TdUiController
             case TdUiAction.RuneTutorialDismiss: DismissRuneCard(); Changed?.Invoke(); break;
             case TdUiAction.FuseOpen or TdUiAction.FusePick or TdUiAction.FuseConfirm or TdUiAction.FuseBack or TdUiAction.FuseClose: ActivateFuse(item); break;
             case TdUiAction.FusionTipDismiss: DismissFusionTip(); break;
+            case TdUiAction.MutationWarnDismiss: DismissMutationWarn(); break;
             case TdUiAction.QuickTowers:
                 if (QuickTowersOpen) Close();
                 else if (!ModalOpen && _match().Phase is not (MatchPhase.Vitoria or MatchPhase.Derrota)) OpenQuickTowers();
@@ -349,6 +350,7 @@ public sealed partial class TdUiController
             RuneWindowOpen = false;
             ResetRuneCard(clearSeen: false);
             ResetFusion(clearSeen: false);
+            ResetMutations(clearSeen: false);
             _runeCount = m.AwakenedCount;
             _runeKnown.Clear();
             foreach (var rn in m.RuneWeb) if (m.IsAwakened(rn.Id)) _runeKnown.Add(rn.Id);
@@ -369,6 +371,7 @@ public sealed partial class TdUiController
         SyncRuneCard(m);
         SyncAlertCard();
         SyncFuse(m);
+        SyncMutationWarn(m);
         UpdateModalPause();
         if (m.Phase is MatchPhase.Vitoria or MatchPhase.Derrota)
         {
@@ -470,6 +473,7 @@ public sealed partial class TdUiController
         _returnToEnd = false;
         _rcPending = false;
         _ftShown = false;
+        _mwShown = false;
         _tipText = null;
         Close();
     }
@@ -815,6 +819,7 @@ public sealed partial class TdUiController
         if (!BuildActive && NoticeOpen && (Mode == TdUiMode.None || QuickTowersOpen)) return BuildNotice();
         if (!BuildActive && FuseCardOpen) return BuildFuseCard(m);
         if (!BuildActive && FusionTipOpen && (Mode == TdUiMode.None || QuickTowersOpen)) return BuildFusionTip();
+        if (!BuildActive && MutationWarnOpen && (Mode == TdUiMode.None || QuickTowersOpen)) return BuildMutationWarn(m);
         if (!BuildActive && RuneCardOpen && (Mode == TdUiMode.None || QuickTowersOpen)) return BuildRuneCard();
         if (QuickTowersOpen) return BuildQuickTowers(m);
         if (RuneWindowOpen && Mode == TdUiMode.None) return BuildRuneWindow(m);

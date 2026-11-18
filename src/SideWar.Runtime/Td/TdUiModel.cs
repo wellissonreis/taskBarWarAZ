@@ -34,6 +34,8 @@ public enum TdUiAction : byte
     AlertSave, AlertFall, AlertDismiss, AlertMute,
     /// <summary>TD.37b: fusão de torres: abrir o cartão (Arg = id da base), escolher o módulo (SArg = tipo), confirmar, voltar, fechar e dispensar a dica de primeira vez.</summary>
     FuseOpen, FusePick, FuseConfirm, FuseBack, FuseClose, FusionTipDismiss,
+    /// <summary>TD.37d: dispensar o aviso de mutantes da próxima onda.</summary>
+    MutationWarnDismiss,
 }
 
 /// <summary>Ícone do HUD desenhado por código (TD.14); o renderer mapeia para caminhos vetoriais.</summary>
