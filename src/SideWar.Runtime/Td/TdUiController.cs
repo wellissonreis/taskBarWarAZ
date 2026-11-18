@@ -54,7 +54,7 @@ public sealed partial class TdUiController
     public bool NoticeOpen => _noticeText is not null && !BossHidden && _now() < _noticeUntil;
     public string? NoticeText => NoticeOpen ? _noticeText : null;
     /// <summary>Qualquer popover pequeno ancorado ao chip: painel rápido, pergunta-bônus, aviso de fase ou cartão de fim. Nunca ativa janela.</summary>
-    public bool CornerPopover => QuickTowersOpen || RuneWindowOpen || EndCardOpen || NoticeOpen || RuneCardOpen || AlertCardOpen || ((Mode == TdUiMode.None || QuickTowersOpen) && QuizActive);
+    public bool CornerPopover => QuickTowersOpen || RuneWindowOpen || EndCardOpen || NoticeOpen || RuneCardOpen || AlertCardOpen || FuseCardOpen || FusionTipOpen || ((Mode == TdUiMode.None || QuickTowersOpen) && QuizActive);
     private int _chosenX = -1;       // X lógico já escolhido (passo "escolher a torre"); -1 = ainda no passo do ponto
     private int _moveTowerId;        // > 0: reposicionando uma torre SEM POSIÇÃO (sem escolha de tipo)
     private int _ghostX = -1;
@@ -105,7 +105,7 @@ public sealed partial class TdUiController
     public bool BuildActive => Mode == TdUiMode.Build && (_placementType is not null || _moveTowerId > 0);
 
     /// <summary>Algum popover aberto (o ESC fecha). O painel de torres fixo (TD.28b) em repouso não conta: não rouba o ESC dos outros apps.</summary>
-    public bool PopoverOpen => !PinnedIdle && (QuickTowersOpen || RuneWindowOpen || Mode != TdUiMode.None || QuizActive);
+    public bool PopoverOpen => !PinnedIdle && (QuickTowersOpen || FuseCardOpen || RuneWindowOpen || Mode != TdUiMode.None || QuizActive);
 
     /// <summary>Passo do ponto: o fantasma segue o mouse e o clique escolhe o ponto.</summary>
     public bool ChoosingPoint => BuildActive && _chosenX < 0;
@@ -224,6 +224,8 @@ public sealed partial class TdUiController
                 break;
             case TdUiAction.AlertSave or TdUiAction.AlertFall or TdUiAction.AlertDismiss or TdUiAction.AlertMute: ActivateAlert(item.Action); break;
             case TdUiAction.RuneTutorialDismiss: DismissRuneCard(); Changed?.Invoke(); break;
+            case TdUiAction.FuseOpen or TdUiAction.FusePick or TdUiAction.FuseConfirm or TdUiAction.FuseBack or TdUiAction.FuseClose: ActivateFuse(item); break;
+            case TdUiAction.FusionTipDismiss: DismissFusionTip(); break;
             case TdUiAction.QuickTowers:
                 if (QuickTowersOpen) Close();
                 else if (!ModalOpen && _match().Phase is not (MatchPhase.Vitoria or MatchPhase.Derrota)) OpenQuickTowers();
@@ -346,6 +348,7 @@ public sealed partial class TdUiController
             _selectedRune = _lastRune = _hoverRune = _hoverBranch = null;
             RuneWindowOpen = false;
             ResetRuneCard(clearSeen: false);
+            ResetFusion(clearSeen: false);
             _runeCount = m.AwakenedCount;
             _runeKnown.Clear();
             foreach (var rn in m.RuneWeb) if (m.IsAwakened(rn.Id)) _runeKnown.Add(rn.Id);
@@ -365,6 +368,7 @@ public sealed partial class TdUiController
         SyncQuiz(m);
         SyncRuneCard(m);
         SyncAlertCard();
+        SyncFuse(m);
         UpdateModalPause();
         if (m.Phase is MatchPhase.Vitoria or MatchPhase.Derrota)
         {
@@ -465,6 +469,7 @@ public sealed partial class TdUiController
         if (!AlertCritical) _acHidden = true; // a pausa crítica exige escolha explícita: não recolhe
         _returnToEnd = false;
         _rcPending = false;
+        _ftShown = false;
         _tipText = null;
         Close();
     }
@@ -484,6 +489,8 @@ public sealed partial class TdUiController
         _hoverRune = _hoverBranch = null;
         _legendHint = false;
         _rcShown = false; // um cartão ainda pendente continua esperando a vez
+        _fuseBase = 0;
+        _fuseType = null;
         _pinnedOpen = false;
         _noticeText = null;
         _endCorner = false;
@@ -552,6 +559,7 @@ public sealed partial class TdUiController
             if (BossHidden) return;
             var r = m.StageResults[^1];
             var o = _host.LastOutcome;
+            _noticeTitle = null;
             _noticeText = $"Fase {r.StageNumber}" + (r.Crown ? " +coroa" : "") + (o.NewRecord ? " +recorde" : "");
             _noticeUntil = _now() + StageNoticeSeconds;
             Changed?.Invoke();
@@ -567,7 +575,7 @@ public sealed partial class TdUiController
     {
         var s = new Stack(200f);
         s.Add(TdUiKind.Label, _noticeText!, 18f, tone: TdTone.Good, icon: TdIcon.Check);
-        return Finish("Fase concluida", s, 0);
+        return Finish(_noticeTitle ?? "Fase concluida", s, 0);
     }
 
     private void SetMode(TdUiMode mode)
@@ -805,6 +813,8 @@ public sealed partial class TdUiController
         if (AlertWarningOpen) return BuildAlertCard();
         if (!BuildActive && (Mode == TdUiMode.None || QuickTowersOpen) && _quizQ is not null && QuizPhaseOk(m)) return BuildQuiz(m);
         if (!BuildActive && NoticeOpen && (Mode == TdUiMode.None || QuickTowersOpen)) return BuildNotice();
+        if (!BuildActive && FuseCardOpen) return BuildFuseCard(m);
+        if (!BuildActive && FusionTipOpen && (Mode == TdUiMode.None || QuickTowersOpen)) return BuildFusionTip();
         if (!BuildActive && RuneCardOpen && (Mode == TdUiMode.None || QuickTowersOpen)) return BuildRuneCard();
         if (QuickTowersOpen) return BuildQuickTowers(m);
         if (RuneWindowOpen && Mode == TdUiMode.None) return BuildRuneWindow(m);
@@ -1198,14 +1208,14 @@ public sealed partial class TdUiController
         return string.Join(", ", parts);
     }
 
-    private static TdPopoverView Finish(string title, Stack s, float anchorX, string? iconTower = null)
+    private static TdPopoverView Finish(string title, Stack s, float anchorX, string? iconTower = null, string? iconModule = null)
     {
         var items = new List<TdUiItem>(s.Items.Count + 1)
         {
             new(new DipRect(s.Width - HeaderH - 2, 2, HeaderH, HeaderH - 4), TdUiKind.Button, "X", TdUiAction.Close),
         };
         items.AddRange(s.Items);
-        return new TdPopoverView(title, [.. items], s.Width, s.Y + Pad, anchorX, iconTower);
+        return new TdPopoverView(title, [.. items], s.Width, s.Y + Pad, anchorX, iconTower, IconModule: iconModule);
     }
 
     private static string TraitText(string[] traits)
@@ -1262,7 +1272,9 @@ public sealed partial class TdUiController
         if (ti < 0) return Finish("Torre", s, _anchorX);
         var t = m.Towers[ti];
         var d = m.Content.Towers[t.DefIndex];
-        string title = $"{d.Name} x{m.TowerCount(t.DefIndex)}";
+        string title = t.HasModule ? m.TowerDisplayName(t) : $"{d.Name} x{m.TowerCount(t.DefIndex)}";
+        string? moduleId = t.HasModule ? m.Content.Towers[t.ModuleDefIndex].Id : null;
+        if (t.HasModule) s.Add(TdUiKind.Label, $"Fundida: {d.Name} + {m.Content.Towers[t.ModuleDefIndex].Name}", RowH - 4, tone: TdTone.Accent);
         s.Add(TdUiKind.Label, $"Alcance {d.Range:0}", RowH - 4, tone: TdTone.Dim);
         s.Add(TdUiKind.Label, $"Fraqueza: {d.WeaknessText}", TwoLineH - 8, tone: TdTone.Warn);
         if (!t.Placed)
@@ -1280,9 +1292,14 @@ public sealed partial class TdUiController
             }
             s.Y += RowH + 2;
         }
+        if (t.Placed && !t.HasModule)
+        {
+            bool unlocked = m.FusionUnlocked;
+            s.Add(TdUiKind.Button, unlocked ? "Fundir com outra torre" : $"Fundir (fase {m.Content.Fusion.MinStage})", RowH, TdUiAction.FuseOpen, arg: t.Id, enabled: unlocked, tone: unlocked ? TdTone.Accent : TdTone.Dim);
+        }
         long refund = m.SellValue(t.Id); // fungivel: taxa x custo(tipo, n-1) (SDD-29 §5.2)
         s.Add(TdUiKind.Button, $"Vender ({Math.Round(m.Content.Stages.Rules.SellRefund * 100):0}%)", RowH, TdUiAction.Sell, arg: t.Id, right: $"+${refund}", tone: TdTone.Bad);
-        return Finish(title, s, t.Placed ? m.TowerDip(t) : _anchorX, d.Id);
+        return Finish(title, s, t.Placed ? m.TowerDip(t) : _anchorX, d.Id, moduleId);
     }
 
     private static TdPopoverView BuildPreview(TdMatchState m)
@@ -1328,7 +1345,8 @@ public sealed partial class TdUiController
             var d = m.Content.Towers[t.DefIndex];
             long refund = m.SellValue(t.Id);
             s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, PopoverWidth - 3 * Pad - sellW, RowH + 2), TdUiKind.Button,
-                $"{d.Name} x{m.TowerCount(t.DefIndex)}", TdUiAction.OpenTower, t.Id, SArg: d.Id, Tone: t.Placed ? TdTone.Normal : TdTone.Warn));
+                t.HasModule ? m.TowerDisplayName(t) : $"{d.Name} x{m.TowerCount(t.DefIndex)}", TdUiAction.OpenTower, t.Id, SArg: d.Id,
+                Sub: t.HasModule ? m.Content.Towers[t.ModuleDefIndex].Id : null, Tone: t.Placed ? TdTone.Normal : TdTone.Warn));
             s.Items.Add(new TdUiItem(new DipRect(PopoverWidth - Pad - sellW, s.Y, sellW, RowH + 2), TdUiKind.Button,
                 "Vender", TdUiAction.Sell, t.Id, Right: $"+${refund}", Tone: TdTone.Bad));
             s.Y += RowH + 4;
