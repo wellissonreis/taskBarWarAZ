@@ -39,6 +39,21 @@ public sealed class TdBandRenderer : IDisposable
     private readonly bool _ownsAtlas;
     private SKImage?[] _towerImg = [], _chipImg = [], _enemyImg = [];
     private SKImage? _coreImg, _portalImg;
+    // DESIGN-ANIM: arte animada por tempo de render (torres: parada/ataque/projétil; inimigos: caminhada). Sem entrada = arte estática acima.
+    private TowerAnim?[] _towerAnim = [];
+    private TdAnimStrip?[] _enemyAnim = [];
+    private double[] _enemyFps = [];
+    private double _now;
+    private TdMatchState? _lastMatch;
+    private int _lastWidth;
+
+    private sealed class TowerAnim(TdAnimStrip idle, TdAnimStrip attack, TdAnimStrip fx, bool area) : IDisposable
+    {
+        public readonly TdAnimStrip Idle = idle, Attack = attack, Fx = fx;
+        public readonly bool Area = area;
+
+        public void Dispose() { Idle.Dispose(); Attack.Dispose(); Fx.Dispose(); }
+    }
     private bool _baked;
     private static readonly SKSamplingOptions Nearest = new(SKFilterMode.Nearest);
     private const float Ground = 32f, EnemyFoot = 30.5f, FlyFoot = 24f, ChipSpriteDip = 11f;
@@ -93,6 +108,9 @@ public sealed class TdBandRenderer : IDisposable
         ArgumentNullException.ThrowIfNull(match);
         EnsureContent(match.Content);
         if (!_baked) BakeSprites();
+        _now = now;
+        _lastMatch = match;
+        _lastWidth = TdBand.WidthDip(match);
         canvas.Clear(SKColors.Transparent);
         int w = TdBand.WidthDip(match);
         canvas.Save();
@@ -157,13 +175,50 @@ public sealed class TdBandRenderer : IDisposable
             var e = TdArtMap.TryEnemy(id, out var found) ? found : (i < normal.Length ? TdArtMap.Enemies[0] : TdArtMap.Enemies[^3]);
             _enemyImg[i] = TdVectorSprites.IsEnemy(id) ? TdVectorSprites.Bake(id, e.HeightDip * px, true) : TdSpriteBaker.ByHeight(_atlas, e.Sprite, e.HeightDip * px, e.Tint, e.TintAlpha);
         }
+        BakeAnimations(content, px);
         _coreImg = TdSpriteBaker.ByHeight(_atlas, SpriteId.Core, TdArtMap.EdgeHeightDip * px, default, 0);
         _portalImg = TdSpriteBaker.ByHeight(_atlas, SpriteId.Portal, TdArtMap.EdgeHeightDip * px, default, 0);
         _baked = true;
     }
 
+    /// <summary>DESIGN-ANIM: cozinha as folhas animadas (uma vez por DPI/altura da faixa). Torre: altura da caixa = <see cref="TdArtMap.TowerHeightDip"/>; inimigo: a altura da tabela <see cref="TdArtMap"/>.</summary>
+    private void BakeAnimations(TdContent content, float px)
+    {
+        _towerAnim = new TowerAnim?[content.Towers.Length];
+        for (int i = 0; i < content.Towers.Length; i++)
+        {
+            string id = content.Towers[i].Id;
+            if (!TdAnimArt.HasTower(id)) continue;
+            string idle = id + "-idle.png";
+            float scale = TdAnimStrip.ScaleForBoxHeight(idle, TdAnimArt.IdleFrames, TdArtMap.TowerHeightDip * px);
+            bool area = id is "cdn";
+            float fxScale = area ? scale * TdAnimArt.CdnAreaScale : scale;
+            _towerAnim[i] = new TowerAnim(
+                TdAnimStrip.Bake(idle, TdAnimArt.IdleFrames, scale, idle, TdAnimArt.IdleFrames),
+                TdAnimStrip.Bake(id + "-attack.png", TdAnimArt.AttackFrames, scale, idle, TdAnimArt.IdleFrames),
+                TdAnimStrip.Bake(id + "-fx.png", TdAnimArt.FxFrames, fxScale, idle, TdAnimArt.IdleFrames, centered: true),
+                area);
+        }
+        var normal = content.Enemies.Enemies;
+        var bosses = content.Enemies.Bosses;
+        _enemyAnim = new TdAnimStrip?[normal.Length + bosses.Length];
+        _enemyFps = new double[_enemyAnim.Length];
+        for (int i = 0; i < _enemyAnim.Length; i++)
+        {
+            string id = i < normal.Length ? normal[i].Id : bosses[i - normal.Length].Id;
+            if (!TdAnimArt.TryEnemyFps(id, out double fps) || !TdArtMap.TryEnemy(id, out var e)) continue;
+            string walk = id + "-walk.png";
+            float scale = TdAnimStrip.ScaleForBoxHeight(walk, TdAnimArt.WalkFrames, e.HeightDip * px);
+            _enemyAnim[i] = TdAnimStrip.Bake(walk, TdAnimArt.WalkFrames, scale, walk, TdAnimArt.WalkFrames);
+            _enemyFps[i] = fps;
+        }
+    }
+
     private void ReleaseSprites()
     {
+        foreach (var a in _towerAnim) a?.Dispose();
+        foreach (var a in _enemyAnim) a?.Dispose();
+        _towerAnim = []; _enemyAnim = []; _enemyFps = [];
         foreach (var i in _towerImg) i?.Dispose();
         foreach (var i in _chipImg) i?.Dispose();
         foreach (var i in _enemyImg) i?.Dispose();
@@ -181,6 +236,16 @@ public sealed class TdBandRenderer : IDisposable
         c.ResetMatrix();
         _img.Color = Palette.TxtBranco.WithAlpha(alpha);
         c.DrawImage(img, MathF.Round(cxDip * _s - img.Width / 2f), MathF.Round((bottomDip + TdBand.EdgeHeadroomDip) * _s - img.Height), Nearest, _img);
+        c.Restore();
+    }
+
+    /// <summary>Desenha um quadro da folha animada com a base da caixa em <paramref name="bottomDip"/> e o centro em <paramref name="cxDip"/>.</summary>
+    private void BlitStrip(SKCanvas c, TdAnimStrip strip, int frame, float cxDip, float bottomDip, byte alpha = 255)
+    {
+        c.Save();
+        c.ResetMatrix();
+        _img.Color = Palette.TxtBranco.WithAlpha(alpha);
+        strip.Draw(c, frame, cxDip * _s, (bottomDip + TdBand.EdgeHeadroomDip) * _s, _img);
         c.Restore();
     }
 
@@ -295,10 +360,12 @@ public sealed class TdBandRenderer : IDisposable
             bool flying = e.Flying || (bits & FlyingBit) != 0;
             var img = e.DefIndex >= 0 && e.DefIndex < _enemyImg.Length ? _enemyImg[e.DefIndex] : null;
             float foot = e.IsBoss ? Ground - 0.5f : flying ? FlyFoot : EnemyFoot;
-            float sw = WidthDip(img), sh = HeightDip(img);
+            var walk = e.DefIndex >= 0 && e.DefIndex < _enemyAnim.Length ? _enemyAnim[e.DefIndex] : null;
+            float sw = walk is null ? WidthDip(img) : walk.BoxW / _s, sh = walk is null ? HeightDip(img) : walk.BoxH / _s;
             SKColor border = e.IsBoss ? Palette.Perigo : flying ? Palette.Gelo : (bits & ArmoredBit) != 0 ? Palette.Ambar
                 : (bits & RegenBit) != 0 ? Palette.Menta : (bits & DrainBit) != 0 ? Palette.Td.EnemyDrain : Palette.Td.EnemySolo;
-            Blit(c, img, x, foot);
+            if (walk is null) Blit(c, img, x, foot);
+            else BlitStrip(c, walk, TdAnimArt.LoopFrame(_now, _enemyFps[e.DefIndex], walk.Frames, e.Id), x, foot);
             if (e.Mutations != 0 && !e.IsBoss) _marks.Draw(c, e.Mutations, _mutIds, x, foot, sw, sh, e.ShieldHp > 0);
             if ((bits & StealthBit) != 0)
             {
@@ -474,10 +541,14 @@ public sealed class TdBandRenderer : IDisposable
     private void DrawTower(SKCanvas c, float cx, in TdTower t, bool selected, bool hover)
     {
         var img = t.DefIndex >= 0 && t.DefIndex < _towerImg.Length ? _towerImg[t.DefIndex] : null;
+        var anim = t.DefIndex >= 0 && t.DefIndex < _towerAnim.Length ? _towerAnim[t.DefIndex] : null;
         bool disabled = t.DisabledTicks > 0;
-        float sw = MathF.Max(WidthDip(img), 12f), sh = MathF.Max(HeightDip(img), 12f);
+        float sw = MathF.Max(anim is null ? WidthDip(img) : anim.Idle.BoxW / _s, 12f), sh = MathF.Max(anim is null ? HeightDip(img) : anim.Idle.BoxH / _s, 12f);
         float left = cx - sw / 2f, top = Ground - sh;
-        Blit(c, img, cx, Ground, disabled ? (byte)110 : (byte)255);
+        byte alpha = disabled ? (byte)110 : (byte)255;
+        if (anim is null) Blit(c, img, cx, Ground, alpha);
+        else if (TowerAttackFrame(t, cx) is var af && af >= 0) BlitStrip(c, anim.Attack, af, cx, Ground, alpha);
+        else BlitStrip(c, anim.Idle, TdAnimArt.LoopFrame(_now, TdAnimArt.IdleFps, anim.Idle.Frames, t.Id), cx, Ground, alpha);
 
         if (t.HasModule && _content is not null && t.ModuleDefIndex < _content.Towers.Length)
             TdFusionMark.Draw(c, _content.Towers[t.ModuleDefIndex].Id, left + sw - 7f, Ground - 11f, 11f, disabled ? (byte)110 : (byte)255);
@@ -520,8 +591,9 @@ public sealed class TdBandRenderer : IDisposable
     // ------------------------------------------------------------------ projéteis / efeitos
 
     /// <summary>
-    /// Efeito simples de disparo: a torre que acabou de atirar (recarga recém-reiniciada) traça um feixe até o inimigo mais próximo
-    /// dentro do alcance. É só visual (o Core não expõe o alvo): o inimigo mostrado pode divergir do atingido em empates.
+    /// Efeito de disparo (só visual; o Core não expõe o alvo nem o projétil). A torre que acabou de atirar (recarga reiniciada)
+    /// lança o projétil animado do design até o inimigo mais próximo dentro do alcance (o mostrado pode divergir do atingido em empates);
+    /// sem arte do design, traça o feixe simples. O CDN solta o anel de área sobre a própria torre.
     /// </summary>
     private void DrawFire(SKCanvas c, TdMatchState m, int w)
     {
@@ -532,30 +604,85 @@ public sealed class TdBandRenderer : IDisposable
             var def = _content!.Towers[t.DefIndex];
             if (def.Kind != "attack" || def.Interval <= 0) continue;
             int intervalTicks = Math.Max(1, (int)Math.Round(def.Interval * TdWorld.TicksPerSecond));
-            if (t.CooldownTicks < intervalTicks - 2) continue;
+            var anim = t.DefIndex < _towerAnim.Length ? _towerAnim[t.DefIndex] : null;
+            int since = intervalTicks - t.CooldownTicks;
+            if (anim is null ? t.CooldownTicks < intervalTicks - 2 : since < 0 || since > TdAnimArt.ProjectileTicks * 2) continue;
 
             float cx = TdBand.TowerCenterDip(m, t, w);
-            float range = (float)def.Range * w / 1200f;
-            int best = -1;
-            float bestD = float.MaxValue;
-            for (int j = 0; j < m.Enemies.Count; j++)
+            if (!TryTarget(m, def, cx, w, out float tx, out float ty)) continue;
+            if (anim is null)
             {
-                var e = m.Enemies[j];
-                bool both = def.Targets == "both";
-                if (e.Flying && !both) continue;
-                float ex = TdBand.ToDip(e.X, w);
-                float d = MathF.Abs(ex - cx);
-                if (d <= range && d < bestD) { bestD = d; best = j; }
+                _stroke.Color = TowerColor(t.DefIndex).WithAlpha(220);
+                c.DrawLine(cx, Ground - 22f, tx, ty, _stroke);
+                _fill.Color = Palette.TxtBranco;
+                c.DrawCircle(tx, ty, 1.5f, _fill);
+                continue;
             }
-            if (best < 0) continue;
-            var target = m.Enemies[best];
-            float tx = TdBand.ToDip(target.X, w);
-            float ty = target.Flying ? FlyFoot - 7f : EnemyFoot - 7f;
-            _stroke.Color = TowerColor(t.DefIndex).WithAlpha(220);
-            c.DrawLine(cx, Ground - 22f, tx, ty, _stroke);
-            _fill.Color = Palette.TxtBranco;
-            c.DrawCircle(tx, ty, 1.5f, _fill);
+
+            double seconds = since / (double)TdWorld.TicksPerSecond;
+            int frame = TdAnimArt.LoopFrame(seconds, TdAnimArt.FxFps, anim.Fx.Frames);
+            if (anim.Area)
+            {
+                BlitCentered(c, anim.Fx, frame, cx, Ground - anim.Idle.BoxH / _s / 2f);
+                continue;
+            }
+            if (since > TdAnimArt.ProjectileTicks) continue;
+            float p = since / (float)TdAnimArt.ProjectileTicks;
+            float mx = cx - anim.Idle.BoxW / _s / 2f, my = Ground - anim.Idle.BoxH / _s * 0.6f;
+            BlitCentered(c, anim.Fx, frame, mx + (tx - mx) * p, my + (ty - my) * p);
         }
+    }
+
+    private void BlitCentered(SKCanvas c, TdAnimStrip strip, int frame, float cxDip, float cyDip)
+    {
+        c.Save();
+        c.ResetMatrix();
+        _img.Color = Palette.TxtBranco;
+        strip.Draw(c, frame, cxDip * _s, (cyDip + TdBand.EdgeHeadroomDip) * _s, _img);
+        c.Restore();
+    }
+
+    /// <summary>Inimigo visado (mais próximo dentro do alcance, respeitando solo/ar), em DIP; só visual.</summary>
+    private static bool TryTarget(TdMatchState m, TdTowerDef def, float cx, int w, out float tx, out float ty)
+    {
+        float range = (float)def.Range * w / 1200f;
+        int best = -1;
+        float bestD = float.MaxValue;
+        for (int j = 0; j < m.Enemies.Count; j++)
+        {
+            var e = m.Enemies[j];
+            if (e.Flying && def.Targets != "both") continue;
+            float d = MathF.Abs(TdBand.ToDip(e.X, w) - cx);
+            if (d <= range && d < bestD) { bestD = d; best = j; }
+        }
+        tx = ty = 0;
+        if (best < 0) return false;
+        var target = m.Enemies[best];
+        tx = TdBand.ToDip(target.X, w);
+        ty = target.Flying ? FlyFoot - 7f : EnemyFoot - 7f;
+        return true;
+    }
+
+    /// <summary>
+    /// Quadro (0-based) da folha de ataque da torre, ou -1 para a parada. O disparo (recarga reiniciada) cai no quadro <see cref="TdAnimArt.FireFrame"/> e o
+    /// recuo segue a 12 fps; nos últimos ticks da recarga com alvo no alcance a torre "carrega" (quadros 0-1). Derivado só do estado lido.
+    /// </summary>
+    private int TowerAttackFrame(in TdTower t, float cx)
+    {
+        if (!t.Placed || t.DisabledTicks > 0 || _content is null || t.DefIndex >= _content.Towers.Length) return -1;
+        var def = _content.Towers[t.DefIndex];
+        if (def.Kind != "attack" || def.Interval <= 0) return -1;
+        int intervalTicks = Math.Max(1, (int)Math.Round(def.Interval * TdWorld.TicksPerSecond));
+        int since = intervalTicks - t.CooldownTicks;
+        if (t.CooldownTicks > 0 && since >= 0)
+        {
+            int f = TdAnimArt.FireFrame + (int)Math.Floor(since / (double)TdWorld.TicksPerSecond * TdAnimArt.AttackFps);
+            if (f < TdAnimArt.AttackFrames) return f;
+            int chargeTicks = (int)Math.Ceiling(TdAnimArt.FireFrame / TdAnimArt.AttackFps * TdWorld.TicksPerSecond);
+            if (t.CooldownTicks <= chargeTicks && _lastMatch is { } m && TryTarget(m, def, cx, _lastWidth, out _, out _))
+                return TdAnimArt.FireFrame - (int)Math.Ceiling(t.CooldownTicks / (double)TdWorld.TicksPerSecond * TdAnimArt.AttackFps);
+        }
+        return -1;
     }
 
     private static SKPath Poly(params float[] xy)
