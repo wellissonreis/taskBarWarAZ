@@ -1,3 +1,5 @@
 * text=auto eol=lf
 *.ps1 text eol=crlf
 *.png binary
+*.cmd text eol=crlf
+scripts/windows/installer-msix/LEIA-ME.txt text eol=crlf

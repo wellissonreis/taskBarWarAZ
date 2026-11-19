@@ -1,0 +1,26 @@
+SideWar - VERSAO DE TESTE
+=========================
+
+Obrigado por testar! Esta e uma versao de teste, assinada com um certificado
+de teste (nao e a versao final). Os saves e configuracoes desta versao ficam
+SEPARADOS de qualquer outra instalacao do SideWar.
+
+Requisitos
+- Windows 10 versao 2004 ou mais novo, ou Windows 11
+- 64 bits (x64)
+
+Como instalar
+1. Extraia TODO o conteudo do .zip numa pasta (nao rode de dentro do zip).
+2. De duplo clique em Instalar-SideWar.cmd.
+3. Quando o Windows pedir permissao de administrador, aceite (e so para
+   confiar no certificado de teste).
+4. Ao ver "SUCESSO", abra o SideWar pelo menu Iniciar.
+
+Como desinstalar
+- Configuracoes > Aplicativos > Aplicativos instalados > SideWar > Desinstalar.
+
+Como remover o certificado depois (opcional)
+- Abra o PowerShell como administrador e rode:
+  Get-ChildItem Cert:\LocalMachine\TrustedPeople | Where-Object Subject -eq 'CN=SideWar Test Placeholder' | Remove-Item
+
+Qualquer problema, me avise com a mensagem de erro que apareceu.

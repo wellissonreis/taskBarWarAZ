@@ -87,6 +87,18 @@ if ($Mode -eq 'SideLoad') {
     if ($sig.Status -notin @('Valid', 'UnknownError', 'NotTrusted')) { throw "Status de assinatura inesperado: $($sig.Status)." }
     Write-Host "Assinatura verificada: thumbprint $($sig.SignerCertificate.Thumbprint), status $($sig.Status)."
 }
-$hash = (Get-FileHash -LiteralPath $package.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-[IO.File]::WriteAllText((Join-Path $package.DirectoryName 'SHA256SUMS.txt'), "$hash *$($package.Name)`n", [Text.UTF8Encoding]::new($false))
-Write-Host "Pacote: $($package.FullName)`nSHA256: $hash"
+# Saida em pasta FIXA: artifacts/msix/. A copia anterior vai para artifacts/msix/historico/<yyyyMMdd-HHmm>/.
+$stamp = Get-Date -Format 'yyyyMMdd-HHmm'
+$previous = @(Get-ChildItem -LiteralPath $output -File -ErrorAction SilentlyContinue)
+if ($previous.Count -gt 0) {
+    $hist = Join-Path (Join-Path $output 'historico') $stamp
+    New-Item -ItemType Directory -Force -Path $hist | Out-Null
+    $previous | Move-Item -Destination $hist -Force
+}
+$finalName = if ($Mode -eq 'StoreUpload') { 'SideWar.msixupload' } else { 'SideWar.msix' }
+$final = Join-Path $output $finalName
+Copy-Item -LiteralPath $package.FullName -Destination $final -Force
+Remove-Item -LiteralPath $runOutput -Recurse -Force -ErrorAction SilentlyContinue
+$hash = (Get-FileHash -LiteralPath $final -Algorithm SHA256).Hash.ToLowerInvariant()
+[IO.File]::WriteAllText((Join-Path $output 'SHA256SUMS.txt'), "$hash *$finalName`n", [Text.UTF8Encoding]::new($false))
+Write-Host "Pacote: $final`nSHA256: $hash"
