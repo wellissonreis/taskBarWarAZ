@@ -70,18 +70,18 @@ public sealed class TdFusionUiTests
     }
 
     [Fact]
-    public void Inspector_offers_fuse_on_phase_3_and_explains_the_lock_before()
+    public void Inspector_offers_fuse_on_phase_2_and_explains_the_lock_before()
     {
-        var late = new Rig(6);
+        var late = new Rig(2);
         late.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "T", TdUiAction.OpenTower, late.Tower));
         Assert.True(late.Find(TdUiAction.FuseOpen).Enabled);
         var early = new Rig(1);
         early.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "T", TdUiAction.OpenTower, early.Tower));
         var locked = early.Find(TdUiAction.FuseOpen);
         Assert.False(locked.Enabled);
-        Assert.Contains("fase 3", locked.Text);
+        Assert.Contains("fase 2", locked.Text);
         var check = early.Match.CheckFusion(early.Tower, "bolt");
-        Assert.Contains("fase 3", TdUiController.FusionReasonText(early.Match, check));
+        Assert.Contains("fase 2", TdUiController.FusionReasonText(early.Match, check));
     }
 
     [Fact]

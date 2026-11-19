@@ -67,9 +67,9 @@ public sealed class TdAzureTowersTests
     }
 
     [Theory]
-    [InlineData(0, 3)]
-    [InlineData(1, 5)]
-    [InlineData(2, 7)]
+    [InlineData(0, 4)]
+    [InlineData(1, 6)]
+    [InlineData(2, 8)]
     [InlineData(3, 10)]
     [InlineData(4, 13)]
     [InlineData(5, 15)]

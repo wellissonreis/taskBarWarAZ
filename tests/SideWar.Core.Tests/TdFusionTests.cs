@@ -102,7 +102,7 @@ public sealed class TdFusionTests
         Assert.Equal(CommandReason.InsufficientCredits, r.Reason); Assert.True(r.Missing > 0);
         Assert.Equal(ph, poor.ComputeStateHash());
 
-        var early = Arena(stage: 2);
+        var early = Arena(stage: 1);
         int eid = Build(early, "bolt", 1100);
         ulong eh = early.ComputeStateHash();
         Assert.Equal(CommandReason.FusionLocked, early.Apply(new FuseTower(eid, "frost")).Reason);
@@ -401,6 +401,6 @@ public sealed class TdFusionTests
         Bad(With("\"effect\": \"hitSlow\"", "\"effect\": \"laser\""), "effect desconhecido 'laser'");
         Bad(With("\"module\": \"cannon\", \"name\": \"Raio explosivo\"", "\"module\": \"policy\", \"name\": \"Raio explosivo\""), "hitSplash exige");
         Bad(With("\"base\": \"balancer\"", "\"base\": \"nada\""), "torre inexistente");
-        Bad(With("\"minStage\": 3", "\"minStage\": 99"), "minStage");
+        Bad(With("\"minStage\": 2", "\"minStage\": 99"), "minStage");
     }
 }

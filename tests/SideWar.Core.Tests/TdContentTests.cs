@@ -36,7 +36,7 @@ public sealed class TdContentTests
         Assert.Equal([10, 12, 12, 14, 14, 15], c.Waves.Stages.Select(s => s.Waves.Length));
         Assert.Equal(20, c.Stages.Rules.CoreIntegrity);
         Assert.Equal(0.7, c.Stages.Rules.SellRefund);
-        Assert.Equal(4, c.Towers.Single(t => t.Id == "scaleset").UnlockStage);
+        Assert.Equal(3, c.Towers.Single(t => t.Id == "scaleset").UnlockStage);
         Assert.Equal(2, c.Towers.Single(t => t.Id == "balancer").UnlockStage);
     }
 
@@ -81,9 +81,26 @@ public sealed class TdContentTests
         Assert.Contains("ransomware", LastWave(3));
         Assert.Contains("botnet", LastWave(5));
         Assert.Contains("zeroday", LastWave(6));
-        Assert.DoesNotContain(c.Waves.Stages[0].Waves.SelectMany(w => w.Groups), g => g.Enemy is not ("grunt" or "runner"));
+        Assert.DoesNotContain(c.Waves.Stages[0].Waves.SelectMany(w => w.Groups), g => g.Enemy is not ("grunt" or "runner" or "swarm"));
         Assert.DoesNotContain(c.Waves.Stages[2].Waves.SelectMany(w => w.Groups), g => g.Enemy is "flyer" or "regen" or "leech");
         Assert.All(c.Waves.Stages, s => Assert.Contains(s.Waves, w => w.Rest));
+    }
+
+    [Fact(DisplayName = "TD.39a estreias e contra-ataques respeitam as fronteiras de fase")]
+    public void ApprovedExistingCurve()
+    {
+        var c = TdContentLoader.LoadEmbedded();
+        Assert.Equal(2, c.Fusion.MinStage);
+        foreach (var (id, stage) in new[] { ("functions", 1), ("policy", 2), ("scaleset", 3) })
+            Assert.Equal(stage, c.Towers.Single(t => t.Id == id).UnlockStage);
+        foreach (var (id, stage) in new[] { ("swarm", 1), ("flyer", 2), ("trojan", 3), ("regen", 4) })
+        {
+            var enemy = c.Enemies.Enemies.Single(e => e.Id == id);
+            Assert.Equal(stage, enemy.IntroStage);
+            var first = c.Waves.Stages.First(s => s.Waves.Any(w => w.Groups.Any(g => g.Enemy == id)));
+            Assert.Equal(stage, first.Stage);
+            Assert.Contains(enemy.Counters, counter => c.Towers.Any(t => t.Id == counter && t.UnlockStage <= stage));
+        }
     }
 
     [Fact(DisplayName = "TD.1 Validator rejects a tower without declared weakness or with an unknown trait")]
@@ -126,7 +143,7 @@ public sealed class TdContentTests
     [Fact(DisplayName = "TD.1 Validator checks wave authoring rules")]
     public void Validator_ChecksWaves()
     {
-        AssertError(With("td-waves.json", "{\"enemy\": \"grunt\", \"count\": 4, \"offset\": 0.0, \"interval\": 2.53}", "{\"enemy\": \"flyer\", \"count\": 4, \"offset\": 0.0, \"interval\": 2.53}"), "só é introduzido na fase 4");
+        AssertError(With("td-waves.json", "{\"enemy\": \"grunt\", \"count\": 4, \"offset\": 0.0, \"interval\": 2.53}", "{\"enemy\": \"flyer\", \"count\": 4, \"offset\": 0.0, \"interval\": 2.53}"), "só é introduzido na fase 2");
         AssertError(With("td-waves.json", "{\"enemy\": \"grunt\", \"count\": 4, \"offset\": 0.0, \"interval\": 2.53}", "{\"enemy\": \"fantasma\", \"count\": 4, \"offset\": 0.0, \"interval\": 2.53}"), "'fantasma' não existe");
         AssertError(With("td-waves.json", "{\"enemy\": \"grunt\", \"count\": 4, \"offset\": 0.0, \"interval\": 2.53}", "{\"enemy\": \"grunt\", \"count\": 1, \"offset\": 0.0, \"interval\": 2.53}"), "fora de [3, 32]");
         AssertError(With("td-stages.json", "\"waves\": 10,", "\"waves\": 11,"), "td-waves.1");
