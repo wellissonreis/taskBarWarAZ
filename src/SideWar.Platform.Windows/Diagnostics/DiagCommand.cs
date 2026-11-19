@@ -14,7 +14,7 @@ public static class DiagCommand
         return info ?? assembly.GetName().Version?.ToString() ?? "0.0.0";
     }
 
-    public static void WriteDiag(TextWriter output, Assembly assembly, string dataFolder)
+    public static void WriteDiag(TextWriter output, Assembly assembly, string dataFolder, bool packaged = false)
     {
         using var stream = new MemoryStream();
         using (var json = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true }))
@@ -25,6 +25,7 @@ public static class DiagCommand
             json.WriteNumber("osBuild", Environment.OSVersion.Version.Build);
             json.WriteString("dpiAwareness", DpiAwareness());
             json.WriteString("dataFolder", dataFolder);
+            json.WriteBoolean("packaged", packaged);
             json.WriteStartArray("monitors");
             foreach (var m in MonitorService.Enumerate())
             {

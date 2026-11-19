@@ -60,9 +60,13 @@ internal sealed class AppComposition : IDisposable
     {
         string version = DiagCommand.Version(typeof(AppComposition).Assembly);
         Directory.CreateDirectory(dataDirectory);
+        var dataFolder = DataFolderResolver.Resolve();
+        log($"dados: {dataDirectory} (empacotado={dataFolder.IsPackaged}, pfn={dataFolder.PackageFamilyName ?? "-"})");
 
         settingsStore = new SettingsStore(RealFileSystem.Instance, dataDirectory, version);
-        settings = settingsStore.Load().Settings;
+        var loaded = settingsStore.Load();
+        settings = loaded.Settings;
+        log($"settings: origem={loaded.Source}");
         persistence = new SessionPersistence(dataDirectory, version, log);
 
         var sink = new SceneFrameSink(() => gameSide.Animation, () => gameSide.Edge, () => gameSide.BarHeightDip);

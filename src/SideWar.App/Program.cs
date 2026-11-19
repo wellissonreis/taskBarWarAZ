@@ -5,6 +5,7 @@ using System.Windows;
 using SideWar.App.Bench;
 using SideWar.Platform.Windows.Diagnostics;
 using SideWar.Platform.Windows.Instance;
+using SideWar.Platform.Windows.Startup;
 using SideWar.Platform.Windows.Taskbar;
 using SideWar.Runtime.Diagnostics;
 
@@ -44,7 +45,11 @@ public static class Program
         using var stdout = new StreamWriter(Console.OpenStandardOutput()) { AutoFlush = true };
         var assembly = typeof(Program).Assembly;
         if (BenchOptions.IsVersionRequested(args)) stdout.WriteLine(DiagCommand.Version(assembly));
-        else DiagCommand.WriteDiag(stdout, assembly, Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SideWar"));
+        else
+        {
+            var data = DataFolderResolver.Resolve();
+            DiagCommand.WriteDiag(stdout, assembly, data.Path, data.IsPackaged);
+        }
         return 0;
     }
 

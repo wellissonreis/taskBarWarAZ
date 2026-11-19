@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using SideWar.Persistence.IO;
+using SideWar.Platform.Windows.Startup;
 using SideWar.Runtime.Lifecycle;
 
 namespace SideWar.App;
@@ -21,8 +22,7 @@ public static class CrashHandler
     /// <summary>Removes the tray icon on fatal exit (set by the host composition).</summary>
     public static Action? RemoveTrayIcon { get; set; }
 
-    public static string DefaultDataDirectory => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "SideWar");
+    public static string DefaultDataDirectory => DataFolderResolver.Resolve().Path;
 
     public static void Install(Application? app = null, string? dataDirectory = null)
     {
