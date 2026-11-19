@@ -1,0 +1,28 @@
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <ProjectGuid>{7A4952ED-13A7-4CF3-AE08-7B4FD783CE08}</ProjectGuid>
+    <TargetPlatformVersion>10.0.19041.0</TargetPlatformVersion>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <DefaultLanguage>en-US</DefaultLanguage>
+    <EntryPointProjectUniqueName>..\..\src\SideWar.App\SideWar.App.csproj</EntryPointProjectUniqueName>
+    <AppxBundle>Never</AppxBundle>
+    <AppxPackageSigningEnabled>false</AppxPackageSigningEnabled>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>false</PublishSingleFile>
+    <PublishTrimmed>false</PublishTrimmed>
+    <PackageManifestPath Condition="'$(PackageManifestPath)' == ''">Package.appxmanifest</PackageManifestPath>
+    <WapProjPath Condition="'$(WapProjPath)' == ''">$(MSBuildExtensionsPath)\Microsoft\DesktopBridge\</WapProjPath>
+  </PropertyGroup>
+  <Import Project="$(WapProjPath)Microsoft.DesktopBridge.props" />
+  <ItemGroup>
+    <AppxManifest Include="$(PackageManifestPath)"><Link>Package.appxmanifest</Link></AppxManifest>
+    <Content Include="Images\*.png" />
+    <Content Include="..\..\LICENSE.txt"><Link>LICENSE.txt</Link></Content>
+    <Content Include="..\..\THIRD-PARTY-NOTICES.txt"><Link>THIRD-PARTY-NOTICES.txt</Link></Content>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SideWar.App\SideWar.App.csproj" />
+  </ItemGroup>
+  <Import Project="$(WapProjPath)Microsoft.DesktopBridge.targets" />
+</Project>
