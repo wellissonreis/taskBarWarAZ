@@ -66,14 +66,14 @@ Alcance em **unidades lógicas** (caminho = 1.200; Raio 150, Gelo 100, Canhão 1
 
 | # | id | Nome (Azure) | Categoria | `kind` proposto | Base | Alcance | Dano | Intervalo | Fase (`unlockStage`) | Ficha |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | `functions` | Functions | Ataque | `attack` | 60 | 90 | 22 × 3 (rajada) | recarga 3,0 s, só no gatilho | 2 | TD.31a |
+| 1 | `functions` | Functions | Ataque | `attack` | 60 | 90 | 22 × 3 (rajada) | recarga 3,0 s, só no gatilho | 1 | TD.31a |
 | 2 | `cosmos` | Cosmos | Ataque | `attack` | 130 | 100 | 20 + 3 saltos | 1,6 s | 3 | TD.31b |
 | 3 | `sentinel` | Sentinel | Controle | `control` | 110 | 130 | 0 (marca +25%) | marca a cada 5 s | 5 | TD.31b |
 | 4 | `vault` | Cofre (máx. 2) | Economia | `economy` | 160 | n/a | n/a | por onda | 6 | TD.31c |
 | 5 | `backup` | Backup | Suporte | `support` | 170 | 140 | n/a | reativa a cada 6 s; cura 1 a cada 45 s | 5 | TD.31c |
 | 6 | `cdn` | CDN | Ataque | `attack` | 140 | 260 (mín. 120, fixo) | 8 | 1,4 s | 4 | TD.31a |
 | 7 | `queue` | Fila | Controle | `control` | 120 | 110 | 0 (empurra 60; 30 em chefe) | 6 s | 5 | TD.31b |
-| 8 | `policy` | Policy | Controle | `control` | 120 | 110 | 0 (remove armadura) | contínuo | 3 | TD.31a |
+| 8 | `policy` | Policy | Controle | `control` | 120 | 110 | 0 (remove armadura) | contínuo | 2 | TD.31a |
 | 9 | `aks` | AKS | Suporte | `summoner` | 180 | 80 | 3 pods × 8/s | recarga 20 s | 6 | TD.31c |
 | 10 | `pipeline` | Pipeline | Ataque | `attack` | 150 | 130 | 14 + rampa | 0,8 s | 4 | TD.31b |
 
@@ -269,18 +269,19 @@ Impacto esperado das torres novas (hipótese, **não medida**): ampliam muito o 
 
 ## 10. Liberação gradual por fase (`unlockStage`)
 
-Hoje: Raio, Gelo, Canhão na fase 1; Balanceador na 2; Scale Set na 4. Proposta (≈ 2 a 3 opções por fase, cada torre chega **junto do problema que resolve**):
+Curva aprovada na SDD-39 (DP-39.2 e DP-39.6), substituindo a tabela anterior. A tabela abaixo mostra os tipos existentes; os novos são entregues em TD.39c/d.
 
-| Fase | Conceito (`td-stages.json`) | Torres liberadas | Total de torres |
-|---|---|---|---|
-| 1 Brazil South | Tutorial | Raio, Gelo, Canhão | 3 |
-| 2 East US | Blindados e mira | Balanceador (já), **Functions** | 5 |
-| 3 West Europe | Controle, habilidade, 1º chefe | **Policy**, **Cosmos** (e inimigo `fork`) | 7 |
-| 4 Japan East | Voadores e suporte | Scale Set (já), **CDN**, **Pipeline** (e `trojan`) | 10 |
-| 5 UK South | Regeneração e drenagem | **Sentinel**, **Backup**, **Fila** (e `phishing`) | 13 |
-| 6 Australia East | Prova final | **Cofre**, **AKS** (sem inimigo novo: reaproveita os existentes) | 15 |
+| Fase | Torres existentes liberadas nessa fase | Total existente acumulado |
+|---|---|---|
+| 1 | Raio, Gelo, Canhão, Functions | 4 |
+| 2 | Balanceador, Policy | 6 |
+| 3 | Cosmos, Scale Set | 8 |
+| 4 | CDN, Pipeline | 10 |
+| 5 | Sentinel, Backup, Fila | 13 |
+| 6 | Cofre, AKS | 15 |
 
-- **Decidido (DP-31.12):** `unlockStage` compara com o **maior estágio concluído do perfil**, **não** com a fase da partida (`_stageNumber`). Regra: a torre com `unlockStage` N está liberada quando `maiorConcluído + 1 ≥ N` (a fase 1 libera Raio, Gelo e Canhão; concluir a fase 2 libera as da fase 3). Quem reinicia em uma fase anterior **mantém** as torres já liberadas. A TD.31d localiza onde o perfil guarda o progresso por fase e só acrescenta um campo mínimo se faltar.
+- **DP-31.12 preservada:** `unlockStage` compara com o maior estágio concluído do perfil mais um; reiniciar em fase anterior mantém as torres liberadas.
+
 - Cada torre nova aparece com **uma dica de 1ª vez** curta (≤ 6 palavras de função + 1 de contra, padrão `td.tipsSeen`), nunca bloqueante. Texto na §11.4.
 - Torres não liberadas aparecem **apagadas com cadeado e "Fase N"** (padrão `TdIcon.Lock`), sem ocupar espaço extra: ver §11.2.
 

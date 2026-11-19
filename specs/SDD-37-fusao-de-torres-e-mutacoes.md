@@ -20,7 +20,7 @@ O Core atual tem 15 definições em `td-towers.json`, posições livres, constru
 
 Guardar preço pago de A e B separadamente. Venda é indivisível: somar, para cada componente, `min(preço pago, SellValueAt(tipo, contagem antes da remoção))`, calculando em ordem fixa base depois módulo e decrementando a contagem virtual entre as duas; então remover ambas e seus efeitos. Usar a taxa e teto vigentes; não há reembolso extra nem venda parcial. Ex.: A+A usa contagens n e n−1, impedindo reembolso duplicado da mesma posição da tabela. Venda e fusão devem ser transações atômicas e sem lucro por ciclo compra/venda.
 
-**RF-37.4 — Liberação.** Proposta inicial: fusão a partir da fase absoluta 3 da corrida, ou ao iniciar partida em fase 3 ou superior; além disso ambas as definições precisam estar liberadas pelas regras existentes (`UnlockedTowerStage`), inclusive limites do perfil. A liberação é permanente somente durante a corrida; reinício obedece à fase inicial/perfil. Antes disso, indicar discretamente “Fusão na fase 3”. O desbloqueio absoluto não volta para 1 ao iniciar outro ciclo.
+**RF-37.4 — Liberação.** Decidido em DP-39.1: fusão a partir da fase absoluta 2 da corrida, ou ao iniciar partida em fase 2 ou superior; além disso ambas as definições precisam estar liberadas pelas regras existentes (`UnlockedTowerStage`), inclusive limites do perfil. A liberação é permanente somente durante a corrida; reinício obedece à fase inicial/perfil. Antes disso, indicar discretamente “Fusão na fase 2”. O desbloqueio absoluto não volta para 1 ao iniciar outro ciclo.
 
 ## 3. Matriz de combinações e efeitos
 
@@ -97,7 +97,7 @@ Todas as recomendações abaixo foram adotadas como decisão para as fichas TD.3
 | ID | Questão | Decisão (recomendação aplicada em 2026-11-18, antes da TD.37a) |
 |---|---|---|
 | DP-37.1 | Ordem da fusão e mesmo tipo | **Ordenada e A+A permitido**: base dita comportamento, módulo traz efeito limitado; preview torna diferença explícita. |
-| DP-37.2 | Liberação e pacing | **Fase absoluta 3 e marcos de §4**, calibrar com duração real; não acelerar ondas. |
+| DP-37.2 | Liberação e pacing | **Substituída pela DP-39.1:** fase absoluta 2 e convite persistente até a primeira fusão (TD.39b); marcos de mutação de §4 permanecem. |
 | DP-37.3 | Acúmulo com Cofre e aura | **Contar componentes, máximo dois Cofres e sem autoaura**; pagar renda do módulo apenas conforme §3. |
 | DP-37.4 | Geração de mutações quando fica fácil | **Progressão determinística por fase/G**, sem leitura de atenção ou adaptação invisível; medir antes de cogitar detector de facilidade. |
 | DP-37.5 | Força de inimigos e híbridos | **Começar pelos fatores propostos**, testar 20 seeds e ajustar antes de assumir equilíbrio. |

@@ -1,6 +1,6 @@
 # SDD-39: novas torres, inimigos e ritmo de desbloqueio
 
-**Status:** proposta para decisão do usuário; não autoriza implementação. Ficha TD.41, 2026-11-19. **Depende:** SDD-28, SDD-31 e SDD-37; prevalece o comportamento atual do Core onde documentos históricos divergem. Todos os números e custos abaixo são hipóteses não medidas, inclusive duração e estimativas de trabalho. Nenhum balanceamento foi validado em partida.
+**Status:** decisões aprovadas em 2026-11-19; execução por fichas. Ficha TD.41, 2026-11-19. **Depende:** SDD-28, SDD-31 e SDD-37; prevalece o comportamento atual do Core onde documentos históricos divergem. Todos os números e custos abaixo são hipóteses não medidas, inclusive duração e estimativas de trabalho. Nenhum balanceamento foi validado em partida.
 
 ## 1. Diagnóstico: por que a fusão passa despercebida
 
@@ -26,7 +26,7 @@ Em qualquer opção: mostrar “Fusão: fase N” na lista de torres e no inspet
 
 Hoje `td-towers.json` libera 3/2/2/3/3/2 torres adicionais nas fases 1–6, respectivamente: Raio, Gelo, Canhão; Balanceador, Functions; Policy, Cosmos; Scale Set, CDN, Pipeline; Sentinel, Fila, Backup; Cofre, AKS. A fase 1 tem apenas Requisição e Ping nas ondas; fase 2 acrescenta Pacote blindado; fase 3 acrescenta Rajada, Tráfego pesado, Fork Bomb e Ransomware. Há 15 torres, 11 inimigos comuns e três chefes no catálogo total: a queixa é coerente com exposição inicial, não ausência de conteúdo total. `introStage` sozinho não cria spawns: é preciso alterar também `td-waves.json` e verificar perfil/liberação.
 
-Curva candidata, acumulados de torres disponíveis e inimigos comuns já apresentados; chefes separados. Estreias em grupo pequeno, com aviso antes, contra-ataque acessível na mesma fase e intervalo de aprendizado; conservar ondas de respiro e não acelerar ondas para atingir metas. Os nomes novos são definidos na seção 3.
+Curva aprovada, acumulados de torres disponíveis e inimigos comuns já apresentados; chefes separados. Estreias em grupo pequeno, com aviso antes, contra-ataque acessível na mesma fase e intervalo de aprendizado; conservar ondas de respiro e não acelerar ondas para atingir metas. Os nomes novos são definidos na seção 3.
 
 | Fase | Torres disponíveis acumuladas | Novos inimigos comuns na agenda | Comuns acumulados / chefes introduzidos |
 |---|---|---|---|
@@ -37,7 +37,7 @@ Curva candidata, acumulados de torres disponíveis e inimigos comuns já apresen
 | 5 | 19: + Sentinel, Fila, Backup, Bastion | Parasita, Phishing, Túnel DNS | 16 / Botnet |
 | 6 | 22: + Cofre, AKS, Firewall | Carga criptografada | 17 / Zero-day |
 
-São 7 torres e 6 inimigos propostos além dos atuais. A agenda deve respeitar a semântica dos tipos, não apenas seus nomes: por exemplo, voador exige Raio/Gelo/Functions e blindado exige Canhão ou Policy. A fase 1 tem créditos iniciais 220 e pode não conseguir comprar tudo; disponibilidade não significa compra garantida. A introdução de Rajada cedo precisa ser testada, pois seu HP atual é 150 apesar do nome. Antecipar Policy, Scale Set, Functions e outras altera decisões vigentes de SDD-31; depende de aprovação expressa na DP-39.2 e de calibração. Não prometer uma torre nova em cada onda. Revisar UI paginada, legibilidade e acessibilidade antes de aumentar o catálogo.
+São 7 torres e 6 inimigos propostos além dos atuais. A agenda deve respeitar a semântica dos tipos, não apenas seus nomes: por exemplo, voador exige Raio/Gelo/Functions e blindado exige Canhão ou Policy. A fase 1 tem créditos iniciais 220 e pode não conseguir comprar tudo; disponibilidade não significa compra garantida. A introdução de Rajada cedo precisa ser testada, pois seu HP atual é 150 apesar do nome. Antecipar Policy, Scale Set, Functions e outras altera decisões vigentes de SDD-31; foi aprovada na DP-39.2 e de calibração. Não prometer uma torre nova em cada onda. Revisar UI paginada, legibilidade e acessibilidade antes de aumentar o catálogo.
 
 ## 3. Catálogo proposto
 
@@ -85,16 +85,18 @@ Pares **ordenados** e distintos dos nove existentes; candidatas ao vocabulário 
 
 Pares ficam disponíveis apenas quando ambas as torres e fusão estiverem liberadas; nenhum cria terceiro componente. Se o efeito existente exigir IDs específicos, implementar suporte explícito ou escolher outro par após testes.
 
-## 4. Decisões pendentes para o usuário
+## 4. Decisões do usuário — DECIDIDAS em 2026-11-19
 
-| DP | Decisão | Recomendação, sujeita a aprovação |
+| DP | Decisão | Decisão aprovada |
 |---|---|---|
-| DP-39.1 | Fusão na fase 1, 2 ou 3? | Fase 2 com convite persistente; qualquer mudança substitui explicitamente DP-37.2 |
-| DP-39.2 | Antecipar torres e inimigos existentes conforme tabela? | Sim, com telegráfo e contra-ataque; revisa marcos da SDD-31 |
-| DP-39.3 | Aceitar sete torres e seis inimigos ou selecionar um subconjunto? | Sete e seis em lotes; eliminar duplicações após playtest |
-| DP-39.4 | Gesto de módulo sobre base além do inspetor? | Sim, seleção e clique com confirmação; sem arrastar obrigatório |
-| DP-39.5 | Introduzir quatro pares e preservar combinações genéricas? | Sim, com preview de efeito e custo, mantendo genéricas |
-| DP-39.6 | Ritmo da primeira fase e carga de informação? | Quatro inimigos, cinco torres disponíveis, estreias espaçadas; ajustar após observação |
+| **DECIDIDA** DP-39.1 | Fusão na fase 1, 2 ou 3? | Fase 2 com convite persistente; qualquer mudança substitui explicitamente DP-37.2 |
+| **DECIDIDA** DP-39.2 | Antecipar torres e inimigos existentes conforme tabela? | Sim, com telegráfo e contra-ataque; revisa marcos da SDD-31 |
+| **DECIDIDA** DP-39.3 | Aceitar sete torres e seis inimigos ou selecionar um subconjunto? | Sete e seis em lotes; eliminar duplicações após playtest |
+| **DECIDIDA** DP-39.4 | Gesto de módulo sobre base além do inspetor? | Sim, seleção e clique com confirmação; sem arrastar obrigatório |
+| **DECIDIDA** DP-39.5 | Introduzir quatro pares e preservar combinações genéricas? | Sim, com preview de efeito e custo, mantendo genéricas |
+| **DECIDIDA** DP-39.6 | Ritmo da primeira fase e carga de informação? | Quatro inimigos, cinco torres disponíveis, estreias espaçadas; ajustar após observação |
+
+A TD.39a antecipa somente os tipos existentes; DNS, SYN Flood e os demais tipos novos chegam nas fichas TD.39c/d. Portanto os totais da tabela são o alvo final, não o resultado imediato da TD.39a.
 
 ## 5. Fichas de execução após decisão
 
