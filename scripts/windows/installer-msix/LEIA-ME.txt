@@ -17,10 +17,10 @@ Como instalar
 3. Abra o SideWar pelo menu Iniciar.
 
 Como desinstalar
-- Configuracoes > Aplicativos > Aplicativos instalados > SideWar > Desinstalar.
-
-Como remover o certificado depois (opcional)
-- Abra o PowerShell como administrador e rode:
-  Get-ChildItem Cert:\LocalMachine\TrustedPeople | Where-Object Subject -eq 'CN=SideWar Test Placeholder' | Remove-Item
+- De duplo clique em Desinstalar-SideWar.cmd. Ele remove o app (os saves da
+  versao de teste sao apagados junto) e depois, com sua permissao de
+  administrador, remove o certificado de teste.
+- Alternativa: Configuracoes > Aplicativos > Aplicativos instalados > SideWar >
+  Desinstalar (isso nao remove o certificado).
 
 Qualquer problema, me avise com a mensagem de erro que apareceu.
