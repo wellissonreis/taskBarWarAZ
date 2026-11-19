@@ -145,6 +145,26 @@ public sealed class TdFusionTests
         Assert.Equal(TdMatchState.TechnicalTowerLimit, s.Towers.Count);
     }
 
+    [Theory]
+    [InlineData("dns")]
+    [InlineData("frontdoor")]
+    [InlineData("shield")]
+    [InlineData("waf")]
+    [InlineData("eventgrid")]
+    [InlineData("bastion")]
+    [InlineData("firewall")]
+    public void NewModulesRespectEntityAndComponentLimits(string module)
+    {
+        var s = Arena();
+        for (int i = 0; i < TdMatchState.TechnicalTowerLimit; i++)
+            Assert.True(s.Apply(new BuildTower(i == 0 ? "dns" : i % 2 == 0 ? "bolt" : "frost", 20 + i * 20)).IsOk);
+        int id = s.Towers[0].Id;
+        Fuse(s, id, module);
+        Assert.Equal(TdMatchState.TechnicalTowerLimit, s.Towers.Count);
+        Assert.False(s.Apply(new FuseTower(id, module)).IsOk);
+        Assert.Equal(TdMatchState.TechnicalTowerLimit, s.Towers.Count);
+    }
+
     [Fact(DisplayName = "CA-37.2 at most two Cofre components in total, including hybrids and A+A")]
     public void Fuse_VaultLimitCountsComponents()
     {

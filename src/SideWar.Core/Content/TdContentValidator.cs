@@ -192,7 +192,7 @@ public static class TdContentValidator
     {
         if (traits.Contains("shielded")) Req(e, p.TryGetValue("shieldHp", out var shield) && double.IsFinite(shield) && shield > 0, $"{owner}: shieldHp deve ser > 0");
         if (traits.Contains("stealth")) Req(e, p.TryGetValue("revealRange", out var reveal) && double.IsFinite(reveal) && reveal > 0, $"{owner}: revealRange deve ser > 0");
-        if (traits.Contains("replicator")) Req(e, p.TryGetValue("copyHpFraction", out var fraction) && fraction > 0 && fraction <= 1, $"{owner}: copyHpFraction deve estar em (0, 1]");
+        if (traits.Contains("replicator")) Req(e, p.TryGetValue("copyHpFraction", out var fraction) && double.IsFinite(fraction) && fraction > 0 && fraction <= 1, $"{owner}: copyHpFraction deve estar em (0, 1]");
         if (traits.Contains("regen"))
             Req(e, p.TryGetValue("regenPctPerSecond", out var r) && r > 0 && r <= 1, $"{owner}: traço 'regen' exige params.regenPctPerSecond em (0, 1]");
         if (traits.Contains("drain") && !boss)

@@ -226,6 +226,32 @@ public sealed class TdMutationTests
         Assert.True(sawReplica, string.Join(",", s.Enemies.Select(e => $"{e.X:F0}/{e.Hp:F0}/{e.IsReplica}")) + " tick " + s.Tick + " " + s.Towers.Count);
     }
 
+    [Fact(DisplayName = "TD.39d escudo nativo e divisão respeitam mutações e ouro")]
+    public void NewEnemies_MutationsAndReplicas()
+    {
+        var (_, encrypted, state) = Run(Rig(Mut(0, 5, Cat("shielded"), Cat("durable")), "encrypted", 10), 1);
+        Assert.NotEmpty(encrypted);
+        Assert.All(encrypted, m => { Assert.Equal(80, m.Enemy.ShieldHp); Assert.Equal(["durable"], state.MutationTraitIds(m.Enemy.Mutations)); });
+        var c = Rig(Mut(0, 5, Cat("durable")), "fragment", 10, edit: e => e.Id == "fragment" ? e with { Hp = 30, Speed = 20 } : e);
+        var match = New(c);
+        Assert.True(match.Apply(new BuildTower("bolt", 1100)).IsOk);
+        Assert.True(match.Apply(new StartWave()).IsOk);
+        bool replica = false;
+        for (int i = 0; i < 3000 && !replica; i++)
+        {
+            match.Step();
+            foreach (var e in match.Enemies.Where(e => e.IsReplica))
+            {
+                replica = true;
+                Assert.Equal(0, e.Gold);
+                Assert.Equal(0, e.Mutations);
+                Assert.True(e.MaxHp > 0);
+            }
+            Assert.True(match.Enemies.Count <= c.Stages.Rules.MaxEnemiesOnField);
+        }
+        Assert.True(replica);
+    }
+
     // ---------------------------------------------------------------- interações
 
     [Fact(DisplayName = "CA-37.4 a mutated flying enemy is ignored by ground-only towers and hit by Raio explosivo (both); the union of traits is exposed")]

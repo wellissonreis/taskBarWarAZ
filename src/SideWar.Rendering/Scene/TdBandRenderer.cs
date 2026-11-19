@@ -342,6 +342,16 @@ public sealed class TdBandRenderer : IDisposable
                 c.DrawRect(x - MathF.Max(3f, sw / 2f), Ground - 1.5f, MathF.Max(6f, sw), 1.5f, _fill);
             }
 
+            if (e.ShieldHp > 0 && e.DefIndex >= 0 && e.DefIndex < m.Content.Enemies.Enemies.Length &&
+                m.Content.Enemies.Enemies[e.DefIndex].Params.TryGetValue("shieldHp", out double shieldMax) && shieldMax > 0)
+            {
+                float barWidth = 10f;
+                _fill.Color = Palette.BgAbismo;
+                c.DrawRect(x - barWidth / 2, foot - sh - 6, barWidth, 2, _fill);
+                _fill.Color = Palette.Td.TintCyan;
+                c.DrawRect(x - barWidth / 2, foot - sh - 6, barWidth * (float)Math.Clamp(e.ShieldHp / shieldMax, 0, 1), 2, _fill);
+            }
+
             if (e.IsBoss || (e.Hp < e.MaxHp && e.MaxHp >= 90))
                 DrawLifeBar(c, x, e.IsBoss ? 0f : foot - sh - 3.5f, e.IsBoss ? 24f : 10f, (float)(e.Hp / e.MaxHp), e.IsBoss);
         }

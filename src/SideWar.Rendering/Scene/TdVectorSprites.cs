@@ -31,7 +31,7 @@ internal static class TdVectorSprites
     };
 
     public static bool IsTower(string id) => Tower(id).Path is not null;
-    public static bool IsEnemy(string id) => id is "fork" or "trojan" or "phishing";
+    public static bool IsEnemy(string id) => id is "fork" or "trojan" or "phishing" or "synflood" or "scanner" or "slowloris" or "fragment" or "dnstunnel" or "encrypted";
 
     public static SKImage Bake(string id, float height, bool enemy)
     {
@@ -50,6 +50,12 @@ internal static class TdVectorSprites
         {
             (shape, color) = id switch
             {
+                "synflood" => ("M2 10 L8 3 L14 8 L21 4 L24 13 L19 22 L12 26 L5 22 Z", Palette.Td.TintCyan),
+                "scanner" => ("M2 14 L8 6 L19 4 L24 14 L19 24 L8 22 Z", Palette.Td.TintAmber),
+                "slowloris" => ("M3 10 L8 4 L18 4 L23 10 L23 20 L18 25 L8 25 L3 20 Z", Palette.Menta),
+                "fragment" => ("M3 4 L12 3 L15 9 L23 7 L22 24 L14 26 L11 20 L3 23 Z", Palette.Td.TintViolet),
+                "dnstunnel" => ("M3 6 L13 2 L23 6 L23 22 L13 26 L3 22 Z", Palette.Td.TintCyan),
+                "encrypted" => ("M13 2 L23 7 L22 19 L13 27 L4 19 L3 7 Z", Palette.Td.TintAmber),
                 "fork" => ("M2 23 L4 13 L1 9 L5 6 L9 9 L13 4 L17 9 L21 6 L25 9 L22 13 L24 23 L18 25 L13 21 L8 25 Z", Palette.Td.TintViolet),
                 "trojan" => ("M3 9 L13 2 L23 9 L21 20 L13 27 L5 20 Z", Palette.Td.TintAmber),
                 _ => ("M2 8 L5 4 L21 4 L24 8 L22 20 L17 23 L13 27 L9 23 L4 20 Z", Palette.Td.TintCyan),
@@ -68,7 +74,13 @@ internal static class TdVectorSprites
         else
         {
             line.StrokeWidth = 2;
-            if (id == "fork") { c.DrawLine(13, 18, 13, 11, line); c.DrawLine(13, 13, 8, 9, line); c.DrawLine(13, 13, 18, 9, line); }
+            if (id == "synflood") { c.DrawRect(6, 9, 5, 5, line); c.DrawRect(14, 14, 5, 5, line); }
+            else if (id == "scanner") { c.DrawCircle(12, 14, 5, line); c.DrawLine(16, 18, 20, 22, line); }
+            else if (id == "slowloris") { c.DrawCircle(13, 14, 7, line); c.DrawLine(13, 14, 13, 9, line); c.DrawLine(13, 14, 17, 16, line); }
+            else if (id == "fragment") { c.DrawLine(13, 4, 9, 12, line); c.DrawLine(9, 12, 16, 15, line); c.DrawLine(16, 15, 12, 24, line); }
+            else if (id == "dnstunnel") { c.DrawOval(new SKRect(7, 7, 19, 21), line); c.DrawLine(3, 14, 23, 14, line); }
+            else if (id == "encrypted") { c.DrawRect(8, 13, 10, 8, line); c.DrawArc(new SKRect(10, 6, 16, 16), 180, 180, false, line); }
+            else if (id == "fork") { c.DrawLine(13, 18, 13, 11, line); c.DrawLine(13, 13, 8, 9, line); c.DrawLine(13, 13, 18, 9, line); }
             else if (id == "trojan") { c.DrawRect(8, 10, 10, 9, line); c.DrawLine(8, 10, 13, 15, line); c.DrawLine(13, 15, 18, 10, line); }
             else { c.DrawLine(6, 10, 13, 15, line); c.DrawLine(13, 15, 20, 10, line); c.DrawLine(6, 10, 20, 10, line); }
         }

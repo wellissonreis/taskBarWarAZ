@@ -27,7 +27,7 @@ public sealed class TdContentTests
     {
         var c = TdContentLoader.LoadEmbedded();
         Assert.Equal(22, c.Towers.Length);
-        Assert.Equal(11, c.Enemies.Enemies.Length);
+        Assert.Equal(17, c.Enemies.Enemies.Length);
         Assert.Equal(3, c.Enemies.Bosses.Length);
         Assert.Equal(6, c.Stages.Stages.Length);
         Assert.Equal(3, c.Abilities.Length);
@@ -81,7 +81,7 @@ public sealed class TdContentTests
         Assert.Contains("ransomware", LastWave(3));
         Assert.Contains("botnet", LastWave(5));
         Assert.Contains("zeroday", LastWave(6));
-        Assert.DoesNotContain(c.Waves.Stages[0].Waves.SelectMany(w => w.Groups), g => g.Enemy is not ("grunt" or "runner" or "swarm"));
+        Assert.DoesNotContain(c.Waves.Stages[0].Waves.SelectMany(w => w.Groups), g => g.Enemy is not ("grunt" or "runner" or "swarm" or "synflood"));
         Assert.DoesNotContain(c.Waves.Stages[2].Waves.SelectMany(w => w.Groups), g => g.Enemy is "flyer" or "regen" or "leech");
         Assert.All(c.Waves.Stages, s => Assert.Contains(s.Waves, w => w.Rest));
     }
@@ -93,7 +93,7 @@ public sealed class TdContentTests
         Assert.Equal(2, c.Fusion.MinStage);
         foreach (var (id, stage) in new[] { ("functions", 1), ("policy", 2), ("scaleset", 3) })
             Assert.Equal(stage, c.Towers.Single(t => t.Id == id).UnlockStage);
-        foreach (var (id, stage) in new[] { ("swarm", 1), ("flyer", 2), ("trojan", 3), ("regen", 4) })
+        foreach (var (id, stage) in new[] { ("swarm", 1), ("flyer", 2), ("trojan", 3), ("regen", 4), ("synflood", 1), ("scanner", 2), ("slowloris", 3), ("fragment", 4), ("dnstunnel", 5), ("encrypted", 6) })
         {
             var enemy = c.Enemies.Enemies.Single(e => e.Id == id);
             Assert.Equal(stage, enemy.IntroStage);
@@ -101,6 +101,14 @@ public sealed class TdContentTests
             Assert.Equal(stage, first.Stage);
             Assert.Contains(enemy.Counters, counter => c.Towers.Any(t => t.Id == counter && t.UnlockStage <= stage));
         }
+    }
+
+    [Fact(DisplayName = "TD.39d parâmetros dos novos traços são validados")]
+    public void NewEnemyMechanicsAreValidated()
+    {
+        AssertError(With("td-enemies.json", "\"copyHpFraction\": 0.35", "\"copyHpFraction\": 0"), "copyHpFraction");
+        AssertError(With("td-enemies.json", "\"revealRange\": 55", "\"revealRange\": 0"), "revealRange");
+        AssertError(With("td-enemies.json", "\"shieldHp\": 80", "\"shieldHp\": 0"), "shieldHp");
     }
 
     [Fact(DisplayName = "TD.1 Validator rejects a tower without declared weakness or with an unknown trait")]

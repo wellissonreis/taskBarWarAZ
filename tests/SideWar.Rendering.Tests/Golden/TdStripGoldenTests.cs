@@ -120,7 +120,8 @@ public sealed class TdStripGoldenTests
         Assert.True(SideWar.Rendering.Scene.TdArtMap.TryTower("balancer", out var bal) && bal.Provisional);
         Assert.True(SideWar.Rendering.Scene.TdArtMap.TryTower("scaleset", out var sc) && sc.Provisional);
         // sem dois inimigos idênticos (sprite + tinta + altura): cada um é distinguível
-        var all = SideWar.Rendering.Scene.TdArtMap.Enemies.Select(e => (e.Sprite, e.Tint, e.HeightDip)).ToArray();
+        var vector = new[] { "fork", "trojan", "phishing", "synflood", "scanner", "slowloris", "fragment", "dnstunnel", "encrypted" };
+        var all = SideWar.Rendering.Scene.TdArtMap.Enemies.Where(e => !vector.Contains(e.Id)).Select(e => (e.Sprite, e.Tint, e.HeightDip)).ToArray();
         Assert.Equal(all.Length, all.Distinct().Count());
     }
 

@@ -46,6 +46,52 @@ public sealed class TdAzureTowersTests
     }
 
     [Fact]
+    public void FragmentCopiesKeepWaveOpenAndGiveNoGold()
+    {
+        var s = Arena("fragment");
+        Assert.True(s.Apply(new StartWave()).IsOk); Steps(s, 1);
+        var enemies = (List<TdEnemy>)s.Enemies;
+        var parent = enemies[0]; parent.Hp = 0; parent.Speed = 0; enemies[0] = parent;
+        long credits = s.Credits; Steps(s, 1);
+        Assert.Equal(credits + parent.Gold, s.Credits);
+        Assert.Equal(2, enemies.Count);
+        Assert.All(enemies, e => { Assert.True(e.IsReplica); Assert.Equal(0, e.Gold); Assert.Equal(parent.MaxHp * 0.35, e.MaxHp, 8); });
+        Assert.NotEmpty(s.ActiveWaves);
+        for (int i = 0; i < enemies.Count; i++) { var copy = enemies[i]; copy.Hp = 0; enemies[i] = copy; }
+        Steps(s, 1); Assert.Empty(enemies); Assert.Empty(s.ActiveWaves);
+    }
+
+    [Fact]
+    public void EncryptedShieldAndDnsTunnelVisibility()
+    {
+        var shield = Arena("encrypted"); Build(shield, "frost", 1100);
+        Assert.True(shield.Apply(new StartWave()).IsOk); Steps(shield, 1);
+        Assert.InRange(shield.Enemies[0].ShieldHp, 1, 79);
+        Assert.Equal(shield.Enemies[0].MaxHp, shield.Enemies[0].Hp);
+        Assert.Equal(0, shield.Enemies[0].SlowTicks);
+        var hidden = Arena("dnstunnel"); Build(hidden, "bolt", 1100);
+        Assert.True(hidden.Apply(new StartWave()).IsOk); Steps(hidden, 1);
+        Assert.Equal(hidden.Enemies[0].MaxHp, hidden.Enemies[0].Hp);
+        Build(hidden, "sentinel", 1090); Steps(hidden, 1);
+        Assert.True(hidden.Enemies[0].SentinelMarkTicks > 0);
+        Assert.True(hidden.Enemies[0].Hp < hidden.Enemies[0].MaxHp);
+    }
+
+    [Fact]
+    public void NewFusionEffectsSlowAndChain()
+    {
+        var slow = Arena("grunt"); Build(slow, "frontdoor", 1100);
+        Assert.True(slow.Apply(new FuseTower(slow.Towers[0].Id, "frost")).IsOk);
+        Assert.True(slow.Apply(new StartWave()).IsOk); Steps(slow, 1);
+        var field = (List<TdEnemy>)slow.Enemies; var target = field[0]; target.X = 1100; target.Speed = 0; field[0] = target; Steps(slow, 2);
+        Assert.True(slow.Enemies[0].SlowMult < 1);
+        var chain = Arena("grunt", 3); Build(chain, "dns", 1100);
+        Assert.True(chain.Apply(new FuseTower(chain.Towers[0].Id, "cosmos")).IsOk);
+        Assert.True(chain.Apply(new StartWave()).IsOk); Steps(chain, 1);
+        Assert.True(chain.Enemies.Count(e => e.Hp < e.MaxHp) > 1);
+    }
+
+    [Fact]
     public void NewEnemiesHaveCountersAndDeterministicState()
     {
         var c = TdContentLoader.LoadEmbedded();
