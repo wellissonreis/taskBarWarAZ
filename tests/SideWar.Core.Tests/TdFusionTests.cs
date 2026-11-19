@@ -383,7 +383,7 @@ public sealed class TdFusionTests
         var changed = new Dictionary<string, byte[]>(files) { ["td-fusion.json"] = Encoding.UTF8.GetBytes(" " + Encoding.UTF8.GetString(files["td-fusion.json"])) };
         Assert.NotEqual(TdContentLoader.ComputeHash(files), TdContentLoader.ComputeHash(changed));
         var fusion = TdContentLoader.LoadEmbedded().Fusion;
-        Assert.Equal(9, fusion.Pairs.Length);
+        Assert.Equal(13, fusion.Pairs.Length);
 
         static TdContentLoadResult With(string find, string replace)
         {
@@ -396,7 +396,7 @@ public sealed class TdFusionTests
         static void Bad(TdContentLoadResult r, string fragment) { Assert.False(r.IsValid); Assert.Contains(r.Errors, x => x.Contains(fragment, StringComparison.Ordinal)); }
         Bad(With("{\"base\": \"bolt\", \"module\": \"frost\", \"name\": \"Raio gélido\"", "{\"base\": \"frost\", \"module\": \"bolt\", \"name\": \"Raio gélido\""), "par duplicado");
         Bad(With("\"economy\": [\"vault\"]", "\"economy\": []"), "sem papel");
-        Bad(With("\"support\": [\"scaleset\", \"backup\", \"aks\"]", "\"support\": [\"scaleset\", \"backup\", \"aks\", \"bolt\"]"), "em mais de um papel");
+        Bad(With("\"support\": [\"scaleset\", \"backup\", \"aks\", \"shield\", \"bastion\"]", "\"support\": [\"scaleset\", \"backup\", \"aks\", \"bolt\"]"), "em mais de um papel");
         Bad(With("\"damagePct\": 0.35}}", "\"damagePct\": 0}}"), "deve ser positivo");
         Bad(With("\"effect\": \"hitSlow\"", "\"effect\": \"laser\""), "effect desconhecido 'laser'");
         Bad(With("\"module\": \"cannon\", \"name\": \"Raio explosivo\"", "\"module\": \"policy\", \"name\": \"Raio explosivo\""), "hitSplash exige");

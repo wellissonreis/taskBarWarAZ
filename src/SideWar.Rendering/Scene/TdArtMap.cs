@@ -31,6 +31,13 @@ public static class TdArtMap
 
     public static readonly TdArtEntry[] Towers =
     [
+        new("dns", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "vetor próprio"),
+        new("frontdoor", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "vetor próprio"),
+        new("shield", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "vetor próprio"),
+        new("waf", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "vetor próprio"),
+        new("eventgrid", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "vetor próprio"),
+        new("bastion", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "vetor próprio"),
+        new("firewall", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "vetor próprio"),
         new("bolt", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "tower-bolt"),
         new("frost", SpriteId.TowerFrost, TowerHeightDip, default, 0, false, "tower-frost"),
         new("cannon", SpriteId.TowerCannon, TowerHeightDip, default, 0, false, "tower-cannon"),

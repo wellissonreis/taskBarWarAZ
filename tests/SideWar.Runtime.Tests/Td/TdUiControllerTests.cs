@@ -185,7 +185,7 @@ public sealed class TdUiControllerTests
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.QuickTowers));
         var panel = r.Ui.BuildPopover()!;
         var slots = panel.Items.Where(i => i.Action == TdUiAction.ChooseTower).ToArray();
-        Assert.Equal(6, slots.Length);
+        Assert.Equal(9, slots.Length);
         Assert.All(slots, i => { Assert.Equal(slots[0].Rect.Y, i.Rect.Y); Assert.Equal(44, i.Rect.W); Assert.NotNull(i.Tip); });
         r.Ui.Activate(Find(panel, TdUiAction.TowerCategory, "economy"));
         Assert.Single(r.Ui.BuildPopover()!.Items, i => i.Action == TdUiAction.ChooseTower);

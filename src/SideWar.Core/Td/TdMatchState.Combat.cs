@@ -122,8 +122,8 @@ public sealed partial class TdMatchState
                 if (j == i) continue;
                 var s = _towers[j];
                 var sd = _content.Towers[s.DefIndex];
-                if (sd.Id != "scaleset" || s.DisabledTicks > 0 || !s.Placed || Dist(s.X, t.X) > EffectiveRange(sd)) continue;
-                double c = BaseAura;
+                if ((sd.Id != "scaleset" && !sd.Stats.ContainsKey("neighborDamageBonus")) || s.DisabledTicks > 0 || !s.Placed || Dist(s.X, t.X) > EffectiveRange(sd)) continue;
+                double c = sd.Id == "scaleset" ? BaseAura : 0;
                 if (c > 0 && scale) c *= Stat(s, sd, "bonusMultiplierDuringScale", 1.0);
                 cad += c;
                 dmg += Stat(s, sd, "neighborDamageBonus", 0);
@@ -297,7 +297,7 @@ public sealed partial class TdMatchState
         DealDamage(target, ComputeDamage(t, def, e, st, ti, 1.0, burst));
         ApplyOnHit(ref t, def, target);
         ApplyModuleOnHit(t, def, ti, target);
-        if (def.Id == "cosmos")
+        if (def.Stats.ContainsKey("chainJumps"))
         {
             var hit = new HashSet<int> { e.Id };
             double x = e.X, factor = 1;
@@ -466,7 +466,7 @@ public sealed partial class TdMatchState
         for (int i = 0; i < _towers.Count; i++)
         {
             var t = _towers[i]; var def = _content.Towers[t.DefIndex];
-            if (def.Id != "backup" || !t.Placed || t.DisabledTicks > 0 || t.CooldownTicks > 1) continue;
+            if (!def.Stats.ContainsKey("reviveEverySeconds") || !t.Placed || t.DisabledTicks > 0 || t.CooldownTicks > 1) continue;
             for (int j = 0; j < _towers.Count; j++)
             {
                 var other = _towers[j];

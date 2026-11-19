@@ -10,6 +10,13 @@ internal static class TdVectorSprites
 {
     private static (string Path, TdIcon Icon, SKColor Color) Tower(string id) => id switch
     {
+        "dns" => ("M3 27 L6 22 L5 8 L13 2 L21 8 L20 22 L23 27 Z", TdIcon.Cdn, Palette.Gelo),
+        "frontdoor" => ("M2 27 L4 5 L9 2 L21 5 L24 27 L18 27 L18 12 L8 12 L8 27 Z", TdIcon.Policy, Palette.Menta),
+        "shield" => ("M4 27 L7 22 L3 5 L13 1 L23 5 L19 22 L22 27 Z", TdIcon.Policy, Palette.Gelo),
+        "waf" => ("M2 27 L5 20 L3 8 L13 2 L23 8 L21 20 L24 27 Z", TdIcon.Policy, Palette.Ambar),
+        "eventgrid" => ("M2 27 L8 21 L4 13 L8 4 L18 4 L22 13 L18 21 L24 27 Z", TdIcon.Cosmos, Palette.Td.TintViolet),
+        "bastion" => ("M2 27 L4 9 L7 9 L7 4 L10 4 L10 1 L16 1 L16 4 L19 4 L19 9 L22 9 L24 27 Z", TdIcon.Backup, Palette.Menta),
+        "firewall" => ("M2 27 L3 9 L7 9 L7 5 L11 5 L11 2 L15 2 L15 5 L19 5 L19 9 L23 9 L24 27 Z", TdIcon.Pipeline, Palette.Ambar),
         "functions" => ("M5 27 L7 18 L2 15 L8 3 L13 8 L18 2 L23 15 L19 18 L22 27 Z", TdIcon.Functions, Palette.Ambar),
         "cdn" => ("M4 27 L7 23 L5 20 L2 15 L3 9 L7 4 L13 2 L19 4 L23 9 L24 15 L21 20 L19 23 L22 27 Z", TdIcon.Cdn, Palette.Gelo),
         "policy" => ("M4 27 L7 22 L4 18 L3 5 L13 1 L23 5 L22 18 L19 22 L22 27 Z", TdIcon.Policy, Palette.Menta),

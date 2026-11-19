@@ -239,6 +239,13 @@ public static class TdContentValidator
                 "control" => true,
                 _ => t.Targets != "none"
             }, $"{o}: targets incompatível com kind");
+            if (t.Stats.TryGetValue("slowFactor", out var slow))
+                Req(e, t.Kind == "attack" && slow is > 0 and < 1, $"{o}: slowFactor inválido");
+            if (t.Id == "frontdoor")
+                Req(e, t.Kind == "blocker" && t.Stats.TryGetValue("nodes", out var nodes) && nodes == 1
+                    && t.Stats.TryGetValue("nodeHolds", out var holds) && holds == 1
+                    && t.Stats.TryGetValue("nodeDamagePerSecond", out var nodeDps) && nodeDps > 0
+                    && t.Stats.TryGetValue("nodeCooldownSeconds", out var nodeCooldown) && nodeCooldown > 0, $"{o}: stats de nó inválidos");
             if (t.Id == "functions")
                 Req(e, t.Stats.TryGetValue("burstShots", out var shots) && shots >= 1 && shots == Math.Floor(shots)
                     && t.Stats.TryGetValue("burstGapTicks", out var gap) && gap >= 1 && gap == Math.Floor(gap)
@@ -248,7 +255,7 @@ public static class TdContentValidator
             if (t.Id == "policy")
                 Req(e, t.Stats.TryGetValue("armorRemoveBp", out var bp) && bp is >= 0 and <= 10000, $"{o}: armorRemoveBp inválido");
 
-            if (t.Id == "cosmos")
+            if (t.Stats.ContainsKey("chainJumps"))
                 Req(e, t.Stats.TryGetValue("chainJumps", out var jumps) && jumps >= 0 && jumps == Math.Floor(jumps)
                     && t.Stats.TryGetValue("chainRadius", out var radius) && radius > 0
                     && t.Stats.TryGetValue("chainFalloffBp", out var falloff) && falloff is >= 0 and <= 10000, $"{o}: stats de cadeia inválidos");
@@ -271,6 +278,10 @@ public static class TdContentValidator
                 Req(e, t.Kind == "economy" && t.Stats.TryGetValue("maxPerPlayer", out var vaultLimit) && vaultLimit == 2
                     && t.Stats.TryGetValue("creditsPerWave", out var credits) && credits >= 0 && credits == Math.Floor(credits)
                     && t.Stats.TryGetValue("noLeakBonus", out var noLeak) && noLeak >= 0 && noLeak == Math.Floor(noLeak), $"{o}: stats de economia inválidos");
+            if (t.Stats.TryGetValue("neighborDamageBonus", out var aura))
+                Req(e, t.Kind == "support" && aura is > 0 and <= 1, $"{o}: bônus de aura inválido");
+            if (t.Id == "bastion")
+                Req(e, t.Kind == "support" && t.Stats.TryGetValue("reviveEverySeconds", out var bastionRevive) && bastionRevive > 0, $"{o}: reativação inválida");
             if (t.Id == "backup")
                 Req(e, t.Kind == "support" && t.Stats.TryGetValue("reviveEverySeconds", out var revive) && revive > 0
                     && t.Stats.TryGetValue("coreHealEverySeconds", out var heal) && heal > 0

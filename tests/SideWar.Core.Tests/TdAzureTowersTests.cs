@@ -67,12 +67,12 @@ public sealed class TdAzureTowersTests
     }
 
     [Theory]
-    [InlineData(0, 4)]
-    [InlineData(1, 6)]
-    [InlineData(2, 8)]
-    [InlineData(3, 10)]
-    [InlineData(4, 13)]
-    [InlineData(5, 15)]
+    [InlineData(0, 5)]
+    [InlineData(1, 8)]
+    [InlineData(2, 12)]
+    [InlineData(3, 15)]
+    [InlineData(4, 19)]
+    [InlineData(5, 22)]
     public void TowerUnlockUsesProfileRatherThanStartingStage(int completed, int expected)
     {
         var content = TdContentLoader.LoadEmbedded();
@@ -83,6 +83,72 @@ public sealed class TdAzureTowersTests
         Assert.Equal(early.UnlockedTowerStage, late.UnlockedTowerStage);
         if (completed < 5)
             Assert.Equal(SideWar.Core.Simulation.CommandReason.TowerLocked, late.Apply(new BuildTower("vault", 1100)).Reason);
+    }
+
+    [Theory]
+    [InlineData("dns", "frost", "Resolução gélida")]
+    [InlineData("dns", "cosmos", "Consulta distribuída")]
+    [InlineData("firewall", "policy", "Muralha corrosiva")]
+    [InlineData("frontdoor", "frost", "Porta congelante")]
+    public void NewPairsAreOrderedAndCanBeSold(string baseId, string module, string name)
+    {
+        var s = Arena("grunt"); Build(s, baseId, 1100);
+        var id = s.Towers[0].Id;
+        Assert.True(s.Apply(new FuseTower(id, module)).IsOk);
+        Assert.Equal(name, s.TowerDisplayName(s.Towers[0]));
+        long before = s.Credits;
+        Assert.True(s.Apply(new SellTower(id)).IsOk);
+        Assert.Empty(s.Towers); Assert.True(s.Credits > before);
+    }
+
+    [Theory]
+    [InlineData("dns")]
+    [InlineData("waf")]
+    [InlineData("eventgrid")]
+    [InlineData("firewall")]
+    public void NewAttacksDamageGroundTargets(string id)
+    {
+        var s = Arena("grunt"); Build(s, id, 1100);
+        Assert.True(s.Apply(new StartWave()).IsOk); Steps(s, 1);
+        Assert.True(s.Enemies[0].Hp < s.Enemies[0].MaxHp);
+    }
+
+    [Fact]
+    public void WafSlowsAndFirewallCannotTargetFlying()
+    {
+        var waf = Arena("grunt"); Build(waf, "waf", 1100);
+        Assert.True(waf.Apply(new StartWave()).IsOk); Steps(waf, 1);
+        Assert.Equal(0.8, waf.Enemies[0].SlowMult, 6);
+        var firewall = Arena("flyer"); Build(firewall, "firewall", 1100);
+        Assert.True(firewall.Apply(new StartWave()).IsOk); Steps(firewall, 1);
+        Assert.Equal(firewall.Enemies[0].MaxHp, firewall.Enemies[0].Hp);
+    }
+
+    [Fact]
+    public void ShieldBoostsOthersAndEventGridChains()
+    {
+        var plain = Arena("grunt"); Build(plain, "dns", 1100);
+        var boosted = Arena("grunt"); Build(boosted, "dns", 1100); Build(boosted, "shield", 1080);
+        Assert.True(plain.Apply(new StartWave()).IsOk); Assert.True(boosted.Apply(new StartWave()).IsOk);
+        Steps(plain, 1); Steps(boosted, 1);
+        Assert.True(boosted.Enemies[0].Hp < plain.Enemies[0].Hp);
+        var chain = Arena("grunt", 3); Build(chain, "eventgrid", 1100);
+        Assert.True(chain.Apply(new StartWave()).IsOk); Steps(chain, 1);
+        Assert.Equal(3, chain.Enemies.Count(e => e.Hp < e.MaxHp));
+    }
+
+    [Fact]
+    public void DnsFrostPairSlowsAndFirewallPolicyCorrodes()
+    {
+        var frost = Arena("grunt"); Build(frost, "dns", 1100);
+        Assert.True(frost.Apply(new FuseTower(frost.Towers[0].Id, "frost")).IsOk);
+        Assert.True(frost.Apply(new StartWave()).IsOk); Steps(frost, 1);
+        Assert.Equal(0.7, frost.Enemies[0].SlowMult, 6);
+        var policy = Arena("grunt", armor: 40); Build(policy, "firewall", 1100);
+        Assert.True(policy.Apply(new FuseTower(policy.Towers[0].Id, "policy")).IsOk);
+        Assert.True(policy.Apply(new StartWave()).IsOk); Steps(policy, 1);
+        Assert.Equal(10, policy.Enemies[0].CorrodeAmount, 6);
+        Assert.True(policy.Enemies[0].CorrodeTicks > 0);
     }
 
     private static TdMatchState Arena(string enemy, int count = 1, double armor = 0)

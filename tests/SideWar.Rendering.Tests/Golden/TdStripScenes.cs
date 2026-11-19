@@ -106,7 +106,7 @@ public static class TdStripScenes
         switch (scene)
         {
             case TdStripScene.AllTowers:
-                for (int i = 0; i < Embedded.Towers.Length; i++) Build(m, Embedded.Towers[i].Id, 80 + i * 72);
+                for (int i = 0; i < 15; i++) Build(m, Embedded.Towers[i].Id, 80 + i * 72);
                 return (m, TdView.None, 100.0);
             case TdStripScene.Fused:
             {

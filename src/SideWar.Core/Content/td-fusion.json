@@ -2,9 +2,9 @@
   "minStage": 2,
   "resolveOrder": ["base", "module", "aura"],
   "roles": {
-    "attack": ["bolt", "cannon", "functions", "cdn", "cosmos", "pipeline"],
-    "control": ["frost", "balancer", "policy", "sentinel", "queue"],
-    "support": ["scaleset", "backup", "aks"],
+    "attack": ["bolt", "cannon", "functions", "cdn", "cosmos", "pipeline", "dns", "eventgrid", "firewall"],
+    "control": ["frost", "balancer", "policy", "sentinel", "queue", "frontdoor", "waf"],
+    "support": ["scaleset", "backup", "aks", "shield", "bastion"],
     "economy": ["vault"]
   },
   "generic": {
@@ -14,6 +14,10 @@
     "economy": {"incomePct": 0.5}
   },
   "pairs": [
+    {"base": "dns", "module": "frost", "name": "Resolução gélida", "effect": "hitSlow", "params": {}},
+    {"base": "dns", "module": "cosmos", "name": "Consulta distribuída", "effect": "hitChain", "params": {"jumps": 1, "damagePct": 0.4}},
+    {"base": "firewall", "module": "policy", "name": "Muralha corrosiva", "effect": "hitCorrode", "params": {"armorPct": 0.25, "seconds": 3}},
+    {"base": "frontdoor", "module": "frost", "name": "Porta congelante", "effect": "nodeSlow", "params": {}},
     {"base": "frost", "module": "bolt", "name": "Gelo elétrico", "effect": "hitDamage", "params": {"damagePct": 0.35}},
     {"base": "bolt", "module": "frost", "name": "Raio gélido", "effect": "hitSlow", "params": {}},
     {"base": "cannon", "module": "bolt", "name": "Canhão elétrico", "effect": "hitDamage", "params": {"damagePct": 0.35}},
