@@ -39,12 +39,17 @@ public sealed class TdAlertGuard
 {
     public const int CooldownTicks = 60 * 30;
     public const int MaxNonFatalPerWave = 2;
+    public const int DefeatWarningWaves = 3;
+    public const int MaxDamageWarningsPerRun = 3;
 
     private readonly List<TdProtectionEntry> _log = [];
     private readonly Dictionary<TdAlertType, long> _lastShown = [];
     private int _wave = -1, _shownThisWave;
     private bool _fallAuthorized;
     private readonly HashSet<int> _acknowledged = [];
+    private readonly HashSet<TdAlertType> _shownTips = [];
+    private int _damageWarnings;
+    private long _lastDamageWarning = -CooldownTicks;
 
     public TdAlertSettings Settings { get; } = new();
 
@@ -63,6 +68,7 @@ public sealed class TdAlertGuard
     {
         _log.Clear(); _lastShown.Clear();
         _wave = -1; _shownThisWave = 0; _fallAuthorized = false; _acknowledged.Clear();
+        _shownTips.Clear(); _damageWarnings = 0; _lastDamageWarning = -CooldownTicks;
         Holding = false; HoldAlert = null; Current = null; Raised = 0;
     }
 
@@ -71,6 +77,7 @@ public sealed class TdAlertGuard
     {
         if (Holding) return true;
         if (!Settings.AutoPause || _fallAuthorized || match.Phase != MatchPhase.Onda || match.Paused) return false;
+        if (match.WavesReached >= DefeatWarningWaves) return false;
         // Rede de segurança: o passo seguinte levaria à derrota (simulado numa cópia).
         if (match.NextStepIsFatal())
         {
@@ -121,10 +128,16 @@ public sealed class TdAlertGuard
         foreach (var alert in TdAlertCatalog.Detect(match))
         {
             if (TdAlertSettings.IsProtection(alert.Type)) continue; // tratado por Blocks, sem cooldown
+            if (alert.Type == TdAlertType.CoreAtRisk && match.WavesReached >= DefeatWarningWaves) continue;
+            bool damage = alert.Type is TdAlertType.ImminentLeak or TdAlertType.TowerDamage;
+            if (damage && (_damageWarnings >= MaxDamageWarningsPerRun || match.Tick - _lastDamageWarning < CooldownTicks)) continue;
+            if (alert.Severity == TdAlertSeverity.Tip && _shownTips.Contains(alert.Type)) continue;
             if (_lastShown.TryGetValue(alert.Type, out long last) && match.Tick - last < CooldownTicks) continue;
             bool pauses = alert.Severity == TdAlertSeverity.Critical && Settings.AutoPause && !_fallAuthorized && !Settings.IsMuted(alert.Type);
             if (!pauses && (!Settings.Enabled || _shownThisWave >= MaxNonFatalPerWave)) continue;
             _lastShown[alert.Type] = match.Tick;
+            if (damage) { _damageWarnings++; _lastDamageWarning = match.Tick; }
+            if (alert.Severity == TdAlertSeverity.Tip) _shownTips.Add(alert.Type);
             if (!pauses) _shownThisWave++;
             Current = alert; Raised++;
             if (pauses) Hold(match, alert, alert.Type);

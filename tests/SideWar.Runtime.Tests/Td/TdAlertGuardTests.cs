@@ -107,7 +107,8 @@ public sealed class TdAlertGuardTests
         for (int i = 0; i < 40; i++)
         {
             if (r.Match.Phase == MatchPhase.Preparo) { r.Host.OnCommand(new StartWave()); r.Wake(); }
-            r.RunUntilHeld(120);
+            if (r.Match.WavesReached >= TdAlertGuard.DefeatWarningWaves) break;
+            r.Run(1);
             if (r.Host.Alerts.Holding) r.Host.SaveTower();
         }
         Assert.NotEqual(MatchPhase.Derrota, r.Match.Phase);
@@ -177,5 +178,62 @@ public sealed class TdAlertGuardTests
         r.Run(20);
         Assert.False(r.Host.Alerts.Holding);
         Assert.True(r.Host.Alerts.Raised - raised <= TdAlertGuard.MaxNonFatalPerWave);
+    }
+
+    [Fact]
+    public void Defeat_warnings_stop_after_the_first_three_waves_even_with_auto_pause()
+    {
+        var r = new Rig();
+        var enemies = Assert.IsType<List<TdEnemy>>(r.Match.Enemies);
+        enemies.Add(new TdEnemy { Id = 901, X = r.Match.LeakX + 10, Hp = 5, Speed = 30, CoreDamage = r.Match.Integrity });
+        Assert.True(r.Host.Alerts.Blocks(r.Match));
+        r.Host.SaveTower();
+        typeof(TdMatchState).GetProperty(nameof(TdMatchState.WaveNumber))!.SetValue(r.Match, 4);
+        Assert.False(r.Host.Alerts.Blocks(r.Match));
+        r.Host.Alerts.Settings.Enabled = true;
+        r.Host.Alerts.Evaluate(r.Match);
+        Assert.NotEqual(TdAlertType.CoreAtRisk, r.Host.Alerts.Current?.Type);
+        Assert.False(r.Host.Alerts.Holding);
+    }
+
+    [Fact]
+    public void Damage_and_leak_share_three_warnings_per_run_and_restart_clears_the_limit()
+    {
+        var r = new Rig(autoPause: false);
+        var guard = r.Host.Alerts;
+        guard.Settings.Enabled = true;
+        var enemies = Assert.IsType<List<TdEnemy>>(r.Match.Enemies);
+        enemies.Add(new TdEnemy { Id = 901, X = r.Match.LeakX + 30, Hp = 5, Speed = 30, CoreDamage = 1 });
+        for (int i = 0; i < 4; i++)
+        {
+            typeof(TdMatchState).GetProperty(nameof(TdMatchState.Tick))!.SetValue(r.Match, (long)i * TdAlertGuard.CooldownTicks);
+            typeof(TdMatchState).GetProperty(nameof(TdMatchState.WaveNumber))!.SetValue(r.Match, i + 1);
+            int before = guard.Raised;
+            guard.Evaluate(r.Match);
+            if (i < 3) { Assert.Equal(before + 1, guard.Raised); Assert.Equal(TdAlertType.ImminentLeak, guard.Current?.Type); }
+            else if (guard.Raised > before) Assert.DoesNotContain(guard.Current!.Value.Type, new[] { TdAlertType.ImminentLeak, TdAlertType.TowerDamage });
+        }
+        guard.Reset();
+        guard.Evaluate(r.Match);
+        Assert.Equal(TdAlertType.ImminentLeak, guard.Current?.Type);
+    }
+
+    [Fact]
+    public void Recurring_tips_are_shown_once_per_type_per_run()
+    {
+        var r = new Rig(autoPause: false);
+        var guard = r.Host.Alerts;
+        guard.Settings.Enabled = true;
+        guard.Evaluate(r.Match);
+        Assert.Equal(TdAlertType.FewTowers, guard.Current?.Type);
+        typeof(TdMatchState).GetProperty(nameof(TdMatchState.Tick))!.SetValue(r.Match, (long)TdAlertGuard.CooldownTicks);
+        typeof(TdMatchState).GetProperty(nameof(TdMatchState.WaveNumber))!.SetValue(r.Match, 2);
+        guard.Evaluate(r.Match);
+        Assert.Equal(TdAlertType.IdleCredits, guard.Current?.Type);
+        int raised = guard.Raised;
+        typeof(TdMatchState).GetProperty(nameof(TdMatchState.Tick))!.SetValue(r.Match, 2L * TdAlertGuard.CooldownTicks);
+        typeof(TdMatchState).GetProperty(nameof(TdMatchState.WaveNumber))!.SetValue(r.Match, 3);
+        guard.Evaluate(r.Match);
+        Assert.Equal(raised, guard.Raised);
     }
 }
