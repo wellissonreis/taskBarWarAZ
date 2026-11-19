@@ -12,8 +12,10 @@ $stage = Join-Path $env:TEMP ('sidewar-kit-' + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $stage | Out-Null
 try {
     Copy-Item -LiteralPath $msix -Destination (Join-Path $stage 'SideWar.msix')
-    Copy-Item -LiteralPath $CertificatePath -Destination (Join-Path $stage 'sidewar-test.cer')
-    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Instalar-SideWar.cmd') -Destination $stage
+    # Cert publico embutido (base64 do .cer) no proprio .cmd; o zip tem exatamente 3 arquivos.
+    $b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes((Resolve-Path -LiteralPath $CertificatePath).Path))
+    $tpl = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Cert-Chave-Acesso.template.cmd'))
+    [IO.File]::WriteAllText((Join-Path $stage 'Cert-Chave-Acesso.cmd'), $tpl.Replace('@@CERT@@', $b64), [Text.UTF8Encoding]::new($false))
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'LEIA-ME.txt') -Destination $stage
     $zip = Join-Path $MsixDir 'SideWar-teste.zip'
     if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip -Force }

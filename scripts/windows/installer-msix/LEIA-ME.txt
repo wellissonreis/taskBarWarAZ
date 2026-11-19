@@ -10,11 +10,11 @@ Requisitos
 - 64 bits (x64)
 
 Como instalar
-1. Extraia TODO o conteudo do .zip numa pasta (nao rode de dentro do zip).
-2. De duplo clique em Instalar-SideWar.cmd.
-3. Quando o Windows pedir permissao de administrador, aceite (e so para
-   confiar no certificado de teste).
-4. Ao ver "SUCESSO", abra o SideWar pelo menu Iniciar.
+1. Extraia o .zip numa pasta e de duplo clique em Cert-Chave-Acesso.cmd
+   (so uma vez). Aceite o pedido de administrador; ele apenas faz o Windows
+   confiar no certificado de teste. Espere a mensagem "SUCESSO".
+2. De duplo clique em SideWar.msix e clique em Instalar.
+3. Abra o SideWar pelo menu Iniciar.
 
 Como desinstalar
 - Configuracoes > Aplicativos > Aplicativos instalados > SideWar > Desinstalar.
