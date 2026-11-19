@@ -15,7 +15,11 @@
         <StackPanel Margin="12">
           <TextBlock Text="Modo de jogo (vale ao reiniciar o SideWar)" />
           <ComboBox x:Name="ModeCombo" Width="260" HorizontalAlignment="Left" Margin="0,2,0,8" />
-          <CheckBox Content="Iniciar com o Windows" IsChecked="{Binding StartWithWindows}" Margin="0,0,0,8" />
+          <StackPanel>
+            <StackPanel.Style><Style TargetType="StackPanel"><Setter Property="Visibility" Value="Collapsed" /><Style.Triggers><DataTrigger Binding="{Binding StartupVisible}" Value="True"><Setter Property="Visibility" Value="Visible" /></DataTrigger></Style.Triggers></Style></StackPanel.Style>
+            <CheckBox Content="Iniciar com o Windows" IsChecked="{Binding StartWithWindows}" IsEnabled="{Binding StartupAvailable}" Margin="0,0,0,4" />
+            <TextBlock Text="{Binding StartupMessage}" TextWrapping="Wrap" Margin="0,0,0,8" />
+          </StackPanel>
           <TextBlock Text="Ocultar em tela cheia" />
           <ComboBox x:Name="HideCombo" Width="220" HorizontalAlignment="Left" Margin="0,2,0,8" />
           <CheckBox Content="Usar UI Automation para a barra de tarefas" IsChecked="{Binding UseUia}" Margin="0,0,0,8" />

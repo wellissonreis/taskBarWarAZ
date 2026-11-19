@@ -57,6 +57,7 @@ public partial class SettingsWindow : Window
         HkPause.TextChanged += (_, _) => viewModel.TogglePause = HkPause.Text;
         viewModel.PropertyChanged += (_, _) => Refresh();
         Refresh();
+        Loaded += async (_, _) => await viewModel.LoadStartupAsync();
     }
 
     private static SolidColorBrush Brush(SkiaSharp.SKColor color) =>
@@ -72,7 +73,7 @@ public partial class SettingsWindow : Window
         HkStartWaveErr.Text = ViewModel.GetError(nameof(SettingsViewModel.StartWave)) ?? "";
         HkConflictText.Text = ViewModel.HotkeyConflict ?? "";
         SaveErrorText.Text = ViewModel.SaveError ?? "";
-        SaveButton.IsEnabled = ViewModel.IsValid;
+        SaveButton.IsEnabled = ViewModel.IsValid && !ViewModel.StartupBusy;
         if (HkInteractive.Text != ViewModel.ToggleInteractive) HkInteractive.Text = ViewModel.ToggleInteractive;
         if (HkVisibility.Text != ViewModel.ToggleVisibility) HkVisibility.Text = ViewModel.ToggleVisibility;
         if (HkPause.Text != ViewModel.TogglePause) HkPause.Text = ViewModel.TogglePause;
@@ -81,9 +82,9 @@ public partial class SettingsWindow : Window
 
     private void OnRestoreHotkeys(object sender, RoutedEventArgs e) => ViewModel.RestoreDefaultHotkeys();
 
-    private void OnSave(object sender, RoutedEventArgs e)
+    private async void OnSave(object sender, RoutedEventArgs e)
     {
-        if (ViewModel.TrySave()) Close();
+        if (await ViewModel.TrySaveAsync()) Close();
         else Refresh();
     }
 

@@ -6,6 +6,7 @@ using SideWar.Persistence.Settings;
 using SideWar.Platform.Windows.Diagnostics;
 using SideWar.Platform.Windows.Instance;
 using SideWar.Platform.Windows.Menus;
+using SideWar.Platform.Windows.Startup;
 using SideWar.Platform.Windows.Threading;
 using SideWar.Platform.Windows.Tray;
 using SideWar.Runtime.Composition;
@@ -211,7 +212,7 @@ internal sealed class AppComposition : IDisposable
     {
         if (IsShuttingDown) return;
         if (settingsWindow is not null) { settingsWindow.Activate(); return; }
-        var vm = new SettingsViewModel(settings, SaveSettings);
+        var vm = new SettingsViewModel(settings, SaveSettings, new StartupService());
         vm.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName != nameof(SettingsViewModel.TdCornerUiScale)) return;

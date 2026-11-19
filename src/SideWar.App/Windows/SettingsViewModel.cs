@@ -3,6 +3,7 @@ using System.Runtime.CompilerServices;
 using SideWar.Core.Td;
 using SideWar.Persistence.Settings;
 using SideWar.Runtime.Input;
+using SideWar.Platform.Windows.Startup;
 
 namespace SideWar.App.Windows;
 
@@ -36,11 +37,84 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     private bool tdAlertsEnabled, tdAlertsAutoPause, tdAlertsSound;
     private int tdAlertsMutedMask;
     private string? saveError;
+    private readonly IStartupService? startup;
+    private bool startupVisible, startupAvailable, startupBusy, startupInitial;
+    private string? startupMessage;
 
-    public SettingsViewModel(AppSettings current, Func<AppSettings, bool> save)
+    public bool StartupVisible { get => startupVisible; private set => Set(ref startupVisible, value); }
+    public bool StartupAvailable { get => startupAvailable && !startupBusy; private set { startupAvailable = value; Raise(); } }
+    public string? StartupMessage { get => startupMessage; private set => Set(ref startupMessage, value); }
+    public bool StartupBusy { get => startupBusy; private set { startupBusy = value; Raise(); Raise(nameof(StartupAvailable)); } }
+
+    public async Task LoadStartupAsync()
+    {
+        if (startup is null) return;
+        try
+        {
+            if (!startup.IsPackaged) return;
+        }
+        catch (Exception) { return; }
+        StartupVisible = true;
+        StartupBusy = true;
+        try
+        {
+            ApplyStartupStatus(await startup.GetStatusAsync());
+        }
+        catch (Exception)
+        {
+            StartupAvailable = false;
+            StartupMessage = "Não foi possível consultar a inicialização no Windows.";
+        }
+        finally { StartupBusy = false; }
+    }
+
+    private void ApplyStartupStatus(StartupStatus status)
+    {
+        StartWithWindows = status is StartupStatus.Enabled or StartupStatus.EnabledByPolicy;
+        startupInitial = StartWithWindows;
+        StartupAvailable = status is StartupStatus.Enabled or StartupStatus.Disabled;
+        StartupMessage = status switch
+        {
+            StartupStatus.DisabledByUser => "Desativado pelo usuário nas configurações do Windows. Altere a opção no Windows para reativar.",
+            StartupStatus.DisabledByPolicy => "Desativado por política do Windows.",
+            StartupStatus.EnabledByPolicy => "Ativado por política do Windows.",
+            _ => null,
+        };
+    }
+
+    public async Task<bool> TrySaveAsync()
+    {
+        if (!IsValid) return false;
+        // Persist the settings first; a StartupTask failure must not undo them.
+        bool startupChange = StartupVisible && StartupAvailable && StartWithWindows != startupInitial && startup is not null;
+        if (!TrySave()) return false;
+        if (!startupChange) return true;
+        bool requested = StartWithWindows;
+        StartupBusy = true;
+        try
+        {
+            var status = await startup!.SetEnabledAsync(requested);
+            ApplyStartupStatus(status);
+            if (StartWithWindows != requested)
+            {
+                SaveError = "Configurações gravadas, mas o Windows não aplicou a opção de inicialização.";
+                return false;
+            }
+        }
+        catch (Exception)
+        {
+            SaveError = "Configurações gravadas, mas não foi possível alterar a inicialização no Windows.";
+            return false;
+        }
+        finally { StartupBusy = false; }
+        return true;
+    }
+
+    public SettingsViewModel(AppSettings current, Func<AppSettings, bool> save, IStartupService? startup = null)
     {
         original = current;
         this.save = save;
+        this.startup = startup;
         Load(current);
     }
 
@@ -172,7 +246,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         Behavior = original.Behavior with
         {
             HideOnFullscreen = hideOnFullscreen,
-            StartWithWindows = startWithWindows,
+            StartWithWindows = startup is null ? startWithWindows : original.Behavior.StartWithWindows,
             PeekOnHover = peekOnHover,
             AutoPassiveSeconds = autoPassiveSeconds,
         },
