@@ -29,6 +29,35 @@ public class SettingsTdTests
     }
 
     [Fact]
+    public void Fresh_install_defaults_never_auto_start_and_show_the_tutorial()
+    {
+        var fresh = new SettingsStore(new FakeFileSystem(), "/data", utcNow: () => Now).Load();
+        Assert.Equal(SettingsSource.Defaults, fresh.Source);
+        AssertFirstRun(fresh.Settings.Td);
+        AssertFirstRun(ReadPayload("{}").Td);               // arquivo sem seção td
+        AssertFirstRun(ReadPayload("{\"td\":{}}").Td);       // seção vazia
+        AssertFirstRun(ReadPayload("{\"td\":{\"autoStartEnabled\":\"sim\",\"autoRestart\":1,\"tutorialDone\":\"x\"}}").Td); // tipos inválidos caem no padrão
+    }
+
+    [Fact]
+    public void Values_already_saved_by_the_user_are_preserved()
+    {
+        var td = ReadPayload("{\"td\":{\"autoStartEnabled\":true,\"autoRestart\":true,\"tutorialDone\":true}}").Td;
+        Assert.True(td.AutoStartEnabled);
+        Assert.True(td.AutoRestart);
+        Assert.True(td.TutorialDone);
+    }
+
+    private static void AssertFirstRun(TdSettings td)
+    {
+        Assert.False(td.AutoStartEnabled);
+        Assert.False(td.AutoRestart);
+        Assert.False(td.TutorialDone);
+        Assert.True(td.HudMinimized);
+        Assert.Equal("", td.TipsSeen);
+    }
+
+    [Fact]
     public void Corner_scale_migrates_validates_and_roundtrips()
     {
         Assert.Equal(125, ReadPayload("{\"td\":{}}").Td.CornerUiScalePercent);
