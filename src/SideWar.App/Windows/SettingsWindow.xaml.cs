@@ -28,12 +28,6 @@ public partial class SettingsWindow : Window
         this.onClosed = onClosed;
         DataContext = viewModel;
 
-        CornerScaleCombo.ItemsSource = SettingsSerializer.AllowedCornerUiScales.Select(v => ($"{v}%", v)).ToArray();
-        CornerScaleCombo.DisplayMemberPath = "Item1";
-        CornerScaleCombo.SelectedValuePath = "Item2";
-        CornerScaleCombo.SelectedValue = viewModel.TdCornerUiScale;
-        CornerScaleCombo.SelectionChanged += (_, _) => { if (CornerScaleCombo.SelectedValue is int v) viewModel.TdCornerUiScale = v; };
-
         ModeCombo.ItemsSource = new[] { ("Tower Defense (novo)", GameMode.Td), ("Clássico (idle)", GameMode.Idle) };
         ModeCombo.DisplayMemberPath = "Item1";
         ModeCombo.SelectedValuePath = "Item2";
@@ -96,6 +90,9 @@ public partial class SettingsWindow : Window
     private void OnSpeed1(object sender, RoutedEventArgs e) => ViewModel.TdGameSpeed = 1;
     private void OnSpeed2(object sender, RoutedEventArgs e) => ViewModel.TdGameSpeed = 2;
     private void OnSpeed3(object sender, RoutedEventArgs e) => ViewModel.TdGameSpeed = 3;
+    private void OnCornerSmall(object sender, RoutedEventArgs e) => ViewModel.TdCornerUiScale = 100;
+    private void OnCornerMedium(object sender, RoutedEventArgs e) => ViewModel.TdCornerUiScale = 150;
+    private void OnCornerLarge(object sender, RoutedEventArgs e) => ViewModel.TdCornerUiScale = 200;
     private void OnBandSmall(object sender, RoutedEventArgs e) => ViewModel.TdBandHeight = TdSettings.SmallBandHeightDip;
     private void OnBandMedium(object sender, RoutedEventArgs e) => ViewModel.TdBandHeight = TdSettings.DefaultBandHeightDip;
     private void OnBandLarge(object sender, RoutedEventArgs e) => ViewModel.TdBandHeight = TdSettings.LargeBandHeightDip;

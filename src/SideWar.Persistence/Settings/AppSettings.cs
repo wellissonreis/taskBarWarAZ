@@ -136,6 +136,8 @@ public sealed record TdSettings
     public bool HudMinimized { get; init; } = true;
 
     /// <summary>Escala da interface do canto, independente da altura da faixa.</summary>
+    public const int MinCornerUiScalePercent = 100;
+    public const int MaxCornerUiScalePercent = 250;
     public int CornerUiScalePercent { get; init; } = 125;
 
     /// <summary>Esmaecer faixa e HUD quando o usuário ativa outro app (ausente: só o esmaecer; o fps não muda, TD.28c).</summary>

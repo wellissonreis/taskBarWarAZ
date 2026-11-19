@@ -74,7 +74,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     public int TdAutoStartSeconds { get => tdAutoStartSeconds; set { if (Set(ref tdAutoStartSeconds, value)) Check(nameof(TdAutoStartSeconds), value is >= TdSettings.MinAutoStartSeconds and <= TdSettings.MaxAutoStartSeconds ? null : "Entre 5 e 60 segundos."); } }
     /// <summary>Altura da faixa TD em DIP (32 a 96); presets Pequeno 40 / Médio 64 / Grande 88. Vale ao reiniciar o SideWar.</summary>
     public int TdBandHeight { get => tdBandHeight; set { if (Set(ref tdBandHeight, value)) Check(nameof(TdBandHeight), value is >= TdSettings.MinBandHeightDip and <= TdSettings.MaxBandHeightDip ? null : "Altura entre 32 e 96 DIP."); } }
-    public int TdCornerUiScale { get => tdCornerUiScale; set { if (Set(ref tdCornerUiScale, value)) Check(nameof(TdCornerUiScale), SettingsSerializer.AllowedCornerUiScales.Contains(value) ? null : "Escolha um tamanho disponível."); } }
+    public int TdCornerUiScale { get => tdCornerUiScale; set => Set(ref tdCornerUiScale, Math.Clamp(value, TdSettings.MinCornerUiScalePercent, TdSettings.MaxCornerUiScalePercent)); }
     /// <summary>Esmaecer faixa e HUD ao ativar outro app (TD.14).</summary>
     public bool TdBonusQuestions { get => tdBonusQuestions; set => Set(ref tdBonusQuestions, value); }
     public bool TdShowIncome { get => tdShowIncome; set => Set(ref tdShowIncome, value); }

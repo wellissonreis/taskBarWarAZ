@@ -24,6 +24,22 @@ public class SettingsViewModelTests
     }
 
     [Fact]
+    public void Corner_scale_supports_continuous_values_and_clamps_with_change_notifications()
+    {
+        var vm = Make(out var saved);
+        var changes = new List<string?>();
+        vm.PropertyChanged += (_, e) => changes.Add(e.PropertyName);
+        vm.TdCornerUiScale = 137;
+        Assert.Contains(nameof(vm.TdCornerUiScale), changes);
+        Assert.True(vm.TrySave());
+        Assert.Equal(137, Assert.Single(saved).Td.CornerUiScalePercent);
+        vm.TdCornerUiScale = 20;
+        Assert.Equal(100, vm.TdCornerUiScale);
+        vm.TdCornerUiScale = 300;
+        Assert.Equal(250, vm.TdCornerUiScale);
+    }
+
+    [Fact]
     public void Edits_flow_into_settings()
     {
         var vm = Make(out var saved);

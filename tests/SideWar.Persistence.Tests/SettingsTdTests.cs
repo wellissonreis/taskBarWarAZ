@@ -32,11 +32,14 @@ public class SettingsTdTests
     public void Corner_scale_migrates_validates_and_roundtrips()
     {
         Assert.Equal(125, ReadPayload("{\"td\":{}}").Td.CornerUiScalePercent);
-        Assert.Equal(125, ReadPayload("{\"td\":{\"cornerUiScalePercent\":130}}").Td.CornerUiScalePercent);
+        Assert.Equal(130, ReadPayload("{\"td\":{\"cornerUiScalePercent\":130}}").Td.CornerUiScalePercent);
+        Assert.Equal(100, ReadPayload("{\"td\":{\"cornerUiScalePercent\":99}}").Td.CornerUiScalePercent);
+        Assert.Equal(250, ReadPayload("{\"td\":{\"cornerUiScalePercent\":251}}").Td.CornerUiScalePercent);
+        Assert.Equal(125, ReadPayload("{\"td\":{\"cornerUiScalePercent\":null}}").Td.CornerUiScalePercent);
         var fs = new FakeFileSystem();
         var store = new SettingsStore(fs, "/data", utcNow: () => Now);
-        Assert.True(store.Save(new AppSettings { Td = new TdSettings { CornerUiScalePercent = 200, BandHeightDip = 40 } }));
-        Assert.Equal(200, store.Load().Settings.Td.CornerUiScalePercent);
+        Assert.True(store.Save(new AppSettings { Td = new TdSettings { CornerUiScalePercent = 237, BandHeightDip = 40 } }));
+        Assert.Equal(237, store.Load().Settings.Td.CornerUiScalePercent);
         Assert.Equal(40, store.Load().Settings.Td.BandHeightDip);
     }
 

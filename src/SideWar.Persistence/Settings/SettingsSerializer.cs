@@ -7,7 +7,6 @@ public static class SettingsSerializer
 {
     public static readonly int[] AllowedPresentFps = [20, 30, 60];
     public static readonly int[] AllowedAbsentFps = [4, 8];
-    public static readonly int[] AllowedCornerUiScales = [100, 125, 150, 175, 200];
 
     public static void Write(Utf8JsonWriter w, AppSettings s)
     {
@@ -162,7 +161,7 @@ public static class SettingsSerializer
                 AutoStartSeconds = IntRange(td, "autoStartSeconds", TdSettings.MinAutoStartSeconds, TdSettings.MaxAutoStartSeconds, d.Td.AutoStartSeconds),
                 BandHeightDip = IntRange(td, "bandHeightDip", TdSettings.MinBandHeightDip, TdSettings.MaxBandHeightDip, d.Td.BandHeightDip),
                 HudMinimized = Bool(td, "hudMinimized", d.Td.HudMinimized),
-                CornerUiScalePercent = IntOneOf(td, "cornerUiScalePercent", AllowedCornerUiScales, d.Td.CornerUiScalePercent),
+                CornerUiScalePercent = IntClamped(td, "cornerUiScalePercent", TdSettings.MinCornerUiScalePercent, TdSettings.MaxCornerUiScalePercent, d.Td.CornerUiScalePercent),
                 FadeWhenUnfocused = Bool(td, "fadeWhenUnfocused", d.Td.FadeWhenUnfocused),
                 FadeOpacityPercent = IntRange(td, "fadeOpacityPercent", TdSettings.MinFadePercent, TdSettings.MaxFadePercent, d.Td.FadeOpacityPercent),
                 TutorialDone = Bool(td, "tutorialDone", d.Td.TutorialDone),
@@ -189,6 +188,9 @@ public static class SettingsSerializer
 
     private static int IntRange(JsonElement? parent, string name, int min, int max, int def) =>
         Prop(parent, name) is { ValueKind: JsonValueKind.Number } e && e.TryGetInt32(out var v) && v >= min && v <= max ? v : def;
+
+    private static int IntClamped(JsonElement? parent, string name, int min, int max, int def) =>
+        Prop(parent, name) is { ValueKind: JsonValueKind.Number } e && e.TryGetInt32(out var v) ? Math.Clamp(v, min, max) : def;
 
     private static int IntOneOf(JsonElement? parent, string name, int[] allowed, int def) =>
         Prop(parent, name) is { ValueKind: JsonValueKind.Number } e && e.TryGetInt32(out var v) && Array.IndexOf(allowed, v) >= 0 ? v : def;
