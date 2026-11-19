@@ -316,6 +316,12 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     private void ModalKey(int key)
     {
         if (key == 27) { controller.Cancel(); return; }
+        if (controller.Mode == TdUiMode.Build && !controller.BuildActive && key is 37 or 39 && pop is not null)
+        {
+            var page = pop.Items.FirstOrDefault(i => i.Action == TdUiAction.BuildCatalogPage && i.Arg == (key == 37 ? -1 : 1));
+            if (page.Clickable) controller.Activate(page);
+            return;
+        }
         if (controller.QuickTowersOpen && key is >= 49 and <= 52 && pop is not null)
         {
             string[] categories = ["attack", "control", "support", "economy"];

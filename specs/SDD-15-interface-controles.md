@@ -257,3 +257,5 @@ SDD-04 (modos e hit-test), SDD-05 (escala), SDD-08 (desenho), SDD-10 (pausa), SD
 | Atalhos globais conflitarem com IDEs (Ctrl+Alt+…) | Média | Baixo | Configuráveis e com aviso; escolher padrões incomuns |
 
 **RF-15.40 — Tamanho da interface do canto.** Configurações permite 100%, 125%, 150%, 175% ou 200% (padrão 125%) para o seletor, inspetor, cartões e dicas do canto. A escolha é persistida, pré-visualizada ao mudar e aplicada sobre o DPI, independente da altura da faixa e da simulação; cancelar restaura o valor salvo. Desenho e áreas de clique usam a mesma escala.
+
+**RF-15.41 — Catálogo de construção.** O seletor central e o painel rápido exibem somente torres liberadas, paginadas por categoria, com setas discretas e indicação do próximo desbloqueio. As setas do teclado também mudam a página; desenho e hit-test respeitam a escala da interface aplicável. Cada torre usa sua arte própria quando disponível.

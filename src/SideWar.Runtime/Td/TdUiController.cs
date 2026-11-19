@@ -328,7 +328,8 @@ public sealed partial class TdUiController
             case TdUiAction.AutoStartToggle:
                 _send(new SetAutoStart(_match().AutoStart == AutoStartMode.Off ? AutoStartMode.Countdown : AutoStartMode.Off, 15));
                 Changed?.Invoke(); break;
-            case TdUiAction.TowerCategory: _towerCategory = item.SArg ?? "attack"; Changed?.Invoke(); break;
+            case TdUiAction.TowerCategory: _towerCategory = item.SArg ?? "attack"; _buildPage = 0; Changed?.Invoke(); break;
+            case TdUiAction.BuildCatalogPage: _buildPage = Math.Max(0, _buildPage + item.Arg); Changed?.Invoke(); break;
             case TdUiAction.TowerPage: _towerPage = Math.Max(0, _towerPage + item.Arg); Changed?.Invoke(); break;
             case TdUiAction.OpenTower: OpenInspector(item.Arg); break;
             case TdUiAction.Reposition:
@@ -877,6 +878,13 @@ public sealed partial class TdUiController
 
     public const float QuickWidth = 304f, QuickHeader = 6f, QuickCardH = 62f;
     private string _towerCategory = "attack";
+    private int _buildPage;
+
+    private static string NextTowerHint(TdMatchState m)
+    {
+        var next = m.Content.Towers.Where(t => t.UnlockStage > m.UnlockedTowerStage).OrderBy(t => t.UnlockStage).FirstOrDefault();
+        return next is null ? "Todas as torres liberadas" : $"Próxima: {next.Name} · fase {next.UnlockStage}";
+    }
     private static readonly (string Id, string Name)[] TowerCategories = [("attack", "Ataque"), ("control", "Controle"), ("support", "Suporte"), ("economy", "Economia")];
 
     private void EnsureTowerCategory(TdMatchState m)
@@ -899,11 +907,15 @@ public sealed partial class TdUiController
             if (!m.Content.Towers.Any(t => t.Category == id && t.UnlockStage <= m.UnlockedTowerStage)) continue;
             items.Add(new TdUiItem(new DipRect(8 + tabs++ * 72, QuickHeader, 68, 22), TdUiKind.Button, name, TdUiAction.TowerCategory, SArg: id, Selected: _towerCategory == id));
         }
-        int row = 0;
+        int count = m.Content.Towers.Count(t => t.Category == _towerCategory && t.UnlockStage <= m.UnlockedTowerStage);
+        const int pageSize = 6;
+        _buildPage = Math.Clamp(_buildPage, 0, Math.Max(0, (count - 1) / pageSize));
+        int row = 0, seen = 0;
         for (int i = 0; i < m.Content.Towers.Length; i++)
         {
             var d = m.Content.Towers[i];
             if (d.Category != _towerCategory || m.UnlockedTowerStage < d.UnlockStage) continue;
+            if (seen++ < _buildPage * pageSize || row >= pageSize) continue;
             long price = m.NextTowerCost(i);
             bool locked = m.UnlockedTowerStage < d.UnlockStage;
             bool enabled = !locked && m.Credits >= price;
@@ -914,8 +926,9 @@ public sealed partial class TdUiController
                 Selected: _placementType == d.Id, Highlight: hl));
         }
         float statusY = QuickHeader + 26 + QuickCardH + 4;
-        items.Add(new TdUiItem(new DipRect(8, statusY, w - 16, 20), TdUiKind.Label,
-            m.FusionUnlocked ? "Fusão disponível" : $"Fusão: fase {m.Content.Fusion.MinStage}", Tone: TdTone.Dim));
+        items.Add(new TdUiItem(new DipRect(8, statusY, 22, 20), TdUiKind.Button, "<", TdUiAction.BuildCatalogPage, -1, Enabled: _buildPage > 0));
+        items.Add(new TdUiItem(new DipRect(30, statusY, w - 60, 20), TdUiKind.Label, NextTowerHint(m), Tone: TdTone.Dim));
+        items.Add(new TdUiItem(new DipRect(w - 30, statusY, 22, 20), TdUiKind.Button, ">", TdUiAction.BuildCatalogPage, 1, Enabled: (_buildPage + 1) * pageSize < count));
         float h = statusY + 24;
         return new TdPopoverView(BuildActive ? "TORRES   Toque na faixa" : "TORRES   Escolha uma torre", [.. items], w, h, 0, Quick: true);
     }
@@ -1180,7 +1193,7 @@ public sealed partial class TdUiController
                 items.Add(item with { Rect = new DipRect(674, 4, 36, 36) });
                 continue;
             }
-            if (Mode == TdUiMode.Build && item.Kind == TdUiKind.Label && towerRow == 0)
+            if (Mode == TdUiMode.Build && item.Kind == TdUiKind.Label && item.SArg != "catalog-hint" && towerRow == 0)
             {
                 items.Add(item with { Rect = new DipRect(16, 103, 688, 18) });
                 items.Add(new(new DipRect(504, 103, 200, 18), TdUiKind.Label, "+25% por torre igual", Tone: TdTone.Dim, SArg: "hdrR"));
@@ -1189,6 +1202,16 @@ public sealed partial class TdUiController
             if (item.Action == TdUiAction.ChooseTower)
             {
                 items.Add(item with { Rect = new DipRect(16, 158 + towerRow++ * 51, 688, 48) });
+                continue;
+            }
+            if (item.Action == TdUiAction.BuildCatalogPage)
+            {
+                items.Add(item with { Rect = new DipRect(item.Arg < 0 ? 16 : 662, 426, 42, 28) });
+                continue;
+            }
+            if (item.Kind == TdUiKind.Label && item.SArg == "catalog-hint")
+            {
+                items.Add(item with { Rect = new DipRect(64, 430, 590, 20) });
                 continue;
             }
             if (item.Action == TdUiAction.TowerCategory)
@@ -1280,10 +1303,15 @@ public sealed partial class TdUiController
             if (m.Content.Towers.Any(t => t.Category == id && t.UnlockStage <= m.UnlockedTowerStage))
                 s.Add(TdUiKind.Button, name, 24, TdUiAction.TowerCategory, sarg: id, selected: _towerCategory == id);
         var towers = m.Content.Towers;
+        const int pageSize = 5;
+        int count = towers.Count(t => t.Category == _towerCategory && t.UnlockStage <= m.UnlockedTowerStage);
+        _buildPage = Math.Clamp(_buildPage, 0, Math.Max(0, (count - 1) / pageSize));
+        int seen = 0;
         for (int i = 0; i < towers.Length; i++)
         {
             var d = towers[i];
             if (d.Category != _towerCategory || d.UnlockStage > m.UnlockedTowerStage) continue;
+            if (seen++ < _buildPage * pageSize || seen > (_buildPage + 1) * pageSize) continue;
             bool locked = m.UnlockedTowerStage < d.UnlockStage;
             int owned = m.TowerCount(i);
             long price = m.NextTowerCost(i); // custo crescente por tipo (SDD-29 §5.1)
@@ -1293,7 +1321,9 @@ public sealed partial class TdUiController
             s.Add(TdUiKind.Button, owned > 0 ? $"{d.Name}  x{owned}" : d.Name, 44f, TdUiAction.ChooseTower, sarg: d.Id, right: right, sub: sub, enabled: !locked && !poor,
                 tone: locked ? TdTone.Dim : poor ? TdTone.Bad : TdTone.Normal);
         }
-        if (_notice is not null) s.Add(TdUiKind.Label, _notice, RowH - 4, tone: TdTone.Warn);
+        s.Add(TdUiKind.Button, "<", 24, TdUiAction.BuildCatalogPage, -1, enabled: _buildPage > 0);
+        s.Add(TdUiKind.Label, NextTowerHint(m), 20, sarg: "catalog-hint", tone: TdTone.Dim);
+        s.Add(TdUiKind.Button, ">", 24, TdUiAction.BuildCatalogPage, 1, enabled: (_buildPage + 1) * pageSize < count);
         return Finish("Construir: escolha a torre", s, _anchorX);
     }
 

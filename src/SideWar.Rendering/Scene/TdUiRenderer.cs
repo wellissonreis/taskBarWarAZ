@@ -1,3 +1,4 @@
+using TdVectorSprites = SideWar.Rendering.Scene.TdVectorSprites;
 using TdArtMap = SideWar.Rendering.Scene.TdArtMap;
 using TdSpriteBaker = SideWar.Rendering.Scene.TdSpriteBaker;
 using TdFusionMark = SideWar.Rendering.Scene.TdFusionMark;
@@ -773,6 +774,12 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
                     _p.Text(c, it.Text, PanelFont.JetBrainsMono, 11, r, it.Selected ? Palette.Td.Amber : Palette.Td.Text, TextAlign.Center);
                     continue;
                 }
+                if (it.Action == TdUiAction.BuildCatalogPage)
+                {
+                    RoundBox(c, r, Palette.Td.BorderStrong, i == hover && it.Enabled ? Palette.Td.Button : Palette.Td.Card, 4);
+                    _p.Text(c, it.Text, PanelFont.JetBrainsMono, 11, r, it.Enabled ? Palette.Td.Text : Palette.Td.Dim, TextAlign.Center);
+                    continue;
+                }
                 var border = it.Arg switch { 1 => Palette.Td.Frost, 2 => Palette.Td.Green, 3 => Palette.Td.Amber, _ => Palette.Td.Cannon };
                 RoundBox(c, r, border, i == hover && it.Enabled ? Palette.Td.Button : Palette.Td.Card, 8);
                 DrawTowerIcon(c, it.SArg ?? "", r.X + 8, r.Y + 4, 28f, it.Enabled ? (byte)255 : (byte)110);
@@ -956,23 +963,12 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     // Ícone da torre (sprite do design, TdArtMap) pré-escalado por altura física e cacheado: desenhado em pixels inteiros.
     private void DrawTowerIcon(SKCanvas c, string towerId, float xDip, float yDip, float heightDip, byte alpha)
     {
-        var vectorIcon = towerId switch
-        {
-            "functions" => TdIcon.Functions, "cosmos" => TdIcon.Cosmos, "sentinel" => TdIcon.Sentinel,
-            "vault" => TdIcon.Vault, "backup" => TdIcon.Backup, "cdn" => TdIcon.Cdn,
-            "queue" => TdIcon.Queue, "policy" => TdIcon.Policy, "aks" => TdIcon.Aks,
-            "pipeline" => TdIcon.Pipeline, _ => TdIcon.None,
-        };
-        if (vectorIcon != TdIcon.None)
-        {
-            TdIconPainter.Draw(c, vectorIcon, _p.Px(xDip), _p.Px(yDip), _p.Px(heightDip), Palette.Td.Text.WithAlpha(alpha), Palette.Td.Amber.WithAlpha(alpha));
-            return;
-        }
-        if (!TdArtMap.TryTower(towerId, out var e)) return;
         int hpx = Math.Max(1, (int)MathF.Round(_p.Px(heightDip)));
         if (!_icons.TryGetValue((towerId, hpx), out var img))
         {
-            img = TdSpriteBaker.ByHeight(_atlas, e.Sprite, hpx, e.Tint, e.TintAlpha);
+            if (TdVectorSprites.IsTower(towerId)) img = TdVectorSprites.Bake(towerId, hpx, false);
+            else if (TdArtMap.TryTower(towerId, out var e)) img = TdSpriteBaker.ByHeight(_atlas, e.Sprite, hpx, e.Tint, e.TintAlpha);
+            else return;
             _icons[(towerId, hpx)] = img;
         }
         using var paint = new SKPaint { IsAntialias = false, Color = Palette.TxtBranco.WithAlpha(alpha) };

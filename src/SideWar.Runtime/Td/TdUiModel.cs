@@ -36,6 +36,8 @@ public enum TdUiAction : byte
     FuseOpen, FusePick, FuseConfirm, FuseBack, FuseClose, FusionTipDismiss, FusionTry, FusionModule, FusionSelectModule,
     /// <summary>TD.37d: dispensar o aviso de mutantes da próxima onda.</summary>
     MutationWarnDismiss,
+    /// <summary>Paginação do catálogo de construção.</summary>
+    BuildCatalogPage,
 }
 
 /// <summary>Ícone do HUD desenhado por código (TD.14); o renderer mapeia para caminhos vetoriais.</summary>

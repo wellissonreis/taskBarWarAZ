@@ -73,6 +73,46 @@ public sealed class TdUiControllerTests
         return m;
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void Catalog_pages_cover_unlocked_towers_and_stay_inside_view(bool quick)
+    {
+        var r = new Rig { Match = Create(6) };
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", quick ? TdUiAction.QuickTowers : TdUiAction.BuildToggle));
+        foreach (var category in new[] { "attack", "control", "support", "economy" })
+        {
+            r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.TowerCategory, SArg: category));
+            var expected = r.Match.Content.Towers.Where(t => t.Category == category && t.UnlockStage <= r.Match.UnlockedTowerStage).Select(t => t.Id).ToArray();
+            var actual = new List<string>();
+            for (int page = 0; page < 20; page++)
+            {
+                var view = r.Ui.BuildPopover()!;
+                foreach (var item in view.Items.Where(i => i.Action == TdUiAction.ChooseTower))
+                {
+                    Assert.True(item.Rect.X >= 0 && item.Rect.Y >= 0 && item.Rect.X + item.Rect.W <= view.Width && item.Rect.Y + item.Rect.H <= view.Height);
+                    actual.Add(item.SArg!);
+                    if (item.Clickable) Assert.Equal(item, view.Items[view.HitTest(item.Rect.X + 1, item.Rect.Y + 1)]);
+                }
+                var next = view.Items.Single(i => i.Action == TdUiAction.BuildCatalogPage && i.Arg == 1);
+                if (!next.Enabled) break;
+                r.Ui.Activate(next);
+            }
+            Assert.Equal(expected, actual);
+        }
+    }
+
+    [Fact]
+    public void Catalog_shows_next_unlock_without_locked_tower_buttons()
+    {
+        var r = new Rig();
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.QuickTowers));
+        var view = r.Ui.BuildPopover()!;
+        Assert.Contains(view.Items, i => i.Text.StartsWith("Próxima:", StringComparison.Ordinal));
+        Assert.All(view.Items.Where(i => i.Action == TdUiAction.ChooseTower), item =>
+            Assert.True(r.Match.Content.Towers.Single(t => t.Id == item.SArg).UnlockStage <= r.Match.UnlockedTowerStage));
+    }
+
     [Fact]
     public void Outside_collapse_closes_build_and_runes_without_reopening_pinned_panel()
     {
@@ -185,7 +225,7 @@ public sealed class TdUiControllerTests
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.QuickTowers));
         var panel = r.Ui.BuildPopover()!;
         var slots = panel.Items.Where(i => i.Action == TdUiAction.ChooseTower).ToArray();
-        Assert.Equal(9, slots.Length);
+        Assert.Equal(6, slots.Length);
         Assert.All(slots, i => { Assert.Equal(slots[0].Rect.Y, i.Rect.Y); Assert.Equal(44, i.Rect.W); Assert.NotNull(i.Tip); });
         r.Ui.Activate(Find(panel, TdUiAction.TowerCategory, "economy"));
         Assert.Single(r.Ui.BuildPopover()!.Items, i => i.Action == TdUiAction.ChooseTower);
