@@ -151,6 +151,18 @@ public sealed class TdAzureTowersTests
         Assert.True(policy.Enemies[0].CorrodeTicks > 0);
     }
 
+    [Fact]
+    public void BastionReactivatesAnotherTowerWithoutHealingCore()
+    {
+        var s = Arena("grunt"); Build(s, "bastion", 1100); Build(s, "dns", 1080);
+        var towers = (List<TdTower>)s.Towers;
+        var target = towers[1]; target.DisabledTicks = 300; towers[1] = target;
+        var integrity = s.Integrity;
+        Assert.True(s.Apply(new StartWave()).IsOk); Steps(s, 1);
+        Assert.Equal(0, s.Towers[1].DisabledTicks);
+        Assert.Equal(integrity, s.Integrity);
+    }
+
     private static TdMatchState Arena(string enemy, int count = 1, double armor = 0)
     {
         var c = TdContentLoader.LoadEmbedded();
