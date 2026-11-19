@@ -205,16 +205,16 @@ public sealed class TdUiGoldenTests
         Assert.True(a.Bytes.AsSpan().SequenceEqual(b.Bytes));
     }
 
-    /// <summary>TD.14: o HUD escala com a faixa (dpi efetivo = dpi × HudScale): faixa de 40 (piso 0,75) e de 88 (1,375).</summary>
+    /// <summary>A escala configurável do canto combina com o DPI do monitor.</summary>
     [Theory]
-    [InlineData(40)]
-    [InlineData(88)]
-    public void Hud_MatchesGoldenAtBandHeight(int bandHeightDip)
+    [InlineData(125)]
+    [InlineData(200)]
+    public void Hud_MatchesGoldenAtCornerScale(int percent)
     {
         Assert.SkipUnless(OperatingSystem.IsLinux(), "texto Skia difere entre SOs; golden com texto só no Linux (RF-17.3)");
-        int effDpi = (int)MathF.Round(96 * TdBand.HudScale(bandHeightDip));
+        int effDpi = new TdCornerScale(96, percent).EffectiveDpi;
         using var bmp = Render(UiScene.HudPrep, effDpi, text: true);
-        string? failure = GoldenImage.Verify($"td-ui-hud-band{bandHeightDip}", bmp);
+        string? failure = GoldenImage.Verify($"td-ui-hud-corner{percent}", bmp);
         Assert.True(failure is null, failure);
     }
 

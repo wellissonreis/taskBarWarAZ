@@ -212,9 +212,17 @@ internal sealed class AppComposition : IDisposable
         if (IsShuttingDown) return;
         if (settingsWindow is not null) { settingsWindow.Activate(); return; }
         var vm = new SettingsViewModel(settings, SaveSettings);
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName != nameof(SettingsViewModel.TdCornerUiScale)) return;
+            try { game?.Post(() => gameSide.PreviewCornerUiScale(vm.TdCornerUiScale)); }
+            catch (InvalidOperationException) { }
+        };
         settingsWindow = new SettingsWindow(vm, () =>
         {
             settingsWindow = null;
+            try { game?.Post(() => gameSide.PreviewCornerUiScale(settings.Td.CornerUiScalePercent)); }
+            catch (InvalidOperationException) { }
             ForegroundRestorer.Restore(previousForeground);
         });
         settingsWindow.Show();

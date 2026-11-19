@@ -51,6 +51,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     {
         gameOptions = new(settings.Td.BandHeightDip, settings.Td.AutoStartEnabled, settings.Audio.Enabled, (int)Math.Round(settings.Audio.Volume * 100), settings.Td.BonusQuestions, settings.Td.FadeWhenUnfocused,
             settings.Td.ContinuousWaves, settings.Td.TowerPanelPinned, settings.Td.GameSpeed, settings.Td.ShowIncome, settings.Td.DiscreetMode, settings.Td.AutoRestart);
+        SetCornerUiScale(settings.Td.CornerUiScalePercent);
         bossHotkey = settings.Hotkeys.ToggleVisibility;
         Kick();
     }
@@ -142,7 +143,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         this.tipsSeen = new HashSet<string>(tipsSeenText.Split(';', StringSplitOptions.RemoveEmptyEntries), StringComparer.Ordinal);
         this.focus = focus; this.bandHeight = bandHeight; this.hudMinimized = hudMinimized; this.menuChanged = menuChanged;
         k = TdBand.Scale(bandHeight);
-        hudScale = TdBand.HudScale(bandHeight);
+        hudScale = 1.25f;
         this.atlas = atlas;
         this.game = game; this.runtime = runtime; this.td = td; this.driver = driver; this.typography = typography;
         this.clock = clock; this.ui = ui; this.hotkeys = hotkeys;
@@ -306,10 +307,11 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     /// <summary>DPI do monitor / 96 (pixels por DIP real).</summary>
     private float Scale => game.Dock.Current is { } c ? c.Monitor.Dpi / 96f : 1f;
 
-    /// <summary>Pixels por DIP de desenho do HUD/popover/dica: DPI × escala do HUD (proporcional à faixa).</summary>
-    private float UiScale => Scale * hudScale;
+    /// <summary>Pixels por DIP de desenho do HUD/popover/dica: DPI × escala configurada para o canto.</summary>
+    private float UiScale => new TdCornerScale((int)MathF.Round(Scale * 96), (int)MathF.Round(hudScale * 100)).PixelsPerDip;
     private float PopScale => controller.CornerPopover ? UiScale : ModalScale;
-    private float ModalScale => game.Dock.Current is { } c ? TdModalLayout.Scale(c.Monitor.WorkArea, Scale) : Scale;
+    private float ModalDpiScale => Scale * (controller.Mode == TdUiMode.Inspector ? hudScale : 1f);
+    private float ModalScale => game.Dock.Current is { } c ? TdModalLayout.Scale(c.Monitor.WorkArea, ModalDpiScale) : ModalDpiScale;
 
     private void ModalKey(int key)
     {
@@ -369,9 +371,22 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         if (newHeight == bandHeight) return;
         bandHeight = newHeight;
         k = TdBand.Scale(newHeight);
-        hudScale = TdBand.HudScale(newHeight);
+
         renderer?.Dispose();
         renderer = null; // Relayout recria com o novo hudScale
+        tipIndex = -1; hudHover = popHover = -1;
+        Relayout();
+        Kick();
+    }
+
+    public void SetCornerUiScale(int percent)
+    {
+        float next = percent / 100f;
+        if (hudScale == next) return;
+        hudScale = next;
+        renderer?.Dispose();
+        renderer = null;
+        tipText = null;
         tipIndex = -1; hudHover = popHover = -1;
         Relayout();
         Kick();
@@ -453,7 +468,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
             var work = c.Monitor.WorkArea;
             bool quick = controller.CornerPopover;
             int quickW = (int)MathF.Round(pop.Width * UiScale), quickH = (int)MathF.Round(pop.Height * UiScale);
-            var bounds = quick ? new PixelRect(hudBounds.Right - quickW, Math.Max(work.Top, hudBounds.Top - quickH - 2), hudBounds.Right, Math.Max(work.Top, hudBounds.Top - quickH - 2) + quickH) : TdModalLayout.Bounds(work, Scale);
+            var bounds = quick ? new PixelRect(hudBounds.Right - quickW, Math.Max(work.Top, hudBounds.Top - quickH - 2), hudBounds.Right, Math.Max(work.Top, hudBounds.Top - quickH - 2) + quickH) : TdModalLayout.Bounds(work, ModalDpiScale);
             if (!quick && scrimWindow is not null && (!scrimWindow.WantsVisible || scrimWindow.Bounds != c.Monitor.Bounds))
             {
                 scrimWindow.Apply(c.Monitor.Bounds); scrimWindow.Show();
@@ -497,7 +512,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         if (tip is null && pop is not null && popHover >= 0 && popHover < pop.Items.Length && pop.Items[popHover].Tip is { } popTip)
         {
             var rect = pop.Items[popHover].Rect;
-            tip = new TdTooltipView(popTip, (popBounds.Left - hudBounds.Left) / UiScale + rect.X + rect.W / 2, 0);
+            tip = new TdTooltipView(popTip, (popBounds.Left - hudBounds.Left + (rect.X + rect.W / 2) * PopScale) / UiScale, 0);
         }
         // Dica de 1ª vez (TD.15): ocupa a janela do tooltip quando não há dica de hover.
         bool firstTime = tip is null && controller.CurrentTip is not null;

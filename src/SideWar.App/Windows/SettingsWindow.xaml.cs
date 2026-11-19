@@ -28,6 +28,12 @@ public partial class SettingsWindow : Window
         this.onClosed = onClosed;
         DataContext = viewModel;
 
+        CornerScaleCombo.ItemsSource = SettingsSerializer.AllowedCornerUiScales.Select(v => ($"{v}%", v)).ToArray();
+        CornerScaleCombo.DisplayMemberPath = "Item1";
+        CornerScaleCombo.SelectedValuePath = "Item2";
+        CornerScaleCombo.SelectedValue = viewModel.TdCornerUiScale;
+        CornerScaleCombo.SelectionChanged += (_, _) => { if (CornerScaleCombo.SelectedValue is int v) viewModel.TdCornerUiScale = v; };
+
         ModeCombo.ItemsSource = new[] { ("Tower Defense (novo)", GameMode.Td), ("Clássico (idle)", GameMode.Idle) };
         ModeCombo.DisplayMemberPath = "Item1";
         ModeCombo.SelectedValuePath = "Item2";

@@ -135,6 +135,9 @@ public sealed record TdSettings
     /// <summary>HUD recolhido a um chip no canto da faixa (lembrado entre sessões). TD.17: nasce recolhido na 1ª execução (o tutorial ensina a abrir).</summary>
     public bool HudMinimized { get; init; } = true;
 
+    /// <summary>Escala da interface do canto, independente da altura da faixa.</summary>
+    public int CornerUiScalePercent { get; init; } = 125;
+
     /// <summary>Esmaecer faixa e HUD quando o usuário ativa outro app (ausente: só o esmaecer; o fps não muda, TD.28c).</summary>
     public bool FadeWhenUnfocused { get; init; } = true;
 

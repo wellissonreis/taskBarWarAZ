@@ -98,7 +98,7 @@ public sealed record TdPopoverView(string Title, TdUiItem[] Items, float Width, 
 
 /// <summary>
 /// HUD (RF-28.14, TD.14) na área à direita da faixa. Projetado para uma faixa de 64 DIP (<see cref="TdBand.HudBaseWidthDip"/>): a janela
-/// escala por <see cref="TdBand.HudScale"/>. <see cref="Minimized"/> = chip pequeno (núcleo e onda) no canto.
+/// usa a escala configurada para o canto. <see cref="Minimized"/> = chip pequeno (núcleo e onda) no canto.
 /// </summary>
 public sealed record TdHudView(TdUiItem[] Items, float Width, float Height, bool Minimized = false, int Wave = 0, int TotalWaves = 0,
     IReadOnlyList<TdMoneyFloat>? Floats = null, float TopPad = 0f)

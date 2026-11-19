@@ -382,6 +382,8 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     }
 
     /// <summary>Novas configurações salvas pela janela WPF (T-UI → T-Game).</summary>
+    public void PreviewCornerUiScale(int percent) => tdUi?.SetCornerUiScale(percent);
+
     public void ApplySettings(AppSettings value)
     {
         settings = value;

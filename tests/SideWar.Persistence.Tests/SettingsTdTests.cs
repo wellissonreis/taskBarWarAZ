@@ -28,6 +28,18 @@ public class SettingsTdTests
         Assert.True(result.AlertsSound);
     }
 
+    [Fact]
+    public void Corner_scale_migrates_validates_and_roundtrips()
+    {
+        Assert.Equal(125, ReadPayload("{\"td\":{}}").Td.CornerUiScalePercent);
+        Assert.Equal(125, ReadPayload("{\"td\":{\"cornerUiScalePercent\":130}}").Td.CornerUiScalePercent);
+        var fs = new FakeFileSystem();
+        var store = new SettingsStore(fs, "/data", utcNow: () => Now);
+        Assert.True(store.Save(new AppSettings { Td = new TdSettings { CornerUiScalePercent = 200, BandHeightDip = 40 } }));
+        Assert.Equal(200, store.Load().Settings.Td.CornerUiScalePercent);
+        Assert.Equal(40, store.Load().Settings.Td.BandHeightDip);
+    }
+
     private static AppSettings ReadPayload(string json)
     {
         using var doc = JsonDocument.Parse(json);

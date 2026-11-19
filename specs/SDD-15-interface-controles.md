@@ -255,3 +255,5 @@ SDD-04 (modos e hit-test), SDD-05 (escala), SDD-08 (desenho), SDD-10 (pausa), SD
 | `SetForegroundWindow` para o menu falhar por regras de foreground | Baixa | Baixo | O clique do usuário concede a permissão; fallback sem menu (log) |
 | HUD apertada no tamanho S (168 DIP) | Média | Médio | Validar no playtest; a caixa de projeto escala de forma uniforme *(obsoleto: sem S/M/L; o risco do widget é o encaixe de 420 DIP, SDD-23 DP-23.1)* |
 | Atalhos globais conflitarem com IDEs (Ctrl+Alt+…) | Média | Baixo | Configuráveis e com aviso; escolher padrões incomuns |
+
+**RF-15.40 — Tamanho da interface do canto.** Configurações permite 100%, 125%, 150%, 175% ou 200% (padrão 125%) para o seletor, inspetor, cartões e dicas do canto. A escolha é persistida, pré-visualizada ao mudar e aplicada sobre o DPI, independente da altura da faixa e da simulação; cancelar restaura o valor salvo. Desenho e áreas de clique usam a mesma escala.

@@ -48,6 +48,8 @@
           </StackPanel>
           <Slider Minimum="32" Maximum="96" Value="{Binding TdBandHeight}" IsSnapToTickEnabled="True" TickFrequency="1" Margin="0,2,0,0" />
           <TextBlock Text="{Binding TdBandHeight}" Margin="0,0,0,8" />
+          <TextBlock Text="Tamanho da interface do canto" />
+          <ComboBox x:Name="CornerScaleCombo" Width="120" HorizontalAlignment="Left" Margin="0,2,0,8" />
           <TextBlock Text="Velocidade do jogo (Tower Defense)" />
           <StackPanel Orientation="Horizontal" Margin="0,2,0,8">
             <Button Content="1x" Width="60" Margin="0,0,6,0" Click="OnSpeed1" />

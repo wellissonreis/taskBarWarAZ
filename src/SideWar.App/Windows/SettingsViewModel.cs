@@ -30,7 +30,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     private GameMode gameMode;
     private bool tdAutoStart;
     private bool tdAutoRestart;
-    private int tdAutoStartSeconds, tdBandHeight, tdFadePercent, tdGameSpeed = 1;
+    private int tdAutoStartSeconds, tdBandHeight, tdFadePercent, tdCornerUiScale, tdGameSpeed = 1;
     private bool tdFadeWhenUnfocused;
     private bool tdBonusQuestions, tdContinuousWaves, tdTowerPanelPinned, tdShowIncome, tdDiscreetMode;
     private bool tdAlertsEnabled, tdAlertsAutoPause, tdAlertsSound;
@@ -74,6 +74,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
     public int TdAutoStartSeconds { get => tdAutoStartSeconds; set { if (Set(ref tdAutoStartSeconds, value)) Check(nameof(TdAutoStartSeconds), value is >= TdSettings.MinAutoStartSeconds and <= TdSettings.MaxAutoStartSeconds ? null : "Entre 5 e 60 segundos."); } }
     /// <summary>Altura da faixa TD em DIP (32 a 96); presets Pequeno 40 / Médio 64 / Grande 88. Vale ao reiniciar o SideWar.</summary>
     public int TdBandHeight { get => tdBandHeight; set { if (Set(ref tdBandHeight, value)) Check(nameof(TdBandHeight), value is >= TdSettings.MinBandHeightDip and <= TdSettings.MaxBandHeightDip ? null : "Altura entre 32 e 96 DIP."); } }
+    public int TdCornerUiScale { get => tdCornerUiScale; set { if (Set(ref tdCornerUiScale, value)) Check(nameof(TdCornerUiScale), SettingsSerializer.AllowedCornerUiScales.Contains(value) ? null : "Escolha um tamanho disponível."); } }
     /// <summary>Esmaecer faixa e HUD ao ativar outro app (TD.14).</summary>
     public bool TdBonusQuestions { get => tdBonusQuestions; set => Set(ref tdBonusQuestions, value); }
     public bool TdShowIncome { get => tdShowIncome; set => Set(ref tdShowIncome, value); }
@@ -189,7 +190,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         Taskbar = original.Taskbar with { UseUia = useUia },
         Td = original.Td with
         {
-            AutoStartEnabled = tdAutoStart, AutoRestart = tdAutoRestart, AutoStartSeconds = tdAutoStartSeconds, BandHeightDip = tdBandHeight,
+            AutoStartEnabled = tdAutoStart, AutoRestart = tdAutoRestart, AutoStartSeconds = tdAutoStartSeconds, BandHeightDip = tdBandHeight, CornerUiScalePercent = tdCornerUiScale,
             FadeWhenUnfocused = tdFadeWhenUnfocused, FadeOpacityPercent = tdFadePercent, BonusQuestions = tdBonusQuestions,
             ContinuousWaves = tdContinuousWaves, TowerPanelPinned = tdTowerPanelPinned, GameSpeed = tdGameSpeed,
             ShowIncome = tdShowIncome, DiscreetMode = tdDiscreetMode,
@@ -244,6 +245,7 @@ public sealed class SettingsViewModel : INotifyPropertyChanged
         tdAutoRestart = s.Td.AutoRestart;
         tdAutoStartSeconds = s.Td.AutoStartSeconds;
         tdBandHeight = s.Td.BandHeightDip;
+        tdCornerUiScale = s.Td.CornerUiScalePercent;
         tdFadeWhenUnfocused = s.Td.FadeWhenUnfocused;
         tdFadePercent = s.Td.FadeOpacityPercent;
         tdBonusQuestions = s.Td.BonusQuestions;

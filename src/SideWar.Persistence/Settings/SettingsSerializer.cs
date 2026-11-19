@@ -7,6 +7,7 @@ public static class SettingsSerializer
 {
     public static readonly int[] AllowedPresentFps = [20, 30, 60];
     public static readonly int[] AllowedAbsentFps = [4, 8];
+    public static readonly int[] AllowedCornerUiScales = [100, 125, 150, 175, 200];
 
     public static void Write(Utf8JsonWriter w, AppSettings s)
     {
@@ -71,6 +72,7 @@ public static class SettingsSerializer
         w.WriteNumber("autoStartSeconds", s.Td.AutoStartSeconds);
         w.WriteNumber("bandHeightDip", s.Td.BandHeightDip);
         w.WriteBoolean("hudMinimized", s.Td.HudMinimized);
+        w.WriteNumber("cornerUiScalePercent", s.Td.CornerUiScalePercent);
         w.WriteBoolean("fadeWhenUnfocused", s.Td.FadeWhenUnfocused);
         w.WriteNumber("fadeOpacityPercent", s.Td.FadeOpacityPercent);
         w.WriteBoolean("tutorialDone", s.Td.TutorialDone);
@@ -160,6 +162,7 @@ public static class SettingsSerializer
                 AutoStartSeconds = IntRange(td, "autoStartSeconds", TdSettings.MinAutoStartSeconds, TdSettings.MaxAutoStartSeconds, d.Td.AutoStartSeconds),
                 BandHeightDip = IntRange(td, "bandHeightDip", TdSettings.MinBandHeightDip, TdSettings.MaxBandHeightDip, d.Td.BandHeightDip),
                 HudMinimized = Bool(td, "hudMinimized", d.Td.HudMinimized),
+                CornerUiScalePercent = IntOneOf(td, "cornerUiScalePercent", AllowedCornerUiScales, d.Td.CornerUiScalePercent),
                 FadeWhenUnfocused = Bool(td, "fadeWhenUnfocused", d.Td.FadeWhenUnfocused),
                 FadeOpacityPercent = IntRange(td, "fadeOpacityPercent", TdSettings.MinFadePercent, TdSettings.MaxFadePercent, d.Td.FadeOpacityPercent),
                 TutorialDone = Bool(td, "tutorialDone", d.Td.TutorialDone),
