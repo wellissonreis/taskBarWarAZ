@@ -7,30 +7,31 @@ namespace SideWar.Runtime.Td;
 /// <summary>
 /// TD.37b (SDD-37 RF-37.10): UI da fusão de torres. O inspetor ganha "Fundir"; o fluxo roda num cartão no cantinho (sem pausa, sem foco, recolhe ao
 /// clicar fora): escolher o módulo, ver o preview (nome do híbrido, custo exato, efeito e, se bloqueado, o motivo) e confirmar. O Core revalida tudo
-/// em <see cref="FuseTower"/>; a UI só consulta <see cref="TdMatchState.CheckFusion"/>. Dica de primeira vez ao liberar a fusão (fase 3).
+/// em <see cref="FuseTower"/>; a UI só consulta <see cref="TdMatchState.CheckFusion"/>. O convite persiste até a primeira fusão ou dispensa.
 /// </summary>
 public sealed partial class TdUiController
 {
-    public const string FusionTipKey = "fusion-unlocked";
-    public const double FusionTipSeconds = 20.0;
+    public const string FusionTipKey = "fusion-discovery-done";
     public const float FuseWidth = 360f, FuseFont = 14f, FuseTitleFont = 15f, FuseButtonH = 32f;
-    public const string FusionTipText = "Fusão liberada! Abra uma torre (aba Torres) e toque em Fundir: ela ganha o módulo de outra torre na mesma posição.";
+    public const string FusionTipText = "Fusão liberada! Fundir compra um módulo para uma torre base; não junta duas torres existentes.";
 
     private int _fuseBase;         // > 0: cartão de fusão aberto sobre esta torre
     private string? _fuseType;     // módulo escolhido (preview); nulo = escolhendo
     private int _fuseAwait;        // torre cuja fusão foi enviada e espera o resultado
     private string? _fuseAwaitName;
     private string? _noticeTitle;
+    private bool _fusionChoosingModule;
+    private string? _fusionTargetModule;
+    public bool FusionTargetActive => _fusionTargetModule is not null && !BossHidden;
 
     private bool _ftPending, _ftShown;
-    private double _ftLeft, _ftClock = -1.0;
 
     /// <summary>Cartão de fusão aberto (a torre ainda existe e a partida segue em Preparo/Onda).</summary>
     public bool FuseCardOpen => _fuseBase > 0 && !BossHidden && Mode == TdUiMode.None && FuseStillValid(_match());
 
     public int FuseBaseId => _fuseBase;
     public string? FuseChosen => _fuseType;
-    public bool FusionTipOpen => _ftShown && !BossHidden && !MatchPaused;
+    public bool FusionTipOpen => _ftShown && !BossHidden && !MatchPaused && Mode == TdUiMode.None && !QuickTowersOpen && !RuneWindowOpen && _fuseBase == 0;
     public bool FusionTipPending => _ftPending;
 
     private bool FuseStillValid(TdMatchState m) => m.Phase is MatchPhase.Preparo or MatchPhase.Onda && FindTower(m, _fuseBase) >= 0;
@@ -136,6 +137,7 @@ public sealed partial class TdUiController
             if (!BossHidden)
             {
                 bool ok = ti >= 0 && m.Towers[ti].HasModule;
+                if (ok) { _onb?.MarkTipSeen(FusionTipKey); _ftShown = _ftPending = false; }
                 _noticeTitle = ok ? "Torre fundida" : "Fusão recusada";
                 _noticeText = ok ? (ti >= 0 ? m.TowerDisplayName(m.Towers[ti]) : name ?? "") : "O Core recusou: confira créditos e limites.";
                 _noticeUntil = _now() + StageNoticeSeconds;
@@ -146,36 +148,28 @@ public sealed partial class TdUiController
     }
 
     private bool CanShowFusionTip(TdMatchState m) =>
-        !BossHidden && !MatchPaused && !ModalOpen && !BuildActive && !RuneWindowOpen && !QuizShowing(m) && !NoticeOpen && !EndCardOpen && !RuneCardOpen
+        !BossHidden && !MatchPaused && !ModalOpen && !BuildActive && !_outsideCollapsed && !_fusionChoosingModule && !FusionTargetActive && !RuneWindowOpen && !QuizShowing(m) && !NoticeOpen && !EndCardOpen && !RuneCardOpen
         && !AlertCardOpen && _fuseBase == 0 && (Mode == TdUiMode.None || QuickTowersOpen) && m.Phase is MatchPhase.Preparo or MatchPhase.Onda;
 
     private void SyncFusionTip(TdMatchState m)
     {
         if (_onb is null) return;
-        double now = _now();
-        double dt = _ftClock < 0.0 ? 0.0 : Math.Clamp(now - _ftClock, 0.0, QuizMaxDeltaSeconds);
-        _ftClock = now;
         if (!_ftShown && !_ftPending && m.FusionUnlocked && !_onb.TipSeen(FusionTipKey)) _ftPending = true;
         if (_ftPending && !_ftShown && CanShowFusionTip(m))
         {
             _ftShown = true;
             _ftPending = false;
-            _ftLeft = FusionTipSeconds;
-            _onb.MarkTipSeen(FusionTipKey); // contado ao exibir: nunca repete
             Changed?.Invoke();
             return;
         }
         if (!_ftShown) return;
-        if (ModalOpen || m.Phase is not (MatchPhase.Preparo or MatchPhase.Onda)) { DismissFusionTip(); return; }
-        if (BossHidden || MatchPaused || QuizShowing(m) || NoticeOpen || AlertCardOpen) return;
-        _ftLeft -= dt;
-        if (_ftLeft <= 0.0) DismissFusionTip();
+        if (ModalOpen || m.Phase is not (MatchPhase.Preparo or MatchPhase.Onda)) { _ftShown = false; _ftPending = true; }
     }
 
     private void DismissFusionTip()
     {
-        if (!_ftShown) return;
-        _ftShown = false;
+        _onb?.MarkTipSeen(FusionTipKey);
+        _ftShown = _ftPending = false;
         Changed?.Invoke();
     }
 
@@ -185,6 +179,8 @@ public sealed partial class TdUiController
         _fuseType = null;
         _fuseAwaitName = null;
         _ftShown = _ftPending = false;
+        _fusionChoosingModule = false;
+        _fusionTargetModule = null;
         if (clearSeen) _onb?.ClearTip(FusionTipKey);
     }
 
@@ -192,7 +188,9 @@ public sealed partial class TdUiController
     {
         var s = new Stack(QuizWidth);
         QuizText(s, FusionTipText, QuizOptionFont, icon: TdIcon.Star);
-        s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, s.Width - 2 * Pad, 34f), TdUiKind.Button, "Entendi", TdUiAction.FusionTipDismiss, Tone: TdTone.Accent, FontSize: QuizOptionFont));
+        s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, s.Width - 2 * Pad, 34f), TdUiKind.Button, "Experimentar fusão", TdUiAction.FusionTry, Tone: TdTone.Accent, FontSize: QuizOptionFont));
+        s.Y += 38f;
+        s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, s.Width - 2 * Pad, 34f), TdUiKind.Button, "Escolher módulo e base", TdUiAction.FusionModule, FontSize: QuizOptionFont));
         s.Y += 38f;
         var items = new List<TdUiItem>(s.Items.Count + 1)
         {
@@ -200,6 +198,46 @@ public sealed partial class TdUiController
         };
         items.AddRange(s.Items);
         return new TdPopoverView("Fusão", [.. items], s.Width, s.Y + Pad, 0f);
+    }
+
+    private void TryFusion()
+    {
+        var m = _match();
+        int towerId = m.Towers.Where(t => t.Placed && !t.HasModule).Select(t => t.Id).FirstOrDefault();
+        _ftShown = false;
+        _ftPending = true;
+        if (towerId > 0) OpenFuse(towerId);
+        else { _noticeTitle = "Fusão"; _noticeText = "Construa uma torre simples para usar como base."; _noticeUntil = _now() + StageNoticeSeconds; Changed?.Invoke(); }
+    }
+
+    private void OpenFusionModuleChooser()
+    {
+        _ftShown = false; _ftPending = true;
+        _fusionChoosingModule = true;
+        Changed?.Invoke();
+    }
+
+    private TdPopoverView BuildFusionGesture(TdMatchState m)
+    {
+        var s = new Stack(FuseWidth);
+        if (FusionTargetActive)
+            QuizText(s, "Clique sobre uma torre na faixa para ver o preview. Esc cancela.", FuseFont);
+        else
+        {
+            QuizText(s, "Escolha o módulo: ele será comprado, não junta torres existentes.", FuseFont);
+            float half = (s.Width - 2 * Pad - 4f) / 2f;
+            int col = 0;
+            float rowY = s.Y;
+            foreach (var d in m.Content.Towers.Where(t => t.UnlockStage <= m.UnlockedTowerStage))
+            {
+                s.Items.Add(new TdUiItem(new DipRect(Pad + col * (half + 4f), rowY, half, FuseButtonH), TdUiKind.Button,
+                    d.Name, TdUiAction.FusionSelectModule, SArg: d.Id, FontSize: FuseFont));
+                if (++col == 2) { col = 0; rowY += FuseButtonH + 4f; }
+            }
+            s.Y = rowY + (col > 0 ? FuseButtonH + 4f : 0f);
+        }
+        s.Add(TdUiKind.Button, "Cancelar", FuseButtonH, TdUiAction.Close);
+        return Finish("Experimentar fusão", s, 0);
     }
 
     private TdPopoverView BuildFuseCard(TdMatchState m)

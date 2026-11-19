@@ -247,8 +247,8 @@ public sealed class TdFusionUiTests
         Assert.True(r.Ui.FusionTipOpen);
         var p = r.Ui.BuildPopover()!;
         Assert.Equal("Fusão", p.Title);
-        Assert.Contains(p.Items, i => i.Text.Contains("Fundir", StringComparison.Ordinal));
-        Assert.True(r.Store.TipSeen(TdUiController.FusionTipKey));
+        Assert.Contains(p.Items, i => i.Action == TdUiAction.FusionTry);
+        Assert.False(r.Store.TipSeen(TdUiController.FusionTipKey));
         r.Ui.Activate(r.Find(TdUiAction.FusionTipDismiss));
         Assert.False(r.Ui.FusionTipOpen);
         for (int i = 0; i < 5; i++) { r.Now += 0.5; r.Ui.Sync(); }
@@ -260,7 +260,7 @@ public sealed class TdFusionUiTests
     }
 
     [Fact]
-    public void Tip_expires_by_itself_and_waits_for_the_boss_key()
+    public void Tip_persists_and_waits_for_the_boss_key()
     {
         var r = new Rig(stage: 6, onboarding: true);
         r.Ui.SetBossHidden(true);
@@ -270,6 +270,27 @@ public sealed class TdFusionUiTests
         r.Now += 1; r.Ui.Sync();
         Assert.True(r.Ui.FusionTipOpen);
         for (int i = 0; i < 25; i++) { r.Now += 1; r.Ui.Sync(); }
-        Assert.False(r.Ui.FusionTipOpen);
+        Assert.True(r.Ui.FusionTipOpen);
+    }
+
+    [Fact]
+    public void Module_then_base_requires_confirmation_and_ignores_empty_space()
+    {
+        var r = new Rig(stage: 6, onboarding: true);
+        r.Ui.Activate(r.Find(TdUiAction.FusionModule));
+        r.Ui.Activate(r.Find(TdUiAction.FusionSelectModule, "bolt"));
+        Assert.True(r.Ui.FusionTargetActive);
+        long credits = r.Match.Credits;
+        r.Ui.SceneLeftClick(10, 20, default);
+        Assert.True(r.Ui.FusionTargetActive);
+        Assert.Empty(r.Sent);
+        r.Ui.SceneLeftClick(TdBand.TowerCenterDip(r.Match, r.Match.Towers[0], TdBand.WidthDip(r.Match)), 20, default);
+        Assert.False(r.Ui.FusionTargetActive);
+        Assert.Equal("bolt", r.Ui.FuseChosen);
+        Assert.Equal(credits, r.Match.Credits);
+        r.Ui.Activate(r.Find(TdUiAction.FuseConfirm));
+        r.Ui.Sync();
+        Assert.Single(r.Sent, c => c is FuseTower);
+        Assert.True(r.Store.TipSeen(TdUiController.FusionTipKey));
     }
 }

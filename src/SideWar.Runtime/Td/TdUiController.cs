@@ -54,7 +54,7 @@ public sealed partial class TdUiController
     public bool NoticeOpen => _noticeText is not null && !BossHidden && _now() < _noticeUntil;
     public string? NoticeText => NoticeOpen ? _noticeText : null;
     /// <summary>Qualquer popover pequeno ancorado ao chip: painel rápido, pergunta-bônus, aviso de fase ou cartão de fim. Nunca ativa janela.</summary>
-    public bool CornerPopover => QuickTowersOpen || RuneWindowOpen || EndCardOpen || NoticeOpen || RuneCardOpen || AlertCardOpen || FuseCardOpen || FusionTipOpen || MutationWarnOpen || ((Mode == TdUiMode.None || QuickTowersOpen) && QuizActive);
+    public bool CornerPopover => QuickTowersOpen || RuneWindowOpen || EndCardOpen || NoticeOpen || RuneCardOpen || AlertCardOpen || FuseCardOpen || FusionTipOpen || _fusionChoosingModule || FusionTargetActive || MutationWarnOpen || ((Mode == TdUiMode.None || QuickTowersOpen) && QuizActive);
     private int _chosenX = -1;       // X lógico já escolhido (passo "escolher a torre"); -1 = ainda no passo do ponto
     private int _moveTowerId;        // > 0: reposicionando uma torre SEM POSIÇÃO (sem escolha de tipo)
     private int _ghostX = -1;
@@ -105,7 +105,7 @@ public sealed partial class TdUiController
     public bool BuildActive => Mode == TdUiMode.Build && (_placementType is not null || _moveTowerId > 0);
 
     /// <summary>Algum popover aberto (o ESC fecha). O painel de torres fixo (TD.28b) em repouso não conta: não rouba o ESC dos outros apps.</summary>
-    public bool PopoverOpen => !PinnedIdle && (QuickTowersOpen || FuseCardOpen || RuneWindowOpen || Mode != TdUiMode.None || QuizActive);
+    public bool PopoverOpen => !PinnedIdle && (QuickTowersOpen || FuseCardOpen || _fusionChoosingModule || FusionTargetActive || RuneWindowOpen || Mode != TdUiMode.None || QuizActive);
 
     /// <summary>Passo do ponto: o fantasma segue o mouse e o clique escolhe o ponto.</summary>
     public bool ChoosingPoint => BuildActive && _chosenX < 0;
@@ -144,6 +144,19 @@ public sealed partial class TdUiController
     /// </summary>
     public bool SceneLeftClick(float xDip, float yDip, HitTarget target)
     {
+        if (FusionTargetActive)
+        {
+            var hit = TdHitTester.Test(_match(), xDip, yDip);
+            if (hit.Kind == HitKind.TdTower)
+            {
+                string module = _fusionTargetModule!;
+                _fusionTargetModule = null;
+                OpenFuse(hit.TowerId);
+                _fuseType = module;
+                Changed?.Invoke();
+            }
+            return true;
+        }
         if (!BuildActive) return false;
         Touch();
         // Clique no passo do ponto (ou novo ponto durante a escolha): valida e avança.
@@ -226,6 +239,13 @@ public sealed partial class TdUiController
             case TdUiAction.RuneTutorialDismiss: DismissRuneCard(); Changed?.Invoke(); break;
             case TdUiAction.FuseOpen or TdUiAction.FusePick or TdUiAction.FuseConfirm or TdUiAction.FuseBack or TdUiAction.FuseClose: ActivateFuse(item); break;
             case TdUiAction.FusionTipDismiss: DismissFusionTip(); break;
+            case TdUiAction.FusionTry: TryFusion(); break;
+            case TdUiAction.FusionModule: OpenFusionModuleChooser(); break;
+            case TdUiAction.FusionSelectModule when item.SArg is not null:
+                _fusionChoosingModule = false;
+                _fusionTargetModule = item.SArg;
+                _selectedTowerId = _match().Towers.Where(t => t.Placed && !t.HasModule).Select(t => t.Id).FirstOrDefault();
+                Changed?.Invoke(); break;
             case TdUiAction.MutationWarnDismiss: DismissMutationWarn(); break;
             case TdUiAction.QuickTowers:
                 if (QuickTowersOpen) Close();
@@ -495,6 +515,8 @@ public sealed partial class TdUiController
         _rcShown = false; // um cartão ainda pendente continua esperando a vez
         _fuseBase = 0;
         _fuseType = null;
+        _fusionTargetModule = null;
+        _fusionChoosingModule = false;
         _pinnedOpen = false;
         _noticeText = null;
         _endCorner = false;
@@ -818,6 +840,7 @@ public sealed partial class TdUiController
         if (!BuildActive && (Mode == TdUiMode.None || QuickTowersOpen) && _quizQ is not null && QuizPhaseOk(m)) return BuildQuiz(m);
         if (!BuildActive && NoticeOpen && (Mode == TdUiMode.None || QuickTowersOpen)) return BuildNotice();
         if (!BuildActive && FuseCardOpen) return BuildFuseCard(m);
+        if (_fusionChoosingModule || FusionTargetActive) return BuildFusionGesture(m);
         if (!BuildActive && FusionTipOpen && (Mode == TdUiMode.None || QuickTowersOpen)) return BuildFusionTip();
         if (!BuildActive && MutationWarnOpen && (Mode == TdUiMode.None || QuickTowersOpen)) return BuildMutationWarn(m);
         if (!BuildActive && RuneCardOpen && (Mode == TdUiMode.None || QuickTowersOpen)) return BuildRuneCard();
@@ -890,7 +913,10 @@ public sealed partial class TdUiController
                 TdUiAction.ChooseTower, Arg: Array.FindIndex(TowerCategories, c => c.Id == d.Category), SArg: d.Id, Right: $"{price}", Tip: $"{d.Name}: {TowerBlurb(d)} Forte: {string.Join(", ", d.Strong)}. Fraqueza: {d.WeaknessText}", Enabled: enabled,
                 Selected: _placementType == d.Id, Highlight: hl));
         }
-        float h = QuickHeader + 26 + QuickCardH + 6;
+        float statusY = QuickHeader + 26 + QuickCardH + 4;
+        items.Add(new TdUiItem(new DipRect(8, statusY, w - 16, 20), TdUiKind.Label,
+            m.FusionUnlocked ? "Fusão disponível" : $"Fusão: fase {m.Content.Fusion.MinStage}", Tone: TdTone.Dim));
+        float h = statusY + 24;
         return new TdPopoverView(BuildActive ? "TORRES   Toque na faixa" : "TORRES   Escolha uma torre", [.. items], w, h, 0, Quick: true);
     }
 
@@ -1067,7 +1093,8 @@ public sealed partial class TdUiController
             case TdUiMode.Towers:
             {
                 var m = _match();
-                items.Add(new(new DipRect(16, 104, 400, 18), TdUiKind.Label, $"Torres em campo: {m.Towers.Count}", Tone: TdTone.Dim, SArg: "hdr"));
+                string fusion = m.FusionUnlocked ? "Fusão disponível" : $"Fusão: fase {m.Content.Fusion.MinStage}";
+                items.Add(new(new DipRect(16, 104, 470, 18), TdUiKind.Label, $"Torres em campo: {m.Towers.Count}  |  {fusion}", Tone: TdTone.Dim, SArg: "hdr"));
                 items.Add(new(new DipRect(500, 104, 204, 18), TdUiKind.Label, $"Venda devolve {Math.Round(m.Content.Stages.Rules.SellRefund * 100):0}%", Tone: TdTone.Dim, SArg: "hdrR"));
                 if (m.Towers.Count == 0)
                 {
@@ -1341,6 +1368,7 @@ public sealed partial class TdUiController
     {
         var s = new Stack(PopoverWidth);
         s.Add(TdUiKind.Label, $"Torres {m.Towers.Count}", RowH - 4, tone: TdTone.Dim);
+        s.Add(TdUiKind.Label, m.FusionUnlocked ? "Fusão disponível" : $"Fusão: fase {m.Content.Fusion.MinStage}", RowH, tone: TdTone.Dim);
         if (m.Towers.Count == 0) s.Add(TdUiKind.Label, "Nenhuma torre. Use Construir.", RowH, tone: TdTone.Dim);
         float sellW = 98f;
         _towerPage = Math.Min(_towerPage, Math.Max(0, (m.Towers.Count - 1) / 8));

@@ -762,6 +762,11 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             {
                 var it = v.Items[i];
                 var r = it.Rect;
+                if (it.Kind == TdUiKind.Label)
+                {
+                    _p.Text(c, it.Text, PanelFont.JetBrainsMono, 11, r, Palette.Td.Muted);
+                    continue;
+                }
                 if (it.Action == TdUiAction.TowerCategory)
                 {
                     RoundBox(c, r, it.Selected ? Palette.Td.Amber : Palette.Td.BorderStrong, i == hover ? Palette.Td.Button : Palette.Td.Card, 4);

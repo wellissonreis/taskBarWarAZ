@@ -497,7 +497,8 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
             driver.SetView(view);
             if (runtime.App.IsVisible) driver.ForceDraw(); // evento de mouse: desenha já (o laço pode não acordar a tempo)
         }
-        if (controller.BuildActive != buildApplied) { buildApplied = controller.BuildActive; game.Mode.SetBuildMode(buildApplied); }
+        bool sceneInteractive = controller.BuildActive || controller.FusionTargetActive;
+        if (sceneInteractive != buildApplied) { buildApplied = sceneInteractive; game.Mode.SetBuildMode(buildApplied); }
         bool expanded = controller.PopoverOpen || controller.BuildActive || (popWindow.IsVisible && pop is not null);
         if (expanded && !expansionTracked) expansionForeground = TdUiWindow.ForegroundWindow;
         expansionTracked = expanded;
