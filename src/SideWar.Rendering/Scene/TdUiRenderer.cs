@@ -1,3 +1,5 @@
+using TdAnimArt = SideWar.Rendering.Scene.TdAnimArt;
+using TdAnimStrip = SideWar.Rendering.Scene.TdAnimStrip;
 using TdVectorSprites = SideWar.Rendering.Scene.TdVectorSprites;
 using TdArtMap = SideWar.Rendering.Scene.TdArtMap;
 using TdSpriteBaker = SideWar.Rendering.Scene.TdSpriteBaker;
@@ -966,7 +968,8 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         int hpx = Math.Max(1, (int)MathF.Round(_p.Px(heightDip)));
         if (!_icons.TryGetValue((towerId, hpx), out var img))
         {
-            if (TdVectorSprites.IsTower(towerId)) img = TdVectorSprites.Bake(towerId, hpx, false);
+            if (TdAnimArt.HasTower(towerId)) img = TdAnimStrip.IdleIcon(towerId, hpx);
+            else if (TdVectorSprites.IsTower(towerId)) img = TdVectorSprites.Bake(towerId, hpx, false);
             else if (TdArtMap.TryTower(towerId, out var e)) img = TdSpriteBaker.ByHeight(_atlas, e.Sprite, hpx, e.Tint, e.TintAlpha);
             else return;
             _icons[(towerId, hpx)] = img;

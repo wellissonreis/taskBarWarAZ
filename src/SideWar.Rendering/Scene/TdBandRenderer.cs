@@ -164,6 +164,14 @@ public sealed class TdBandRenderer : IDisposable
         {
             var e = TdArtMap.TryTower(content.Towers[i].Id, out var found) ? found : TdArtMap.Towers[0];
             _towerImg[i] = TdVectorSprites.IsTower(content.Towers[i].Id) ? TdVectorSprites.Bake(content.Towers[i].Id, TdArtMap.TowerHeightDip * px, false) : TdSpriteBaker.ByHeight(_atlas, e.Sprite, e.HeightDip * px, e.Tint, e.TintAlpha);
+            if (TdAnimArt.HasTower(content.Towers[i].Id))
+            {
+                // DESIGN-UI: fantasma e chips usam o quadro de repouso do sprite animado do design
+                _towerImg[i]?.Dispose();
+                _towerImg[i] = TdAnimStrip.IdleIcon(content.Towers[i].Id, TdArtMap.TowerHeightDip * px);
+                _chipImg[i] = TdAnimStrip.IdleIcon(content.Towers[i].Id, ChipSpriteDip * px);
+                continue;
+            }
             _chipImg[i] = TdVectorSprites.IsTower(content.Towers[i].Id) ? TdVectorSprites.Bake(content.Towers[i].Id, ChipSpriteDip * px, false) : TdSpriteBaker.ByHeight(_atlas, e.Sprite, ChipSpriteDip * px, e.Tint, e.TintAlpha);
         }
         var normal = content.Enemies.Enemies;

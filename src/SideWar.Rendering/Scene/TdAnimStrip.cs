@@ -114,6 +114,31 @@ internal sealed class TdAnimStrip : IDisposable
         return new TdAnimStrip(owned, frames, w, h, ax, ay, bw, bh);
     }
 
+    /// <summary>
+    /// Ícone estático da torre (quadro 0 da parada recortado na caixa opaca) com a caixa na altura física dada: chips do seletor, painel e fantasma de colocação.
+    /// O chamador é dono da imagem.
+    /// </summary>
+    public static SKImage IdleIcon(string towerId, float heightPx)
+    {
+        string idle = towerId + "-idle.png";
+        float scale = ScaleForBoxHeight(idle, TdAnimArt.IdleFrames, Math.Max(1f, heightPx));
+        using var strip = Bake(idle, TdAnimArt.IdleFrames, scale, idle, TdAnimArt.IdleFrames);
+        int left = Math.Clamp(strip.AnchorX - strip.BoxW / 2, 0, strip.FrameW - 1);
+        int top = Math.Clamp(strip.AnchorY - strip.BoxH, 0, strip.FrameH - 1);
+        int w = Math.Min(strip.BoxW, strip.FrameW - left), h = Math.Min(strip.BoxH, strip.FrameH - top);
+        using var bmp = new SKBitmap(new SKImageInfo(w, h, SKColorType.Rgba8888, SKAlphaType.Premul));
+        using (var canvas = new SKCanvas(bmp))
+        {
+            canvas.Clear(SKColors.Transparent);
+            using var paint = new SKPaint { IsAntialias = false };
+            canvas.DrawImage(strip._image, SKRect.Create(left, top, w, h), SKRect.Create(0, 0, w, h), Nearest, paint);
+        }
+        var img = SKImage.FromBitmap(bmp);
+        var owned = img.ToRasterImage(ensurePixelData: true);
+        if (!ReferenceEquals(owned, img)) img.Dispose();
+        return owned;
+    }
+
     /// <summary>Desenha o quadro com a âncora em (x, y) físicos; a matriz do canvas deve estar em pixels (identidade).</summary>
     public void Draw(SKCanvas canvas, int frame, float x, float y, SKPaint paint)
     {
