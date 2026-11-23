@@ -14,7 +14,7 @@ public sealed class TdAlertSettings
     public int MutedMask { get; set; }
 
     /// <summary>Tipos da proteção contra derrota: não silenciáveis enquanto AutoPause estiver ligado.</summary>
-    public static bool IsProtection(TdAlertType type) => type is TdAlertType.FatalDrop or TdAlertType.PassedLastTower;
+    public static bool IsProtection(TdAlertType type) => type is TdAlertType.PassedLastTower;
 
     public bool IsMuted(TdAlertType type) => !IsProtection(type) && (MutedMask & (1 << (int)type)) != 0;
     public void SetMuted(TdAlertType type, bool muted)
@@ -78,12 +78,6 @@ public sealed class TdAlertGuard
         if (Holding) return true;
         if (!Settings.AutoPause || _fallAuthorized || match.Phase != MatchPhase.Onda || match.Paused) return false;
         if (match.WavesReached >= DefeatWarningWaves) return false;
-        // Rede de segurança: o passo seguinte levaria à derrota (simulado numa cópia).
-        if (match.NextStepIsFatal())
-        {
-            Hold(match, TdAlertCatalog.Test(match, TdAlertType.FatalDrop, out var a) ? a : default, TdAlertType.FatalDrop);
-            return true;
-        }
         // Gatilho geométrico: inimigo novo passou da torre mais próxima do portal (ainda não reconhecido por Salvar).
         foreach (int id in TdRiskAnalyzer.PastDefenseLine(match))
             if (!_acknowledged.Contains(id))
@@ -128,7 +122,6 @@ public sealed class TdAlertGuard
         foreach (var alert in TdAlertCatalog.Detect(match))
         {
             if (TdAlertSettings.IsProtection(alert.Type)) continue; // tratado por Blocks, sem cooldown
-            if (alert.Type == TdAlertType.CoreAtRisk && match.WavesReached >= DefeatWarningWaves) continue;
             bool damage = alert.Type is TdAlertType.ImminentLeak or TdAlertType.TowerDamage;
             if (damage && (_damageWarnings >= MaxDamageWarningsPerRun || match.Tick - _lastDamageWarning < CooldownTicks)) continue;
             if (alert.Severity == TdAlertSeverity.Tip && _shownTips.Contains(alert.Type)) continue;

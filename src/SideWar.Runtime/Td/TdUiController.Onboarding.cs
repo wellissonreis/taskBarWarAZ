@@ -90,7 +90,7 @@ public sealed partial class TdUiController
     private string? _tipText;
     private double _tipUntil;
     private TdMatchState? _hurtMatch;
-    private int _lastIntegrity = -1;
+    private long _lastIntegrity = -1;
     private double _hurtUntil = double.NegativeInfinity, _hurtNextAt = double.NegativeInfinity;
     private int _hurtKind; // 0 construir perto do portal, 1 habilidade, 2 construir mais
 
@@ -275,7 +275,7 @@ public sealed partial class TdUiController
         if (_hudPhase == 1 && min) _hudPhase = 3;
         if (_hudPhase == 2 && !min) _hudPhase = 3;
         bool started = m.WaveNumber > 0 || m.Phase == MatchPhase.Onda;
-        bool ended = m.Phase is MatchPhase.Vitoria or MatchPhase.Derrota;
+        bool ended = m.Phase is MatchPhase.Vitoria;
         bool quizDone = _quizExampleDone || !QuizEnabled;
         if (started && (ended || (_abilityDone && quizDone && (_ack & Ack.Sell) != 0 && ((_ack & Ack.Call) != 0 || m.Options.ContinuousWaves)))) FinishTutorial();
     }
@@ -283,10 +283,10 @@ public sealed partial class TdUiController
     /// <summary>Reforço ao tomar dano (1ª partida): dica curta do que fazer, apontando o alvo; no máximo uma a cada <see cref="HurtMinGapSeconds"/>.</summary>
     private void SyncHurt(TdMatchState m)
     {
-        if (!ReferenceEquals(_hurtMatch, m)) { _hurtMatch = m; _lastIntegrity = m.Integrity; _hurtUntil = _hurtNextAt = double.NegativeInfinity; }
-        int prev = _lastIntegrity;
-        _lastIntegrity = m.Integrity;
-        if (m.Integrity >= prev || m.Phase != MatchPhase.Onda || !TutorialOn(m)) return;
+        if (!ReferenceEquals(_hurtMatch, m)) { _hurtMatch = m; _lastIntegrity = HurtMeter(m); _hurtUntil = _hurtNextAt = double.NegativeInfinity; }
+        long prev = _lastIntegrity, meter = HurtMeter(m);
+        _lastIntegrity = meter;
+        if (meter >= prev || m.Phase != MatchPhase.Onda || !TutorialOn(m)) return;
         double now = _now();
         if (now < _hurtNextAt) return;
         int near = 0;
@@ -423,7 +423,7 @@ public sealed partial class TdUiController
             {
                 case TdTutorialStep.HudOpen when it.Action == TdUiAction.HudRestore: return i;
                 case TdTutorialStep.HudCollapse when it.Action == TdUiAction.HudMinimize: return i;
-                case TdTutorialStep.Core when it.Icon == TdIcon.Heart && it.Kind == TdUiKind.Label: return i;
+                case TdTutorialStep.Core when it.Icon == TdIcon.Medal && it.Kind == TdUiKind.Label && it.SArg == "core": return i;
                 case TdTutorialStep.Credits when it.Icon == TdIcon.Coin && it.Kind == TdUiKind.Label: return i;
                 case TdTutorialStep.Build when it.Action == TdUiAction.QuickTowers: return i;
                 case TdTutorialStep.Controls when it.Action == TdUiAction.PauseToggle: return i;
@@ -442,15 +442,15 @@ public sealed partial class TdUiController
     {
         TdTutorialStep.HudOpen => (TdIcon.Expand, "Toque no chip para abrir", null, false),
         TdTutorialStep.HudCollapse => (TdIcon.Collapse, "Recolha o HUD", "Use o botão de recolher.", false),
-        TdTutorialStep.Core => (TdIcon.Heart, "Proteja o núcleo!", "Chegar a 0 = derrota.", true),
+        TdTutorialStep.Core => (TdIcon.Medal, "Defenda a base!", "Vazar tira XP e pode rebaixar.", true),
         TdTutorialStep.Credits => (TdIcon.Coin, "Créditos compram torres.", "Cada onda rende mais.", true),
-        TdTutorialStep.Portal => (TdIcon.Portal, "Inimigos saem do portal.", "Eles correm até o núcleo.", true),
+        TdTutorialStep.Portal => (TdIcon.Portal, "Inimigos saem do portal.", "Eles correm até a base.", true),
         TdTutorialStep.Build => (TdIcon.Castle, "Clique no castelo: Torres", null, false),
         TdTutorialStep.Point => (TdIcon.Build, "Clique num ponto da faixa", null, false),
         TdTutorialStep.Tower => (TdIcon.Build, "Escolha uma torre", null, false),
         TdTutorialStep.Controls => (TdIcon.Pause, "Pausar e velocidade 1x a 3x", "O botão ao lado pausa; 2x e 3x aceleram.", true),
         TdTutorialStep.Runes => (TdIcon.Question, "Fragmentos despertam runas", "Botão Runas (estrela) do HUD.", true),
-        TdTutorialStep.Rank => (TdIcon.Medal, "Patente e brasão: seu progresso", "Pontos sobem a patente; veja em Jogo.", true),
+        TdTutorialStep.Rank => (TdIcon.Medal, "Patente e brasão: seu progresso", "XP sobe e desce a patente; veja em Jogo.", true),
         TdTutorialStep.Fusion => (TdIcon.Star, "Funda: solte uma torre sobre outra", "Escolha na barra e solte sobre ela.", true),
         TdTutorialStep.Range => (TdIcon.Target, "O círculo é o alcance.", "Ela só atira dentro dele.", true),
         TdTutorialStep.Wave => (TdIcon.Play, "Clique em Iniciar onda", null, false),
@@ -539,7 +539,7 @@ public sealed partial class TdUiController
     {
         var s = new Stack(PopoverWidth);
         void Card(TdIcon icon, string text, TdTone tone = TdTone.Normal) => s.Add(TdUiKind.Label, text, 15f, tone: tone, icon: icon);
-        Card(TdIcon.Heart, "Proteja o núcleo: 0 = derrota.");
+        Card(TdIcon.Medal, "Defenda a base: vazar tira XP, vencer dá XP.");
         Card(TdIcon.Coin, "Créditos compram torres.");
         Card(TdIcon.Expand, "Chip do HUD: toque para abrir/recolher.");
         Card(TdIcon.Build, "Escolha a torre; toque na faixa.");
@@ -559,8 +559,8 @@ public sealed partial class TdUiController
         Card(TdIcon.Question, "Fragmentos despertam runas.");
         Card(TdIcon.Alert, MutationHelpText);
         Card(TdIcon.Question, "Responda V ou F: ganhe bônus.");
-        Card(TdIcon.Medal, "Patentes e brasões: seus pontos.");
-        Card(TdIcon.Crown, "Vença sem perder núcleo: coroa.");
+        Card(TdIcon.Medal, "Patentes e brasões: seu XP.");
+        Card(TdIcon.Crown, "Vença sem vazar nada: coroa.");
         if (_onb is not null) s.Add(TdUiKind.Button, "Refazer tutorial", RowH + 2, TdUiAction.RedoTutorial, tone: TdTone.Good, icon: TdIcon.Play);
         return Finish("Como jogar", s, 0);
     }

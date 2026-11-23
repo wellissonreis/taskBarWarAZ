@@ -49,6 +49,12 @@ public sealed partial class TdUiController
     private TdRankLevel _seenRank;
     private int _seenRankScore;
     private TdRankLevel? _noticeRank;
+    /// <summary>REPUTACAO: "Base sendo atacada" aparece no máximo 1 vez a cada tantos segundos.</summary>
+    public const double AttackNoticeCooldownSeconds = 8.0;
+    private const string AttackTitle = "Base";
+    private TdMatchState? _attackMatch;
+    private long _seenLost;
+    private double _attackNextAt = double.NegativeInfinity;
     private bool _pinnedOpen;
     private bool _outsideCollapsed;
     /// <summary>TD.28b: atalho global "minimizar tudo" ativo: nenhum cartão, painel ou modal é aberto e a pergunta-bônus espera.</summary>
@@ -269,11 +275,11 @@ public sealed partial class TdUiController
             case TdUiAction.ViewRunes: _returnToEnd = true; SetMode(TdUiMode.Runes); break;
             case TdUiAction.RuneWindow:
                 if (RuneWindowOpen) Close();
-                else if (!ModalOpen && _match().Phase is not (MatchPhase.Vitoria or MatchPhase.Derrota)) OpenRuneWindow();
+                else if (!ModalOpen && _match().Phase is not (MatchPhase.Vitoria)) OpenRuneWindow();
                 break;
             case TdUiAction.RuneTutorialOpen:
                 DismissRuneCard();
-                if (!ModalOpen && !RuneWindowOpen && _match().Phase is not (MatchPhase.Vitoria or MatchPhase.Derrota)) OpenRuneWindow(fromCard: true);
+                if (!ModalOpen && !RuneWindowOpen && _match().Phase is not (MatchPhase.Vitoria)) OpenRuneWindow(fromCard: true);
                 Changed?.Invoke();
                 break;
             case TdUiAction.AlertSave or TdUiAction.AlertFall or TdUiAction.AlertDismiss or TdUiAction.AlertMute: ActivateAlert(item.Action); break;
@@ -290,7 +296,7 @@ public sealed partial class TdUiController
             case TdUiAction.MutationWarnDismiss: DismissMutationWarn(); break;
             case TdUiAction.QuickTowers:
                 if (QuickTowersOpen) Close();
-                else if (!ModalOpen && _match().Phase is not (MatchPhase.Vitoria or MatchPhase.Derrota)) OpenQuickTowers();
+                else if (!ModalOpen && _match().Phase is not (MatchPhase.Vitoria)) OpenQuickTowers();
                 break;
             case TdUiAction.BuildToggle:
                 if (BuildActive) Close(); else SetMode(TdUiMode.Build);
@@ -318,7 +324,7 @@ public sealed partial class TdUiController
             case TdUiAction.HudExpand:
             case TdUiAction.HudRestore:
                 if (_host.HudMinimized) { _host.SetHudMinimized(false); Changed?.Invoke(); }
-                else SetMode(_match().Phase is MatchPhase.Vitoria or MatchPhase.Derrota ? TdUiMode.End : TdUiMode.Build);
+                else SetMode(_match().Phase is MatchPhase.Vitoria ? TdUiMode.End : TdUiMode.Build);
                 break;
             case TdUiAction.ModalTab: SetMode((TdUiMode)item.Arg); break;
             case TdUiAction.Targeting when Enum.TryParse<TdTargeting>(item.SArg, out var mode):
@@ -393,7 +399,7 @@ public sealed partial class TdUiController
             case TdUiAction.Exit: _host.RequestExit(); break;
             case TdUiAction.RestartPrompt: _confirmRestart = true; Changed?.Invoke(); break;
             case TdUiAction.RestartCancel: _confirmRestart = false; Changed?.Invoke(); break;
-            case TdUiAction.Restart: { var match = _match(); int stage = match.Options.PersistentRun ? (match.Phase == MatchPhase.Derrota ? 1 : _host.RunStartStage) : match.StageId; _restartArmed = false; Close(); _host.StartStage(stage); break; }
+            case TdUiAction.Restart: { var match = _match(); int stage = match.Options.PersistentRun ? (_host.RunStartStage) : match.StageId; _restartArmed = false; Close(); _host.StartStage(stage); break; }
             case TdUiAction.NextStage: { int stage = _match().StageId + 1; Close(); _host.StartStage(stage); break; }
         }
     }
@@ -439,7 +445,7 @@ public sealed partial class TdUiController
         SyncFuse(m);
         SyncMutationWarn(m);
         UpdateModalPause();
-        if (m.Phase is MatchPhase.Vitoria or MatchPhase.Derrota)
+        if (m.Phase is MatchPhase.Vitoria)
         {
             if (!_endShown)
             {
@@ -449,12 +455,6 @@ public sealed partial class TdUiController
                 ResetBuild();
                 SetMode(TdUiMode.End);
                 _endCorner = true;
-                if (m.Phase == MatchPhase.Derrota && m.Options.PersistentRun && _host.GameOptions.AutoRestart && _restartRemaining <= 0)
-                {
-                    _restartArmed = true;
-                    _restartRemaining = RestartSeconds;
-                    _restartLast = _now();
-                }
             }
             if (_restartArmed)
             {
@@ -603,7 +603,7 @@ public sealed partial class TdUiController
     private void MaintainPinned()
     {
         var m = _match();
-        bool want = PanelPinned && !_outsideCollapsed && !BossHidden && m.Phase is not (MatchPhase.Vitoria or MatchPhase.Derrota);
+        bool want = PanelPinned && !_outsideCollapsed && !BossHidden && m.Phase is not (MatchPhase.Vitoria);
         if (want && !QuickTowersOpen && !RuneWindowOpen && Mode == TdUiMode.None) { OpenQuickTowers(); _pinnedOpen = true; }
         else if (!want && _pinnedOpen && QuickTowersOpen && !BuildActive) Close();
     }
@@ -629,7 +629,11 @@ public sealed partial class TdUiController
         var progress = _host.Rank;
         var rank = progress.Current;
         bool promoted = rank > _seenRank;
+        bool demoted = rank < _seenRank;
         _seenRank = rank;
+        if (!ReferenceEquals(_attackMatch, m)) { _attackMatch = m; _seenLost = m.ReputationLostTotal; }
+        bool attacked = m.ReputationLostTotal > _seenLost;
+        _seenLost = m.ReputationLostTotal;
         if (progress.Total != _seenRankScore)
         {
             _seenRankScore = progress.Total;
@@ -657,6 +661,25 @@ public sealed partial class TdUiController
             _noticeUntil = _now() + StageNoticeSeconds;
             Changed?.Invoke();
         }
+        else if (demoted && !BossHidden)
+        {
+            _noticeTitle = "Rebaixamento";
+            _noticeText = $"Rebaixado a {TdRank.DisplayName(rank)}";
+            _noticeRank = rank;
+            _noticeStarted = _now();
+            _noticeUntil = _now() + StageNoticeSeconds;
+            Changed?.Invoke();
+        }
+        else if (attacked && !BossHidden && _now() >= _attackNextAt && !NoticeOpen && !_rcPending && !_rcShown && !(_onb is not null && !_onb.TipSeen(RuneTipKey)))
+        {
+            // Aviso discreto e único: sem som, sem foco, no máximo 1 a cada AttackNoticeCooldownSeconds.
+            _attackNextAt = _now() + AttackNoticeCooldownSeconds;
+            _noticeTitle = AttackTitle;
+            _noticeText = "Base sendo atacada";
+            _noticeRank = null;
+            _noticeUntil = _now() + StageNoticeSeconds;
+            Changed?.Invoke();
+        }
         else if (_noticeText is not null && _now() >= _noticeUntil)
         {
             _noticeText = null;
@@ -671,7 +694,7 @@ public sealed partial class TdUiController
             s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, s.Width - 2 * Pad, 52), TdUiKind.Label, _noticeText!, Arg: (int)rank, SArg: "rank-notice",
                 Fill: (float)Math.Clamp((_now() - _noticeStarted) / 0.3, 0, 1)));
         else
-            s.Add(TdUiKind.Label, _noticeText!, 18f, tone: TdTone.Good, icon: TdIcon.Check);
+            s.Add(TdUiKind.Label, _noticeText!, 18f, tone: _noticeTitle == AttackTitle ? TdTone.Warn : TdTone.Good, icon: _noticeTitle == AttackTitle ? TdIcon.Alert : TdIcon.Check);
         if (_noticeRank is not null) s.Y += 52;
         return Finish(_noticeTitle ?? "Fase concluida", s, 0);
     }
@@ -776,13 +799,13 @@ public sealed partial class TdUiController
     {
         var m = _match();
         var items = new List<TdUiItem>(14);
-        int integ = m.Integrity, max = m.IntegrityMax;
-        var integTone = integ * 2 > max ? TdTone.Good : integ * 4 > max ? TdTone.Warn : TdTone.Bad;
+        var repRank = _host.Rank;
+        string repText = XpText(repRank.Total);
         int shown = m.Phase == MatchPhase.Onda || m.NextWaveNumber == 0 ? m.WaveNumber : m.NextWaveNumber;
         shown = Math.Clamp(shown, 1, Math.Max(1, m.TotalWaves));
         bool run = m.Options.PersistentRun;
         string stageText = run ? $"Fase {m.StageNumber}{(m.Cycle > 0 ? $"·C{m.Cycle + 1}" : "")}  " : "";
-        string coreTip = "Integridade do núcleo: se chegar a 0 você perde a corrida. Inimigos que chegam ao núcleo tiram integridade."
+        string coreTip = $"Reputação {repRank.Total} XP ({TdRank.DisplayName(repRank.Current)}): vencer ondas dá XP; inimigo que chega à base tira XP e pode rebaixar sua patente. Não há derrota."
             + (run ? " Fase N conta a corrida inteira; depois da última fase o ciclo recomeça mais forte (C2, C3…)." : "")
             + $" Esconder tudo: {_host.BossHotkey}.";
 
@@ -807,7 +830,7 @@ public sealed partial class TdUiController
             => items.Add(new TdUiItem(new DipRect(offset + x, y0 + y, w, h), kind, text, action, arg, SArg: tag,
                 Enabled: enabled, Selected: selected, Icon: icon, Tip: tip, Highlight: highlight, Fill: fill, Sub: sub));
         // Reserve space for large numbers before laying out later groups.
-        float coreExtra = Math.Max(0, $"{integ}/{max}".Length - 5) * 8f;
+        float coreExtra = Math.Max(0, repText.Length - 5) * 8f;
         float waveExtra = Math.Max(0, $"{shown}/{m.TotalWaves}".Length - 4) * 8f;
         if (_host.HudMinimized)
         {
@@ -816,8 +839,8 @@ public sealed partial class TdUiController
             items.Clear();
             bool actionReady = (showStart && StartButton(m).Enabled && !StartBlockedFor(m) && !ModalOpen)
                 || (m.Fragments > 0 && m.Frontier.Count > 0);
-            Add(12, 6, 73 + coreExtra, 28, TdUiKind.Button, $"{integ}/{max}", TdUiAction.HudRestore,
-                tag: "core", icon: TdIcon.Heart, tip: coreTip + $" {stageText.Trim()} Onda {shown}/{m.TotalWaves}. Clique para expandir o HUD.", highlight: needed && PulseOn);
+            Add(12, 6, 73 + coreExtra, 28, TdUiKind.Button, repText, TdUiAction.HudRestore,
+                tag: "core", icon: TdIcon.Medal, fill: (float)repRank.Fraction, tip: coreTip + $" {stageText.Trim()} Onda {shown}/{m.TotalWaves}. Clique para expandir o HUD.", highlight: needed && PulseOn);
             Add(96 + coreExtra, 11, 1, 18, TdUiKind.Separator, "");
             Add(109 + coreExtra, 6, 167 + waveExtra, 28, TdUiKind.Label, $"{shown}/{m.TotalWaves}", tag: "wave", tip: $"{stageText}Onda {shown}/{m.TotalWaves}");
             Add(282 + coreExtra + waveExtra, 6, 28, 28, TdUiKind.Button, "", TdUiAction.HudExpand,
@@ -826,7 +849,7 @@ public sealed partial class TdUiController
         }
         float moneyExtra = Math.Max(0, Math.Max(_money.Real, _money.Display).ToString(System.Globalization.CultureInfo.InvariantCulture).Length - 3) * 8f;
         float grow = coreExtra + waveExtra + moneyExtra;
-        Add(12, 6, 73 + coreExtra, 28, TdUiKind.Button, $"{integ}/{max}", TdUiAction.HudRestore, tag: "core", icon: TdIcon.Heart, tip: coreTip + $" {stageText.Trim()} Onda {shown}/{m.TotalWaves}. Créditos ¢{m.Credits}. Clique para abrir o menu.", highlight: needed && PulseOn);
+        Add(12, 6, 73 + coreExtra, 28, TdUiKind.Button, repText, TdUiAction.HudRestore, tag: "core", icon: TdIcon.Medal, fill: (float)repRank.Fraction, tip: coreTip + $" {stageText.Trim()} Onda {shown}/{m.TotalWaves}. Créditos ¢{m.Credits}. Clique para abrir o menu.", highlight: needed && PulseOn);
         Add(96 + coreExtra, 11, 1, 18, TdUiKind.Separator, "");
         Add(109 + coreExtra, 6, 167 + waveExtra, 28, TdUiKind.Label, $"{shown}/{m.TotalWaves}", tag: "wave", tip: $"{stageText}Onda {shown}/{m.TotalWaves}");
         Add(288 + coreExtra + waveExtra, 11, 1, 18, TdUiKind.Separator, "");
@@ -846,6 +869,13 @@ public sealed partial class TdUiController
         Add(745 + grow, 6, 28, 28, TdUiKind.Button, "", TdUiAction.HudMinimize, icon: TdIcon.Collapse, tip: "Recolher HUD");
         return CompactHud(AddRankToHud(new TdHudView(HighlightHud(items), offset + 779 + grow, 40 + y0, Minimized: false, Wave: shown, TotalWaves: m.TotalWaves, Floats: _money.Floats, TopPad: y0)), 0.7f);
     }
+
+    /// <summary>XP compacto para o HUD (cabe em até 5 caracteres).</summary>
+    internal static string XpText(int xp) => xp < 10_000 ? xp.ToString(System.Globalization.CultureInfo.InvariantCulture)
+        : (xp / 1000.0).ToString("0.#", System.Globalization.CultureInfo.InvariantCulture) + "k";
+
+    /// <summary>Medidor monotônico de dano à base: só desce quando a base é atacada (integridade no clássico, XP perdido na corrida).</summary>
+    internal static long HurtMeter(TdMatchState m) => -m.ReputationLostTotal;
 
     private TdHudView AddRankToHud(TdHudView view)
     {
@@ -1264,7 +1294,7 @@ public sealed partial class TdUiController
                             int crowns = Enumerable.Range(1, _host.StageCount).Count(_host.StageCrown);
                             items.Add(Put(it, lx, 104, w, 156) with { SArg = "rank-card", Arg = (int)rank.Current,
                                 Text = TdRank.DisplayName(rank.Current), Tip = $"Brasão {TdRank.DisplayName(rank.Current)}", Sub = crowns.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                                Right = rank.Next is { } next ? $"{rank.Total} / {rank.NextThreshold} p.|faltam {Math.Max(0, rank.NextThreshold - rank.Total)} p. para {TdRank.DisplayName(next)}" : $"{rank.Total} p.|Patente máxima" });
+                                Right = rank.Next is { } next ? $"{rank.Total} / {rank.NextThreshold} XP|faltam {Math.Max(0, rank.NextThreshold - rank.Total)} XP para {TdRank.DisplayName(next)}" : $"{rank.Total} XP|Patente máxima" });
                             for (int i = 0; i < 6; i++)
                                 items.Add(new(new DipRect(lx + 120 + i * 32, 180, 28, 28), TdUiKind.Label, "", Arg: i,
                                     SArg: "rank-step", Tip: $"Brasão {TdRank.DisplayName((TdRankLevel)i)} · NV {i + 1}"));
@@ -1406,7 +1436,7 @@ public sealed partial class TdUiController
 
     private static void AddRankBar(Stack s, TdRankProgress r)
     {
-        string right = r.Next is { } n ? $"{r.Total}/{r.NextThreshold} p. > {TdRank.DisplayName(n)}" : $"{r.Total} p.";
+        string right = r.Next is { } n ? $"{r.Total}/{r.NextThreshold} XP > {TdRank.DisplayName(n)}" : $"{r.Total} XP";
         s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, s.Width - 2 * Pad, RowH - 2), TdUiKind.Bar, $"Patente: {TdRank.DisplayName(r.Current)}", Right: right,
             Tone: TdTone.Accent, Fill: (float)r.Fraction));
         s.Y += RowH;
@@ -1656,7 +1686,6 @@ public sealed partial class TdUiController
 
     private TdPopoverView BuildEnd(TdMatchState m)
     {
-        if (m.Phase == MatchPhase.Derrota && m.Options.PersistentRun) return BuildRunEnd(m, !EndCardOpen);
         var s = new Stack(260f);
         bool won = m.Phase == MatchPhase.Vitoria;
         var r = m.Result;
@@ -1675,16 +1704,10 @@ public sealed partial class TdUiController
             AddRankBar(s, _host.Rank);
             if (_winGuide)
             {
-                s.Add(TdUiKind.Label, "Coroa: vença sem perder núcleo.", 14f, tone: TdTone.Accent, icon: TdIcon.Crown);
+                s.Add(TdUiKind.Label, "Coroa: vença sem vazar nada.", 14f, tone: TdTone.Accent, icon: TdIcon.Crown);
                 s.Add(TdUiKind.Label, "Medalhas: desafios extras.", 14f, tone: TdTone.Accent, icon: TdIcon.Medal);
-                s.Add(TdUiKind.Label, "Patente: soma dos recordes.", 14f, tone: TdTone.Accent, icon: TdIcon.Target);
+                s.Add(TdUiKind.Label, "Patente: sobe com XP, desce se vazar.", 14f, tone: TdTone.Accent, icon: TdIcon.Target);
             }
-        }
-        else
-        {
-            var (ri, reason, ti, tip) = DefeatTexts(m);
-            s.Add(TdUiKind.Label, reason, 16f, tone: TdTone.Bad, icon: ri);
-            s.Add(TdUiKind.Label, tip, 16f, tone: TdTone.Accent, icon: ti);
         }
         if (won && m.StageId < _host.StageCount && _host.StageUnlocked(m.StageId + 1))
             s.Add(TdUiKind.Button, "Proxima fase", 38, TdUiAction.NextStage, tone: TdTone.Good);
@@ -1693,100 +1716,4 @@ public sealed partial class TdUiController
         return Finish(title, s, 0);
     }
 
-    /// <summary>TD.41: fonte (DIP) dos textos do cartão de fim de corrida e posição/margens do layout da modal 720×480.</summary>
-    public const float RunEndFont = 14f, RunEndModalMargin = 16f, RunEndModalTop = 100f, RunEndRankH = 62f;
-
-    /// <summary>
-    /// Cartão de fim de corrida em blocos empilhados e medidos (altura = linhas × fonte × fator + folga; nenhum bloco invade o seguinte).
-    /// <paramref name="modal"/>: coordenadas da modal 720×480 (conteúdo a partir de y=100, margem 16, botões lado a lado);
-    /// senão o cartão de 260 DIP do cantinho. Vazamentos/razão/advisor ficam em até 2 linhas (reticências no excesso).
-    /// </summary>
-    private TdPopoverView BuildRunEnd(TdMatchState m, bool modal)
-    {
-        float w = modal ? 720f : 260f;
-        var s = new Stack(w);
-        float x = modal ? RunEndModalMargin : Pad, bw = w - 2 * x, gap = modal ? 8f : 2f;
-        if (modal) s.Y = RunEndModalTop;
-        void Line(string text, TdTone tone = TdTone.Normal, int maxLines = 4)
-        {
-            int lines = Math.Min(maxLines, QuizLines(text, bw, RunEndFont));
-            float h = lines * RunEndFont * QuizLineFactor + 2f;
-            s.Items.Add(new TdUiItem(new DipRect(x, s.Y, bw, h), TdUiKind.Label, text, Tone: tone, FontSize: RunEndFont, SArg: modal ? "rewrap" : null));
-            s.Y += h + gap;
-        }
-        int waves = m.WavesReached;
-        Line($"Onda {waves} (fase {m.StageNumber})");
-        Line(waves > _host.PreviousBestRunWaves ? "NOVO RECORDE" : $"Recorde {_host.PreviousBestRunWaves}", TdTone.Accent);
-        float rankH = modal ? RunEndRankH : 24f;
-        s.Items.Add(new TdUiItem(new DipRect(x, s.Y, bw, rankH), TdUiKind.Bar, $"Patente: {TdRank.DisplayName(_host.Rank.Current)}", Tone: TdTone.Accent, Fill: (float)_host.Rank.Fraction, FontSize: RunEndFont));
-        s.Y += rankH + (modal ? gap : 2f);
-        int earned = TdLegacy.Fragments(waves);
-        int nextRunes = TdLegacy.StartingRunes(_host.LegacyTotal);
-        Line($"+{earned} legado", TdTone.Good);
-        if (nextRunes > TdLegacy.StartingRunes(_host.PreviousLegacyTotal)) Line($"Proxima corrida: {nextRunes} runa", TdTone.Good);
-        var leaks = m.Leaks.OrderByDescending(l => l.Count).ThenByDescending(l => l.Damage).Take(3).ToArray();
-        if (leaks.Length > 0)
-        {
-            string Name(TdLeakStat l) => l.IsBoss ? m.Content.Enemies.Bosses.FirstOrDefault(e => e.Id == l.EnemyId)?.Name ?? l.EnemyId : m.Content.Enemies.Enemies.FirstOrDefault(e => e.Id == l.EnemyId)?.Name ?? l.EnemyId;
-            Line("Vazou: " + string.Join(", ", leaks.Select(l => $"{Name(l)} x{l.Count}")), maxLines: 2);
-        }
-        var (_, reason, _, _) = DefeatTexts(m);
-        Line(reason, TdTone.Bad, 2);
-        int unlocked = Enumerable.Range(1, _host.StageCount).Where(_host.StageUnlocked).DefaultIfEmpty(1).Max();
-        var advice = TdAdvisor.Suggest(m.Content, m.Leaks, unlocked);
-        if (advice is not null)
-        {
-            string tower = m.Content.Towers.First(t => t.Id == advice.TowerId).Name;
-            Line($"Advisor: {tower} contra {advice.Trait}.", TdTone.Accent, 2);
-        }
-        if (_restartArmed) Line($"Recomecando em {Math.Max(0, (int)Math.Ceiling(_restartRemaining))} s");
-        if (modal)
-        {
-            float bwHalf = (bw - 8f) / 2f;
-            s.Items.Add(new TdUiItem(new DipRect(x, s.Y, bwHalf, 40f), TdUiKind.Button, "Recomecar", TdUiAction.Restart, Tone: TdTone.Good, FontSize: RunEndFont));
-            s.Items.Add(new TdUiItem(new DipRect(x + bwHalf + 8f, s.Y, bwHalf, 40f), TdUiKind.Button, "Ver runas", TdUiAction.ViewRunes, FontSize: RunEndFont));
-            s.Y += 40f + gap;
-            var items = new List<TdUiItem>(s.Items.Count + 1)
-            {
-                new(new DipRect(674, 4, 36, 36), TdUiKind.Button, "X", TdUiAction.Close),
-            };
-            items.AddRange(s.Items);
-            return new TdPopoverView("CORRIDA ENCERRADA", [.. items], 720, 480, 0);
-        }
-        s.Add(TdUiKind.Button, "Recomecar", 36, TdUiAction.Restart, tone: TdTone.Good);
-        s.Items[^1] = s.Items[^1] with { FontSize = RunEndFont };
-        s.Add(TdUiKind.Button, "Ver runas", 36, TdUiAction.ViewRunes);
-        s.Items[^1] = s.Items[^1] with { FontSize = RunEndFont };
-        if (s.Y + Pad > _host.EndCardAvailableHeight)
-        {
-            int rank = s.Items.FindIndex(i => i.Kind == TdUiKind.Bar);
-            if (rank >= 0)
-            {
-                var rect = s.Items[rank].Rect;
-                s.Items[rank] = s.Items[rank] with { Kind = TdUiKind.Label, Rect = new DipRect(rect.X, rect.Y, rect.W, 20) };
-                for (int i = rank + 1; i < s.Items.Count; i++)
-                {
-                    rect = s.Items[i].Rect;
-                    s.Items[i] = s.Items[i] with { Rect = new DipRect(rect.X, rect.Y - 4, rect.W, rect.H) };
-                }
-                s.Y -= 4;
-            }
-        }
-        if (s.Y + Pad > _host.EndCardAvailableHeight)
-        {
-            int leak = s.Items.FindIndex(i => i.Text.StartsWith("Vazou:", StringComparison.Ordinal));
-            if (leak >= 0)
-            {
-                float cut = s.Items[leak].Rect.H + 2;
-                s.Items.RemoveAt(leak);
-                for (int i = leak; i < s.Items.Count; i++)
-                {
-                    var rect = s.Items[i].Rect;
-                    s.Items[i] = s.Items[i] with { Rect = new DipRect(rect.X, rect.Y - cut, rect.W, rect.H) };
-                }
-                s.Y -= cut;
-            }
-        }
-        return Finish("CORRIDA ENCERRADA", s, 0);
-    }
 }

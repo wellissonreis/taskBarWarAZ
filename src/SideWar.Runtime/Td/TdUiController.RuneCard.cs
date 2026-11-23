@@ -16,7 +16,7 @@ public sealed partial class TdUiController
     public const string RuneCardText = "Você levou dano. Runas reforçam sua defesa: cada fragmento desperta uma runa vizinha. Veja o ramo que quer seguir e monte sua estratégia.";
 
     private TdMatchState? _rcMatch;
-    private int _rcIntegrity;
+    private long _rcIntegrity;
     private bool _rcPending, _rcShown;
     private double _rcLeft, _rcClock = -1.0;
 
@@ -43,11 +43,11 @@ public sealed partial class TdUiController
         double now = _now();
         double dt = _rcClock < 0.0 ? 0.0 : Math.Clamp(now - _rcClock, 0.0, QuizMaxDeltaSeconds);
         _rcClock = now;
-        if (!ReferenceEquals(_rcMatch, m)) { _rcMatch = m; _rcIntegrity = m.Integrity; }
+        if (!ReferenceEquals(_rcMatch, m)) { _rcMatch = m; _rcIntegrity = TdUiController.HurtMeter(m); }
         else
         {
-            if (m.Integrity < _rcIntegrity && !_rcShown && !_onb.TipSeen(RuneTipKey)) _rcPending = true;
-            _rcIntegrity = m.Integrity;
+            if (TdUiController.HurtMeter(m) < _rcIntegrity && !_rcShown && !_onb.TipSeen(RuneTipKey)) _rcPending = true;
+            _rcIntegrity = TdUiController.HurtMeter(m);
         }
         if (_rcPending && !_rcShown && CanShowRuneCard(m))
         {

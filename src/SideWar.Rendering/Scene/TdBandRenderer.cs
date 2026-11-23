@@ -292,9 +292,9 @@ public sealed class TdBandRenderer : IDisposable
         _stroke.PathEffect = m.Phase == MatchPhase.Onda ? null : _dash;
         c.DrawLine(0, Ground - 4.5f, w, Ground - 4.5f, _stroke);
         _stroke.PathEffect = null;
-        if (m.Phase is MatchPhase.Vitoria or MatchPhase.Derrota)
+        if (m.Phase is MatchPhase.Vitoria)
         {
-            _fill.Color = m.Phase == MatchPhase.Vitoria ? Palette.Menta : Palette.Perigo;
+            _fill.Color = Palette.Menta;
             c.DrawRect(0, TdBand.HeightDip - 1, w, 1, _fill);
         }
     }
@@ -303,13 +303,6 @@ public sealed class TdBandRenderer : IDisposable
     {
         float cx = Math.Max(TdArtMap.EdgeWidthDip, WidthDip(_coreImg)) / 2f;
         Blit(c, _coreImg, cx, Ground);
-        // integridade legível por cima da sprite: barra acima do núcleo
-        float frac = m.IntegrityMax > 0 ? Math.Clamp(m.Integrity / (float)m.IntegrityMax, 0f, 1f) : 0f;
-        float top = Math.Max(1f - TdBand.EdgeHeadroomDip, Ground - HeightDip(_coreImg) - 3.5f);
-        _fill.Color = Palette.Placeholder.Edge;
-        c.DrawRect(1, top - 0.5f, 30, 3.5f, _fill);
-        _fill.Color = frac > 0.5f ? Palette.Menta : frac > 0.25f ? Palette.Ambar : Palette.Perigo;
-        c.DrawRect(1.5f, top, 29f * frac, 2.5f, _fill);
     }
 
     private void DrawPortal(SKCanvas c, int w) => Blit(c, _portalImg, w - Math.Max(TdArtMap.EdgeWidthDip, WidthDip(_portalImg)) / 2f, Ground);

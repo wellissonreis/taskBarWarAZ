@@ -226,8 +226,12 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         if (it.Kind == TdUiKind.Separator) { _p.Fill(c, r, Palette.Td.BorderStrong); return; }
         if (it.SArg == "core")
         {
-            DrawIcon(c, TdIcon.Heart, r.X, r.Y + 7, 14, Palette.Td.Red);
-            _p.Text(c, it.Text, PanelFont.JetBrainsMono, Math.Max(13, 11 / layoutScale), new DipRect(r.X + 20, r.Y + 2, r.W - 20, 24), Palette.Td.BrightText);
+            // Reputação (XP): medalha + valor, com uma barra fina de progresso até a próxima patente (it.Fill 0..1).
+            DrawIcon(c, TdIcon.Medal, r.X, r.Y + 7, 14, Palette.Td.Amber);
+            _p.Text(c, it.Text, PanelFont.JetBrainsMono, Math.Max(13, 11 / layoutScale), new DipRect(r.X + 20, r.Y + 2, r.W - 20, 22), Palette.Td.BrightText);
+            float barW = r.W - 6;
+            _p.Fill(c, new DipRect(r.X, r.Y + r.H - 4, barW, 2), Palette.Td.BorderStrong);
+            if (it.Fill > 0f) _p.Fill(c, new DipRect(r.X, r.Y + r.H - 4, barW * Math.Clamp(it.Fill, 0f, 1f), 2), Palette.Td.Amber);
             return;
         }
         if (it.SArg == "wave")
@@ -517,7 +521,6 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
                 _p.Text(c, it.Text, PanelFont.JetBrainsMono, 16, r, Palette.Td.Text, TextAlign.Center);
                 return;
             case "c13": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 11, r, Palette.Td.Muted, TextAlign.Center); return;
-            case "rewrap": DrawWrappedSized(c, it.Text, r, ModalToneColor(it.Tone), it.FontSize > 0f ? it.FontSize : TdUiController.RunEndFont); return;
             case "webbg": return; // desenhada antes dos itens (DrawRuneWeb)
             case "optname": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 12, r, Palette.Td.Text); return;
             case "c11l": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 9, r, Palette.Td.Muted); return;

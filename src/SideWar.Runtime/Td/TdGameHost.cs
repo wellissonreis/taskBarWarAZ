@@ -13,7 +13,7 @@ public interface ITdMatchObserver
     /// <summary>Eventos acumulados desde a última chamada; o host chama <c>ClearEvents</c> depois.</summary>
     void OnEvents(TdMatchState match, IReadOnlyList<TdEvent> events);
 
-    /// <summary>Uma vez por partida, ao entrar em Vitória ou Derrota.</summary>
+    /// <summary>Uma vez por partida, ao entrar em Vitória.</summary>
     void OnMatchEnded(TdMatchState match, TdMatchResult result);
 
     /// <summary>Registra uma corrida ainda em andamento ao encerrar o aplicativo.</summary>
@@ -176,7 +176,7 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
             _observer?.OnEvents(Match, Match.Events);
             Match.ClearEvents();
         }
-        if (!_endReported && Match.Phase is MatchPhase.Vitoria or MatchPhase.Derrota)
+        if (!_endReported && Match.Phase is MatchPhase.Vitoria)
         {
             _endReported = true;
             _observer?.OnMatchEnded(Match, Match.Result);

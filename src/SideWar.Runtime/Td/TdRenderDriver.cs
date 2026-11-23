@@ -136,7 +136,8 @@ public sealed class TdRenderDriver : ILoopParticipant
         var h = new HashCode();
         h.Add((int)match.Phase);
         h.Add(match.Credits);
-        h.Add(match.Integrity);
+        h.Add(match.ReputationLostTotal);
+        h.Add(match.ReputationGainedTotal);
         h.Add(match.WaveNumber);
         h.Add(match.Layout?.Width ?? 0);
         h.Add(match.Layout?.FreeZones.Length ?? 0);
