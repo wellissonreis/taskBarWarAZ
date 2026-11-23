@@ -89,7 +89,6 @@ public sealed partial class TdMatchState
         h.AddBool(_hasLeaked);
         if (!_options.IsClassic) { h.AddBool(_options.ContinuousWaves); h.AddBool(_options.PersistentRun); h.AddInt32(_stageNumber); h.AddInt32(_stageClears); } // só fora do modo clássico: os hashes antigos não mudam
         if (!_options.IsClassic) { h.AddUInt64(_mutSeed); h.AddInt32(_runWaves); foreach (int d in _mutDebut) h.AddInt32(d); } // mutações (SDD-37): semente derivada, ondas iniciadas e estreias
-        if (!_options.IsClassic && _options.LegacyRunes > 0) h.AddInt32(_options.LegacyRunes);
         h.AddUInt64(_rng.State);
         h.AddUInt64(_rng.Inc);
         return h.Value;

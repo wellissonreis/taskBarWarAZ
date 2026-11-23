@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using SideWar.Core.Td;
 using SideWar.Persistence.Migrations;
 
 namespace SideWar.Persistence.Profile;
@@ -11,7 +12,22 @@ public static class TdProfileMigrations
         .Register(TdProfileData.Schema, 1, V1ToV2)
         .Register(TdProfileData.Schema, 2, V2ToV3)
         .Register(TdProfileData.Schema, 3, V3ToV4)
-        .Register(TdProfileData.Schema, 4, V4ToV5);
+        .Register(TdProfileData.Schema, 4, V4ToV5)
+        .Register(TdProfileData.Schema, 5, V5ToV6);
+
+    /// <summary>
+    /// v5 → v6: as runas passam a ser progressão permanente. O Legado antigo (<c>legacyTotal</c>) vira nós iniciais, como antes
+    /// (min(3, total/6) runas): os primeiros nós do anel interno (slots 0..n-1, sempre despertáveis), sem sorteio. Sem fragmentos.
+    /// </summary>
+    private static JsonNode V5ToV6(JsonNode root)
+    {
+        if (root["runeWeb"] is not null) return root;
+        int total = root["legacyTotal"] is JsonValue v && v.TryGetValue<int>(out var t) ? Math.Max(0, t) : 0;
+        int n = TdLegacy.StartingRunes(total);
+        root["runeWeb"] = TdRuneWeb.ToText((UInt128.One << n) - UInt128.One);
+        root["runeFragments"] ??= 0;
+        return root;
+    }
 
     /// <summary>v4 → v5: reputação inicial = soma dos recordes de pontuação por fase (o que definia a patente), sem perder progresso.</summary>
     private static JsonNode V4ToV5(JsonNode root)

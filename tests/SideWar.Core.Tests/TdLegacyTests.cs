@@ -18,24 +18,28 @@ public class TdLegacyTests
     public void StartingRunesAreBounded(int total, int expected) => Assert.Equal(expected, TdLegacy.StartingRunes(total));
 
     [Fact]
-    public void InitialRunesAndReplayAreDeterministic()
+    public void PersistedRunesLoadAndReplayAreDeterministic()
     {
         var content = TdContentLoader.LoadEmbedded();
-        var options = TdMatchOptions.Default with { LegacyRunes = 3 };
+        var options = TdMatchOptions.Default with { InitialAwakened = 0b10111, InitialFragments = 7 };
         var first = TdMatchState.Create(content, 1, Rng.Seed(42, 54), null, options);
-        Assert.Equal(3, first.AwakenedCount);
-        Assert.Equal(0, first.Fragments);
+        Assert.Equal(4, first.AwakenedCount);
+        Assert.Equal(7, first.Fragments);
+        Assert.Equal((UInt128)0b10111, first.AwakenedBits);
         Assert.Equal(0, first.WavesReached);
-        for (int i = 0; i < 5; i++)
-        {
-            var next = TdMatchState.Create(content, 1, Rng.Seed(42, 54), null, options);
-            Assert.Equal(first.ComputeStateHash(), next.ComputeStateHash());
-            Assert.Equal(first.RuneWeb.Where(n => first.IsAwakened(n.Id)).Select(n => n.Id), next.RuneWeb.Where(n => next.IsAwakened(n.Id)).Select(n => n.Id));
-        }
+        for (int i = 0; i < 3; i++)
+            Assert.Equal(first.ComputeStateHash(), TdMatchState.Create(content, 1, Rng.Seed(42, 54), null, options).ComputeStateHash());
         var replay = new TdReplayScript(1, 42, 54, [], 0, options);
         Assert.Equal(first.ComputeStateHash(), TdReplayRunner.Run(content, replay).StateHash);
-        Assert.Equal(0, JsonSerializer.Deserialize<TdMatchOptions>("{}")!.LegacyRunes);
-        Assert.Throws<ArgumentOutOfRangeException>(() => TdMatchState.Create(content, 1, Rng.Seed(42, 54), null, options with { LegacyRunes = 4 }));
+        Assert.NotEqual(first.ComputeStateHash(), TdMatchState.Create(content, 1, Rng.Seed(42, 54), null, TdMatchOptions.Default).ComputeStateHash());
+        // Replay serializado (JSON) preserva a teia permanente.
+        var back = JsonSerializer.Deserialize<TdMatchOptions>(JsonSerializer.Serialize(options))!;
+        Assert.Equal(options.InitialAwakened, back.InitialAwakened);
+        Assert.Equal(7, back.InitialFragments);
+        // Modo clássico ignora a teia permanente.
+        var classic = TdMatchState.Create(content, 1, Rng.Seed(42, 54), null, TdMatchOptions.Classic with { InitialAwakened = 1, InitialFragments = 5 });
+        Assert.Equal(0, classic.AwakenedCount);
+        Assert.Equal(0, classic.Fragments);
     }
 
     [Fact]

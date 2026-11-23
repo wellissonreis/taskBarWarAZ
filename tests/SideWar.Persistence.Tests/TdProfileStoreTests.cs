@@ -57,10 +57,40 @@ public class TdProfileStoreTests
         Assert.Equal(0, p.LegacyTotal);
         Assert.Equal(0, p.BestRunWaves);
         Assert.Equal("", p.LegacyLastRun);
-        Assert.Equal(5, SchemaVersionOnDisk(fs.Files[F]));
+        Assert.Equal(TdProfileData.SchemaVersion, SchemaVersionOnDisk(fs.Files[F]));
         p = p with { LegacyTotal = 12, BestRunWaves = 37, LegacyLastRun = "abc-def", RunsPlayed = 4 };
         Assert.True(store.Save(p));
         Assert.Equal(J(p), J(store.Load().Profile));
+    }
+
+    [Theory]
+    [InlineData(0, 0)] [InlineData(5, 0)] [InlineData(6, 1)] [InlineData(13, 2)] [InlineData(99, 3)]
+    public void Migration_V5ToV6_ConvertsLegacyIntoStartingRunes(int legacyTotal, int nodes)
+    {
+        var (fs, store) = Make();
+        var payload = System.Text.Json.Nodes.JsonNode.Parse(J(Full() with { LegacyTotal = legacyTotal }))!.AsObject();
+        payload.Remove("runeWeb"); payload.Remove("runeFragments");
+        fs.Files[F] = Envelope(payload.ToJsonString(), TdProfileData.Schema, 5);
+        var p = store.Load().Profile;
+        Assert.Equal((UInt128.One << nodes) - UInt128.One, TdRuneWeb.Parse(p.RuneWeb));
+        Assert.Equal(0, p.RuneFragments);
+        Assert.Equal(legacyTotal, p.LegacyTotal);
+        Assert.Equal(TdProfileData.SchemaVersion, SchemaVersionOnDisk(fs.Files[F]));
+    }
+
+    [Fact]
+    public void RuneWeb_RoundTripsAllBitsAndSanitizesGarbage()
+    {
+        var (_, st) = Make();
+        var bits = UInt128.MaxValue ^ (UInt128.One << 70);
+        var p = Full() with { RuneWeb = TdRuneWeb.ToText(bits), RuneFragments = 4321 };
+        Assert.True(st.Save(p));
+        var back = st.Load().Profile;
+        Assert.Equal(bits, TdRuneWeb.Parse(back.RuneWeb));
+        Assert.Equal(4321, back.RuneFragments);
+        var bad = TdProfileSerializer.Sanitize(Full() with { RuneWeb = "zzz", RuneFragments = -9 });
+        Assert.Equal(TdRuneWeb.Empty, bad.RuneWeb);
+        Assert.Equal(0, bad.RuneFragments);
     }
 
     [Fact]
@@ -79,7 +109,7 @@ public class TdProfileStoreTests
     {
         var (fs, st) = Make();
         Assert.True(st.Save(Full()));
-        Assert.Equal(5, SchemaVersionOnDisk(fs.Files[F]));
+        Assert.Equal(TdProfileData.SchemaVersion, SchemaVersionOnDisk(fs.Files[F]));
         var r = st.Load();
         Assert.Equal(TdProfileSource.File, r.Source);
         Assert.Equal(J(TdProfileSerializer.Sanitize(Full())), J(r.Profile));
@@ -303,7 +333,7 @@ public class TdProfileStoreTests
         Assert.All(p.Stages, s => { Assert.False(s.Crown); Assert.Equal(0, s.Medals); Assert.Equal(0, s.BestScore); });
         Assert.Equal(["defense.damage1"], p.PurchasedNodes);
         Assert.Equal((ulong)7, p.InfiniteRuns.Single().Seed);
-        Assert.Equal(5, SchemaVersionOnDisk(fs.Files[F])); // gravado de volta na versão nova
+        Assert.Equal(TdProfileData.SchemaVersion, SchemaVersionOnDisk(fs.Files[F])); // gravado de volta na versão nova
         Assert.Equal(J(p), J(st.Load().Profile));
     }
 
@@ -329,7 +359,7 @@ public class TdProfileStoreTests
         Assert.True(p.IdleImportDone);
         Assert.Equal(J(TdProfileSerializer.Sanitize(Full() with { SealsEarned = 30, PurchasedNodes = ["defense.damage1", "infrastructure.credits"] })), J(p));
         Assert.Equal(28, TdProfileRules.SealsAvailable(p, Meta)); // antes: 19; reembolso integral 2+3+4
-        Assert.Equal(5, SchemaVersionOnDisk(fs.Files[F]));
+        Assert.Equal(TdProfileData.SchemaVersion, SchemaVersionOnDisk(fs.Files[F]));
         Assert.Equal(J(p), J(store.Load().Profile));
         Assert.True(store.Save(p));
         Assert.Equal(J(p), J(store.Load().Profile));
@@ -449,6 +479,6 @@ public class TdReputationProfileTests
         var p = store.Load().Profile;
         Assert.Equal(6_500, p.Reputation);
         Assert.Equal(TdRankLevel.Junior, TdProfileRules.Rank(p).Current);
-        Assert.Equal(5, SchemaVersionOnDisk(fs.Files["/data/profile-td.json"]));
+        Assert.Equal(TdProfileData.SchemaVersion, SchemaVersionOnDisk(fs.Files["/data/profile-td.json"]));
     }
 }

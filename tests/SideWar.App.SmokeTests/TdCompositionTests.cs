@@ -56,6 +56,29 @@ public sealed class TdCompositionTests : IDisposable
     }
 
     [Fact]
+    public void Runes_are_permanent_profile_progress_across_runs_and_restarts()
+    {
+        Directory.CreateDirectory(dir);
+        var clock = new ManualClock();
+        var seeded = new TdProfileStore(SideWar.Persistence.IO.RealFileSystem.Instance, dir, "0.1.0");
+        Assert.True(seeded.Save(TdProfileData.Default with { RuneWeb = TdRuneWeb.ToText(0b11), RuneFragments = 9 }));
+        var td = TdComposition.Create(dir, "0.1.0", VisibleApp(), clock, new AppSettings(), _ => { }, seed: 7);
+        Assert.Equal(2, td.Host.Match.AwakenedCount);
+        Assert.Equal(9, td.Host.Match.Fragments);
+        var node = td.Host.Match.Frontier[0];
+        Assert.True(td.Host.Match.Apply(new AwakenRune(node)).IsOk);
+        Assert.Equal(3, td.Host.Match.AwakenedCount);
+        td.Recorder.OnMatchAbandoned(td.Host.Match); // grava a teia do perfil
+        td.StartStage(1);
+        Assert.Equal(3, td.Host.Match.AwakenedCount);
+        Assert.Equal(td.Recorder.RuneFragments, td.Host.Match.Fragments);
+        var reopened = TdComposition.Create(dir, "0.1.0", VisibleApp(), clock, new AppSettings(), _ => { }, seed: 99);
+        Assert.Equal(3, reopened.Host.Match.AwakenedCount);
+        Assert.True(reopened.Host.Match.IsAwakened(node));
+        Assert.Equal(td.Host.Match.Fragments, reopened.Host.Match.Fragments);
+    }
+
+    [Fact]
     public void Autostart_setting_reaches_the_match()
     {
         Directory.CreateDirectory(dir);

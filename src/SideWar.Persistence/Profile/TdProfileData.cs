@@ -8,7 +8,7 @@ namespace SideWar.Persistence.Profile;
 public sealed record TdProfileData
 {
     public const string Schema = "sidewar.td-profile";
-    public const int SchemaVersion = 5;
+    public const int SchemaVersion = 6;
 
     /// <summary>Total de selos já ganhos (1 por estrela nova, 1 por desafio, mais os iniciais da migração do idle).</summary>
     public int SealsEarned { get; init; }
@@ -34,7 +34,23 @@ public sealed record TdProfileData
     /// <summary>Reputação (XP de patente, v5): sobe ao vencer ondas e desce quando inimigos chegam à base; nunca abaixo de 0. A patente deriva dela.</summary>
     public int Reputation { get; init; }
 
+    /// <summary>Teia de runas permanente (v6): bitset dos nós despertados (slot = anel*16+setor) em hexadecimal de 32 dígitos. Vale para toda partida/corrida nova.</summary>
+    public string RuneWeb { get; init; } = TdRuneWeb.Empty;
+    /// <summary>Fragmentos de runa ainda não gastos (v6), carregados na partida nova.</summary>
+    public long RuneFragments { get; init; }
+
     public static TdProfileData Default { get; } = new();
+}
+
+/// <summary>Conversão do bitset da teia (<see cref="UInt128"/>) de/para o texto do perfil.</summary>
+public static class TdRuneWeb
+{
+    public const string Empty = "00000000000000000000000000000000";
+    public const long MaxFragments = 1_000_000_000_000L;
+    public static string ToText(UInt128 bits) => bits.ToString("x32", System.Globalization.CultureInfo.InvariantCulture);
+    /// <summary>Texto inválido vira teia vazia; bits acima do slot 127 não existem (UInt128 inteiro).</summary>
+    public static UInt128 Parse(string? text) =>
+        text is { Length: 32 } && UInt128.TryParse(text, System.Globalization.NumberStyles.AllowHexSpecifier, System.Globalization.CultureInfo.InvariantCulture, out var v) ? v : UInt128.Zero;
 }
 
 /// <summary>Progresso por fase (RF-28.10): estrelas (máximo, nunca diminui) e desafio concluído (separado das estrelas).</summary>

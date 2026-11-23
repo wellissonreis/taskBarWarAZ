@@ -32,7 +32,27 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
     public TdProfileData Profile { get; private set; }
     public int LegacyTotal => Profile.LegacyTotal;
     public int BestRunWaves => Profile.BestRunWaves;
-    public int StartingRunes => TdLegacy.StartingRunes(LegacyTotal);
+
+    /// <summary>Teia de runas permanente do perfil (nós despertados) e fragmentos não gastos: carregados em toda partida/corrida nova.</summary>
+    public UInt128 RuneBits => TdRuneWeb.Parse(Profile.RuneWeb);
+    public long RuneFragments => Profile.RuneFragments;
+
+    /// <summary>Opções da próxima partida com a teia permanente do perfil (só fora do modo clássico).</summary>
+    public TdMatchOptions WithRunes(TdMatchOptions options) =>
+        options.PersistentRun ? options with { InitialAwakened = RuneBits, InitialFragments = RuneFragments } : options with { InitialAwakened = default, InitialFragments = 0 };
+
+    private bool _runesDirty;
+
+    /// <summary>Copia a teia e os fragmentos da partida para o perfil (em memória); só em partidas persistentes. </summary>
+    private void SyncRunes(TdMatchState match)
+    {
+        if (!match.Options.PersistentRun) return;
+        var web = TdRuneWeb.ToText(match.AwakenedBits);
+        long frag = Math.Clamp(match.Fragments, 0, TdRuneWeb.MaxFragments);
+        if (web == Profile.RuneWeb && frag == Profile.RuneFragments) return;
+        Profile = Profile with { RuneWeb = web, RuneFragments = frag };
+        _runesDirty = true;
+    }
     public int PreviousBestRunWaves { get; private set; }
     public int PreviousLegacyTotal { get; private set; }
 
@@ -91,8 +111,10 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
     /// </summary>
     public void OnEvents(TdMatchState match, IReadOnlyList<TdEvent> events)
     {
+        SyncRunes(match);
         for (int i = 0; i < events.Count; i++)
         {
+            if (events[i].Type == TdEventType.RuneAwakened && _runesDirty) { Save(); continue; } // despertar: grava já (raro)
             if (events[i].Type == TdEventType.BaseAttacked) { Profile = TdProfileRules.ApplyReputation(Profile, -events[i].A); _repDirty = true; continue; }
             if (events[i].Type == TdEventType.ReputationGained)
             {
@@ -118,12 +140,13 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
     /// <summary>Grava a reputação pendente (XP perdido sem onda vencida depois); chamado ao fim/abandono da partida.</summary>
     public void FlushReputation()
     {
-        if (_repDirty) Save();
+        if (_repDirty || _runesDirty) Save();
     }
 
     private void Save()
     {
         _repDirty = false;
+        _runesDirty = false;
         if (_store.Save(Profile)) return;
         SaveFailures++;
         _log("falha ao gravar profile-td.json");
@@ -131,6 +154,7 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
 
     public void OnMatchEnded(TdMatchState match, TdMatchResult result)
     {
+        SyncRunes(match);
         FlushReputation();
         Profile = TdProfileRules.RecordMatch(Profile, _meta, match.StageId, result, _stageCount, out var outcome);
         LastOutcome = outcome;
@@ -139,6 +163,7 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
 
     public void OnMatchAbandoned(TdMatchState match)
     {
+        SyncRunes(match);
         FlushReputation();
         if (!match.Options.PersistentRun || match.Phase is not (MatchPhase.Preparo or MatchPhase.Onda) || Profile.LegacyLastRun == match.RunId) return;
         Profile = TdProfileRules.RecordLegacy(Profile, match.RunId, match.WavesReached);

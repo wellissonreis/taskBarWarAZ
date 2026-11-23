@@ -98,10 +98,8 @@ public sealed partial class TdMatchState
         var stage = content.Stages.Stages.FirstOrDefault(s => s.Id == stageId)
             ?? throw new ArgumentOutOfRangeException(nameof(stageId), stageId, "Fase inexistente no td-stages.json.");
         var waves = content.Waves.Stages.Single(s => s.Stage == stageId).Waves;
-        if (options.LegacyRunes is < 0 or > TdLegacy.MaxStartingRunes)
-            throw new ArgumentOutOfRangeException(nameof(options), "LegacyRunes fora da faixa.");
         var match = new TdMatchState(content, stage, waves, rng, unlockedMetaNodes, options);
-        match.ApplyLegacyRunes();
+        match.ApplyPersistedRunes();
         return match;
     }
 

@@ -59,6 +59,8 @@ public static class TdProfileSerializer
             BestRunWaves = Math.Max(0, p.BestRunWaves),
             LegacyLastRun = p.LegacyLastRun ?? "",
             RunsPlayed = Math.Max(0, p.RunsPlayed),
+            RuneWeb = TdRuneWeb.ToText(TdRuneWeb.Parse(p.RuneWeb)),
+            RuneFragments = Math.Clamp(p.RuneFragments, 0, TdRuneWeb.MaxFragments),
             Reputation = Math.Clamp(p.Reputation, 0, MaxScore),
             SealsEarned = earned,
             MigratedSeals = Math.Clamp(p.MigratedSeals, 0, earned),

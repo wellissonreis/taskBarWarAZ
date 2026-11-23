@@ -214,8 +214,10 @@ public readonly record struct TdRecordOutcome(bool NewRecord, bool NewCrown, TdM
 /// </summary>
 /// <param name="ContinuousWaves">A próxima onda começa no mesmo passo em que a anterior termina (Preparo de 0 s). O Preparo inicial (antes da onda 1 da corrida) continua existindo.</param>
 /// <param name="PersistentRun">Vencer a fase segue para a próxima sem recriar o estado; depois da última, ciclos infinitos mais difíceis. Só a derrota encerra.</param>
+/// <param name="InitialAwakened">Teia de runas permanente do perfil: bitset dos nós já despertados (slot = anel*16+setor), carregado em toda partida/corrida nova (modo não clássico).</param>
+/// <param name="InitialFragments">Fragmentos permanentes do perfil, carregados na partida nova.</param>
 /// <param name="StageClearHeal">Obsoleto (REPUTACAO): a vida do núcleo não existe mais; ignorado.</param>
-public sealed record TdMatchOptions(bool ContinuousWaves = true, bool PersistentRun = true, int StageClearHeal = 5, int LegacyRunes = 0, int? HighestCompletedStage = null)
+public sealed record TdMatchOptions(bool ContinuousWaves = true, bool PersistentRun = true, int StageClearHeal = 5, int? HighestCompletedStage = null, UInt128 InitialAwakened = default, long InitialFragments = 0)
 {
     public static TdMatchOptions Default { get; } = new();
     public static TdMatchOptions Classic { get; } = new(false, false, 0);

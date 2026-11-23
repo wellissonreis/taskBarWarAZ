@@ -1254,9 +1254,6 @@ public sealed partial class TdUiController
             done ? "Teia completa." : m.CanAwakenAny ? "Clique numa runa tracejada para despertar · arraste/setas: mover · roda: zoom" : "Faltam fragmentos para a fronteira · arraste/setas: mover · roda: zoom",
             SArg: "rhint"));
         AddRuneLegend(items, m, area.X, area.Y + area.H + 6f, area.W, ModalLegendHeight);
-        int totalLegacy = _host.LegacyTotal;
-        string legacy = TdLegacy.StartingRunes(totalLegacy) >= TdLegacy.MaxStartingRunes ? "Legado MAX" : $"Legado {totalLegacy} · proxima: +1 runa em {TdLegacy.FragmentsPerRune - totalLegacy % TdLegacy.FragmentsPerRune}";
-        items.Add(new(new DipRect(area.X + 220, area.Y + 12, 300, 22), TdUiKind.Label, legacy, FontSize: 14f));
         return tip;
     }
 

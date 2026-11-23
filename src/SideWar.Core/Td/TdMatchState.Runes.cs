@@ -108,15 +108,16 @@ public sealed partial class TdMatchState
         }
     }
 
-    private void ApplyLegacyRunes()
+    /// <summary>Bitset dos nós despertados (slot = anel*16+setor): o que o perfil persiste.</summary>
+    public UInt128 AwakenedBits => _awakened;
+
+    /// <summary>Carrega a teia permanente do perfil (nós + fragmentos) na partida nova; não consome <c>Rng</c>.</summary>
+    private void ApplyPersistedRunes()
     {
-        for (int i = 0; !_options.IsClassic && i < _options.LegacyRunes; i++)
-        {
-            var frontier = Frontier;
-            var node = _content.Runes.Nodes[NodeIndex(frontier[(int)(_rng.NextUInt() % (uint)frontier.Count)])];
-            _awakened |= Bit(node.Ring, node.Sector);
-            RebuildRuneEffects();
-        }
+        if (_options.IsClassic) return;
+        _awakened = _options.InitialAwakened; // 8 anéis × 16 setores = 128 slots = todos os bits do UInt128
+        if (_options.InitialFragments > 0) Fragments = _options.InitialFragments;
+        if (_awakened != UInt128.Zero) RebuildRuneEffects();
     }
 
     private CommandResult DoAwakenRune(string nodeId)
