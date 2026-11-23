@@ -25,6 +25,15 @@ public readonly record struct TdView(int SelectedTowerId, int HoverTowerId)
 
     /// <summary>Tutorial (TD.15): X (DIP do espaço de desenho) de um alvo a destacar com anel âmbar (torre); -1 = nenhum.</summary>
     public float HintX { get; init; } = -1f;
+
+    /// <summary>Fusão por soltar: torre-alvo sob o fantasma (0 = nenhuma), se o par é válido e o módulo escolhido (cor do contorno).</summary>
+    public int FuseTargetId { get; init; }
+    public bool FuseTargetOk { get; init; }
+    public string? FuseModuleId { get; init; }
+
+    /// <summary>Efeito curto da fusão feita: torre e idade em segundos (&lt; 0 = sem efeito).</summary>
+    public int FuseFxId { get; init; }
+    public float FuseFxAge { get; init; } = -1f;
 }
 
 /// <summary>Destino dos frames da faixa TD (SceneFrameSink no App; fake nos testes). Só na T-Game.</summary>

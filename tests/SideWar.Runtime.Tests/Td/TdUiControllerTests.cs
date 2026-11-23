@@ -184,8 +184,16 @@ public sealed class TdUiControllerTests
                 foreach (var item in view.Items.Where(i => i.Action == TdUiAction.ChooseTower))
                 {
                     Assert.True(item.Rect.X >= 0 && item.Rect.Y >= 0 && item.Rect.X + item.Rect.W <= view.Width && item.Rect.Y + item.Rect.H <= view.Height);
-                    actual.Add(item.SArg!);
+                    if (!actual.Contains(item.SArg!)) actual.Add(item.SArg!);
                     if (item.Clickable) Assert.Equal(item, view.Items[view.HitTest(item.Rect.X + 1, item.Rect.Y + 1)]);
+                }
+                if (!quick)
+                {
+                    // Modal: sem setas; a rolagem desce uma página por vez até o fim.
+                    if (view.Scroll is not { } sc || sc.Offset + sc.Visible >= sc.Total) break;
+                    Assert.DoesNotContain(view.Items, i => i.Action == TdUiAction.BuildCatalogPage);
+                    r.Ui.ScrollBy(sc.Visible);
+                    continue;
                 }
                 var next = view.Items.Single(i => i.Action == TdUiAction.BuildCatalogPage && i.Arg == 1);
                 if (!next.Enabled) break;

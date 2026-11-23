@@ -1,6 +1,7 @@
 using SideWar.Core.Simulation;
 using SideWar.Core.Td;
 using SideWar.Runtime.Geometry;
+using SideWar.Runtime.Input;
 
 namespace SideWar.Runtime.Td;
 
@@ -13,7 +14,7 @@ public sealed partial class TdUiController
 {
     public const string FusionTipKey = "fusion-discovery-done";
     public const float FuseWidth = 360f, FuseFont = 14f, FuseTitleFont = 15f, FuseButtonH = 32f;
-    public const string FusionTipText = "Fusão liberada! Fundir compra um módulo para uma torre base; não junta duas torres existentes.";
+    public const string FusionTipText = "Fusão liberada! Escolha uma torre na barra e solte sobre outra: ela funde.";
 
     private int _fuseBase;         // > 0: cartão de fusão aberto sobre esta torre
     private string? _fuseType;     // módulo escolhido (preview); nulo = escolhendo
@@ -80,6 +81,110 @@ public sealed partial class TdUiController
         };
     }
 
+    /// <summary>Motivo curto (cabe no título do painel) de a fusão por soltar estar bloqueada.</summary>
+    public static string DropReasonText(TdMatchState m, in TdFusionCheck c) => c.Reason switch
+    {
+        CommandReason.FusionLocked => $"só na fase {m.Content.Fusion.MinStage}",
+        CommandReason.AlreadyFused => "torre já fundida",
+        CommandReason.TowerLocked => "módulo bloqueado",
+        CommandReason.TowerTypeLimit => "limite do tipo",
+        CommandReason.InsufficientCredits => $"faltam ${c.Missing}",
+        CommandReason.InvalidPhase => "fora de Preparo/Onda",
+        CommandReason.NotPlaced => "torre sem posição",
+        _ => "par inválido",
+    };
+
+    /// <summary>Soltar na torre: envia <see cref="FuseTower"/> (o Core revalida e cobra), dispara o efeito curto e sai do modo posicionar como após construir.</summary>
+    private void DropFuse(int towerId, string moduleId, in TdFusionCheck check)
+    {
+        _fuseAwait = towerId;
+        _fuseAwaitName = check.Name;
+        _fxTowerId = towerId;
+        _fxStart = _now();
+        _send(new FuseTower(towerId, moduleId));
+        if (QuickTowersOpen) { ResetBuild(); Changed?.Invoke(); }
+        else SetMode(TdUiMode.Build);
+        _dropTowerId = 0;
+    }
+
+    // ---- fusão por arrasto (Parte E): arrastar uma torre já colocada e soltar sobre outra ---------------------------------
+
+    private int _dragTowerId;
+    private bool _dragMoved;
+    private float _dragStartX;
+    public const float DragThresholdDip = 5f;
+
+    /// <summary>Arrasto de uma torre colocada em curso (a faixa só mostra o fantasma; a torre fica no lugar até soltar).</summary>
+    public bool DraggingTower => _dragTowerId > 0;
+
+    /// <summary>Botão pressionado sobre uma torre posicionada: começa o arrasto (sem mover = clique, que abre o inspetor ao soltar).</summary>
+    public bool BeginTowerDrag(int towerId, float xDip)
+    {
+        var m = _match();
+        int ti = FindTower(m, towerId);
+        if (ti < 0 || !m.Towers[ti].Placed || BuildActive || BossHidden || m.Phase is not (MatchPhase.Preparo or MatchPhase.Onda)) return false;
+        _dragTowerId = towerId;
+        _dragMoved = false;
+        _dragStartX = xDip;
+        return true;
+    }
+
+    /// <summary>Mouse movendo durante o arrasto: atualiza o fantasma e o preview da fusão sobre a torre-alvo (igual ao da barra).</summary>
+    public void TowerDragMoved(float xDip)
+    {
+        if (_dragTowerId == 0) return;
+        var m = _match();
+        if (FindTower(m, _dragTowerId) < 0) { CancelTowerDrag(); return; }
+        if (!_dragMoved && MathF.Abs(xDip - _dragStartX) < DragThresholdDip) return;
+        _dragMoved = true;
+        int w = TdBand.WidthDip(m);
+        _ghostX = TdPlacement.ToLogical((int)MathF.Round(Math.Clamp(xDip, 0f, w)), w);
+        _dropTowerId = 0;
+        _ghostValid = false;
+        if (TdHitTester.Test(m, Math.Clamp(xDip, 0f, w - 1f), TdBand.HeightDip / 2f) is { Kind: HitKind.TdTower } hit && hit.TowerId != _dragTowerId)
+        {
+            var (_, _, reason) = m.CheckFusionTowers(hit.TowerId, _dragTowerId);
+            _dropTowerId = hit.TowerId;
+            _dropCheck = new TdFusionCheck(reason, 0, 0, m.FusionNameOfTowers(hit.TowerId, _dragTowerId), false, "");
+            _ghostValid = reason == CommandReason.None;
+            int ti = FindTower(m, hit.TowerId);
+            if (ti >= 0) _ghostX = m.Towers[ti].X;
+        }
+        Changed?.Invoke();
+    }
+
+    /// <summary>Soltou: sobre um par válido funde (a mais forte vira base, sem custo); fora, ou par inválido, a torre fica onde estava; sem mover é clique (inspetor).</summary>
+    public void TowerDragEnd(float xDip)
+    {
+        if (_dragTowerId == 0) return;
+        TowerDragMoved(xDip);
+        int dragged = _dragTowerId, target = _dropTowerId;
+        bool moved = _dragMoved;
+        var check = _dropCheck;
+        CancelTowerDrag();
+        if (!moved) { OpenInspector(dragged); return; }
+        if (target == 0 || !check.IsOk) { Changed?.Invoke(); return; }
+        var m = _match();
+        var (baseId, _, _) = m.CheckFusionTowers(target, dragged);
+        _fuseAwait = baseId;
+        _fuseAwaitName = check.Name;
+        _fxTowerId = baseId;
+        _fxStart = _now();
+        _send(new FuseTowers(target, dragged));
+    }
+
+    /// <summary>Cancela o arrasto sem mexer na partida (Esc, partida acabou).</summary>
+    public void CancelTowerDrag()
+    {
+        if (_dragTowerId == 0) return;
+        _dragTowerId = 0;
+        _dragMoved = false;
+        _dropTowerId = 0;
+        _ghostValid = false;
+        _ghostX = -1;
+        Changed?.Invoke();
+    }
+
     private void OpenFuse(int towerId)
     {
         var m = _match();
@@ -137,7 +242,7 @@ public sealed partial class TdUiController
             if (!BossHidden)
             {
                 bool ok = ti >= 0 && m.Towers[ti].HasModule;
-                if (ok) { _onb?.MarkTipSeen(FusionTipKey); _ftShown = _ftPending = false; }
+                if (ok) { _ack |= Ack.Fusion; _onb?.MarkTipSeen(FusionTipKey); _ftShown = _ftPending = false; }
                 _noticeTitle = ok ? "Torre fundida" : "Fusão recusada";
                 _noticeText = ok ? (ti >= 0 ? m.TowerDisplayName(m.Towers[ti]) : name ?? "") : "O Core recusou: confira créditos e limites.";
                 _noticeUntil = _now() + StageNoticeSeconds;
@@ -175,7 +280,7 @@ public sealed partial class TdUiController
 
     private void ResetFusion(bool clearSeen)
     {
-        _fuseBase = _fuseAwait = 0;
+        _fuseBase = _fuseAwait = _fxTowerId = _dropTowerId = _dragTowerId = 0;
         _fuseType = null;
         _fuseAwaitName = null;
         _ftShown = _ftPending = false;
@@ -188,7 +293,7 @@ public sealed partial class TdUiController
     {
         var s = new Stack(QuizWidth);
         QuizText(s, FusionTipText, QuizOptionFont, icon: TdIcon.Star);
-        s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, s.Width - 2 * Pad, 34f), TdUiKind.Button, "Experimentar fusão", TdUiAction.FusionTry, Tone: TdTone.Accent, FontSize: QuizOptionFont));
+        s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, s.Width - 2 * Pad, 34f), TdUiKind.Button, "Experimentar pelo inspetor", TdUiAction.FusionTry, Tone: TdTone.Accent, FontSize: QuizOptionFont));
         s.Y += 38f;
         s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, s.Width - 2 * Pad, 34f), TdUiKind.Button, "Escolher módulo e base", TdUiAction.FusionModule, FontSize: QuizOptionFont));
         s.Y += 38f;

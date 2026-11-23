@@ -1,0 +1,341 @@
+using SideWar.Core;
+using SideWar.Core.Content.Td;
+using SideWar.Core.Simulation;
+using SideWar.Core.Td;
+using SideWar.Runtime.Input;
+using BuildTower = SideWar.Core.Td.BuildTower;
+using SideWar.Runtime.Td;
+using Xunit;
+using LayoutChanged = SideWar.Core.Td.LayoutChanged;
+
+namespace SideWar.Runtime.Tests.Td;
+
+/// <summary>Fusão por soltar (escolher a torre na barra e soltar sobre outra), rolagem da modal e tutorial atualizado.</summary>
+public sealed class TdFusionDropTests
+{
+    private sealed class Host : ITdUiHost
+    {
+        public bool Paused => false;
+        public void TogglePause() { }
+        public void OpenSettings() { }
+        public void RequestExit() { }
+        public bool HudMinimized { get; set; } = true;
+        public void SetHudMinimized(bool minimized) => HudMinimized = minimized;
+        public void StartStage(int stageId) { }
+        public int StageCount => 6;
+        public bool StageUnlocked(int stageId) => true;
+        public int StageStars(int stageId) => 0;
+        public bool StageCrown(int stageId) => false;
+        public int StageMedals(int stageId) => 0;
+        public int StageBestScore(int stageId) => 0;
+        public TdRankProgress Rank => TdRank.Progress(0);
+        public TdRecordOutcome LastOutcome => default;
+        public int SealsAvailable => 0;
+        public bool NodePurchased(string nodeId) => false;
+        public bool PurchaseNode(string nodeId) => true;
+    }
+
+    private sealed class Store : ITdOnboardingStore
+    {
+        public readonly HashSet<string> Seen = [];
+        public bool Done;
+        public bool TutorialDone => Done;
+        public void SetTutorialDone(bool done) => Done = done;
+        public bool TipSeen(string id) => Seen.Contains(id);
+        public void MarkTipSeen(string id) => Seen.Add(id);
+        public void ClearTip(string id) => Seen.Remove(id);
+    }
+
+    private sealed class Rig
+    {
+        public readonly TdMatchState Match;
+        public readonly List<IGameCommand> Sent = [];
+        public readonly Store Store = new() { Done = true };
+        public readonly Host Host = new();
+        public readonly TdUiController Ui;
+        public int Tower;
+
+        public Rig(int stage = 6, long credits = 5000, bool onboarding = false)
+        {
+            Match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), stage, Rng.Seed(7, 54));
+            Match.Apply(new LayoutChanged(StripLayout.Create(1000, 954, 88, 4, 920, TowerHost.Band, [new FreeZone(32, 968)])));
+            typeof(TdMatchState).GetProperty("Credits")!.SetValue(Match, credits);
+            Ui = new TdUiController(() => Match, c => { Sent.Add(c); Match.Apply(c); }, Host, () => 0.0, onboarding ? Store : null);
+            Assert.True(Match.Apply(new BuildTower("frost", 500)).IsOk);
+            Tower = Match.Towers[0].Id;
+            Ui.Sync();
+        }
+
+        public void Credits(long v) => typeof(TdMatchState).GetProperty("Credits")!.SetValue(Match, v);
+        public float TowerX() => TdBand.TowerCenterDip(Match, Match.Towers.First(t => t.Id == Tower), TdBand.WidthDip(Match));
+
+        public void Pick(string type)
+        {
+            if (!Ui.QuickTowersOpen) Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.QuickTowers));
+            Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.ChooseTower, SArg: type));
+        }
+    }
+
+    [Fact]
+    public void Dropping_a_picked_tower_on_a_valid_pair_fuses_it_and_charges_the_same_cost()
+    {
+        var r = new Rig();
+        long before = r.Match.Credits;
+        var check = r.Match.CheckFusion(r.Tower, "bolt");
+        Assert.True(check.IsOk);
+        r.Pick("bolt");
+        r.Ui.PointerMoved(r.TowerX());
+        Assert.Equal(r.Tower, r.Ui.View.FuseTargetId);
+        Assert.True(r.Ui.View.FuseTargetOk);
+        Assert.True(r.Ui.View.GhostValid);
+        Assert.Equal("bolt", r.Ui.View.FuseModuleId);
+        var title = r.Ui.BuildPopover()!.Title;
+        Assert.Contains(check.Name, title);
+        Assert.Contains($"${check.Cost}", title);
+
+        Assert.True(r.Ui.SceneLeftClick(r.TowerX(), 20f, HitTarget.None));
+        Assert.Contains(r.Sent, c => c is FuseTower f && f.BaseId == r.Tower && f.ComponentTypeId == "bolt");
+        Assert.DoesNotContain(r.Sent, c => c is BuildTower b && b.TowerId == "bolt");
+        Assert.True(r.Match.Towers[0].HasModule);
+        Assert.Equal(before - check.Cost, r.Match.Credits);
+        Assert.Equal(r.Tower, r.Ui.View.FuseFxId);
+        Assert.True(r.Ui.View.FuseFxAge >= 0f);
+    }
+
+    [Fact]
+    public void Dropping_on_an_invalid_pair_shows_a_short_reason_and_does_nothing()
+    {
+        var r = new Rig(stage: 1); // fusão só na fase 2
+        long before = r.Match.Credits;
+        int sent = r.Sent.Count;
+        r.Pick("bolt");
+        r.Ui.PointerMoved(r.TowerX());
+        Assert.Equal(r.Tower, r.Ui.View.FuseTargetId);
+        Assert.False(r.Ui.View.FuseTargetOk);
+        Assert.False(r.Ui.View.GhostValid);
+        Assert.Contains("fase 2", r.Ui.BuildPopover()!.Title);
+        Assert.True(r.Ui.SceneLeftClick(r.TowerX(), 20f, HitTarget.None));
+        Assert.Equal(sent, r.Sent.Count);
+        Assert.Equal(before, r.Match.Credits);
+        Assert.False(r.Match.Towers[0].HasModule);
+        Assert.True(r.Ui.BuildActive); // segue escolhendo
+    }
+
+    [Fact]
+    public void Dropping_without_credits_is_refused_with_the_missing_amount()
+    {
+        var r = new Rig();
+        r.Credits(1);
+        int sent = r.Sent.Count;
+        r.Pick("bolt");
+        r.Ui.PointerMoved(r.TowerX());
+        Assert.False(r.Ui.View.GhostValid);
+        Assert.Contains("faltam", r.Ui.BuildPopover()!.Title);
+        r.Ui.SceneLeftClick(r.TowerX(), 20f, HitTarget.None);
+        Assert.Equal(sent, r.Sent.Count);
+        Assert.False(r.Match.Towers[0].HasModule);
+        Assert.Equal(1, r.Match.Credits);
+    }
+
+    [Fact]
+    public void Moving_off_the_tower_returns_to_normal_placement_and_a_fused_tower_is_refused()
+    {
+        var r = new Rig();
+        r.Pick("bolt");
+        r.Ui.PointerMoved(r.TowerX() + 200f);
+        Assert.Equal(0, r.Ui.View.FuseTargetId);
+        Assert.True(r.Ui.View.GhostValid);
+        r.Ui.PointerMoved(r.TowerX());
+        r.Ui.SceneLeftClick(r.TowerX(), 20f, HitTarget.None);
+        Assert.True(r.Match.Towers[0].HasModule);
+        r.Pick("cannon");
+        r.Ui.PointerMoved(r.TowerX());
+        Assert.False(r.Ui.View.FuseTargetOk);
+        Assert.Contains("já fundida", r.Ui.BuildPopover()!.Title);
+    }
+
+    // ---------------------------------------------------------------- arrastar uma torre já colocada
+
+    private static (int Id, float X) AddSecond(Rig r, string type = "bolt", int logical = 760)
+    {
+        Assert.True(r.Match.Apply(new BuildTower(type, logical)).IsOk);
+        r.Ui.Sync();
+        var t = r.Match.Towers[^1];
+        return (t.Id, TdBand.TowerCenterDip(r.Match, t, TdBand.WidthDip(r.Match)));
+    }
+
+    [Fact]
+    public void Dragging_a_placed_tower_onto_another_previews_and_fuses_for_free()
+    {
+        var r = new Rig();
+        var (id, x2) = AddSecond(r);
+        long credits = r.Match.Credits;
+        Assert.True(r.Ui.BeginTowerDrag(id, x2));
+        r.Ui.TowerDragMoved(r.TowerX());
+        Assert.True(r.Ui.DraggingTower);
+        Assert.Equal(r.Tower, r.Ui.View.FuseTargetId);
+        Assert.True(r.Ui.View.GhostValid);
+        Assert.True(r.Ui.View.FuseTargetOk);
+        r.Ui.TowerDragEnd(r.TowerX());
+        Assert.Contains(r.Sent, c => c is FuseTowers f && f.TargetId == r.Tower && f.SourceId == id);
+        Assert.Single(r.Match.Towers);
+        Assert.True(r.Match.Towers[0].HasModule);
+        Assert.Equal(credits, r.Match.Credits);
+        Assert.False(r.Ui.DraggingTower);
+        Assert.True(r.Ui.View.FuseFxId > 0);
+    }
+
+    [Fact]
+    public void Dropping_a_dragged_tower_outside_or_on_an_invalid_pair_leaves_everything_in_place()
+    {
+        var r = new Rig();
+        var (id, x2) = AddSecond(r);
+        r.Ui.BeginTowerDrag(id, x2);
+        r.Ui.TowerDragMoved(x2 - 120f);
+        Assert.Equal(0, r.Ui.View.FuseTargetId);
+        r.Ui.TowerDragEnd(x2 - 120f);
+        Assert.DoesNotContain(r.Sent, c => c is FuseTowers);
+        Assert.Equal(2, r.Match.Towers.Count);
+
+        var early = new Rig(stage: 1); // fusão bloqueada
+        var (id2, x3) = AddSecond(early);
+        early.Ui.BeginTowerDrag(id2, x3);
+        early.Ui.TowerDragMoved(early.TowerX());
+        Assert.False(early.Ui.View.GhostValid);
+        early.Ui.TowerDragEnd(early.TowerX());
+        Assert.DoesNotContain(early.Sent, c => c is FuseTowers);
+        Assert.Equal(2, early.Match.Towers.Count);
+    }
+
+    [Fact]
+    public void A_simple_press_and_release_on_a_tower_still_opens_the_inspector_and_esc_cancels_a_drag()
+    {
+        var r = new Rig();
+        Assert.True(r.Ui.SceneLeftClick(r.TowerX(), 20f, HitTarget.None)); // pressionar começa o arrasto
+        r.Ui.SceneLeftUp(r.TowerX());                                         // sem mover = clique
+        Assert.Equal(TdUiMode.Inspector, r.Ui.Mode);
+        Assert.Equal(r.Tower, r.Ui.SelectedTowerId);
+        r.Ui.Cancel();
+
+        var (id, x2) = AddSecond(r);
+        r.Ui.BeginTowerDrag(id, x2);
+        r.Ui.TowerDragMoved(r.TowerX());
+        r.Ui.Cancel();
+        Assert.False(r.Ui.DraggingTower);
+        r.Ui.SceneLeftUp(r.TowerX());
+        Assert.DoesNotContain(r.Sent, c => c is FuseTowers);
+    }
+
+    // ---------------------------------------------------------------- rolagem
+
+    private static Rig WithTowers(int n)
+    {
+        var r = new Rig();
+        string[] ids = [.. r.Match.Content.Towers.Where(t => t.UnlockStage <= r.Match.UnlockedTowerStage).Select(t => t.Id)];
+        for (int x = 100, k = 0; r.Match.Towers.Count < n && x < 960; x += 80, k++)
+            r.Match.Apply(new BuildTower(ids[k % ids.Length], x));
+        Assert.Equal(n, r.Match.Towers.Count);
+        r.Ui.Sync();
+        return r;
+    }
+
+    [Fact]
+    public void Towers_tab_scrolls_by_wheel_and_keyboard_without_arrow_buttons()
+    {
+        var r = WithTowers(9);
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.ModalTab, (int)TdUiMode.Towers));
+        var v = r.Ui.BuildPopover()!;
+        Assert.Equal(new TdScrollInfo(9, TdUiController.ModalTowerRows, 0, 132f, TdUiController.ModalTowerRows * 52f - 6f), v.Scroll);
+        Assert.DoesNotContain(v.Items, i => i.Action is TdUiAction.TowerPage or TdUiAction.BuildCatalogPage);
+        Assert.Equal(TdUiController.ModalTowerRows, v.Items.Count(i => i.Action == TdUiAction.OpenTower));
+
+        Assert.True(r.Ui.ScrollBy(1));
+        Assert.Equal(1, r.Ui.BuildPopover()!.Scroll!.Value.Offset);
+        r.Ui.ScrollBy(100);
+        Assert.Equal(3, r.Ui.BuildPopover()!.Scroll!.Value.Offset); // 9 - 6
+        r.Ui.ScrollBy(-100);
+        Assert.Equal(0, r.Ui.BuildPopover()!.Scroll!.Value.Offset);
+        r.Ui.ScrollKey(1); // teclado: uma página, travada no fim
+        Assert.Equal(3, r.Ui.BuildPopover()!.Scroll!.Value.Offset);
+        r.Ui.ScrollKey(-1);
+        Assert.Equal(0, r.Ui.BuildPopover()!.Scroll!.Value.Offset);
+        var (y, h) = r.Ui.BuildPopover()!.Scroll!.Value.Thumb();
+        Assert.Equal(132f, y);
+        Assert.InRange(h, 16f, 52f * 6f);
+    }
+
+    [Fact]
+    public void Scrolling_is_a_noop_on_tabs_without_a_long_list()
+    {
+        var r = new Rig();
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.ModalTab, (int)TdUiMode.Towers));
+        Assert.Null(r.Ui.BuildPopover()!.Scroll);
+        Assert.False(r.Ui.ScrollBy(1));
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.ModalTab, (int)TdUiMode.Help));
+        Assert.False(r.Ui.ScrollKey(1));
+    }
+
+    // ---------------------------------------------------------------- tutorial
+
+    [Fact]
+    public void Help_card_covers_hud_fusion_runes_and_ranks_and_offers_the_tutorial_again()
+    {
+        var r = new Rig(onboarding: true);
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.ModalTab, (int)TdUiMode.Help));
+        var texts = r.Ui.BuildPopover()!.Items.Select(i => i.Text).ToArray();
+        Assert.Contains(texts, t => t.Contains("HUD"));
+        Assert.Contains(texts, t => t.Contains("funde"));
+        Assert.Contains(texts, t => t.Contains("runas"));
+        Assert.Contains(texts, t => t.Contains("Patentes"));
+        var redo = r.Ui.BuildPopover()!.Items.First(i => i.Action == TdUiAction.RedoTutorial);
+        r.Ui.Activate(redo);
+        Assert.False(r.Store.Done);
+    }
+
+    [Fact]
+    public void Tutorial_teaches_rank_and_then_fusion_with_short_texts_and_never_without_a_pair()
+    {
+        var r = new Rig(onboarding: true);
+        r.Store.Done = false;
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.FusionTipDismiss)); // o convite da fusão é outro cartão; aqui só o passo do tutorial
+        var seen = new List<TdTutorialStep>();
+        r.Host.SetHudMinimized(false);
+        r.Ui.Sync();
+        r.Host.SetHudMinimized(true);
+        for (int i = 0; i < 40 && r.Ui.Step != TdTutorialStep.Rank && r.Ui.Step != TdTutorialStep.None; i++)
+        {
+            r.Ui.Sync();
+            seen.Add(r.Ui.Step);
+            r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.TutorialNext));
+            r.Ui.Sync();
+        }
+        Assert.Equal(TdTutorialStep.Rank, r.Ui.Step);
+        var call = r.Ui.BuildPopover();
+        Assert.NotNull(call);
+        Assert.True(call!.Items.Any(i => i.Action == TdUiAction.TutorialSkip), call.Title + ":" + string.Join("|", call.Items.Select(i => i.Text)) + " mode=" + r.Ui.Mode);
+        Assert.True(call.Items.Any(i => i.Text.Contains("Patente")), string.Join("|", call.Items.Select(i => i.Text)));
+
+        // Com a onda em curso e 2 torres, a fusão (liberada na fase 2) vira passo.
+        Assert.True(r.Match.Apply(new BuildTower("frost", 700)).IsOk);
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.TutorialNext));
+        r.Match.Apply(new StartWave());
+        for (int i = 0; i < 40 && r.Ui.Step != TdTutorialStep.Fusion && r.Ui.Step != TdTutorialStep.None; i++)
+        {
+            r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.TutorialNext));
+            r.Ui.Sync();
+        }
+        Assert.Equal(TdTutorialStep.Fusion, r.Ui.Step);
+        var tip = r.Ui.BuildPopover()!;
+        Assert.Contains(tip.Items, i => i.Text.Contains("solte uma torre sobre outra"));
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.TutorialSkip));
+        Assert.True(r.Store.Done); // mostrado uma vez: pular persiste
+        Assert.Equal(TdTutorialStep.None, r.Ui.Step);
+    }
+
+    [Fact]
+    public void Fusion_tip_text_describes_the_drop_gesture()
+    {
+        Assert.Contains("solte sobre outra", TdUiController.FusionTipText);
+        Assert.DoesNotContain("não junta", TdUiController.FusionTipText);
+    }
+}

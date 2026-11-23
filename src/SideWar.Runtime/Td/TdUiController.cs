@@ -61,6 +61,11 @@ public sealed partial class TdUiController
     public bool CornerPopover => QuickTowersOpen || RuneWindowOpen || EndCardOpen || NoticeOpen || RuneCardOpen || AlertCardOpen || FuseCardOpen || FusionTipOpen || _fusionChoosingModule || FusionTargetActive || MutationWarnOpen || ((Mode == TdUiMode.None || QuickTowersOpen) && QuizActive);
     private int _chosenX = -1;       // X lógico já escolhido (passo "escolher a torre"); -1 = ainda no passo do ponto
     private int _moveTowerId;        // > 0: reposicionando uma torre SEM POSIÇÃO (sem escolha de tipo)
+    private int _dropTowerId;       // > 0: o fantasma está sobre esta torre (preview de fusão)
+    private TdFusionCheck _dropCheck;
+    private int _fxTowerId;
+    private double _fxStart;
+    public const float FuseFxSeconds = 0.6f;
     private int _ghostX = -1;
     private bool _ghostValid;
     private int _hoverDef = -1;
@@ -84,7 +89,6 @@ public sealed partial class TdUiController
     private bool _legendHint;
     private int _runeCount;
     private readonly HashSet<string> _runeKnown = [];
-    private int _towerPage;
     private double _lastActionAt;
     private float _anchorX;
 
@@ -137,18 +141,24 @@ public sealed partial class TdUiController
     /// <summary>Visão da faixa: seleção, fantasma e alcance da torre candidata.</summary>
     public TdView View => new(_selectedTowerId, 0)
     {
-        GhostX = BuildActive ? _ghostX : -1,
+        GhostX = BuildActive || _dragMoved ? _ghostX : -1,
         GhostValid = _ghostValid,
-        GhostDef = _hoverDef >= 0 ? _hoverDef : -1,
+        GhostDef = _dragTowerId > 0 ? DragDef() : _hoverDef >= 0 ? _hoverDef : -1,
         ChosenX = BuildActive ? _chosenX : -1,
         PlacingMode = BuildActive,
         BandHint = Step == TdTutorialStep.Point,
         HintX = HintX(),
+        FuseTargetId = BuildActive || _dragMoved ? _dropTowerId : 0,
+        FuseTargetOk = _dropCheck.IsOk,
+        FuseModuleId = _dropTowerId > 0 ? (_dragTowerId > 0 ? DragModuleId() : BuildActive ? _placementType : null) : null,
+        FuseFxId = _fxTowerId,
+        FuseFxAge = _fxTowerId > 0 ? (float)(_now() - _fxStart) : -1f,
     };
 
     /// <summary>Move o mouse sobre a faixa (X em DIP): só importa no passo do ponto.</summary>
     public void PointerMoved(float xDip)
     {
+        if (_dragTowerId > 0) { TowerDragMoved(xDip); return; }
         if (!ChoosingPoint) return;
         UpdateGhost(xDip);
         Changed?.Invoke();
@@ -173,10 +183,21 @@ public sealed partial class TdUiController
             }
             return true;
         }
-        if (!BuildActive) return false;
+        if (!BuildActive)
+        {
+            // Botão pressionado sobre uma torre colocada: começa o arrasto (soltar sobre outra funde; sem mover abre o inspetor).
+            return TdHitTester.Test(_match(), xDip, yDip) is { Kind: HitKind.TdTower } h && BeginTowerDrag(h.TowerId, xDip);
+        }
         Touch();
         // Clique no passo do ponto (ou novo ponto durante a escolha): valida e avança.
         UpdateGhost(xDip);
+        if (_dropTowerId > 0)
+        {
+            // Soltar sobre uma torre: fusão direta (mesmo custo/regras do cartão); par inválido não faz nada.
+            if (!_dropCheck.IsOk) { Changed?.Invoke(); return true; }
+            DropFuse(_dropTowerId, _placementType!, _dropCheck);
+            return true;
+        }
         if (!_ghostValid) { Changed?.Invoke(); return true; }
         _anchorX = xDip;
         if (_moveTowerId > 0)
@@ -193,6 +214,9 @@ public sealed partial class TdUiController
         return true;
     }
 
+    /// <summary>Botão esquerdo solto na cena: termina um arrasto de torre, se houver.</summary>
+    public void SceneLeftUp(float xDip) => TowerDragEnd(xDip);
+
     public void SceneRightClick()
     {
         if (PopoverOpen) Close();
@@ -201,6 +225,7 @@ public sealed partial class TdUiController
     /// <summary>ESC / clique direito / ocultação da cena / 30 s: cancela sem tocar no jogo (RF-28.20 passo 5).</summary>
     public void Cancel()
     {
+        if (_dragTowerId > 0) { CancelTowerDrag(); return; }
         if (!PopoverOpen && _selectedTowerId == 0) return;
         Close();
     }
@@ -348,9 +373,9 @@ public sealed partial class TdUiController
             case TdUiAction.AutoStartToggle:
                 _send(new SetAutoStart(_match().AutoStart == AutoStartMode.Off ? AutoStartMode.Countdown : AutoStartMode.Off, 15));
                 Changed?.Invoke(); break;
-            case TdUiAction.TowerCategory: _towerCategory = item.SArg ?? "attack"; _buildPage = 0; Changed?.Invoke(); break;
+            case TdUiAction.TowerCategory: _towerCategory = item.SArg ?? "attack"; _buildPage = 0; _buildScroll = 0; Changed?.Invoke(); break;
             case TdUiAction.BuildCatalogPage: _buildPage = Math.Max(0, _buildPage + item.Arg); Changed?.Invoke(); break;
-            case TdUiAction.TowerPage: _towerPage = Math.Max(0, _towerPage + item.Arg); Changed?.Invoke(); break;
+            case TdUiAction.TowerPage: ScrollBy(item.Arg * ModalTowerRows); break;
             case TdUiAction.OpenTower: OpenInspector(item.Arg); break;
             case TdUiAction.Reposition:
                 EnterBuild();
@@ -502,6 +527,8 @@ public sealed partial class TdUiController
         _moveTowerId = 0;
         _ghostX = -1;
         _ghostValid = false;
+        _dropTowerId = 0;
+        _dragTowerId = 0;
         _hoverDef = -1;
         _notice = null;
     }
@@ -690,10 +717,39 @@ public sealed partial class TdUiController
         Changed?.Invoke();
     }
 
+    private int DragDef()
+    {
+        var m = _match();
+        int ti = FindTower(m, _dragTowerId);
+        return ti >= 0 ? m.Towers[ti].DefIndex : -1;
+    }
+
+    private string? DragModuleId()
+    {
+        var m = _match();
+        var (b, mo, r) = m.CheckFusionTowers(_dropTowerId, _dragTowerId);
+        if (r != CommandReason.None) return m.Content.Towers[DragDef()].Id;
+        int mi = FindTower(m, mo);
+        return mi >= 0 ? m.Content.Towers[m.Towers[mi].DefIndex].Id : null;
+    }
+
     private void UpdateGhost(float xDip)
     {
         var m = _match();
         int w = TdBand.WidthDip(m);
+        _dropTowerId = 0;
+        // Fusão por soltar: com um tipo escolhido, o fantasma sobre uma torre posicionada vira preview de fusão (o Core revalida em FuseTower).
+        if (_moveTowerId == 0 && _placementType is not null
+            && TdHitTester.Test(m, Math.Clamp(xDip, 0f, w - 1f), TdBand.HeightDip / 2f) is { Kind: HitKind.TdTower } hit
+            && FindTower(m, hit.TowerId) is var ti and >= 0 && m.Towers[ti].Placed)
+        {
+            _dropTowerId = hit.TowerId;
+            _dropCheck = m.CheckFusion(hit.TowerId, _placementType);
+            _ghostX = m.Towers[ti].X;
+            _ghostValid = _dropCheck.IsOk;
+            _notice = _dropCheck.IsOk ? $"Soltar funde: {_dropCheck.Name} ${_dropCheck.Cost}" : "Fusão: " + DropReasonText(m, _dropCheck);
+            return;
+        }
         int logical = TdPlacement.ToLogical((int)MathF.Round(Math.Clamp(xDip, 0f, w)), w);
         var reason = m.ValidatePlacement(logical, _moveTowerId, out int snapped);
         bool room = _moveTowerId > 0 || m.Towers.Count < TdMatchState.TechnicalTowerLimit;
@@ -945,6 +1001,8 @@ public sealed partial class TdUiController
     public const float QuickWidth = 304f, QuickHeader = 6f, QuickCardH = 62f;
     private string _towerCategory = "attack";
     private int _buildPage;
+    private int _buildScroll, _towerScroll;
+    public const int ModalBuildRows = 5, ModalTowerRows = 6;
 
     private static string NextTowerHint(TdMatchState m)
     {
@@ -996,7 +1054,7 @@ public sealed partial class TdUiController
         items.Add(new TdUiItem(new DipRect(30, statusY, w - 60, 20), TdUiKind.Label, NextTowerHint(m), Tone: TdTone.Dim));
         items.Add(new TdUiItem(new DipRect(w - 30, statusY, 22, 20), TdUiKind.Button, ">", TdUiAction.BuildCatalogPage, 1, Enabled: (_buildPage + 1) * pageSize < count));
         float h = statusY + 24;
-        return new TdPopoverView(BuildActive ? "TORRES   Toque na faixa" : "TORRES   Escolha uma torre", [.. items], w, h, 0, Quick: true);
+        return new TdPopoverView(BuildActive && _dropTowerId > 0 ? (_dropCheck.IsOk ? $"FUNDIR: {_dropCheck.Name}  ${_dropCheck.Cost}" : "FUSÃO: " + DropReasonText(m, _dropCheck)) : BuildActive ? "TORRES   Toque na faixa" : "TORRES   Escolha uma torre", [.. items], w, h, 0, Quick: true);
     }
 
     private static Stack Placeholder()
@@ -1190,7 +1248,6 @@ public sealed partial class TdUiController
                     if (it.Action == TdUiAction.OpenTower) items.Add(Put(it, 16, y, 560, 46));
                     else if (it.Action == TdUiAction.Sell) { items.Add(Put(it, 584, y, 120, 46)); row++; }
                     else if (it.Action == TdUiAction.Reposition) items.Add(Put(it, 330, y + 6, 240, 34));
-                    else items.Add(Put(it, 16 + (it.Arg > 0 ? 360 : 0), 132 + 8 * 52 + 4, 336, 34));
                 }
                 break;
             }
@@ -1235,6 +1292,38 @@ public sealed partial class TdUiController
         return runeTip;
     }
 
+    /// <summary>Lista rolável da aba atual da modal (Construir: catálogo; Torres: torres em campo). Nulo se cabe inteira.</summary>
+    private TdScrollInfo? ScrollInfo(TdMatchState m)
+    {
+        if (Mode == TdUiMode.Towers)
+            return m.Towers.Count > ModalTowerRows ? new(m.Towers.Count, ModalTowerRows, _towerScroll, 132f, ModalTowerRows * 52f - 6f) : null;
+        if (Mode == TdUiMode.Build && !BuildActive)
+        {
+            int count = m.Content.Towers.Count(t => t.Category == _towerCategory && t.UnlockStage <= m.UnlockedTowerStage);
+            return count > ModalBuildRows ? new(count, ModalBuildRows, _buildScroll, 158f, ModalBuildRows * 51f - 3f) : null;
+        }
+        return null;
+    }
+
+    /// <summary>Rolagem da lista da aba atual (roda do mouse: 1 linha por clique; teclado: página). Negativo sobe. Devolve true se a aba tem lista rolável.</summary>
+    public bool ScrollBy(int rows)
+    {
+        var m = _match();
+        if (ScrollInfo(m) is not { } info) return false;
+        int max = Math.Max(0, info.Total - info.Visible);
+        int next = Math.Clamp(info.Offset + rows, 0, max);
+        if (next != info.Offset)
+        {
+            if (Mode == TdUiMode.Towers) _towerScroll = next; else _buildScroll = next;
+            Changed?.Invoke();
+        }
+        return true;
+    }
+
+    /// <summary>Rolagem pelo teclado: -1/+1 = uma página (ou uma linha com <paramref name="line"/>).</summary>
+    public bool ScrollKey(int dir, bool line = false) =>
+        ScrollInfo(_match()) is { } i && ScrollBy(dir * (line ? 1 : i.Visible));
+
     private TdPopoverView? Modalize(TdPopoverView? view)
     {
         if (view is null) return null;
@@ -1258,7 +1347,7 @@ public sealed partial class TdUiController
         {
             var tip = RelayoutTab(view, items);
             AddModalTutorial(items);
-            return new TdPopoverView($"{view.Title}   ¢{_match().Credits}", [.. items], 720, 480, 0, Tip: tip);
+            return new TdPopoverView($"{view.Title}   ¢{_match().Credits}", [.. items], 720, 480, 0, Tip: tip, Scroll: ScrollInfo(_match()));
         }
         foreach (var item in view.Items)
         {
@@ -1279,14 +1368,9 @@ public sealed partial class TdUiController
                 items.Add(item with { Rect = new DipRect(16, 158 + towerRow++ * 51, 688, 48) });
                 continue;
             }
-            if (item.Action == TdUiAction.BuildCatalogPage)
-            {
-                items.Add(item with { Rect = new DipRect(item.Arg < 0 ? 16 : 662, 426, 42, 28) });
-                continue;
-            }
             if (item.Kind == TdUiKind.Label && item.SArg == "catalog-hint")
             {
-                items.Add(item with { Rect = new DipRect(64, 430, 590, 20) });
+                items.Add(item with { Rect = new DipRect(16, 430, 672, 20) });
                 continue;
             }
             if (item.Action == TdUiAction.TowerCategory)
@@ -1297,7 +1381,7 @@ public sealed partial class TdUiController
             items.Add(item with { Rect = new DipRect(r.X * 2.2f + 20, 96 + r.Y * factor * .92f, r.W * 2.2f, r.H * factor * .92f) });
         }
         AddModalTutorial(items);
-        return new TdPopoverView($"{view.Title}   ¢{_match().Credits}", [.. items], 720, 480, 0);
+        return new TdPopoverView($"{view.Title}   ¢{_match().Credits}", [.. items], 720, 480, 0, Scroll: ScrollInfo(_match()));
     }
 
     private sealed class Stack(float width)
@@ -1378,15 +1462,14 @@ public sealed partial class TdUiController
             if (m.Content.Towers.Any(t => t.Category == id && t.UnlockStage <= m.UnlockedTowerStage))
                 s.Add(TdUiKind.Button, name, 24, TdUiAction.TowerCategory, sarg: id, selected: _towerCategory == id);
         var towers = m.Content.Towers;
-        const int pageSize = 5;
         int count = towers.Count(t => t.Category == _towerCategory && t.UnlockStage <= m.UnlockedTowerStage);
-        _buildPage = Math.Clamp(_buildPage, 0, Math.Max(0, (count - 1) / pageSize));
+        _buildScroll = Math.Clamp(_buildScroll, 0, Math.Max(0, count - ModalBuildRows));
         int seen = 0;
         for (int i = 0; i < towers.Length; i++)
         {
             var d = towers[i];
             if (d.Category != _towerCategory || d.UnlockStage > m.UnlockedTowerStage) continue;
-            if (seen++ < _buildPage * pageSize || seen > (_buildPage + 1) * pageSize) continue;
+            if (seen++ < _buildScroll || seen > _buildScroll + ModalBuildRows) continue;
             bool locked = m.UnlockedTowerStage < d.UnlockStage;
             int owned = m.TowerCount(i);
             long price = m.NextTowerCost(i); // custo crescente por tipo (SDD-29 §5.1)
@@ -1396,9 +1479,7 @@ public sealed partial class TdUiController
             s.Add(TdUiKind.Button, owned > 0 ? $"{d.Name}  x{owned}" : d.Name, 44f, TdUiAction.ChooseTower, sarg: d.Id, right: right, sub: sub, enabled: !locked && !poor,
                 tone: locked ? TdTone.Dim : poor ? TdTone.Bad : TdTone.Normal);
         }
-        s.Add(TdUiKind.Button, "<", 24, TdUiAction.BuildCatalogPage, -1, enabled: _buildPage > 0);
         s.Add(TdUiKind.Label, NextTowerHint(m), 20, sarg: "catalog-hint", tone: TdTone.Dim);
-        s.Add(TdUiKind.Button, ">", 24, TdUiAction.BuildCatalogPage, 1, enabled: (_buildPage + 1) * pageSize < count);
         return Finish("Construir: escolha a torre", s, _anchorX);
     }
 
@@ -1476,8 +1557,8 @@ public sealed partial class TdUiController
         s.Add(TdUiKind.Label, m.FusionUnlocked ? "Fusão disponível" : $"Fusão: fase {m.Content.Fusion.MinStage}", RowH, tone: TdTone.Dim);
         if (m.Towers.Count == 0) s.Add(TdUiKind.Label, "Nenhuma torre. Use Construir.", RowH, tone: TdTone.Dim);
         float sellW = 98f;
-        _towerPage = Math.Min(_towerPage, Math.Max(0, (m.Towers.Count - 1) / 8));
-        for (int i = _towerPage * 8; i < Math.Min(m.Towers.Count, (_towerPage + 1) * 8); i++)
+        _towerScroll = Math.Clamp(_towerScroll, 0, Math.Max(0, m.Towers.Count - ModalTowerRows));
+        for (int i = _towerScroll; i < Math.Min(m.Towers.Count, _towerScroll + ModalTowerRows); i++)
         {
             var t = m.Towers[i];
             var d = m.Content.Towers[t.DefIndex];
@@ -1489,11 +1570,6 @@ public sealed partial class TdUiController
                 "Vender", TdUiAction.Sell, t.Id, Right: $"+${refund}", Tone: TdTone.Bad));
             s.Y += RowH + 4;
             if (!t.Placed) s.Add(TdUiKind.Button, "SEM POSICAO: reposicionar", RowH - 2, TdUiAction.Reposition, arg: t.Id, tone: TdTone.Warn);
-        }
-        if (m.Towers.Count > 8)
-        {
-            s.Add(TdUiKind.Button, "Anterior", RowH, TdUiAction.TowerPage, -1, enabled: _towerPage > 0);
-            s.Add(TdUiKind.Button, "Próximas", RowH, TdUiAction.TowerPage, 1, enabled: (_towerPage + 1) * 8 < m.Towers.Count);
         }
         return Finish("Torres", s, 0);
     }

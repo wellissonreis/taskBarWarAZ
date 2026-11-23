@@ -41,6 +41,10 @@ public enum TdTutorialStep : byte
     Controls,
     /// <summary>TD.29b: fragmentos despertam runas na aba Runas (informativo, OK).</summary>
     Runes,
+    /// <summary>Patente e brasão: o progresso fica em Jogo (informativo, OK).</summary>
+    Rank,
+    /// <summary>Fusão: escolher uma torre na barra e soltar sobre outra torre (informativo, OK; só com a fusão liberada e 2 torres).</summary>
+    Fusion,
 }
 
 /// <summary>
@@ -76,7 +80,7 @@ public sealed partial class TdUiController
     public const float CalloutWidth = 250f;
 
     [Flags]
-    private enum Ack : byte { None = 0, Core = 1, Credits = 2, Portal = 4, Range = 8, Call = 16, Sell = 32, Controls = 64, Runes = 128 }
+    private enum Ack : ushort { None = 0, Core = 1, Credits = 2, Portal = 4, Range = 8, Call = 16, Sell = 32, Controls = 64, Runes = 128, Rank = 256, Fusion = 512 }
 
     private Ack _ack;
     private bool _abilityDone;
@@ -136,6 +140,7 @@ public sealed partial class TdUiController
                 return BuildActive ? TdTutorialStep.Point : Mode == TdUiMode.Build ? TdTutorialStep.Tower : TdTutorialStep.Build;
             if ((_ack & Ack.Range) == 0) return TdTutorialStep.Range;
             if ((_ack & Ack.Controls) == 0) return TdTutorialStep.Controls;
+            if ((_ack & Ack.Rank) == 0) return TdTutorialStep.Rank;
             return TdTutorialStep.Wave;
         }
         if (_now() < _hurtUntil) return TdTutorialStep.Hurt;
@@ -143,8 +148,15 @@ public sealed partial class TdUiController
         if (m.Phase == MatchPhase.Preparo && _quizQ is not null) return TdTutorialStep.Quiz;
         if ((m.Phase == MatchPhase.Preparo || m.Options.ContinuousWaves) && (_ack & Ack.Sell) == 0 && PlacedTowers(m) > 0 && m.WaveNumber >= 1) return TdTutorialStep.Sell;
         if ((_ack & Ack.Runes) == 0 && m.Fragments > 0 && m.WaveNumber >= 1) return TdTutorialStep.Runes;
+        if ((_ack & Ack.Fusion) == 0 && m.FusionUnlocked && PlacedTowers(m) >= 2 && !FusionHasModule(m)) return TdTutorialStep.Fusion;
         if (!_abilityDone && ReadyAbility(m) >= 0) return TdTutorialStep.Ability;
         return TdTutorialStep.None;
+    }
+
+    private static bool FusionHasModule(TdMatchState m)
+    {
+        for (int i = 0; i < m.Towers.Count; i++) if (m.Towers[i].HasModule) return true;
+        return false;
     }
 
     private static bool CallReady(TdMatchState m)
@@ -206,6 +218,8 @@ public sealed partial class TdUiController
             case TdTutorialStep.Sell: _ack |= Ack.Sell; break;
             case TdTutorialStep.Controls: _ack |= Ack.Controls; break;
             case TdTutorialStep.Runes: _ack |= Ack.Runes; break;
+            case TdTutorialStep.Rank: _ack |= Ack.Rank; break;
+            case TdTutorialStep.Fusion: _ack |= Ack.Fusion; break;
         }
         Changed?.Invoke();
     }
@@ -386,7 +400,7 @@ public sealed partial class TdUiController
     private static bool HudStep(TdTutorialStep s) =>
         s is TdTutorialStep.Core or TdTutorialStep.Credits or TdTutorialStep.Build or TdTutorialStep.Wave or TdTutorialStep.CallNext
             or TdTutorialStep.Ability or TdTutorialStep.HudCollapse or TdTutorialStep.HudOpen or TdTutorialStep.Sell
-            or TdTutorialStep.Controls or TdTutorialStep.Runes or TdTutorialStep.Tower
+            or TdTutorialStep.Controls or TdTutorialStep.Runes or TdTutorialStep.Tower or TdTutorialStep.Rank or TdTutorialStep.Fusion
             || s == TdTutorialStep.Hurt;
 
     private TdUiItem[] HighlightHud(List<TdUiItem> items)
@@ -436,6 +450,8 @@ public sealed partial class TdUiController
         TdTutorialStep.Tower => (TdIcon.Build, "Escolha uma torre", null, false),
         TdTutorialStep.Controls => (TdIcon.Pause, "Pausar e velocidade 1x a 3x", "O botão ao lado pausa; 2x e 3x aceleram.", true),
         TdTutorialStep.Runes => (TdIcon.Question, "Fragmentos despertam runas", "Botão Runas (estrela) do HUD.", true),
+        TdTutorialStep.Rank => (TdIcon.Medal, "Patente e brasão: seu progresso", "Pontos sobem a patente; veja em Jogo.", true),
+        TdTutorialStep.Fusion => (TdIcon.Star, "Funda: solte uma torre sobre outra", "Escolha na barra e solte sobre ela.", true),
         TdTutorialStep.Range => (TdIcon.Target, "O círculo é o alcance.", "Ela só atira dentro dele.", true),
         TdTutorialStep.Wave => (TdIcon.Play, "Clique em Iniciar onda", null, false),
         TdTutorialStep.Hurt => (TdIcon.Alert, "Inimigo passou!", _hurtKind switch { 0 => "Construa perto do portal.", 1 => "Use uma habilidade.", _ => "Construa mais torres." }, false),
@@ -525,10 +541,10 @@ public sealed partial class TdUiController
         void Card(TdIcon icon, string text, TdTone tone = TdTone.Normal) => s.Add(TdUiKind.Label, text, 15f, tone: tone, icon: icon);
         Card(TdIcon.Heart, "Proteja o núcleo: 0 = derrota.");
         Card(TdIcon.Coin, "Créditos compram torres.");
-        Card(TdIcon.Portal, "Inimigos saem do portal.");
+        Card(TdIcon.Expand, "Chip do HUD: toque para abrir/recolher.");
         Card(TdIcon.Build, "Escolha a torre; toque na faixa.");
+        Card(TdIcon.Star, "Torre sobre torre: solte e funde.", TdTone.Accent);
         Card(TdIcon.Coin, "Cada torre igual custa +25%.");
-        Card(TdIcon.Target, "O círculo mostra o alcance.");
         if (m.Options.ContinuousWaves)
         {
             Card(TdIcon.Play, "Inicie só a 1ª onda; o resto flui.");
@@ -540,11 +556,11 @@ public sealed partial class TdUiController
             Card(TdIcon.FastForward, "Chame a próxima: ganhe bônus.");
         }
         Card(TdIcon.Coin, $"Venda na aba Torres: devolve {Math.Round(m.Content.Stages.Rules.SellRefund * 100):0}%.");
-        Card(TdIcon.Scale, "Habilidades recarregam sozinhas.");
+        Card(TdIcon.Question, "Fragmentos despertam runas.");
         Card(TdIcon.Alert, MutationHelpText);
         Card(TdIcon.Question, "Responda V ou F: ganhe bônus.");
+        Card(TdIcon.Medal, "Patentes e brasões: seus pontos.");
         Card(TdIcon.Crown, "Vença sem perder núcleo: coroa.");
-        Card(TdIcon.Medal, "Medalhas e patente: seus recordes.");
         if (_onb is not null) s.Add(TdUiKind.Button, "Refazer tutorial", RowH + 2, TdUiAction.RedoTutorial, tone: TdTone.Good, icon: TdIcon.Play);
         return Finish("Como jogar", s, 0);
     }
