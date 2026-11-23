@@ -39,7 +39,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         for (int i = 0; i < hud.Items.Length; i++)
         {
             DrawHudItem(c, hud.Items[i], i == hover);
-            if (hud.Items[i].Action == TdUiAction.HudRestore)
+            if (hud.Items[i].SArg == "wave")
                 DrawWaveTicks(c, hud.Items[i].Rect, hud.Wave, hud.TotalWaves);
             if (hud.Items[i].Highlight) DrawHighlight(c, hud.Items[i].Rect);
         }
@@ -53,12 +53,10 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     {
         if (total <= 0) return;
         int count = Math.Min(total, 10);
-        float step = (r.W - 12f) / count;
         for (int i = 0; i < count; i++)
         {
             bool reached = (long)i * total < (long)Math.Clamp(wave, 0, total) * count;
-            _p.Fill(c, new DipRect(r.X + 6f + i * step, r.Y + r.H - 5f, Math.Max(1f, step - 1f), 2f),
-                reached ? Palette.Td.Amber : Palette.Td.BorderStrong);
+            RoundBox(c, new DipRect(r.X + 106f + (r.W - 167f) + i * 6f, r.Y + 9f, 4f, 10f), reached ? Palette.Td.Amber : new SKColor(0x2a, 0x3d, 0x58), reached ? Palette.Td.Amber : new SKColor(0x2a, 0x3d, 0x58), 1);
         }
     }
 
@@ -156,12 +154,44 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     {
         var r = it.Rect;
         if (it.Kind == TdUiKind.Separator) { _p.Fill(c, r, Palette.Td.BorderStrong); return; }
-        if (it.Kind == TdUiKind.Money) { DrawMoney(c, it); return; }
+        if (it.SArg == "core")
+        {
+            DrawIcon(c, TdIcon.Heart, r.X, r.Y + 7, 14, new SKColor(0xf2, 0x6d, 0x7d));
+            _p.Text(c, it.Text, PanelFont.JetBrainsMono, 13, new DipRect(r.X + 20, r.Y + 6, r.W - 20, 16), new SKColor(0xf4, 0xf7, 0xfb));
+            return;
+        }
+        if (it.SArg == "wave")
+        {
+            _p.Text(c, "Onda", PanelFont.SpaceGrotesk, 12, new DipRect(r.X, r.Y + 6, 36, 16), Palette.Td.Muted);
+            _p.Text(c, it.Text, PanelFont.JetBrainsMono, 13, new DipRect(r.X + 44, r.Y + 6, 60 + (r.W - 167), 16), new SKColor(0xf4, 0xf7, 0xfb));
+            return;
+        }
+        if (it.Kind == TdUiKind.Money)
+        {
+            if (it.Fill > 0f) RoundBox(c, r, Palette.Td.Amber.WithAlpha((byte)(140 * it.Fill)), Palette.Td.Amber.WithAlpha((byte)(36 * it.Fill)), 4);
+            using var coin = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, Color = Palette.Td.Amber, StrokeWidth = Math.Max(1f, _p.Px(1.3f)) };
+            c.DrawCircle(_p.Px(r.X + 7), _p.Px(r.Y + 14), _p.Px(5), coin);
+            c.DrawCircle(_p.Px(r.X + 7), _p.Px(r.Y + 14), _p.Px(2.2f), coin);
+            _p.Text(c, it.Text, PanelFont.JetBrainsMono, 13, new DipRect(r.X + 20, r.Y + (it.Sub is null ? 6 : 1), r.W - 20, 16), new SKColor(0xf4, 0xf7, 0xfb));
+            if (it.Sub is not null) _p.Text(c, it.Sub, PanelFont.JetBrainsMono, 8, new DipRect(r.X + 20, r.Y + 17, r.W - 20, 10), Palette.Td.Muted);
+            return;
+        }
+        if (it.SArg == "speeds") { RoundBox(c, r, Palette.Td.BorderStrong, Palette.Td.Background, 7); return; }
+        if (it.SArg == "crate")
+        {
+            DashedBox(c, r, Palette.Td.BorderStrong, 6);
+            using var paint = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, Color = Palette.Td.Dim, StrokeWidth = Math.Max(1f, _p.Px(1f)) };
+            using var box = new SKPathBuilder();
+            box.MoveTo(_p.Px(r.X + 10), _p.Px(r.Y + 10)); box.LineTo(_p.Px(r.X + 16), _p.Px(r.Y + 7)); box.LineTo(_p.Px(r.X + 22), _p.Px(r.Y + 10)); box.LineTo(_p.Px(r.X + 22), _p.Px(r.Y + 17)); box.LineTo(_p.Px(r.X + 16), _p.Px(r.Y + 20)); box.LineTo(_p.Px(r.X + 10), _p.Px(r.Y + 17)); box.Close();
+            box.MoveTo(_p.Px(r.X + 10), _p.Px(r.Y + 10)); box.LineTo(_p.Px(r.X + 16), _p.Px(r.Y + 13)); box.LineTo(_p.Px(r.X + 22), _p.Px(r.Y + 10)); box.MoveTo(_p.Px(r.X + 16), _p.Px(r.Y + 13)); box.LineTo(_p.Px(r.X + 16), _p.Px(r.Y + 20));
+            using var path = box.Detach(); c.DrawPath(path, paint);
+            _p.Text(c, it.Text, PanelFont.SpaceGrotesk, 12, new DipRect(r.X + 26, r.Y + 6, r.W - 28, 16), Palette.Td.Dim, TextAlign.Center);
+            return;
+        }
         if (it.Action == TdUiAction.SetSpeed)
         {
-            // Botão de velocidade do chip: mostra 1x/2x/3x e alterna; âmbar quando acelerado.
-            RoundBox(c, r, it.Selected ? Palette.Td.Amber : Palette.Td.BorderStrong, hover && it.Enabled ? Palette.Td.BorderStrong : Palette.Td.Button, 6);
-            _p.Text(c, it.Text, PanelFont.JetBrainsMono, 9.5f, new DipRect(r.X, r.Y + (r.H - 12) / 2f, r.W, 12), it.Selected ? Palette.Td.Amber : Palette.Td.Text, TextAlign.Center);
+            if (it.Selected) RoundBox(c, r, Palette.Td.Amber, Palette.Td.Amber, 5);
+            _p.Text(c, it.Text, PanelFont.JetBrainsMono, 11, new DipRect(r.X, r.Y + 4, r.W, 14), it.Selected ? Palette.Td.Background : Palette.Td.Muted, TextAlign.Center);
             return;
         }
         if (it.Action == TdUiAction.PauseToggle)
@@ -176,8 +206,8 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         if (it.Action == TdUiAction.RuneWindow)
         {
             // TD.30c: botão Runas (estrela). Discreto: sem animação; ponto âmbar pequeno só quando há fragmento e nó a despertar.
-            RoundBox(c, r, it.Selected ? Palette.Td.Amber : Palette.Td.BorderStrong, hover && it.Enabled ? Palette.Td.BorderStrong : Palette.Td.Button, 6);
-            DrawIcon(c, TdIcon.Star, r.X + (r.W - 14) / 2f, r.Y + (r.H - 14) / 2f, 14f, it.Selected ? Palette.Td.Amber : it.Enabled ? Palette.Td.Text : Palette.Td.Dim);
+            RoundBox(c, r, it.Selected ? Palette.Td.Amber : Palette.Td.BorderStrong, it.Selected ? Palette.Td.Amber.WithAlpha(41) : hover && it.Enabled ? Palette.Td.BorderStrong : Palette.Td.Button, 6);
+            DrawIcon(c, TdIcon.Star, r.X + (r.W - 14) / 2f, r.Y + (r.H - 14) / 2f, 14f, it.Enabled ? Palette.Td.Amber : Palette.Td.Dim);
             if (it.Fill > 0f)
             {
                 using var dot = new SKPaint { IsAntialias = true, Color = Palette.Td.Amber };
@@ -690,15 +720,19 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         float ax = Math.Clamp(v.ArrowX, 14f, v.Width - 14f);
         using (var b = new SKPathBuilder())
         {
-            b.MoveTo(_p.Px(ax - 7f), _p.Px(boxH - 1f)); b.LineTo(_p.Px(ax), _p.Px(boxH + TdPopoverView.ArrowH - 0.5f)); b.LineTo(_p.Px(ax + 7f), _p.Px(boxH - 1f));
+            float baseY = v.ArrowTop ? TdPopoverView.ArrowH + 1f : boxH - 1f;
+            float tipY = v.ArrowTop ? 0.5f : boxH + TdPopoverView.ArrowH - 0.5f;
+            b.MoveTo(_p.Px(ax - 7f), _p.Px(baseY)); b.LineTo(_p.Px(ax), _p.Px(tipY)); b.LineTo(_p.Px(ax + 7f), _p.Px(baseY));
             using var path = b.Detach();
             using var fill = new SKPaint { IsAntialias = true, Color = Palette.Td.Surface };
             using var line = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, Color = edge, StrokeWidth = Math.Max(1f, _p.Px(1f)), StrokeJoin = SKStrokeJoin.Miter };
             c.DrawPath(path, fill);
             c.DrawPath(path, line);
         }
+        c.Save();
+        if (v.ArrowTop) c.Translate(0, _p.Px(TdPopoverView.ArrowH));
         RoundBox(c, new DipRect(0, 0, v.Width, boxH), edge, Palette.Td.Surface, 10);
-        _p.Fill(c, new DipRect(ax - 6f, boxH - 1f, 12f, 2f), Palette.Td.Surface);
+        _p.Fill(c, new DipRect(ax - 6f, v.ArrowTop ? 0 : boxH - 1f, 12f, 2f), Palette.Td.Surface);
         DrawStar(c, 19, 20, 14, 2f);
         _p.Text(c, v.Title, PanelFont.JetBrainsMono, 13, new DipRect(34, 12, 60, 16), Palette.Td.Text);
         DrawRuneWeb(c, v.Items, false);
@@ -743,6 +777,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             }
         }
         if (v.Tip is { } tip) DrawRuneTip(c, tip, v.Width, boxH, false);
+        c.Restore();
     }
 
     private void DrawRuneDiamond(SKCanvas c, float cxDip, float cyDip, float rDip)

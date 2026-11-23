@@ -16,6 +16,7 @@ public static class FontLoader
         FontRole.SilkscreenBold => "Silkscreen-Bold.ttf",
         FontRole.JetBrainsMonoRegular => "JetBrainsMono-Regular.ttf",
         FontRole.JetBrainsMonoSemiBold => "JetBrainsMono-SemiBold.ttf",
+        FontRole.SpaceGrotesk => "SpaceGrotesk.ttf",
         _ => throw new ArgumentOutOfRangeException(nameof(role)),
     };
 

@@ -262,7 +262,8 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
                 for (int i = pop.Items.Length - 1; i >= 0; i--)
                 {
                     var item = pop.Items[i]; var rect = item.Rect;
-                    if (item.Tip is not null && x / PopScale >= rect.X && x / PopScale < rect.X + rect.W && y / PopScale >= rect.Y && y / PopScale < rect.Y + rect.H) { h = i; break; }
+                    float itemY = y / PopScale - (pop.RuneWindow && pop.ArrowTop ? TdPopoverView.ArrowH : 0f);
+                    if (item.Tip is not null && x / PopScale >= rect.X && x / PopScale < rect.X + rect.W && itemY >= rect.Y && itemY < rect.Y + rect.H) { h = i; break; }
                 }
             if (h == popHover) return;
             popHover = h;
@@ -475,6 +476,21 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
             bool quick = controller.CornerPopover;
             int quickW = (int)MathF.Round(pop.Width * UiScale), quickH = (int)MathF.Round(pop.Height * UiScale);
             var bounds = quick ? new PixelRect(hudBounds.Right - quickW, Math.Max(work.Top, hudBounds.Top - quickH - 2), hudBounds.Right, Math.Max(work.Top, hudBounds.Top - quickH - 2) + quickH) : TdModalLayout.Bounds(work, ModalDpiScale);
+            if (pop.RuneWindow)
+            {
+                var rune = hud.Items.First(i => i.Action == TdUiAction.RuneWindow);
+                var placement = TdRunePopoverLayout.Place(work, hudBounds, rune.Rect.X + rune.Rect.W / 2f, UiScale, pop.Width, pop.Height);
+                bounds = placement.Bounds;
+                pop = pop with { ArrowTop = placement.ArrowTop, ArrowX = placement.ArrowX };
+            }
+            else if (controller.RuneCardOpen)
+            {
+                var rune = hud.Items.First(i => i.Action == TdUiAction.RuneWindow);
+                var placement = TdRunePopoverLayout.Place(work, hudBounds, rune.Rect.X + rune.Rect.W / 2f, UiScale, pop.Width, pop.Height);
+                int top = Math.Max(work.Top, hudBounds.Top - quickH - 2);
+                bounds = new PixelRect(placement.Bounds.Left, top, placement.Bounds.Right, top + quickH);
+                pop = pop with { ArrowX = placement.ArrowX };
+            }
             if (!quick && scrimWindow is not null && (!scrimWindow.WantsVisible || scrimWindow.Bounds != c.Monitor.Bounds))
             {
                 scrimWindow.Apply(c.Monitor.Bounds); scrimWindow.Show();

@@ -12,7 +12,7 @@ public sealed class PanelTextMetricsSkia(Typography typography) : IPanelTextMetr
 {
     private readonly Typography _typography = typography ?? throw new ArgumentNullException(nameof(typography));
 
-    public static FontRole Role(PanelFont font) => font == PanelFont.Silkscreen ? FontRole.SilkscreenRegular : FontRole.JetBrainsMonoRegular;
+    public static FontRole Role(PanelFont font) => font switch { PanelFont.Silkscreen => FontRole.SilkscreenRegular, PanelFont.SpaceGrotesk => FontRole.SpaceGrotesk, _ => FontRole.JetBrainsMonoRegular };
 
     public float Width(PanelFont font, float sizeDip, string text, float letterSpacing = 0f)
     {

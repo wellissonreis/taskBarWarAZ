@@ -1,7 +1,7 @@
 namespace SideWar.Runtime.Panel;
 
 /// <summary>Famílias de fonte do painel (SDD-20 RF-20.2), sem dependência de Skia.</summary>
-public enum PanelFont { Silkscreen, JetBrainsMono }
+public enum PanelFont { Silkscreen, JetBrainsMono, SpaceGrotesk }
 
 /// <summary>
 /// Medidas de texto em DIP para o layout puro (SDD-24 RF-24.3: "larguras de texto medidas"). Implementada no Rendering

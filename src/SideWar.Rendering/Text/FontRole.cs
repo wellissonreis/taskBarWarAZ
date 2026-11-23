@@ -14,4 +14,7 @@ public enum FontRole
 
     /// <summary>JetBrains Mono SemiBold (600).</summary>
     JetBrainsMonoSemiBold,
+
+    /// <summary>Space Grotesk (HUD TD).</summary>
+    SpaceGrotesk,
 }

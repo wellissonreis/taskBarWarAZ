@@ -68,7 +68,7 @@ public readonly record struct TdUiItem(
 /// <summary>Popover (acima da faixa): título, itens (o item 0, quando botão de fechar, fica no canto) e âncora em X (DIP da faixa).</summary>
 public sealed record TdPopoverView(string Title, TdUiItem[] Items, float Width, float Height, float AnchorX, string? IconTower = null,
     float ArrowX = -1f, float TargetHudX = -1f, bool Quick = false, TdRuneTip? Tip = null, bool RuneWindow = false,
-    TdTone AlertTone = TdTone.Normal, float Pulse = 0f, string? IconModule = null)
+    TdTone AlertTone = TdTone.Normal, float Pulse = 0f, string? IconModule = null, bool ArrowTop = false)
 {
     /// <summary>Altura (DIP) da seta do balão do tutorial (TD.15), somada ao fim da janela quando <see cref="ArrowX"/> &gt;= 0.</summary>
     public const float ArrowH = 7f;
@@ -77,6 +77,7 @@ public sealed record TdPopoverView(string Title, TdUiItem[] Items, float Width, 
 
     public int HitTest(float x, float y)
     {
+        if (RuneWindow && ArrowTop) y -= ArrowH;
         for (int i = Items.Length - 1; i >= 0; i--)
         {
             var r = Items[i].Rect;
@@ -89,7 +90,7 @@ public sealed record TdPopoverView(string Title, TdUiItem[] Items, float Width, 
     public long Signature()
     {
         var h = new HashCode();
-        h.Add(Title); h.Add(IconTower); h.Add(IconModule); h.Add((int)AlertTone); h.Add((int)(Pulse * 8)); h.Add(Quick); h.Add(RuneWindow); h.Add(Tip); h.Add((int)(ArrowX * 10)); h.Add((int)(TargetHudX * 10));
+        h.Add(ArrowTop); h.Add(Title); h.Add(IconTower); h.Add(IconModule); h.Add((int)AlertTone); h.Add((int)(Pulse * 8)); h.Add(Quick); h.Add(RuneWindow); h.Add(Tip); h.Add((int)(ArrowX * 10)); h.Add((int)(TargetHudX * 10));
         foreach (var it in Items)
         {
             h.Add(it.Text); h.Add(it.Right); h.Add(it.Sub); h.Add(it.Arg); h.Add(it.FontSize); h.Add((int)it.Icon); h.Add(it.Highlight); h.Add(it.Enabled); h.Add(it.Selected); h.Add((int)it.Tone); h.Add((int)(it.Fill * 100));
@@ -166,7 +167,7 @@ public sealed record TdHudView(TdUiItem[] Items, float Width, float Height, bool
         var h = new HashCode();
         foreach (var it in Items)
         {
-            h.Add(it.Text); h.Add(it.Right); h.Add(it.Enabled); h.Add(it.Selected); h.Add(it.Highlight); h.Add((int)it.Tone); h.Add((int)(it.Fill * 100)); h.Add((int)it.Icon); h.Add((int)it.RightIcon);
+            h.Add(it.Text); h.Add(it.Right); h.Add(it.Sub); h.Add(it.Enabled); h.Add(it.Selected); h.Add(it.Highlight); h.Add((int)it.Tone); h.Add((int)(it.Fill * 100)); h.Add((int)it.Icon); h.Add((int)it.RightIcon);
         }
         h.Add(Minimized); h.Add(Wave); h.Add(TotalWaves); h.Add(TopPad);
         if (Floats is { Count: > 0 })
