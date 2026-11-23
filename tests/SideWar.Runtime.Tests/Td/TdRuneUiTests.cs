@@ -70,7 +70,7 @@ public sealed class TdRuneUiTests
         // sem Iniciar (corrida contínua em andamento) a largura é exatamente a de repouso
         r.Match.Apply(new SideWar.Core.Td.BuildTower("bolt", 600));
         r.Match.Apply(new StartWave());
-        Assert.Equal(779f * 0.7f, r.Ui.BuildHud().Width);
+        Assert.Equal((779f + 34f) * 0.7f, r.Ui.BuildHud().Width);
     }
 
     [Fact]

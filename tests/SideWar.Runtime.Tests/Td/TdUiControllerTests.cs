@@ -464,7 +464,8 @@ public sealed class TdUiControllerTests
         var chip = r.Ui.BuildHud();
         Assert.True(chip.Minimized);
         Assert.Equal(22f, chip.Height);
-        Assert.InRange(chip.Width, 170f, 180f);
+        Assert.InRange(chip.Width, 190f, 195f);
+        Assert.Contains(chip.Items, i => i.SArg == "rank-crown" && i.Tip == "Patente: Júnior");
         Assert.DoesNotContain(chip.Items, i => i.Kind == TdUiKind.Money || i.Action == TdUiAction.StartWave);
         var expand = chip.Items.Single(i => i.Action == TdUiAction.HudExpand);
         Assert.Equal(1f, expand.Fill); // Iniciar disponível continua sinalizado sem abrir o HUD.

@@ -67,13 +67,13 @@ public sealed class TdHud29bTests
         var r = new Rig();
         var hud = r.Ui.BuildHud();
         // em Preparo o botão Iniciar existe; depois da 1ª onda (contínua) o chip em repouso tem ≤ 220 DIP
-        Assert.Equal((779f + 88f + 4f) * 0.7f, hud.Width);
+        Assert.Equal((779f + 88f + 4f + 34f) * 0.7f, hud.Width);
         Assert.Equal(28f, hud.Height);
         r.Match.Apply(new SideWar.Core.Td.BuildTower("bolt", 600));
         var sw = r.Match.Apply(new StartWave());
         Assert.Equal(MatchPhase.Onda, r.Match.Phase);
         var rest = r.Ui.BuildHud();
-        Assert.Equal(779f * 0.7f, rest.Width);
+        Assert.Equal((779f + 34f) * 0.7f, rest.Width);
         Assert.DoesNotContain(rest.Items, i => i.Action is TdUiAction.StartWave);
         Assert.All(rest.Items, i => Assert.True(i.Rect.X + i.Rect.W <= rest.Width + 0.01f));
         Assert.All(rest.Items.Where(i => i.Kind == TdUiKind.Button), i => Assert.True(i.Rect.W <= 100f, i.Text));

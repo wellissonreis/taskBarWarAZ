@@ -178,10 +178,10 @@ public sealed class TdScoreTests
         Assert.Equal(TdRankLevel.Junior, TdRank.For(5_000));
         Assert.Equal(TdRankLevel.Pleno, TdRank.For(12_000));
         Assert.Equal(TdRankLevel.Senior, TdRank.For(22_000));
-        Assert.Equal(TdRankLevel.Arquiteto, TdRank.For(29_000));
-        Assert.Equal(TdRankLevel.Mvp, TdRank.For(34_000));
-        Assert.Equal(TdRankLevel.Mvp, TdRank.For(int.MaxValue));
-        for (var l = TdRankLevel.Junior; l <= TdRankLevel.Mvp; l++) Assert.True(TdRank.Threshold(l) > TdRank.Threshold(l - 1));
+        Assert.Equal(TdRankLevel.Especialista, TdRank.For(29_000));
+        Assert.Equal(TdRankLevel.Arquiteto, TdRank.For(34_000));
+        Assert.Equal(TdRankLevel.Arquiteto, TdRank.For(int.MaxValue));
+        for (var l = TdRankLevel.Junior; l <= TdRankLevel.Arquiteto; l++) Assert.True(TdRank.Threshold(l) > TdRank.Threshold(l - 1));
     }
 
     [Fact(DisplayName = "RF-28.21 Rank progress: fraction to the next level; MVP is full")]
@@ -195,6 +195,22 @@ public sealed class TdScoreTests
         Assert.Null(m.Next);
         Assert.Equal(1.0, m.Fraction);
         Assert.Equal(TdRankLevel.Estagiario, TdRank.Progress(-5).Current);
+    }
+
+    [Theory]
+    [InlineData(0, TdRankLevel.Estagiario, TdRankLevel.Junior, 5000, 0.0)]
+    [InlineData(4999, TdRankLevel.Estagiario, TdRankLevel.Junior, 5000, 0.9998)]
+    [InlineData(5000, TdRankLevel.Junior, TdRankLevel.Pleno, 12000, 0.0)]
+    [InlineData(34000, TdRankLevel.Arquiteto, null, 34000, 1.0)]
+    public void Rank_Boundaries(int points, TdRankLevel current, TdRankLevel? next, int target, double fraction)
+    {
+        var progress = TdRank.Progress(points);
+        Assert.Equal(current, TdRank.For(points));
+        Assert.Equal(current, progress.Current);
+        Assert.Equal(next, progress.Next);
+        Assert.Equal(points, progress.Total);
+        Assert.Equal(target, progress.NextThreshold);
+        Assert.Equal(fraction, progress.Fraction, 4);
     }
 
     private static int Record(int stage, TdBotProfile p)
@@ -212,7 +228,7 @@ public sealed class TdScoreTests
     public void Rank_BotCalibration()
     {
         int Total(TdBotProfile p) => Enumerable.Range(1, 6).Sum(st => Record(st, p));
-        Assert.Equal(TdRankLevel.Mvp, TdRank.For(Total(TdBotProfile.Otimizado)));
+        Assert.Equal(TdRankLevel.Arquiteto, TdRank.For(Total(TdBotProfile.Otimizado)));
         var medio = TdRank.For(Total(TdBotProfile.Medio));
         Assert.InRange(medio, TdRankLevel.Pleno, TdRankLevel.Senior);
         Assert.Equal(TdRankLevel.Estagiario, TdRank.For(Total(TdBotProfile.SemContra)));
