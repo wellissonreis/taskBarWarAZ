@@ -63,3 +63,10 @@ public sealed record AwakenRune(string NodeId) : IGameCommand;
 /// Atômico: rejeição não altera créditos, contagens, RNG nem estado. Só em Preparo ou Onda (inclusive pausa de menu).
 /// </summary>
 public sealed record FuseTower(int BaseId, string ComponentTypeId) : IGameCommand;
+
+/// <summary>
+/// Fusão por arrasto (SDD-37, Parte E): arrasta a torre posicionada <paramref name="SourceId"/> sobre <paramref name="TargetId"/>. A mais forte das duas
+/// (maior custo de tipo; empate = o alvo) vira a base e a outra é absorvida como módulo: o híbrido nunca é mais fraco que nenhuma das originais.
+/// Sem custo em créditos (a torre absorvida já foi paga e seu preço vira o preço do módulo). Só em Preparo ou Onda; ambas simples e posicionadas.
+/// </summary>
+public sealed record FuseTowers(int TargetId, int SourceId) : IGameCommand;

@@ -78,7 +78,7 @@ public sealed class TdFusionTests
         Assert.Equal("Gelo elétrico", a.TowerDisplayName(a.Towers[0]));
         Assert.Equal("Raio gélido", b.TowerDisplayName(b.Towers[0]));
         var c = Arena(); int fc = Build(c, "bolt", 1100); Fuse(c, fc, "bolt");
-        Assert.Equal("Raio + Raio", c.TowerDisplayName(c.Towers[0]));
+        Assert.Equal("Raio em dobro", c.TowerDisplayName(c.Towers[0]));
         Assert.Equal(2, c.TowerCount(0));
     }
 
@@ -313,16 +313,16 @@ public sealed class TdFusionTests
         Assert.InRange(s.Enemies[0].SlowTicks, 55, 60);
     }
 
-    [Fact(DisplayName = "CA-37.3 generic support module: +5% damage to OTHER placed towers in range, never self-aura")]
+    [Fact(DisplayName = "CA-37.3 generic support module: +5% damage to placed towers in range, including the hybrid itself (never weaker than its base)")]
     public void GenericSupportModule()
     {
         var s = Arena(); int host = Build(s, "bolt", 1100); Fuse(s, host, "scaleset");
         int neighbor = Build(s, "bolt", 1060);
         Start(s, 1100); Steps(s, 2);
-        // Raio vizinho: 24 × 1,05 = 25 (piso); o Raio híbrido (módulo Scale Set genérico) não se beneficia: 24.
+        // Raio vizinho: 24 × 1,05 = 25 (piso); o Raio híbrido (módulo Scale Set genérico) também se beneficia: 25 (Parte E: o híbrido nunca é mais fraco).
         var plain = Arena(); Build(plain, "bolt", 1100); Start(plain, 1100); Steps(plain, 2);
         Assert.Equal(24, plain.Enemies[0].MaxHp - plain.Enemies[0].Hp);
-        Assert.Equal(25 + 24, s.Enemies[0].MaxHp - s.Enemies[0].Hp);
+        Assert.Equal(25 + 25, s.Enemies[0].MaxHp - s.Enemies[0].Hp);
         Assert.NotEqual(host, neighbor);
     }
 

@@ -27,5 +27,37 @@
     {"base": "balancer", "module": "frost", "name": "Bloqueio gelado", "effect": "nodeSlow", "params": {}},
     {"base": "scaleset", "module": "bolt", "name": "Aura elétrica", "effect": "periodicDamage", "params": {"intervalSeconds": 3, "damagePct": 0.35, "rangeFromModule": 0}},
     {"base": "vault", "module": "frost", "name": "Cofre gélido", "effect": "periodicSlow", "params": {"intervalSeconds": 3, "rangeFromModule": 1}}
-  ]
+  ],
+  "names": {
+    "same": "{noun} em dobro",
+    "overrides": [
+      {"base": "cannon", "module": "frost", "name": "Canhão de fogo frio"},
+      {"base": "frost", "module": "cannon", "name": "Gelo de artilharia"}
+    ],
+    "gender": {"bolt": "m", "frost": "m", "cannon": "m", "balancer": "m", "scaleset": "m", "functions": "f", "cdn": "f", "policy": "f", "cosmos": "m", "sentinel": "f", "queue": "f", "pipeline": "f", "vault": "m", "backup": "m", "aks": "m", "dns": "m", "frontdoor": "f", "shield": "m", "waf": "m", "eventgrid": "f", "bastion": "m", "firewall": "m"},
+    "adjective": {
+      "bolt": ["elétrico", "elétrica"],
+      "frost": ["gélido", "gélida"],
+      "cannon": ["explosivo", "explosiva"],
+      "balancer": ["balanceado", "balanceada"],
+      "scaleset": ["elástico", "elástica"],
+      "functions": ["efêmero", "efêmera"],
+      "cdn": ["cacheado", "cacheada"],
+      "policy": ["regulado", "regulada"],
+      "cosmos": ["cósmico", "cósmica"],
+      "sentinel": ["vigilante"],
+      "queue": ["enfileirado", "enfileirada"],
+      "pipeline": ["automatizado", "automatizada"],
+      "vault": ["lacrado", "lacrada"],
+      "backup": ["redundante"],
+      "aks": ["orquestrado", "orquestrada"],
+      "dns": ["resolvido", "resolvida"],
+      "frontdoor": ["de entrada"],
+      "shield": ["protegido", "protegida"],
+      "waf": ["filtrado", "filtrada"],
+      "eventgrid": ["reativo", "reativa"],
+      "bastion": ["fortificado", "fortificada"],
+      "firewall": ["flamejante"]
+    }
+  }
 }

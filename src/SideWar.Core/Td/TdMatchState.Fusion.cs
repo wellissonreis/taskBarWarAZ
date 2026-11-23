@@ -36,13 +36,27 @@ public sealed partial class TdMatchState
         return null;
     }
 
+    /// <summary>Nome próprio da combinação base+módulo (par nomeado, nome avulso ou composição de td-fusion.json "names"); nunca "A + B".</summary>
+    public string FusionName(int baseDefIndex, int moduleDefIndex)
+    {
+        if (FusionPair(baseDefIndex, moduleDefIndex) is { } pair) return pair.Name;
+        var b = _content.Towers[baseDefIndex];
+        var mo = _content.Towers[moduleDefIndex];
+        if (_content.Fusion.Names is not { } names) return $"{b.Name} + {mo.Name}"; // conteúdo sem "names" (fixtures antigas): rótulo genérico
+        foreach (var o in names.Overrides)
+            if (o.Base == b.Id && o.Module == mo.Id) return o.Name;
+        if (b.Id == mo.Id) return names.Same.Replace("{noun}", b.Name, StringComparison.Ordinal);
+        bool fem = names.Gender.TryGetValue(b.Id, out var g) && g == "f";
+        if (!names.Adjective.TryGetValue(mo.Id, out var adj) || adj.Length == 0) return $"{b.Name} + {mo.Name}";
+        return $"{b.Name} {(fem && adj.Length > 1 ? adj[1] : adj[0])}";
+    }
+
     /// <summary>Nome do híbrido: o do par nomeado ou "Base + Módulo" na regra genérica; o nome da torre se simples.</summary>
     public string TowerDisplayName(in TdTower t)
     {
         var def = _content.Towers[t.DefIndex];
         if (!t.HasModule) return def.Name;
-        var pair = FusionPair(t.DefIndex, t.ModuleDefIndex);
-        return pair?.Name ?? $"{def.Name} + {_content.Towers[t.ModuleDefIndex].Name}";
+        return FusionName(t.DefIndex, t.ModuleDefIndex);
     }
 
     /// <summary>Quantas componentes de cada tipo existem (inclui módulos e torres SEM POSIÇÃO): base de custo e limite por tipo.</summary>
@@ -56,7 +70,7 @@ public sealed partial class TdMatchState
         if (bi < 0 || mi < 0) return new(CommandReason.TowerNotFound, 0, 0, "", false, "");
         var t = _towers[bi];
         var pair = FusionPair(t.DefIndex, mi);
-        string name = pair?.Name ?? $"{_content.Towers[t.DefIndex].Name} + {_content.Towers[mi].Name}";
+        string name = FusionName(t.DefIndex, mi);
         string effect = pair?.Effect ?? "generic:" + FusionRole(mi);
         long cost = NextTowerCost(mi);
         TdFusionCheck R(CommandReason r, long missing = 0) => new(r, cost, missing, name, pair is not null, effect);
@@ -69,6 +83,45 @@ public sealed partial class TdMatchState
         if (def.Stats.TryGetValue("maxPerPlayer", out var limit) && TowerCount(mi) >= limit) return R(CommandReason.TowerTypeLimit);
         if (Credits < cost) return R(CommandReason.InsufficientCredits, cost - Credits);
         return R(CommandReason.None);
+    }
+
+    /// <summary>Quem é a base ao arrastar <paramref name="sourceId"/> sobre <paramref name="targetId"/>: a de maior custo de tipo (empate: o alvo). Devolve (base, módulo) ou (-1, -1) se inválido.</summary>
+    public (int BaseId, int ModuleId, CommandReason Reason) CheckFusionTowers(int targetId, int sourceId)
+    {
+        int ti = FindTower(targetId), si = FindTower(sourceId);
+        if (ti < 0 || si < 0 || targetId == sourceId) return (-1, -1, CommandReason.TowerNotFound);
+        var t = _towers[ti];
+        var s = _towers[si];
+        if (!Running) return (-1, -1, CommandReason.InvalidPhase);
+        if (!t.Placed || !s.Placed) return (-1, -1, CommandReason.NotPlaced);
+        if (t.HasModule || s.HasModule) return (-1, -1, CommandReason.AlreadyFused);
+        if (!FusionUnlocked) return (-1, -1, CommandReason.FusionLocked);
+        bool sourceStronger = _content.Towers[s.DefIndex].Cost > _content.Towers[t.DefIndex].Cost;
+        return sourceStronger ? (sourceId, targetId, CommandReason.None) : (targetId, sourceId, CommandReason.None);
+    }
+
+    /// <summary>Nome do híbrido de um arrasto (a base é a mais forte).</summary>
+    public string FusionNameOfTowers(int targetId, int sourceId)
+    {
+        var (b, mo, r) = CheckFusionTowers(targetId, sourceId);
+        return r != CommandReason.None ? "" : FusionName(_towers[FindTower(b)].DefIndex, _towers[FindTower(mo)].DefIndex);
+    }
+
+    private CommandResult DoFuseTowers(FuseTowers cmd)
+    {
+        var (baseId, moduleId, reason) = CheckFusionTowers(cmd.TargetId, cmd.SourceId);
+        if (reason != CommandReason.None) return Reject(reason);
+        int bi = FindTower(baseId), mi = FindTower(moduleId);
+        var module = _towers[mi];
+        var t = _towers[bi];
+        t.ModuleSlot = module.DefIndex + 1;
+        t.ModulePrice = module.PurchasePrice;
+        t.ModuleCdTicks = ModuleIntervalTicks(t);
+        _towers[bi] = t;
+        _nodes.RemoveAll(n => n.TowerId == moduleId);
+        _towers.RemoveAt(mi);
+        Emit(TdEventType.TowerFused, baseId, 0);
+        return CommandResult.Ok;
     }
 
     private CommandResult DoFuse(FuseTower cmd)

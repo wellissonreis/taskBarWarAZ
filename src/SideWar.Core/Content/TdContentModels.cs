@@ -103,7 +103,18 @@ public sealed record TdFusionPairDef(string Base, string Module, string Name, st
 /// </summary>
 public sealed record TdFusionDef(
     int MinStage, string[] ResolveOrder, Dictionary<string, string[]> Roles,
-    Dictionary<string, Dictionary<string, double>> Generic, TdFusionPairDef[] Pairs);
+    Dictionary<string, Dictionary<string, double>> Generic, TdFusionPairDef[] Pairs, TdFusionNamesDef? Names = null);
+
+/// <summary>Nome próprio de um par base+módulo que NÃO tem efeito nomeado (continua no efeito genérico por papel): só troca o rótulo.</summary>
+public sealed record TdFusionNameOverride(string Base, string Module, string Name);
+
+/// <summary>
+/// Nomes de fusão num único lugar (td-fusion.json, "names"). Todo par sem nome próprio vira "{Substantivo da base} {adjetivo do módulo}" concordando em gênero:
+/// <c>Gender</c> (id -> "m" | "f"), <c>Adjective</c> (id -> [masculino, feminino] ou [invariável]), <c>Same</c> (base = módulo, usa <c>{noun}</c>) e <c>Overrides</c>.
+/// Só muda o rótulo: nenhum efeito nem número depende daqui.
+/// </summary>
+public sealed record TdFusionNamesDef(
+    Dictionary<string, string> Gender, Dictionary<string, string[]> Adjective, string Same, TdFusionNameOverride[] Overrides);
 
 // ---------------------------------------------------------------- mutações de inimigos (SDD-37 §4)
 

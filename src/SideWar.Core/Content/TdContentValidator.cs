@@ -522,6 +522,19 @@ public static class TdContentValidator
         Req(e, G("support", "damageAuraBp") > 0, "td-fusion.generic.support: damageAuraBp deve ser > 0");
         Req(e, G("economy", "incomePct") is > 0 and <= 1, "td-fusion.generic.economy: incomePct deve estar em (0, 1]");
 
+        var nm = f.Names;
+        if (nm is not null)
+        {
+            Req(e, nm.Same.Contains("{noun}", StringComparison.Ordinal), "td-fusion.names.same deve conter {noun}");
+            foreach (var t in c.Towers)
+            {
+                Req(e, nm.Gender.TryGetValue(t.Id, out var g) && g is "m" or "f", $"td-fusion.names.gender: torre '{t.Id}' sem gênero m/f");
+                Req(e, nm.Adjective.TryGetValue(t.Id, out var a) && a.Length is 1 or 2 && a.All(Text), $"td-fusion.names.adjective: torre '{t.Id}' sem adjetivo");
+            }
+            foreach (var o in nm.Overrides)
+                Req(e, towers.ContainsKey(o.Base ?? "") && towers.ContainsKey(o.Module ?? "") && Text(o.Name), $"td-fusion.names.overrides.{o.Base}+{o.Module}: torre inexistente ou nome vazio");
+        }
+
         var seen = new HashSet<(string, string)>();
         foreach (var p in f.Pairs)
         {
