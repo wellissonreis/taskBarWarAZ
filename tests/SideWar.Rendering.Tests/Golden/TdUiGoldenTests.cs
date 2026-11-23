@@ -208,6 +208,72 @@ public sealed class TdUiGoldenTests
         Assert.True(failure is null, failure);
     }
 
+    private static SKBitmap RenderRankToast(int rank, float fill, int dpi)
+    {
+        var item = new TdUiItem(new SideWar.Runtime.Geometry.DipRect(TdUiController.Pad, 26, 176, 52), TdUiKind.Label,
+            $"Promovido a {TdRank.DisplayName((TdRankLevel)rank)}!", Arg: rank, SArg: "rank-notice", Fill: fill);
+        var view = new TdPopoverView("Promoção", [item], 200f, 90f, 0f);
+        using var typo = new Typography();
+        using var r = new TdUiRenderer(typo, dpi) { TextEnabled = true };
+        var (w, h) = r.PhysicalSize(view.Width, view.Height);
+        var bmp = new SKBitmap(new SKImageInfo(w, h, SKColorType.Bgra8888, SKAlphaType.Premul));
+        using var c = new SKCanvas(bmp);
+        c.Clear(Backdrop);
+        using var layer = new SKBitmap(new SKImageInfo(w, h, SKColorType.Bgra8888, SKAlphaType.Premul));
+        using (var lc = new SKCanvas(layer)) r.DrawPopover(lc, view, -1);
+        GoldenImage.Blit(c, layer, 0, 0);
+        return bmp;
+    }
+
+    /// <summary>Toast de promoção: início (moldura + opacidade baixa) e fim da animação; brasão sempre em 1x (pixel art íntegro).</summary>
+    [Theory]
+    [InlineData(1, 0.0f, 96)]
+    [InlineData(1, 1.0f, 96)]
+    [InlineData(3, 1.0f, 144)]
+    public void Rank_toast_matches_golden(int rank, float fill, int dpi)
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "golden com texto só no Linux");
+        using var bmp = RenderRankToast(rank, fill, dpi);
+        string? failure = GoldenImage.Verify($"td-ui-ranktoast-r{rank}-f{(int)(fill * 100)}-{dpi * 100 / 96}", bmp);
+        Assert.True(failure is null, failure);
+    }
+
+    [Fact]
+    public void Rank_toast_animation_changes_only_opacity_and_frame_not_the_badge_size()
+    {
+        using var start = RenderRankToast(2, 0f, 96);
+        using var end = RenderRankToast(2, 1f, 96);
+        Assert.False(start.Bytes.AsSpan().SequenceEqual(end.Bytes));
+        // o brasão final (opaco) ocupa exatamente 48x48 DIP: coluna 1px fora da área só tem moldura/brilho, nunca sprite escalado
+        int opaqueEnd = 0, opaqueStart = 0;
+        for (int y = 28; y < 76; y++)
+            for (int x = 16; x < 64; x++)
+            {
+                if (end.GetPixel(x, y) != Backdrop) opaqueEnd++;
+                if (start.GetPixel(x, y) != Backdrop) opaqueStart++;
+            }
+        Assert.True(opaqueEnd > 0 && opaqueStart > 0);
+    }
+
+    [Theory]
+    [InlineData(0, 96)]
+    [InlineData(5, 144)]
+    public void Rank_tooltip_matches_golden(int rank, int dpi)
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "golden com texto só no Linux");
+        using var typo = new Typography();
+        using var r = new TdUiRenderer(typo, dpi) { TextEnabled = true };
+        var (w, h) = r.PhysicalSize(TdUiRenderer.TooltipWidthDip, 58);
+        using var bmp = new SKBitmap(new SKImageInfo(w, h, SKColorType.Bgra8888, SKAlphaType.Premul));
+        using var c = new SKCanvas(bmp);
+        c.Clear(Backdrop);
+        using var layer = new SKBitmap(new SKImageInfo(w, h, SKColorType.Bgra8888, SKAlphaType.Premul));
+        using (var lc = new SKCanvas(layer)) r.DrawRankTooltip(lc, rank);
+        GoldenImage.Blit(c, layer, 0, 0);
+        string? failure = GoldenImage.Verify($"td-ui-ranktip-r{rank}-{dpi * 100 / 96}", bmp);
+        Assert.True(failure is null, failure);
+    }
+
     [Theory]
     [MemberData(nameof(Cases))]
     public void Ui_IsDeterministic(UiScene scene, int dpi)
