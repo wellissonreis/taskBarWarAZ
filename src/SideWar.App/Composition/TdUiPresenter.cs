@@ -278,6 +278,9 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
 
         game.Mode.TdPointerMoved += (x, _) => { Present(); controller.PointerMoved(x / k); };
         game.Mode.TdLeftReleased += x => { Present(); controller.SceneLeftUp(x / k); Kick(); };
+        // Fusão por arrasto: só as torres colocadas recebem o botão (a faixa continua click-through no resto); a captura do mouse é da plataforma.
+        game.Mode.TdGrabTest = (x, y) => controller.CanGrabTowerAt(x / k, y / k - TdBand.EdgeHeadroomDip);
+        game.Mode.TdGrabCancelled += () => { Present(); controller.CancelTowerDrag(); Kick(); };
         game.Mode.TdRightClicked += () => { Present(); runtime.NotifyInteraction(); controller.SceneRightClick(); };
         game.Mode.TdLeftClicked += (x, y, target) =>
         {

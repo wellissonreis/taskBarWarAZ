@@ -226,6 +226,21 @@ public sealed class TdFusionDropTests
         Assert.DoesNotContain(r.Sent, c => c is FuseTowers);
     }
 
+    [Fact]
+    public void CanGrabTowerAt_is_true_only_over_a_placed_tower_while_playing_and_not_placing()
+    {
+        var r = new Rig();
+        float x = r.TowerX();
+        Assert.True(r.Ui.CanGrabTowerAt(x, 20f));                 // sobre a torre colocada
+        Assert.True(r.Ui.CanGrabTowerAt(x + 19f, 5f));            // borda da área de acerto
+        Assert.False(r.Ui.CanGrabTowerAt(x + 21f, 20f));          // ao lado: o clique passa
+        Assert.False(r.Ui.CanGrabTowerAt(100f, 20f));             // espaço livre
+        Assert.False(r.Ui.CanGrabTowerAt(x, 40f));                // fora da faixa
+        Assert.False(r.Ui.CanGrabTowerAt(float.NaN, 20f));
+        r.Pick("bolt");                                           // modo posicionar: a cena já é interativa por outro caminho
+        Assert.False(r.Ui.CanGrabTowerAt(x, 20f));
+    }
+
     // ---------------------------------------------------------------- rolagem
 
     private static Rig WithTowers(int n)

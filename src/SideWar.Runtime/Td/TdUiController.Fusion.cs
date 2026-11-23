@@ -117,6 +117,19 @@ public sealed partial class TdUiController
     /// <summary>Arrasto de uma torre colocada em curso (a faixa só mostra o fantasma; a torre fica no lugar até soltar).</summary>
     public bool DraggingTower => _dragTowerId > 0;
 
+    /// <summary>
+    /// A plataforma pergunta se, neste ponto (DIP do espaço de desenho, Y já sem a folga), há uma torre COLOCADA que pode ser arrastada agora.
+    /// Só então a faixa deixa de ser click-through; chip sem posição, espaço livre, modo posicionar, chefe oculto e fases fora de jogo = não.
+    /// </summary>
+    public bool CanGrabTowerAt(float xDip, float yDip)
+    {
+        var m = _match();
+        if (BuildActive || BossHidden || m.Phase is not (MatchPhase.Preparo or MatchPhase.Onda)) return false;
+        if (TdHitTester.Test(m, xDip, yDip) is not { Kind: HitKind.TdTower } hit) return false;
+        int ti = FindTower(m, hit.TowerId);
+        return ti >= 0 && m.Towers[ti].Placed;
+    }
+
     /// <summary>Botão pressionado sobre uma torre posicionada: começa o arrasto (sem mover = clique, que abre o inspetor ao soltar).</summary>
     public bool BeginTowerDrag(int towerId, float xDip)
     {

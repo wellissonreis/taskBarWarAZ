@@ -24,6 +24,8 @@ public sealed class SceneModeController
     private readonly GameThread owner;
     private OverlayModeController mode = new(Stopwatch.Frequency);
     private bool tdHover;
+    private readonly TowerGrabGate grab = new();
+    private long grabNext;
     private long hoverNext;
     private readonly PeekController peek = new(Stopwatch.Frequency);
     private SideWar.Core.Simulation.SimState? hitState;
@@ -53,6 +55,18 @@ public sealed class SceneModeController
 
     /// <summary>TD mode (TD.7): hit test in DIP for the TD band (<c>TdHitTester</c>); null = the idle test.</summary>
     public Func<float, float, HitTarget>? TdHitTest { get; set; }
+
+    /// <summary>
+    /// Fusão por arrasto: há, neste ponto (DIP da janela), uma torre colocada que pode ser pegada? Só então a faixa deixa de ser click-through
+    /// (<see cref="TowerGrabGate"/>); null desliga o recurso (a faixa segue 100% click-through fora do modo posicionar).
+    /// </summary>
+    public Func<float, float, bool>? TdGrabTest { get; set; }
+
+    /// <summary>O arrasto de torre perdeu a captura do mouse sem soltar o botão (Alt+Tab, janela modal...): o jogo cancela o arrasto.</summary>
+    public event Action? TdGrabCancelled;
+
+    /// <summary>Uma torre está sob o cursor ou capturada (a faixa está recebendo o botão).</summary>
+    public bool GrabHot => grab.Hot;
 
     /// <summary>
     /// TD (TD.16b): a faixa é CLICK-THROUGH por padrão (WS_EX_TRANSPARENT: cliques e roda vão para o app de baixo) e hover NÃO a torna
@@ -167,7 +181,8 @@ public sealed class SceneModeController
     /// <summary>Applies the current effects, e.g. after the surface was created (initial Passive).</summary>
     public void Reapply() => Apply(mode.Effects, modeChanged: false);
 
-    internal long? NextDeadline => Min(Min(mode.NextDeadline, peek.NextPoll), tdHover && owner.Scene.IsVisible ? hoverNext : null);
+    internal long? NextDeadline => Min(Min(Min(mode.NextDeadline, peek.NextPoll), tdHover && owner.Scene.IsVisible ? hoverNext : null),
+        tdHover && TdGrabTest is not null && owner.Scene.IsVisible ? grabNext : null);
 
     internal void OnWake(long now)
     {
@@ -181,6 +196,11 @@ public sealed class SceneModeController
                 if (seen && now >= suppressExternalUntil) TdExternalInput();
             }
         }
+        if (tdHover && TdGrabTest is not null && now >= grabNext)
+        {
+            grabNext = now + Stopwatch.Frequency / 20; // 20 Hz: só GetCursorPos; sem trabalho enquanto o cursor está fora da faixa
+            PollGrab();
+        }
         if (peek.PollDue(now) && peek.OnSample(now, CursorInStrip())) ApplyOpacity();
     }
 
@@ -189,6 +209,7 @@ public sealed class SceneModeController
     /// <summary>Hidden → always Passive (RF-04.2), polling off.</summary>
     internal void OnSceneHidden()
     {
+        EndGrab(false);
         Apply(mode.OnHidden(Now));
         ConfigurePeek();
     }
@@ -198,6 +219,18 @@ public sealed class SceneModeController
     {
         switch (message)
         {
+            case PInvoke.WM_MOUSEMOVE when mode.Mode != OverlayMode.Interactive && grab.Hot:
+                if (!tracking) tracking = TrackLeave(hwnd);
+                if (grab.Captured)
+                {
+                    if (TdPointerMoved is { } dragMove)
+                    {
+                        var (gx, gy) = SceneHitTester.ToDip((short)(lParam & 0xFFFF), (short)((lParam >> 16) & 0xFFFF), Scale);
+                        dragMove(gx, gy);
+                    }
+                }
+                else if (!GrabOver((short)(lParam & 0xFFFF), (short)((lParam >> 16) & 0xFFFF))) UpdateGrab(false); // saiu da torre: volta a ser click-through
+                break;
             case PInvoke.WM_MOUSEMOVE when mode.Mode == OverlayMode.Interactive:
                 mode.OnMouseMove();
                 if (!tracking) tracking = TrackLeave(hwnd);
@@ -213,10 +246,34 @@ public sealed class SceneModeController
             case PInvoke.WM_MOUSELEAVE:
                 tracking = false;
                 mode.OnMouseLeave(Now);
+                if (!grab.Captured && grab.Hot) UpdateGrab(false);
+                break;
+            case PInvoke.WM_LBUTTONUP when grab.Captured:
+            {
+                short ux = (short)(lParam & 0xFFFF), uy = (short)((lParam >> 16) & 0xFFFF);
+                EndGrab(GrabOver(ux, uy)); // solta a captura ANTES de o jogo reagir; reavalia pelo ponto final
+                TdLeftReleased?.Invoke(SceneHitTester.ToDip(ux, uy, Scale).Item1);
+                break;
+            }
+            case PInvoke.WM_CAPTURECHANGED when grab.Captured:
+                EndGrab(false);
+                TdGrabCancelled?.Invoke();
                 break;
             case PInvoke.WM_LBUTTONUP when mode.Mode == OverlayMode.Interactive && TdLeftReleased is { } released:
                 released(SceneHitTester.ToDip((short)(lParam & 0xFFFF), (short)((lParam >> 16) & 0xFFFF), Scale).Item1);
                 break;
+            case PInvoke.WM_LBUTTONDOWN when mode.Mode != OverlayMode.Interactive && grab.BeginCapture():
+            {
+                // O botão chegou porque a torre estava sob o cursor: captura o mouse (sem foco) até soltar; o jogo decide se vira arrasto.
+                PInvoke.SetCapture(hwnd);
+                short dx = (short)(lParam & 0xFFFF), dy = (short)((lParam >> 16) & 0xFFFF);
+                if (TdLeftClicked is { } grabClick)
+                {
+                    var (cx, cy) = SceneHitTester.ToDip(dx, dy, Scale);
+                    grabClick(cx, cy, HitTest(dx, dy));
+                }
+                break;
+            }
             case PInvoke.WM_LBUTTONDOWN when mode.Mode == OverlayMode.Interactive:
                 var target = HitTest((short)(lParam & 0xFFFF), (short)((lParam >> 16) & 0xFFFF));
                 if (TdLeftClicked is { } tdClick)
@@ -230,6 +287,44 @@ public sealed class SceneModeController
     }
 
     private static long Now => Stopwatch.GetTimestamp();
+
+    private bool GrabOver(int clientX, int clientY)
+    {
+        if (TdGrabTest is not { } test) return false;
+        var (x, y) = SceneHitTester.ToDip(clientX, clientY, Scale);
+        return test(x, y);
+    }
+
+    /// <summary>Poll do cursor (20 Hz): torre sob o cursor deixa a faixa receber o botão; fora, volta a ser click-through. Não toca em modo nem foco.</summary>
+    private void PollGrab()
+    {
+        if (grab.Captured || mode.Mode == OverlayMode.Interactive || !owner.Scene.IsVisible) return;
+        bool over = false;
+        if (PInvoke.GetCursorPos(out var p) && PInvoke.GetWindowRect(new HWND(owner.Scene.Handle), out var s) &&
+            p.X >= s.left && p.X < s.right && p.Y >= s.top && p.Y < s.bottom)
+            over = GrabOver(p.X - s.left, p.Y - s.top);
+        UpdateGrab(over);
+    }
+
+    private void UpdateGrab(bool over)
+    {
+        if (grab.SetOver(over)) RefreshTransparency();
+    }
+
+    private void EndGrab(bool overAtEnd)
+    {
+        bool wasCaptured = grab.Captured;
+        bool changed = grab.EndCapture(overAtEnd);
+        if (wasCaptured) PInvoke.ReleaseCapture();
+        if (changed) RefreshTransparency();
+    }
+
+    private void RefreshTransparency()
+    {
+        if (owner.Scene.Handle == 0) return;
+        SetTransparent(new HWND(owner.Scene.Handle), grab.WantsTransparent(mode.Effects.Transparent));
+        if (!grab.Hot) tracking = false;
+    }
 
     private float Scale => ScaleOverride ?? (owner.Dock.Current is { } c ? c.Monitor.Dpi / 96f : 1f);
 
@@ -258,7 +353,7 @@ public sealed class SceneModeController
         owner.VerifyAccess();
         if (effects is not { } fx) return;
         var hwnd = new HWND(owner.Scene.Handle);
-        SetTransparent(hwnd, fx.Transparent);
+        SetTransparent(hwnd, grab.WantsTransparent(fx.Transparent));
         if (fx.CancelDrag)
         {
             PInvoke.ReleaseCapture();
