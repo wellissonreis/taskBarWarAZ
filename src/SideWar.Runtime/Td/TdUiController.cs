@@ -46,6 +46,7 @@ public sealed partial class TdUiController
     private double _noticeUntil;
     private int _seenStages = -1;
     private TdRankLevel _seenRank;
+    private int _seenRankScore;
     private TdRankLevel? _noticeRank;
     private bool _pinnedOpen;
     private bool _outsideCollapsed;
@@ -96,6 +97,7 @@ public sealed partial class TdUiController
         _send = send ?? throw new ArgumentNullException(nameof(send));
         _host = host ?? throw new ArgumentNullException(nameof(host));
         _seenRank = _host.Rank.Current;
+        _seenRankScore = _host.Rank.Total;
         _now = now ?? (() => 0.0);
     }
 
@@ -586,9 +588,15 @@ public sealed partial class TdUiController
 
     private void SyncNotice(TdMatchState m)
     {
-        var rank = _host.Rank.Current;
+        var progress = _host.Rank;
+        var rank = progress.Current;
         bool promoted = rank > _seenRank;
         _seenRank = rank;
+        if (progress.Total != _seenRankScore)
+        {
+            _seenRankScore = progress.Total;
+            Changed?.Invoke();
+        }
         int n = m.StageResults.Count;
         if (n > _seenStages)
         {
