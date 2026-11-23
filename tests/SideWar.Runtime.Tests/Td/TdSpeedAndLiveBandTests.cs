@@ -101,6 +101,7 @@ public sealed class TdSpeedAndLiveBandTests
         var host = new SpeedHost();
         var match = TdMatchState.Create(Content, 1, Rng.Seed(1, 54));
         var ui = new TdUiController(() => match, _ => { }, host, () => 0.0, null);
+        host.HudMinimized = false;
         var chip = ui.BuildHud();
         var buttons = chip.Items.Where(i => i.Action == TdUiAction.SetSpeed).ToArray();
         Assert.Equal(["1x", "2x", "3x"], buttons.Select(i => i.Text));

@@ -67,16 +67,16 @@ public sealed class TdHud29bTests
         var r = new Rig();
         var hud = r.Ui.BuildHud();
         // em Preparo o botão Iniciar existe; depois da 1ª onda (contínua) o chip em repouso tem ≤ 220 DIP
-        Assert.Equal(720f + TdHudView.StartWidth + 4f, hud.Width);
-        Assert.Equal(40f, hud.Height);
+        Assert.Equal((779f + 88f + 4f) * 0.7f, hud.Width);
+        Assert.Equal(28f, hud.Height);
         r.Match.Apply(new SideWar.Core.Td.BuildTower("bolt", 600));
         var sw = r.Match.Apply(new StartWave());
         Assert.Equal(MatchPhase.Onda, r.Match.Phase);
         var rest = r.Ui.BuildHud();
-        Assert.Equal(720f, rest.Width);
+        Assert.Equal(779f * 0.7f, rest.Width);
         Assert.DoesNotContain(rest.Items, i => i.Action is TdUiAction.StartWave);
         Assert.All(rest.Items, i => Assert.True(i.Rect.X + i.Rect.W <= rest.Width + 0.01f));
-        Assert.All(rest.Items.Where(i => i.Kind == TdUiKind.Button), i => Assert.True(i.Rect.W <= 118f, i.Text));
+        Assert.All(rest.Items.Where(i => i.Kind == TdUiKind.Button), i => Assert.True(i.Rect.W <= 100f, i.Text));
     }
 
     [Fact]
@@ -139,6 +139,7 @@ public sealed class TdHud29bTests
         Assert.Equal(TdTutorialStep.HudCollapse, r.Ui.Step);
         Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.SArg == "tut");
         r.Ui.Cancel(); r.Ui.Sync();
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.HudMinimize)); r.Ui.Sync();
         Assert.Equal(TdTutorialStep.Core, r.Ui.Step);
         Assert.False(store.Done);
     }
@@ -149,6 +150,8 @@ public sealed class TdHud29bTests
         var store = new Store { Done = false };
         var r = new Rig(store);
         r.Ui.OpenStartupModal(); r.Ui.Sync(); r.Ui.Cancel(); r.Ui.Sync();
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.HudMinimize)); r.Ui.Sync();
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.HudRestore)); r.Ui.Sync();
         for (int i = 0; i < 3; i++) r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.TutorialNext));
         Assert.Equal(TdTutorialStep.Build, r.Ui.Step);
         Assert.Contains(r.Ui.BuildHud().Items, i => i.Action == TdUiAction.QuickTowers && i.Highlight);

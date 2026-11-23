@@ -111,6 +111,7 @@ public sealed class TdContinuousHostTests
     public void Next_wave_starts_without_preparo_and_start_button_only_exists_in_the_initial_preparo()
     {
         var r = new Rig();
+        r.Ui.Activate(r.Ui.BuildHud().Items.Single(i => i.Action == TdUiAction.HudExpand));
         Assert.Contains(r.Ui.BuildHud().Items, i => i.Action == TdUiAction.StartWave);
         Assert.Contains("Fase 1", r.Ui.BuildHud().Items.Single(i => i.Action == TdUiAction.HudRestore).Tip);
         r.Start();
@@ -125,6 +126,7 @@ public sealed class TdContinuousHostTests
     public void Classic_mode_keeps_the_start_button_and_preparo_between_waves()
     {
         var r = new Rig(TdMatchOptions.Classic);
+        r.Ui.Activate(r.Ui.BuildHud().Items.Single(i => i.Action == TdUiAction.HudExpand));
         r.Start();
         r.RunUntil(() => r.Match.Phase == MatchPhase.Preparo);
         Assert.Contains(r.Ui.BuildHud().Items, i => i.Action == TdUiAction.StartWave);

@@ -434,7 +434,7 @@ public sealed class TdUiControllerTests
     {
         var r = new Rig();
         var hud = r.Ui.BuildHud();
-        Assert.True(hud.Minimized);
+        Assert.False(hud.Minimized);
         Assert.Contains(hud.Items, i => i.Action == TdUiAction.HudRestore && i.Text.Contains("20/20") && !i.Text.Contains('¢'));
         Assert.Contains(hud.Items, i => i.Kind == TdUiKind.Money);
         Assert.DoesNotContain(hud.Items, i => i.Action == TdUiAction.Ability);
@@ -460,12 +460,26 @@ public sealed class TdUiControllerTests
     public void Minimize_collapses_the_hud_to_a_chip_with_core_and_wave_and_the_chip_restores()
     {
         var r = new Rig();
+        r.Host.HudMinimized = true;
         var chip = r.Ui.BuildHud();
         Assert.True(chip.Minimized);
-        r.Ui.Activate(chip.Items.First(i => i.Action == TdUiAction.HudRestore));
-        Assert.True(r.Ui.ModalOpen);
+        Assert.Equal(22f, chip.Height);
+        Assert.InRange(chip.Width, 170f, 180f);
+        Assert.DoesNotContain(chip.Items, i => i.Kind == TdUiKind.Money || i.Action == TdUiAction.StartWave);
+        var expand = chip.Items.Single(i => i.Action == TdUiAction.HudExpand);
+        Assert.Equal(1f, expand.Fill); // Iniciar disponível continua sinalizado sem abrir o HUD.
+        Assert.Equal(expand, chip.Items[chip.HitTest(expand.Rect.X + 1, expand.Rect.Y + 1)]);
+        r.Ui.Activate(expand);
+        Assert.False(r.Host.HudMinimized);
+        var full = r.Ui.BuildHud();
+        Assert.False(full.Minimized);
+        Assert.Equal(28f, full.Height);
+        Assert.Contains(full.Items, i => i.Kind == TdUiKind.Money);
+        var collapse = full.Items.Single(i => i.Action == TdUiAction.HudMinimize);
+        Assert.Equal(collapse, full.Items[full.HitTest(collapse.Rect.X + 1, collapse.Rect.Y + 1)]);
+        r.Ui.Activate(collapse);
+        Assert.True(r.Host.HudMinimized);
         Assert.True(r.Ui.BuildHud().Minimized);
-        r.Ui.Cancel();
         Assert.False(r.Ui.ModalOpen);
         Assert.False(r.Match.Paused);
     }

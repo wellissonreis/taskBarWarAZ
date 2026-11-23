@@ -289,12 +289,12 @@ public sealed class TdMoneyTests
         var hud = r.Ui.BuildHud();
         var money = hud.Items.Single(i => i.Kind == TdUiKind.Money);
         var rune = hud.Items.Single(i => i.Action == TdUiAction.RuneWindow);
-        Assert.True(hud.Width > 720);
+        Assert.True(hud.Width > 779 * 0.7f);
         Assert.Equal("123456789", money.Text);
         Assert.True(money.Rect.X + money.Rect.W < rune.Rect.X);
-        Assert.Equal(TdUiAction.RuneWindow, hud.Items[hud.HitTest(rune.Rect.X + 14, rune.Rect.Y + 14)].Action);
+        Assert.Equal(TdUiAction.RuneWindow, hud.Items[hud.HitTest(rune.Rect.X + rune.Rect.W / 2, rune.Rect.Y + rune.Rect.H / 2)].Action);
         foreach (var speed in hud.Items.Where(i => i.Action == TdUiAction.SetSpeed))
-            Assert.Equal(speed.Arg, hud.Items[hud.HitTest(speed.Rect.X + 15, speed.Rect.Y + 11)].Arg);
+            Assert.Equal(speed.Arg, hud.Items[hud.HitTest(speed.Rect.X + speed.Rect.W / 2, speed.Rect.Y + speed.Rect.H / 2)].Arg);
     }
 
     [Fact] // T-33.21
@@ -325,14 +325,14 @@ public sealed class TdMoneyTests
         var r = new Rig();
         var rest = r.Ui.BuildHud();
         Assert.Equal(0f, rest.TopPad);
-        Assert.Equal(40f, rest.Height);
+        Assert.Equal(28f, rest.Height);
         r.Match.Apply(new SideWar.Core.Td.BuildTower("bolt", 300));
         r.Match.Apply(new StartWave());
         for (int i = 0; i < 4000 && r.Ui.Money.Floats.Count == 0; i++) { r.Match.Step(); r.Now += Dt; r.Ui.BuildHud(); }
         var hud = r.Ui.BuildHud();
         Assert.NotEmpty(hud.Floats!);
-        Assert.Equal(TdHudView.FloatPad, hud.TopPad);
-        Assert.Equal(40f + TdHudView.FloatPad, hud.Height);
+        Assert.Equal(TdHudView.FloatPad * 0.7f, hud.TopPad);
+        Assert.Equal((40f + TdHudView.FloatPad) * 0.7f, hud.Height);
         Assert.All(hud.Items, it => Assert.True(it.Rect.Y >= hud.TopPad));
         Assert.False(hud.OverButton(5f, 4f));                       // a faixa do topo é transparente ao mouse
         var money = hud.Items.Single(i => i.Kind == TdUiKind.Money);

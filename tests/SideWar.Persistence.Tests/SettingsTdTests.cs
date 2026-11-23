@@ -174,15 +174,17 @@ public class SettingsTdTests
         Assert.Equal("tower:bolt;enemy:runner", r.TipsSeen);
     }
 
-    [Fact]
-    public void RoundTrip_keeps_band_height_hud_state_and_fade()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void RoundTrip_keeps_band_height_hud_state_and_fade(bool minimized)
     {
         var fs = new FakeFileSystem();
         var st = new SettingsStore(fs, "/data", utcNow: () => Now);
-        Assert.True(st.Save(new AppSettings { Td = new TdSettings { BandHeightDip = 88, HudMinimized = true, FadeWhenUnfocused = false, FadeOpacityPercent = 35 } }));
+        Assert.True(st.Save(new AppSettings { Td = new TdSettings { BandHeightDip = 88, HudMinimized = minimized, FadeWhenUnfocused = false, FadeOpacityPercent = 35 } }));
         var td = st.Load().Settings.Td;
         Assert.Equal(88, td.BandHeightDip);
-        Assert.True(td.HudMinimized);
+        Assert.Equal(minimized, td.HudMinimized);
         Assert.False(td.FadeWhenUnfocused);
         Assert.Equal(35, td.FadeOpacityPercent);
     }
