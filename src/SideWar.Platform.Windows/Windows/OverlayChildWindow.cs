@@ -116,6 +116,8 @@ public abstract unsafe class OverlayChildWindow : IDisposable
     private protected virtual void OnMouseMove(int x, int y) { }
     private protected virtual void OnMouseLeave() { }
     private protected virtual void OnRightButtonUp(int x, int y) { }
+    /// <summary>Roda do mouse (WM_MOUSEWHEEL): <paramref name="delta"/> em múltiplos de 120 (positivo = para cima).</summary>
+    private protected virtual void OnMouseWheel(int delta) { }
     private bool trackingLeave;
 
     /// <summary>True when the cursor over the client area should be the hand.</summary>
@@ -235,6 +237,9 @@ public abstract unsafe class OverlayChildWindow : IDisposable
                 case PInvoke.WM_LBUTTONUP:
                     // Client coordinates are signed 16-bit words (no capture, no focus).
                     window?.OnLeftButtonUp((short)(lParam.Value & 0xFFFF), (short)((lParam.Value >> 16) & 0xFFFF));
+                    return new LRESULT(0);
+                case PInvoke.WM_MOUSEWHEEL:
+                    window?.OnMouseWheel((short)((wParam.Value >> 16) & 0xFFFF));
                     return new LRESULT(0);
                 case PInvoke.WM_RBUTTONUP:
                     window?.OnRightButtonUp((short)(lParam.Value & 0xFFFF), (short)((lParam.Value >> 16) & 0xFFFF));

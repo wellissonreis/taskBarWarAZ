@@ -131,6 +131,7 @@ public sealed class TdBandRenderer : IDisposable
         DrawUnplaced(canvas, match, view);
         DrawEnemies(canvas, match, w);
         DrawGhost(canvas, match, view, w);
+        DrawFuse(canvas, match, view, w);
         DrawFire(canvas, match, w);
         DrawHint(canvas, view, now, w);
         DrawPlacingMode(canvas, view, w);
@@ -489,7 +490,7 @@ public sealed class TdBandRenderer : IDisposable
     {
         if (view.GhostX < 0) return;
         float cx = m.Layout is null ? TdBand.ToDip(view.GhostX, w) : TdPlacement.ToDip(view.GhostX, w);
-        var color = view.GhostValid ? Palette.Menta : Palette.Ambar;
+        var color = view.GhostValid ? Palette.Menta : view.FuseTargetId > 0 ? Palette.Perigo : Palette.Ambar;
         int def = view.GhostDef;
         float range = def >= 0 && def < _content!.Towers.Length ? TdBand.ToDip(_content.Towers[def].Range, w) : 0f;
         if (range > 0)
@@ -518,6 +519,42 @@ public sealed class TdBandRenderer : IDisposable
         _stroke.PathEffect = _dash;
         c.DrawRoundRect(x + 0.5f, TdBand.TowerTop + 0.5f, TdBand.TowerWidth - 1, TdBand.TowerHeight - 1, 3, 3, _stroke);
         _stroke.PathEffect = null;
+    }
+
+    // Fusão por soltar: contorno + brilho na torre-alvo (cor do módulo se o par vale, vermelho se não) e, depois de fundir, um anel curto que se expande.
+    private void DrawFuse(SKCanvas c, TdMatchState m, in TdView view, int w)
+    {
+        if (view.FuseTargetId > 0 && TowerX(m, view.FuseTargetId, w) is { } tx)
+        {
+            var color = view.FuseTargetOk && view.FuseModuleId is not null ? TdFusionMark.ColorFor(view.FuseModuleId) : Palette.Perigo;
+            byte pulse = (byte)(110 + 70 * (0.5 + 0.5 * Math.Sin(_now * 6.0)));
+            const float hw = 17f;
+            _fill.Color = color.WithAlpha(view.FuseTargetOk ? (byte)(pulse / 3) : (byte)30);
+            c.DrawRoundRect(tx - hw, 1f, 2 * hw, TdBand.HeightDip - 2f, 4, 4, _fill);
+            _stroke.Color = color.WithAlpha(view.FuseTargetOk ? (byte)(150 + pulse / 3) : (byte)200);
+            _stroke.StrokeWidth = 2f;
+            c.DrawRoundRect(tx - hw, 1f, 2 * hw, TdBand.HeightDip - 2f, 4, 4, _stroke);
+            _stroke.StrokeWidth = 1f;
+            if (view.FuseModuleId is not null && view.FuseTargetOk) TdFusionMark.Draw(c, view.FuseModuleId, tx - 5f, 2f, 10f);
+        }
+        if (view.FuseFxId > 0 && view.FuseFxAge >= 0f && view.FuseFxAge < TdUiController.FuseFxSeconds && TowerX(m, view.FuseFxId, w) is { } fx)
+        {
+            float k = view.FuseFxAge / TdUiController.FuseFxSeconds;
+            byte a = (byte)(230 * (1f - k));
+            _fill.Color = Palette.Td.Amber.WithAlpha((byte)(a / 3));
+            c.DrawCircle(fx, Ground - 14f, 6f + 26f * k, _fill);
+            _stroke.Color = Palette.Td.Amber.WithAlpha(a);
+            _stroke.StrokeWidth = 2f;
+            c.DrawCircle(fx, Ground - 14f, 6f + 30f * k, _stroke);
+            _stroke.StrokeWidth = 1f;
+        }
+    }
+
+    private static float? TowerX(TdMatchState m, int id, int w)
+    {
+        for (int i = 0; i < m.Towers.Count; i++)
+            if (m.Towers[i].Id == id && m.Towers[i].Placed) return TdBand.TowerCenterDip(m, m.Towers[i], w);
+        return null;
     }
 
     // Modo posicionar (TD.16b): a faixa passa a aceitar clique; borda menta em toda a faixa + véu leve, para o modo ser inequívoco.

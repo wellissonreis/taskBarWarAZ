@@ -273,9 +273,11 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         popWindow.Left += () => { if (popHover != -1) { popHover = -1; controller.Hover(null); Refresh(true); } };
         popWindow.LeftUp += (x, y) => Click(pop?.Items, pop?.HitTest(x / PopScale, y / PopScale) ?? -1, x / PopScale);
         popWindow.RightUp += (_, _) => controller.Cancel();
+        popWindow.Wheel += delta => { if (controller.ScrollBy(-Math.Sign(delta))) Refresh(true); };
         tipWindow.LeftUp += (_, _) => { Present(); controller.DismissTip(); };
 
         game.Mode.TdPointerMoved += (x, _) => { Present(); controller.PointerMoved(x / k); };
+        game.Mode.TdLeftReleased += x => { Present(); controller.SceneLeftUp(x / k); Kick(); };
         game.Mode.TdRightClicked += () => { Present(); runtime.NotifyInteraction(); controller.SceneRightClick(); };
         game.Mode.TdLeftClicked += (x, y, target) =>
         {
@@ -317,12 +319,9 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     private void ModalKey(int key)
     {
         if (key == 27) { controller.Cancel(); return; }
-        if (controller.Mode == TdUiMode.Build && !controller.BuildActive && key is 37 or 39 && pop is not null)
-        {
-            var page = pop.Items.FirstOrDefault(i => i.Action == TdUiAction.BuildCatalogPage && i.Arg == (key == 37 ? -1 : 1));
-            if (page.Clickable) controller.Activate(page);
-            return;
-        }
+        // Rolagem por teclado nas listas da modal: setas esquerda/direita e PgUp/PgDn = página; Home/End = extremos.
+        if (key is 33 or 34 or 37 or 39 && controller.ScrollKey(key is 33 or 37 ? -1 : 1)) return;
+        if (key is 36 or 35 && controller.ScrollBy(key == 36 ? -int.MaxValue / 2 : int.MaxValue / 2)) return;
         if (controller.QuickTowersOpen && key is >= 49 and <= 52 && pop is not null)
         {
             string[] categories = ["attack", "control", "support", "economy"];

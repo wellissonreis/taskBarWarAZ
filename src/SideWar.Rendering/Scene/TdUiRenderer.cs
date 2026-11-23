@@ -989,6 +989,13 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
                 DrawModalItem(c, v.Items[i], i == hover);
                 if (v.Items[i].Highlight) DrawHighlight(c, v.Items[i].Rect);
             }
+            if (v.Scroll is { } sc)
+            {
+                // Barra de rolagem fina (trilho BorderStrong, polegar Amber, do design): só desenho; a roda e o teclado rolam.
+                _p.Fill(c, new DipRect(TdScrollInfo.TrackX, sc.Top, TdScrollInfo.TrackW, sc.Height), Palette.Td.BorderStrong);
+                var (ty, th) = sc.Thumb();
+                _p.Fill(c, new DipRect(TdScrollInfo.TrackX, ty, TdScrollInfo.TrackW, th), Palette.Td.Amber);
+            }
             if (v.Tip is { } tip) DrawRuneTip(c, tip, v.Width, v.Height, true);
             return;
         }

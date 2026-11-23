@@ -26,6 +26,10 @@ public enum TdStripScene
     Fused,
     /// <summary>TD.37d: inimigos mutantes na faixa (Tank Rápido, Voador Tank Lento, escudo, blindado+lento...) lado a lado com a marca de cada traço.</summary>
     Mutants,
+    /// <summary>Fusão por soltar: fantasma sobre uma torre com par válido (contorno na cor do módulo), par inválido (vermelho) e o efeito curto depois de fundir.</summary>
+    FuseDropOk,
+    FuseDropBlocked,
+    FuseFx,
 }
 
 /// <summary>
@@ -49,6 +53,9 @@ public static class TdStripScenes
         TdStripScene.NewEnemies => "td-strip-new-enemies",
         TdStripScene.Fused => "td-strip-fused",
         TdStripScene.Mutants => "td-strip-mutants",
+        TdStripScene.FuseDropOk => "td-strip-fuse-drop-ok",
+        TdStripScene.FuseDropBlocked => "td-strip-fuse-drop-blocked",
+        TdStripScene.FuseFx => "td-strip-fuse-fx",
         _ => "td-strip-unpositioned",
     };
 
@@ -102,7 +109,7 @@ public static class TdStripScenes
 
     public static (TdMatchState Match, TdView View, double Now) Build(TdStripScene scene)
     {
-        var m = NewMatch(newEnemies: scene == TdStripScene.NewEnemies, fusion: scene == TdStripScene.Fused, mutants: scene == TdStripScene.Mutants);
+        var m = NewMatch(newEnemies: scene == TdStripScene.NewEnemies, fusion: scene is TdStripScene.Fused or TdStripScene.FuseDropOk or TdStripScene.FuseDropBlocked or TdStripScene.FuseFx, mutants: scene == TdStripScene.Mutants);
         switch (scene)
         {
             case TdStripScene.AllTowers:
@@ -120,6 +127,20 @@ public static class TdStripScenes
                 Do(m, new FuseTower(c, "bolt"));
                 Do(m, new FuseTower(d, "scaleset"));
                 return (m, new TdView(a, 0), 100.0);
+            }
+            case TdStripScene.FuseDropOk:
+            case TdStripScene.FuseDropBlocked:
+            case TdStripScene.FuseFx:
+            {
+                Build(m, "frost", 330);
+                int target = m.Towers[0].Id;
+                Build(m, "bolt", 440);
+                Build(m, "cannon", 880);
+                var tv = new TdView(0, 0);
+                if (scene == TdStripScene.FuseDropOk) tv = tv with { PlacingMode = true, GhostX = 330, GhostValid = true, GhostDef = 0, FuseTargetId = target, FuseTargetOk = true, FuseModuleId = "bolt" };
+                else if (scene == TdStripScene.FuseDropBlocked) tv = tv with { PlacingMode = true, GhostX = 330, GhostValid = false, GhostDef = 0, FuseTargetId = target, FuseTargetOk = false, FuseModuleId = "bolt" };
+                else { Do(m, new FuseTower(target, "bolt")); tv = tv with { FuseFxId = target, FuseFxAge = 0.25f }; }
+                return (m, tv, 100.0);
             }
             case TdStripScene.Mutants:
             {

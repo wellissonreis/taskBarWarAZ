@@ -45,6 +45,8 @@ public sealed class TdUiWindow : OverlayChildWindow
     public event Action? Left;
     public event Action<int, int>? LeftUp;
     public event Action<int, int>? RightUp;
+    public event Action<int>? Wheel;
+    private protected override void OnMouseWheel(int delta) { if (IsVisible) Wheel?.Invoke(delta); }
 
     private protected override void OnMouseMove(int x, int y) => Moved?.Invoke(x, y);
     private protected override void OnMouseLeave() => Left?.Invoke();

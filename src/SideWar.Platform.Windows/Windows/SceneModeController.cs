@@ -75,6 +75,8 @@ public sealed class SceneModeController
     /// <summary>TD pointer over the scene while Interactive: (xDip, yDip) move; click with its hit target; right click.</summary>
     public event Action<float, float>? TdPointerMoved;
     public event Action<float, float, HitTarget>? TdLeftClicked;
+    /// <summary>Botão esquerdo solto (modo Interativo): termina o arrasto de torre (X em DIP).</summary>
+    public event Action<float>? TdLeftReleased;
     public event Action? TdRightClicked;
 
     /// <summary>
@@ -211,6 +213,9 @@ public sealed class SceneModeController
             case PInvoke.WM_MOUSELEAVE:
                 tracking = false;
                 mode.OnMouseLeave(Now);
+                break;
+            case PInvoke.WM_LBUTTONUP when mode.Mode == OverlayMode.Interactive && TdLeftReleased is { } released:
+                released(SceneHitTester.ToDip((short)(lParam & 0xFFFF), (short)((lParam >> 16) & 0xFFFF), Scale).Item1);
                 break;
             case PInvoke.WM_LBUTTONDOWN when mode.Mode == OverlayMode.Interactive:
                 var target = HitTest((short)(lParam & 0xFFFF), (short)((lParam >> 16) & 0xFFFF));
