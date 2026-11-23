@@ -197,14 +197,15 @@ public sealed class TdBandRenderer : IDisposable
         {
             string id = content.Towers[i].Id;
             if (!TdAnimArt.HasTower(id)) continue;
-            string idle = id + "-idle.png";
+            string sheetId = TdAnimArt.TowerSheetId(id);
+            string idle = sheetId + "-idle.png";
             float scale = TdAnimStrip.ScaleForBoxHeight(idle, TdAnimArt.IdleFrames, TdArtMap.TowerHeightDip * px);
             bool area = id is "cdn";
             float fxScale = area ? scale * TdAnimArt.CdnAreaScale : scale;
             _towerAnim[i] = new TowerAnim(
-                TdAnimStrip.Bake(idle, TdAnimArt.IdleFrames, scale, idle, TdAnimArt.IdleFrames),
-                TdAnimStrip.Bake(id + "-attack.png", TdAnimArt.AttackFrames, scale, idle, TdAnimArt.IdleFrames),
-                TdAnimStrip.Bake(id + "-fx.png", TdAnimArt.FxFrames, fxScale, idle, TdAnimArt.IdleFrames, centered: true),
+                TdAnimStrip.Bake(idle, TdAnimArt.IdleFrames, scale, idle, TdAnimArt.IdleFrames, dnsTint: id == "dns"),
+                TdAnimStrip.Bake(sheetId + "-attack.png", TdAnimArt.AttackFrames, scale, idle, TdAnimArt.IdleFrames, dnsTint: id == "dns"),
+                TdAnimStrip.Bake(sheetId + "-fx.png", TdAnimArt.FxFrames, fxScale, idle, TdAnimArt.IdleFrames, centered: true, dnsTint: id == "dns"),
                 area);
         }
         var normal = content.Enemies.Enemies;
@@ -237,21 +238,23 @@ public sealed class TdBandRenderer : IDisposable
     }
 
     /// <summary>Desenha a imagem pré-escalada com o centro X e a base em DIP, alinhada a pixels inteiros (sem reamostrar).</summary>
-    private void Blit(SKCanvas c, SKImage? img, float cxDip, float bottomDip, byte alpha = 255)
+    private void Blit(SKCanvas c, SKImage? img, float cxDip, float bottomDip, byte alpha = 255, bool flip = false)
     {
         if (img is null) return;
         c.Save();
         c.ResetMatrix();
+        if (flip) { c.Translate(2 * cxDip * _s, 0); c.Scale(-1, 1); }
         _img.Color = Palette.TxtBranco.WithAlpha(alpha);
         c.DrawImage(img, MathF.Round(cxDip * _s - img.Width / 2f), MathF.Round((bottomDip + TdBand.EdgeHeadroomDip) * _s - img.Height), Nearest, _img);
         c.Restore();
     }
 
     /// <summary>Desenha um quadro da folha animada com a base da caixa em <paramref name="bottomDip"/> e o centro em <paramref name="cxDip"/>.</summary>
-    private void BlitStrip(SKCanvas c, TdAnimStrip strip, int frame, float cxDip, float bottomDip, byte alpha = 255)
+    private void BlitStrip(SKCanvas c, TdAnimStrip strip, int frame, float cxDip, float bottomDip, byte alpha = 255, bool flip = false)
     {
         c.Save();
         c.ResetMatrix();
+        if (flip) { c.Translate(2 * cxDip * _s, 0); c.Scale(-1, 1); }
         _img.Color = Palette.TxtBranco.WithAlpha(alpha);
         strip.Draw(c, frame, cxDip * _s, (bottomDip + TdBand.EdgeHeadroomDip) * _s, _img);
         c.Restore();
@@ -554,9 +557,11 @@ public sealed class TdBandRenderer : IDisposable
         float sw = MathF.Max(anim is null ? WidthDip(img) : anim.Idle.BoxW / _s, 12f), sh = MathF.Max(anim is null ? HeightDip(img) : anim.Idle.BoxH / _s, 12f);
         float left = cx - sw / 2f, top = Ground - sh;
         byte alpha = disabled ? (byte)110 : (byte)255;
-        if (anim is null) Blit(c, img, cx, Ground, alpha);
-        else if (TowerAttackFrame(t, cx) is var af && af >= 0) BlitStrip(c, anim.Attack, af, cx, Ground, alpha);
-        else BlitStrip(c, anim.Idle, TdAnimArt.LoopFrame(_now, TdAnimArt.IdleFps, anim.Idle.Frames, t.Id), cx, Ground, alpha);
+        bool flip = _lastMatch is { } m && _content is not null && t.DefIndex >= 0 && t.DefIndex < _content.Towers.Length
+            && TryTarget(m, _content.Towers[t.DefIndex], cx, _lastWidth, out float targetX, out _) && targetX > cx;
+        if (anim is null) Blit(c, img, cx, Ground, alpha, flip);
+        else if (TowerAttackFrame(t, cx) is var af && af >= 0) BlitStrip(c, anim.Attack, af, cx, Ground, alpha, flip);
+        else BlitStrip(c, anim.Idle, TdAnimArt.LoopFrame(_now, TdAnimArt.IdleFps, anim.Idle.Frames, t.Id), cx, Ground, alpha, flip);
 
         if (t.HasModule && _content is not null && t.ModuleDefIndex < _content.Towers.Length)
             TdFusionMark.Draw(c, _content.Towers[t.ModuleDefIndex].Id, left + sw - 7f, Ground - 11f, 11f, disabled ? (byte)110 : (byte)255);
@@ -636,15 +641,16 @@ public sealed class TdBandRenderer : IDisposable
             }
             if (since > TdAnimArt.ProjectileTicks) continue;
             float p = since / (float)TdAnimArt.ProjectileTicks;
-            float mx = cx - anim.Idle.BoxW / _s / 2f, my = Ground - anim.Idle.BoxH / _s * 0.6f;
-            BlitCentered(c, anim.Fx, frame, mx + (tx - mx) * p, my + (ty - my) * p);
+            float mx = cx + (tx > cx ? 1 : -1) * anim.Idle.BoxW / _s / 2f, my = Ground - anim.Idle.BoxH / _s * 0.6f;
+            BlitCentered(c, anim.Fx, frame, mx + (tx - mx) * p, my + (ty - my) * p, tx > cx);
         }
     }
 
-    private void BlitCentered(SKCanvas c, TdAnimStrip strip, int frame, float cxDip, float cyDip)
+    private void BlitCentered(SKCanvas c, TdAnimStrip strip, int frame, float cxDip, float cyDip, bool flip = false)
     {
         c.Save();
         c.ResetMatrix();
+        if (flip) { c.Translate(2 * cxDip * _s, 0); c.Scale(-1, 1); }
         _img.Color = Palette.TxtBranco;
         strip.Draw(c, frame, cxDip * _s, (cyDip + TdBand.EdgeHeadroomDip) * _s, _img);
         c.Restore();

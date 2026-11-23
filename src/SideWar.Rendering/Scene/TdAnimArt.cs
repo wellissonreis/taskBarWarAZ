@@ -40,7 +40,9 @@ public static class TdAnimArt
     /// <summary>Nome lógico do recurso embutido de um arquivo de assets/source/anim.</summary>
     public static string Resource(string file) => "SideWar.Rendering.Assets.Anim." + file;
 
-    public static bool HasTower(string id) => Array.IndexOf(Towers, id) >= 0;
+    public static bool HasTower(string id) => id == "dns" || Array.IndexOf(Towers, id) >= 0;
+
+    public static string TowerSheetId(string id) => id == "dns" ? "bolt" : id;
 
     public static bool TryEnemyFps(string id, out double fps)
     {

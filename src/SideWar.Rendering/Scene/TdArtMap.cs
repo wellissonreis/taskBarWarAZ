@@ -31,7 +31,7 @@ public static class TdArtMap
 
     public static readonly TdArtEntry[] Towers =
     [
-        new("dns", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "vetor próprio"),
+        new("dns", SpriteId.TowerBolt, TowerHeightDip, Cyan, 110, true, "raio animado com tinta ciano"),
         new("frontdoor", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "vetor próprio"),
         new("shield", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "vetor próprio"),
         new("waf", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "vetor próprio"),

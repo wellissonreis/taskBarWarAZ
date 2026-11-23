@@ -1,4 +1,5 @@
 using SkiaSharp;
+using SideWar.Rendering.Theme;
 
 namespace SideWar.Rendering.Scene;
 
@@ -76,7 +77,7 @@ internal sealed class TdAnimStrip : IDisposable
     public static float ScaleForBoxHeight(string boundsFile, int frames, float heightPx) => heightPx / Bounds(boundsFile, frames).Height;
 
     /// <summary>Cozinha a folha na escala dada, ancorada pela caixa de <paramref name="boundsFile"/> (mesma escala/âncora para parada e ataque).</summary>
-    public static TdAnimStrip Bake(string file, int frames, float scale, string boundsFile, int boundsFrames, bool centered = false)
+    public static TdAnimStrip Bake(string file, int frames, float scale, string boundsFile, int boundsFrames, bool centered = false, bool dnsTint = false)
     {
         var sheet = Sheet(file);
         int fw = sheet.Width / frames, fh = sheet.Height;
@@ -88,6 +89,8 @@ internal sealed class TdAnimStrip : IDisposable
         {
             canvas.Clear(SKColors.Transparent);
             using var paint = new SKPaint { IsAntialias = false };
+            using var filter = dnsTint ? SKColorFilter.CreateBlendMode(Palette.Td.TintCyan.WithAlpha(110), SKBlendMode.SrcATop) : null;
+            paint.ColorFilter = filter;
             for (int i = 0; i < frames; i++)
             {
                 var sub = new SKBitmap();
@@ -120,9 +123,9 @@ internal sealed class TdAnimStrip : IDisposable
     /// </summary>
     public static SKImage IdleIcon(string towerId, float heightPx)
     {
-        string idle = towerId + "-idle.png";
+        string idle = TdAnimArt.TowerSheetId(towerId) + "-idle.png";
         float scale = ScaleForBoxHeight(idle, TdAnimArt.IdleFrames, Math.Max(1f, heightPx));
-        using var strip = Bake(idle, TdAnimArt.IdleFrames, scale, idle, TdAnimArt.IdleFrames);
+        using var strip = Bake(idle, TdAnimArt.IdleFrames, scale, idle, TdAnimArt.IdleFrames, dnsTint: towerId == "dns");
         int left = Math.Clamp(strip.AnchorX - strip.BoxW / 2, 0, strip.FrameW - 1);
         int top = Math.Clamp(strip.AnchorY - strip.BoxH, 0, strip.FrameH - 1);
         int w = Math.Min(strip.BoxW, strip.FrameW - left), h = Math.Min(strip.BoxH, strip.FrameH - top);
