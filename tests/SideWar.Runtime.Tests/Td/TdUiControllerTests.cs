@@ -38,7 +38,8 @@ public sealed class TdUiControllerTests
         public bool StageCrown(int stageId) => stageId == 1;
         public int StageMedals(int stageId) => stageId == 1 ? 5 : 0;
         public int StageBestScore(int stageId) => stageId == 1 ? 4123 : 0;
-        public SideWar.Core.Td.TdRankProgress Rank => SideWar.Core.Td.TdRank.Progress(7000);
+        public int Score { get; set; } = 7000;
+        public SideWar.Core.Td.TdRankProgress Rank => SideWar.Core.Td.TdRank.Progress(Score);
         public SideWar.Core.Td.TdRecordOutcome LastOutcome { get; set; }
         public int SealsAvailable { get; set; } = 3;
         public bool NodePurchased(string nodeId) => false;
@@ -71,6 +72,56 @@ public sealed class TdUiControllerTests
         var m = TdMatchState.Create(TdContentLoader.LoadEmbedded(), stage, Rng.Seed(7, 54));
         m.Apply(new LayoutChanged(StripLayout.Create(Width, Width - 46, 88, 4, Width - 80, TowerHost.Band, [new FreeZone(32, Width - 32)])));
         return m;
+    }
+
+    [Fact]
+    public void Promotion_notice_only_appears_on_increase_and_expires()
+    {
+        var r = new Rig();
+        r.Ui.Sync();
+        Assert.False(r.Ui.NoticeOpen);
+        r.Host.Score = 12000;
+        r.Ui.Sync();
+        Assert.Equal("Promovido a Pleno!", r.Ui.NoticeText);
+        Assert.True(r.Ui.CornerPopover);
+        r.Now += TdUiController.StageNoticeSeconds + 1;
+        r.Ui.Sync();
+        Assert.False(r.Ui.NoticeOpen);
+        r.Host.Score = 5000;
+        r.Ui.Sync();
+        Assert.False(r.Ui.NoticeOpen);
+    }
+
+    [Fact]
+    public void Score_change_refreshes_views_even_within_same_rank_or_on_decrease()
+    {
+        var r = new Rig();
+        r.Ui.Sync();
+        int changes = 0;
+        r.Ui.Changed += () => changes++;
+        r.Host.Score = 7100;
+        r.Ui.Sync();
+        Assert.True(changes > 0);
+        changes = 0;
+        r.Host.Score = 0;
+        r.Ui.Sync();
+        Assert.True(changes > 0);
+        Assert.Null(r.Ui.NoticeText);
+    }
+
+    [Theory]
+    [InlineData(0, 0, "Estagiário")]
+    [InlineData(4999, 0, "Estagiário")]
+    [InlineData(5000, 1, "Júnior")]
+    [InlineData(34000, 5, "Arquiteto")]
+    public void Menu_rank_and_header_follow_current_score(int score, int level, string name)
+    {
+        var r = new Rig();
+        r.Host.Score = score;
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
+        var items = r.Ui.BuildPopover()!.Items;
+        Assert.Contains(items, i => i.SArg == "rank-card" && i.Arg == level && i.Text == name);
+        Assert.Contains(items, i => i.SArg == "rank-chip" && i.Arg == level && i.Text == name);
     }
 
     [Theory]
@@ -585,7 +636,7 @@ public sealed class TdUiControllerTests
     {
         var r = new Rig();
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "...", TdUiAction.Menu));
-        Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Kind == TdUiKind.Bar && i.Text == "Patente: Júnior");
+        Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Kind == TdUiKind.Bar && i.SArg == "rank-card" && i.Text == "Júnior");
         r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.MapOpen));
         var map = r.Ui.BuildPopover()!;
         var badges = map.Items.Where(i => i.Kind == TdUiKind.Badges).ToArray();
