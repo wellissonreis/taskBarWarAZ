@@ -224,6 +224,20 @@ public sealed class TdUiGoldenTests
         return 0.2126 * Ch(c.Red) + 0.7152 * Ch(c.Green) + 0.0722 * Ch(c.Blue);
     }
 
+    [Fact]
+    public void Hud_wave_ticks_follow_the_displayed_wave()
+    {
+        var item = new TdUiItem(new SideWar.Runtime.Geometry.DipRect(0, 0, 58, 28), TdUiKind.Button,
+            "20/20 5/10", TdUiAction.HudRestore);
+        using var typo = new Typography();
+        using var renderer = new TdUiRenderer(typo, 96) { TextEnabled = false };
+        using var bmp = new SKBitmap(58, 28);
+        using (var canvas = new SKCanvas(bmp))
+            renderer.DrawHud(canvas, new TdHudView([item], 58, 28, Wave: 5, TotalWaves: 10), -1);
+        Assert.Equal(Palette.Td.Amber, bmp.GetPixel(7, 24));
+        Assert.Equal(Palette.Td.BorderStrong, bmp.GetPixel(49, 24));
+    }
+
     private static double Contrast(SKColor a, SKColor b)
     {
         double la = Luminance(a), lb = Luminance(b);
