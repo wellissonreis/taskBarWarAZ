@@ -109,8 +109,8 @@ public sealed partial class TdUiController
     /// <summary>Fase 1 sem nenhuma torre: a onda 1 não começa (Iniciar onda desabilitado com a dica "Coloque 1 torre primeiro").</summary>
     public bool StartBlocked => StartBlockedFor(_match());
 
-    private bool StartBlockedFor(TdMatchState m) =>
-        _onb is { TutorialDone: false } && m.Phase == MatchPhase.Preparo && m.WaveNumber == 0 && m.Towers.Count == 0;
+    private static bool StartBlockedFor(TdMatchState m) =>
+        m.Phase is MatchPhase.Preparo or MatchPhase.Onda && !m.HasPlacedTower;
 
     private static int PlacedTowers(TdMatchState m)
     {

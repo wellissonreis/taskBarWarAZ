@@ -15,6 +15,16 @@ namespace SideWar.Runtime.Tests.Td;
 /// <summary>TD.8: fluxo de UI da partida TD (construção, inspetor, HUD, fim de partida) sobre o controlador puro.</summary>
 public sealed class TdUiControllerTests
 {
+    [Fact]
+    public void Start_requires_a_placed_tower_without_onboarding()
+    {
+        var r = new Rig();
+        var start = r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.StartWave);
+        Assert.False(start.Enabled);
+        Assert.Equal("Coloque uma torre para começar", start.Tip);
+        Assert.True(r.Match.Apply(new BuildTower("bolt", 500)).IsOk);
+        Assert.True(r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.StartWave).Enabled);
+    }
     private const int Width = 1000;
     private static readonly string[] Affordable = ["bolt", "frost", "cannon"];
 
@@ -321,6 +331,7 @@ public sealed class TdUiControllerTests
     public void Ability_closes_and_resumes_before_sending_the_time_command()
     {
         var r = new Rig();
+        Assert.True(r.Match.Apply(new BuildTower("bolt", 500)).IsOk);
         r.Match.Apply(new StartWave());
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
         var ability = r.Ui.BuildPopover()!.Items.First(i => i.Action == TdUiAction.ResumeAbility && i.SArg == "scale");
@@ -482,6 +493,7 @@ public sealed class TdUiControllerTests
     public void Hud_start_button_sends_wave_request_and_ability_gates_on_wave()
     {
         var r = new Rig();
+        Assert.True(r.Match.Apply(new BuildTower("bolt", 500)).IsOk);
         var start = r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.StartWave);
         Assert.True(start.Enabled);
         r.Ui.Activate(start);
@@ -511,6 +523,7 @@ public sealed class TdUiControllerTests
     public void Start_button_becomes_call_next_with_the_bonus_during_the_wave()
     {
         var r = new Rig();
+        Assert.True(r.Match.Apply(new BuildTower("bolt", 500)).IsOk);
         r.Ui.Activate(r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.StartWave));
         for (int i = 0; i < 30 * 60 && r.Match.ActiveWaves.Any(a => !a.SpawnsDone); i++) r.Match.Step();
         var start = r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.StartWave);
@@ -523,6 +536,7 @@ public sealed class TdUiControllerTests
     public void Minimize_collapses_the_hud_to_a_chip_with_core_and_wave_and_the_chip_restores()
     {
         var r = new Rig();
+        Assert.True(r.Match.Apply(new BuildTower("bolt", 500)).IsOk);
         r.Host.HudMinimized = true;
         var chip = r.Ui.BuildHud();
         Assert.True(chip.Minimized);
@@ -581,6 +595,8 @@ public sealed class TdUiControllerTests
             Stages = content.Stages with { Stages = [content.Stages.Stages[0] with { Waves = 1 }, .. content.Stages.Stages.Skip(1)] },
         };
         var r = new Rig { Match = TdMatchState.Create(content, 1, Rng.Seed(7, 54)) };
+        r.Match.Apply(new LayoutChanged(StripLayout.Create(Width, Width - 46, 88, 4, Width - 80, TowerHost.Band, [new FreeZone(32, Width - 32)])));
+        Assert.True(r.Match.Apply(new BuildTower("bolt", 500)).IsOk);
         r.Match.Apply(new StartWave());
         for (int i = 0; i < 3000 && r.Match.Phase == MatchPhase.Onda; i++) r.Match.Step();
         Assert.Equal(MatchPhase.Vitoria, r.Match.Phase);

@@ -15,7 +15,7 @@ public sealed partial class TdMatchState
         Frame++;
         if (Phase == MatchPhase.Preparo)
         {
-            if (_countdownActive && --_countdownTicks <= 0) BeginWave(NextWaveNumber);
+            if (_countdownActive && HasPlacedTower && --_countdownTicks <= 0) BeginWave(NextWaveNumber);
             return;
         }
         if (Phase != MatchPhase.Onda) return;

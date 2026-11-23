@@ -224,6 +224,9 @@ public sealed partial class TdMatchState
     public long CooldownReductionTicks { get; private set; }
 
     public IReadOnlyList<TdTower> Towers => _towers;
+
+    /// <summary>Existe ao menos uma torre posicionada na faixa.</summary>
+    public bool HasPlacedTower => _towers.Any(t => t.Placed);
     public IReadOnlyList<TdEnemy> Enemies => _enemies;
     public IReadOnlyList<TdActiveWave> ActiveWaves => _active;
     public IReadOnlyList<TdNode> Nodes => _nodes;
@@ -350,6 +353,7 @@ public sealed partial class TdMatchState
     {
         if (Phase != MatchPhase.Preparo) return Reject(CommandReason.InvalidPhase);
         if (NextWaveNumber == 0) return Reject(CommandReason.NotAvailable);
+        if (!HasPlacedTower) return Reject(CommandReason.NotAvailable);
         int w = NextWaveNumber;
         if (_countdownActive && _countdownTicks > 0)
         {
@@ -370,6 +374,7 @@ public sealed partial class TdMatchState
         if (Phase != MatchPhase.Onda) return Reject(CommandReason.InvalidPhase);
         int w = NextWaveNumber;
         if (w == 0) return Reject(CommandReason.NotAvailable);
+        if (!HasPlacedTower) return Reject(CommandReason.NotAvailable);
         foreach (var a in _active)
             if (!a.SpawnsDone) return Reject(CommandReason.NotAvailable);
         _earlyCalls++;

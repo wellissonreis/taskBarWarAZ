@@ -822,7 +822,7 @@ public sealed partial class TdUiController
             items.Add(new TdUiItem(new DipRect(0, y0 + 6, startWidth, 28), TdUiKind.Button,
                 m.Phase == MatchPhase.Onda ? "Próxima" : "Iniciar", TdUiAction.StartWave,
                 Enabled: enabled && !StartBlockedFor(m) && !ModalOpen, Tone: tone,
-                Tip: StartBlockedFor(m) ? "Coloque 1 torre primeiro" : tip,
+                Tip: StartBlockedFor(m) ? "Coloque uma torre para começar" : tip,
                 Icon: m.Phase == MatchPhase.Onda ? TdIcon.FastForward : TdIcon.Play));
         }
         void Add(float x, float y, float w, float h, TdUiKind kind, string text, TdUiAction action = TdUiAction.None,
