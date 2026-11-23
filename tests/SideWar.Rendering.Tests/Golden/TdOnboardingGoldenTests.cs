@@ -25,7 +25,7 @@ public sealed class TdOnboardingGoldenTests
     private const int BandWidth = 1200;
     private static readonly SKColor Backdrop = new(0x1b, 0x22, 0x30);
 
-    public enum Scene { HudOpen, HudCollapse, Core, Credits, Portal, Build, Point, Tower, Range, Wave, Hurt, Quiz, QuizRight, QuizWrong, QuizTime, Defeat, ChipPulse, Ability, Help, Tip }
+    public enum Scene { HudOpen, HudCollapse, Core, Credits, Portal, Build, Point, Tower, Range, Wave, Hurt, Quiz, QuizRight, QuizWrong, QuizTime, ChipPulse, Ability, Help, Tip }
 
     private sealed class Host : ITdUiHost
     {
@@ -73,7 +73,7 @@ public sealed class TdOnboardingGoldenTests
     {
         var m = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 1, Rng.Seed(42, 54));
         m.Apply(new LayoutChanged(StripLayout.Create(BandWidth, BandWidth - 46, 88, 4, BandWidth - 80, TowerHost.Band, [new FreeZone(32, BandWidth - 32)])));
-        bool plain = scene is Scene.Help or Scene.QuizRight or Scene.QuizWrong or Scene.QuizTime or Scene.Defeat or Scene.ChipPulse;
+        bool plain = scene is Scene.Help or Scene.QuizRight or Scene.QuizWrong or Scene.QuizTime or Scene.ChipPulse;
         var store = new Store { Done = plain };
         var host = new Host { HudMinimized = scene is Scene.HudOpen or Scene.ChipPulse };
         double now = 0;
@@ -109,18 +109,13 @@ public sealed class TdOnboardingGoldenTests
             case Scene.Range: Intro(); Acks(3); Bolt(330); break;
             case Scene.Wave: Intro(); Acks(3); Bolt(330); Acks(1); break;
             case Scene.Hurt:
-                Intro(); Acks(3); Bolt(330); Acks(1); m.Apply(new StartWave()); Prop(m, "Integrity", m.Integrity - 1); ui.Sync();
+                Intro(); Acks(3); Bolt(330); Acks(1); m.Apply(new StartWave()); Prop(m, "ReputationLostTotal", m.ReputationLostTotal + 25); ui.Sync();
                 break;
             case Scene.Ability: Intro(); Acks(3); Bolt(330); Acks(1); m.Apply(new StartWave()); Acks(1); Prop(m, "Credits", 0L); ui.Sync(); break;
             case Scene.Quiz: Intro(); Acks(3); Bolt(330); Acks(1); ToPrep2(); break;
             case Scene.QuizRight: Bolt(330); ToPrep2(); ui.Activate(item(TdUiAction.QuizTrue, null)); break; // q01 é verdadeira
             case Scene.QuizWrong: Bolt(330); ToPrep2(); ui.Activate(item(TdUiAction.QuizFalse, null)); break;
             case Scene.QuizTime: Bolt(330); ToPrep2(); now += 10.5; ui.Sync(); break;
-            case Scene.Defeat:
-                m.Apply(new StartWave());
-                for (int i = 0; i < 30 * 900 && m.Phase != MatchPhase.Derrota; i++) { if (m.Phase == MatchPhase.Preparo) m.Apply(new StartWave()); m.Step(); }
-                ui.Sync();
-                break;
             case Scene.ChipPulse: ui.Sync(); break;
             case Scene.Help: ui.OpenHowTo(); break;
             case Scene.Tip: m.Apply(new BuildTower("bolt", 330)); store.Done = true; ui.Sync(); break;

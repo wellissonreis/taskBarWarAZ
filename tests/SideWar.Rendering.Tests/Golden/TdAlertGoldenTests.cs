@@ -46,10 +46,9 @@ public sealed class TdAlertGoldenTests
     {
         var match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 1, Rng.Seed(7, 54), null, TdMatchOptions.Default);
         var g = new TdAlertGuard();
-        TdAlertCatalog.Test(match, TdAlertType.FatalDrop, out _); // só garante o catálogo carregado
+        TdAlertCatalog.Test(match, TdAlertType.PassedLastTower, out _); // só garante o catálogo carregado
         var type = kind switch
         {
-            "critical-short" => TdAlertType.FatalDrop,
             "critical-long" => TdAlertType.PassedLastTower,
             "warning-short" => TdAlertType.BossIncoming,
             _ => TdAlertType.PhishingNoSentinel,
@@ -74,7 +73,7 @@ public sealed class TdAlertGoldenTests
     public static TheoryData<string, int> Cases()
     {
         var d = new TheoryData<string, int>();
-        foreach (var kind in new[] { "critical-short", "critical-long", "warning-short", "warning-long" })
+        foreach (var kind in new[] { "critical-long", "warning-short", "warning-long" })
             foreach (int dpi in new[] { 96, 144, 192 }) d.Add(kind, dpi);
         return d;
     }
@@ -99,7 +98,6 @@ public sealed class TdAlertGoldenTests
     }
 
     [Theory]
-    [InlineData("critical-short")]
     [InlineData("critical-long")]
     [InlineData("warning-short")]
     [InlineData("warning-long")]

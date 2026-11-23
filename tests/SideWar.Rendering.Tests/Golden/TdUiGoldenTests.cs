@@ -48,7 +48,7 @@ public sealed class TdUiGoldenTests
         public void ClearTip(string id) => _seen.Remove(id);
     }
 
-    public enum UiScene { HudMoney, HudPrep, HudWave, HudMin, HudTip, Chooser, ChooserPoint, Inspector, Preview, Map, Seals, Victory, Menu, HudPlacing, Towers, Runes, Help, Defeat, QuickTowers, RuneWindow, RuneWindowTipAvailable, RuneWindowTipAwake, RuneWindowTipLocked, RunesTipAvailable, RunesTipAwake, RunesTipLocked, RunesBranch, RuneWindowBranch, RuneCard, RuneWindowFromCard }
+    public enum UiScene { HudMoney, HudPrep, HudWave, HudMin, HudTip, Chooser, ChooserPoint, Inspector, Preview, Map, Seals, Victory, Menu, HudPlacing, Towers, Runes, Help, BaseAttacked, QuickTowers, RuneWindow, RuneWindowTipAvailable, RuneWindowTipAwake, RuneWindowTipLocked, RunesTipAvailable, RunesTipAwake, RunesTipLocked, RunesBranch, RuneWindowBranch, RuneCard, RuneWindowFromCard }
 
     public static TheoryData<UiScene, int> Cases()
     {
@@ -121,13 +121,14 @@ public sealed class TdUiGoldenTests
                 break;
             }
             case UiScene.RuneCard or UiScene.RuneWindowFromCard:
-                typeof(TdMatchState).GetProperty("Integrity")!.SetValue(match, match.Integrity - 1);
+                typeof(TdMatchState).GetProperty("ReputationLostTotal")!.SetValue(match, match.ReputationLostTotal + 25 * 1);
                 ui.Sync();
                 if (scene == UiScene.RuneWindowFromCard) ui.Activate(ui.BuildPopover()!.Items.First(i => i.Action == TdUiAction.RuneTutorialOpen));
                 break;
             case UiScene.Help: ui.OpenHowTo(); break;
-            case UiScene.Defeat:
-                typeof(TdMatchState).GetProperty("Phase")!.SetValue(match, MatchPhase.Derrota); ui.Sync(); break;
+            case UiScene.BaseAttacked:
+                ui.Sync(); // referência: sem XP perdido ainda
+                typeof(TdMatchState).GetProperty("ReputationLostTotal")!.SetValue(match, match.ReputationLostTotal + 25); ui.Sync(); break;
             case UiScene.Menu: ui.Activate(item(TdUiAction.Menu, 0)); break;
             case UiScene.Towers: ui.Activate(item(TdUiAction.TowersOpen, 0)); break;
             case UiScene.HudPlacing: ui.Activate(item(TdUiAction.BuildToggle, 0)); break;
