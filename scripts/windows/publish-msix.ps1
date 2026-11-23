@@ -19,7 +19,7 @@ $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../..'))
 Set-Location $root
 $parts = $PackageVersion.Split('.') | ForEach-Object { [int64]$_ }
 if (@($parts | Where-Object { $_ -gt 65535 }).Count -gt 0) { throw 'Cada componente de PackageVersion deve estar entre 0 e 65535.' }
-if ($Mode -eq 'StoreUpload' -and ($parts[3] -ne 0)) { throw 'StoreUpload exige o quarto componente de PackageVersion igual a zero.' }
+if ($parts[3] -ne 0) { throw 'PackageVersion exige o quarto componente igual a zero.' }
 if ($IdentityName -notmatch '^[A-Za-z0-9.-]{3,50}$') { throw 'IdentityName inválido.' }
 if ([string]::IsNullOrWhiteSpace($Publisher) -or [string]::IsNullOrWhiteSpace($PublisherDisplayName)) { throw 'Publisher e PublisherDisplayName são obrigatórios.' }
 if ($Mode -eq 'StoreUpload' -and ($IdentityName -match '(?i)placeholder|sidewar\.test' -or $Publisher -match '(?i)placeholder' -or $PublisherDisplayName -match '(?i)placeholder')) { throw 'StoreUpload requer identidade real do Partner Center, não placeholders de teste.' }
@@ -48,6 +48,41 @@ if ($Mode -eq 'SideLoad') {
     $installed = Get-Item -LiteralPath ("Cert:\CurrentUser\My\" + $cert.Thumbprint) -ErrorAction SilentlyContinue
     if (-not $installed -or -not $installed.HasPrivateKey) { throw 'Certificado com chave privada não encontrado em CurrentUser\My.' }
 }
+# A reserva persistente evita versões repetidas mesmo no mesmo segundo, após falhas
+# de build ou quando o relógio volta. O estado fica fora do espelho sincronizado.
+$stateDir = Join-Path $env:LOCALAPPDATA 'SideWar\MsixVersion'
+New-Item -ItemType Directory -Force -Path $stateDir | Out-Null
+$statePath = Join-Path $stateDir 'last-version.txt'
+$mutex = [Threading.Mutex]::new($false, 'Local\SideWar-MsixVersion')
+$locked = $false
+try {
+    try { $locked = $mutex.WaitOne([TimeSpan]::FromMinutes(5)) }
+    catch [Threading.AbandonedMutexException] { $locked = $true }
+    if (-not $locked) { throw 'Tempo esgotado aguardando reserva de versão MSIX.' }
+    $last = [int64]0
+    if (Test-Path -LiteralPath $statePath) {
+        $raw = [IO.File]::ReadAllText($statePath).Trim()
+        if (-not [int64]::TryParse($raw, [ref]$last) -or $last -lt 1 -or $last -gt 281474976710655) {
+            throw "Estado de versão MSIX inválido: $statePath"
+        }
+    }
+    # Três componentes de 16 bits; a data é contada em segundos desde 2020,
+    # partindo de 1.0.0.0. PackageVersion opcional funciona como piso.
+    $seconds = [int64][Math]::Floor(([DateTime]::UtcNow - [DateTime]::new(2020, 1, 1, 0, 0, 0, [DateTimeKind]::Utc)).TotalSeconds)
+    $floor = $parts[0] * 4294967296L + $parts[1] * 65536L + $parts[2]
+    $next = [Math]::Max([Math]::Max(4294967296L + $seconds, $last + 1), $floor)
+    if ($next -gt 281474976710655) { throw 'Limite de versões MSIX esgotado.' }
+    # Gravar antes do build: uma versão reservada nunca é reutilizada.
+    [IO.File]::WriteAllText($statePath, $next.ToString([Globalization.CultureInfo]::InvariantCulture))
+    $major = [int64][Math]::Floor($next / 4294967296L)
+    $minor = [int64][Math]::Floor(($next % 4294967296L) / 65536L)
+    $build = $next % 65536L
+    $PackageVersion = "$major.$minor.$build.0"
+} finally {
+    if ($locked) { $mutex.ReleaseMutex() }
+    $mutex.Dispose()
+}
+
 $projectDir = Join-Path $root 'packaging\SideWar.Package'
 $output = Join-Path $root 'artifacts\msix'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
