@@ -980,7 +980,8 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             bool rankChip = v.Items.Any(i => i.SArg == "rank-chip");
             float headerX = rankChip ? 172 : 16;
             RoundBox(c, new DipRect(headerX, 10, 86, 24), Palette.Td.Surface, Palette.Td.PauseBadge, 4);
-            _p.Text(c, "Ⅱ PAUSADO", PanelFont.JetBrainsMono, 10, new DipRect(headerX + 5, 15, 80, 14), Palette.Td.Amber);
+            DrawIcon(c, TdIcon.Pause, headerX + 6, 16, 12, Palette.Td.Amber);
+            _p.Text(c, "PAUSADO", PanelFont.JetBrainsMono, 10, new DipRect(headerX + 22, 15, 62, 14), Palette.Td.Amber);
             _p.Text(c, v.Title, PanelFont.JetBrainsMono, 11, new DipRect(headerX + 96, 15, 662 - headerX - 96, 16), Palette.Td.Muted);
             DrawRuneWeb(c, v.Items, true);
             for (int i = 0; i < v.Items.Length; i++)
@@ -1024,9 +1025,16 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
                 [RankColor(it.Arg).WithAlpha(80), RankColor(it.Arg).WithAlpha(0)], null, SKShaderTileMode.Clamp))
             using (var paint = new SKPaint { Shader = glow, IsAntialias = true })
                 c.DrawCircle(_p.Px(r.X + 24), _p.Px(r.Y + 26), _p.Px(26), paint);
-            float scale = 0.6f + 0.4f * it.Fill;
-            float badgeSize = 48f * scale;
-            DrawBrasao(c, it.Arg, new DipRect(r.X + (48 - badgeSize) / 2, r.Y + 2 + (48 - badgeSize) / 2, badgeSize, badgeSize));
+            // Pixel art: brasão sempre em 1x (escala inteira); a entrada anima só opacidade e moldura.
+            float fade = Math.Clamp(0.4f + 0.6f * it.Fill, 0f, 1f);
+            using (var frame = new SKPaint { IsAntialias = false, Style = SKPaintStyle.Stroke, StrokeWidth = Math.Max(1f, _p.Px(1f)), Color = RankColor(it.Arg).WithAlpha((byte)(200 * (1f - it.Fill))) })
+                c.DrawRect(_p.Px(r.X - 1), _p.Px(r.Y + 1), _p.Px(50), _p.Px(50), frame);
+            using (var fadePaint = new SKPaint { Color = SKColors.White.WithAlpha((byte)(255 * fade)) })
+            {
+                c.SaveLayer(fadePaint);
+                DrawBrasao(c, it.Arg, new DipRect(r.X, r.Y + 2, 48, 48));
+                c.Restore();
+            }
             _p.Text(c, it.Text, PanelFont.SpaceGrotesk, 12, new DipRect(r.X + 54, r.Y + 14, r.W - 54, 24), RankColor(it.Arg));
             return;
         }
