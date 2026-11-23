@@ -128,7 +128,8 @@ public sealed class TdUiGoldenTests
             case UiScene.Help: ui.OpenHowTo(); break;
             case UiScene.BaseAttacked:
                 ui.Sync(); // referência: sem XP perdido ainda
-                typeof(TdMatchState).GetProperty("ReputationLostTotal")!.SetValue(match, match.ReputationLostTotal + 25); ui.Sync(); break;
+                typeof(TdMatchState).GetProperty("ReputationLostTotal")!.SetValue(match, match.ReputationLostTotal + 25); ui.Sync();
+                now += 0.5; break; // toast já visível (passou a entrada suave)
             case UiScene.Menu: ui.Activate(item(TdUiAction.Menu, 0)); break;
             case UiScene.Towers: ui.Activate(item(TdUiAction.TowersOpen, 0)); break;
             case UiScene.HudPlacing: ui.Activate(item(TdUiAction.BuildToggle, 0)); break;
@@ -211,9 +212,9 @@ public sealed class TdUiGoldenTests
 
     private static SKBitmap RenderRankToast(int rank, float fill, int dpi)
     {
-        var item = new TdUiItem(new SideWar.Runtime.Geometry.DipRect(TdUiController.Pad, 26, 176, 52), TdUiKind.Label,
-            $"Promovido a {TdRank.DisplayName((TdRankLevel)rank)}!", Arg: rank, SArg: "rank-notice", Fill: fill);
-        var view = new TdPopoverView("Promoção", [item], 200f, 90f, 0f);
+        var item = new TdUiItem(new SideWar.Runtime.Geometry.DipRect(0, 0, 200, TdUiController.ToastH), TdUiKind.Label,
+            $"Promovido a {TdRank.DisplayName((TdRankLevel)rank)}!", Arg: rank, SArg: "toast", Tone: TdTone.Accent, Fill: fill, Sub: "glow");
+        var view = new TdPopoverView("Promoção", [item], 200f, TdUiController.ToastH, 0f);
         using var typo = new Typography();
         using var r = new TdUiRenderer(typo, dpi) { TextEnabled = true };
         var (w, h) = r.PhysicalSize(view.Width, view.Height);
@@ -226,9 +227,9 @@ public sealed class TdUiGoldenTests
         return bmp;
     }
 
-    /// <summary>Toast de promoção: início (moldura + opacidade baixa) e fim da animação; brasão sempre em 1x (pixel art íntegro).</summary>
+    /// <summary>Toast de promoção (uma linha, 22 DIP, coroa 20 px em 1x): meio da entrada e opaco.</summary>
     [Theory]
-    [InlineData(1, 0.0f, 96)]
+    [InlineData(1, 0.4f, 96)]
     [InlineData(1, 1.0f, 96)]
     [InlineData(3, 1.0f, 144)]
     public void Rank_toast_matches_golden(int rank, float fill, int dpi)
@@ -240,20 +241,13 @@ public sealed class TdUiGoldenTests
     }
 
     [Fact]
-    public void Rank_toast_animation_changes_only_opacity_and_frame_not_the_badge_size()
+    public void Rank_toast_animation_changes_only_opacity()
     {
-        using var start = RenderRankToast(2, 0f, 96);
+        using var start = RenderRankToast(2, 0.3f, 96);
         using var end = RenderRankToast(2, 1f, 96);
         Assert.False(start.Bytes.AsSpan().SequenceEqual(end.Bytes));
-        // o brasão final (opaco) ocupa exatamente 48x48 DIP: coluna 1px fora da área só tem moldura/brilho, nunca sprite escalado
-        int opaqueEnd = 0, opaqueStart = 0;
-        for (int y = 28; y < 76; y++)
-            for (int x = 16; x < 64; x++)
-            {
-                if (end.GetPixel(x, y) != Backdrop) opaqueEnd++;
-                if (start.GetPixel(x, y) != Backdrop) opaqueStart++;
-            }
-        Assert.True(opaqueEnd > 0 && opaqueStart > 0);
+        Assert.Equal(200, end.Width);
+        Assert.Equal(22, end.Height);
     }
 
     [Theory]

@@ -225,7 +225,7 @@ public sealed class TdAlertCardTests
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public void Card_blocks_are_measured_without_overlap_and_fonts_are_at_least_14(bool critical)
+    public void Card_blocks_are_measured_without_overlap_and_fonts_are_compact(bool critical)
     {
         var r = critical ? Held() : Warning();
         var p = r.Ui.BuildPopover()!;
@@ -233,7 +233,7 @@ public sealed class TdAlertCardTests
         foreach (var b in blocks)
         {
             Assert.True(b.Rect.X >= 0 && b.Rect.Y >= 0 && b.Rect.X + b.Rect.W <= p.Width && b.Rect.Y + b.Rect.H <= p.Height, b.Text);
-            Assert.True(b.FontSize >= 14f, b.Text);
+            Assert.True(b.FontSize >= 10f, b.Text); // avisos discretos: fonte ~11 (antes 14)
             if (b.Kind == TdUiKind.Label)
                 Assert.True(TdUiController.QuizLines(b.Text, b.Rect.W - 16f, b.FontSize) * b.FontSize * TdUiController.QuizLineFactor <= b.Rect.H, b.Text);
         }

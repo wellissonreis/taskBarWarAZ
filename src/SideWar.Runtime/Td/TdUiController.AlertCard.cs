@@ -10,8 +10,8 @@ namespace SideWar.Runtime.Td;
 /// </summary>
 public sealed partial class TdUiController
 {
-    public const double AlertCardSeconds = 14.0, AlertPulseSeconds = 3.0;
-    public const float AlertWidth = 320f, AlertTitleFont = 15f, AlertFont = 14f, AlertButtonH = 34f;
+    public const double AlertCardSeconds = 2.5, AlertPulseSeconds = 3.0;
+    public const float AlertWidth = 250f, AlertTitleFont = 11f, AlertFont = 10.5f, AlertButtonH = 20f;
 
     private int _acRaised;
     private double _acUntil, _acPulseUntil;
@@ -110,7 +110,7 @@ public sealed partial class TdUiController
         void Button(string text, TdUiAction act, TdTone t)
         {
             s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, bw, AlertButtonH), TdUiKind.Button, text, act, Tone: t, FontSize: AlertFont));
-            s.Y += AlertButtonH + 4f;
+            s.Y += AlertButtonH + 3f;
         }
         if (fatal)
         {

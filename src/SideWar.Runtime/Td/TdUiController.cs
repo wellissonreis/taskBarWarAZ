@@ -41,7 +41,10 @@ public sealed partial class TdUiController
     /// <summary>Cartão automático de fim de fase no cantinho (sem modal, sem foco); clicar no chip abre a modal central.</summary>
     public bool EndCardOpen => Mode == TdUiMode.End && _endCorner;
     /// <summary>TD.28b: aviso discreto "Fase N ✓" ao concluir uma fase da corrida; some sozinho em <see cref="StageNoticeSeconds"/> s, sem foco, sem pausa.</summary>
-    public const double StageNoticeSeconds = 4.0;
+    public const double StageNoticeSeconds = 2.5;
+    /// <summary>Aviso de promoção dura um pouco mais (3,5 s); entrada/saída suaves por opacidade (<see cref="NoticeFadeSeconds"/>).</summary>
+    public const double PromoNoticeSeconds = 3.5, NoticeFadeSeconds = 0.25;
+    public const float ToastH = 22f, ToastFont = 11f;
     private string? _noticeText;
     private double _noticeUntil;
     private double _noticeStarted;
@@ -658,7 +661,7 @@ public sealed partial class TdUiController
             _noticeText = $"Promovido a {TdRank.DisplayName(rank)}!";
             _noticeRank = rank;
             _noticeStarted = _now();
-            _noticeUntil = _now() + StageNoticeSeconds;
+            _noticeUntil = _now() + PromoNoticeSeconds;
             Changed?.Invoke();
         }
         else if (demoted && !BossHidden)
@@ -689,14 +692,14 @@ public sealed partial class TdUiController
 
     private TdPopoverView BuildNotice()
     {
-        var s = new Stack(200f);
-        if (_noticeRank is { } rank)
-            s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, s.Width - 2 * Pad, 52), TdUiKind.Label, _noticeText!, Arg: (int)rank, SArg: "rank-notice",
-                Fill: (float)Math.Clamp((_now() - _noticeStarted) / 0.3, 0, 1)));
-        else
-            s.Add(TdUiKind.Label, _noticeText!, 18f, tone: _noticeTitle == AttackTitle ? TdTone.Warn : TdTone.Good, icon: _noticeTitle == AttackTitle ? TdIcon.Alert : TdIcon.Check);
-        if (_noticeRank is not null) s.Y += 52;
-        return Finish(_noticeTitle ?? "Fase concluida", s, 0);
+        // Toast discreto: uma linha, ~22 DIP, sem botão; o mais recente substitui (só existe um texto). Fill = opacidade (entrada/saída suaves).
+        double now = _now(), dur = _noticeTitle == "Promoção" ? PromoNoticeSeconds : StageNoticeSeconds, start = _noticeUntil - dur;
+        float alpha = (float)Math.Clamp(Math.Min((now - start) / NoticeFadeSeconds, (_noticeUntil - now) / NoticeFadeSeconds), 0.0, 1.0);
+        var tone = _noticeRank is not null ? TdTone.Accent : _noticeTitle == AttackTitle ? TdTone.Warn : _noticeTitle == "Fusão recusada" ? TdTone.Warn : TdTone.Good;
+        float w = Math.Clamp(26f + _noticeText!.Length * 6.6f + (_noticeRank is not null ? 22f : 0f), 110f, 280f);
+        var item = new TdUiItem(new DipRect(0, 0, w, ToastH), TdUiKind.Label, _noticeText!, Arg: _noticeRank is { } r ? (int)r : -1, SArg: "toast", Tone: tone, Icon: tone == TdTone.Warn ? TdIcon.Alert : TdIcon.Check,
+            Fill: alpha, Sub: _noticeTitle == "Promoção" ? "glow" : null);
+        return new TdPopoverView(_noticeTitle ?? "Fase concluida", [item], w, ToastH, 0f);
     }
 
     private void SetMode(TdUiMode mode)

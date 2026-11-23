@@ -972,6 +972,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             return;
         }
         if (v.RuneWindow) { DrawRuneWindow(c, v, hover); return; }
+        if (v.Items.Length == 1 && v.Items[0].SArg == "toast") { DrawToast(c, v.Items[0], v.Width, boxH); return; }
         bool modal = v.Width == 720 && v.Height == 480 && !v.HasArrow;
         bool alert = v.AlertTone != TdTone.Normal;
         var edge = alert ? ToneColor(v.AlertTone) : modal ? Palette.Td.Border : v.HasArrow ? Palette.Ambar : Palette.BordaForte;
@@ -979,7 +980,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         if (alert && v.Pulse > 0f)
         {
             // TD.40c: pulso discreto da borda (sem tomar foco; zero com o modo discreto).
-            var glow = edge.WithAlpha((byte)(60 + 150 * v.Pulse));
+            var glow = edge.WithAlpha((byte)(30 + 60 * v.Pulse));
             _p.Fill(c, new DipRect(1, 1, v.Width - 2, 2), glow);
             _p.Fill(c, new DipRect(1, boxH - 3, v.Width - 2, 2), glow);
             _p.Fill(c, new DipRect(1, 3, 2, boxH - 6), glow);
@@ -1020,7 +1021,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             if (v.IconModule is not null) TdFusionMark.Draw(c, v.IconModule, _p.Px(4 + HeaderIconDip - 7f), _p.Px(2 + HeaderIconDip - 8f), _p.Px(9f));
             titleX += 22;
         }
-        float titleSize = v.Title == "CORRIDA ENCERRADA" || alert ? 14f : 10.5f;
+        float titleSize = v.Title == "CORRIDA ENCERRADA" ? 14f : alert ? 11f : 10.5f;
         _p.Text(c, v.Title, PanelFont.JetBrainsMono, titleSize, new DipRect(titleX, 3, v.Width - 40 - (titleX - TdUiController.Pad - 2), 18), alert ? edge : Palette.TxtPrincipal);
         _p.Fill(c, new DipRect(1, TdUiController.HeaderH, v.Width - 2, 1), Palette.BordaPainel);
         for (int i = 0; i < v.Items.Length; i++)
@@ -1028,6 +1029,33 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             DrawItem(c, v.Items[i], i == hover, v.Width, small: false);
             if (v.Items[i].Highlight) DrawHighlight(c, v.Items[i].Rect);
         }
+    }
+
+    /// <summary>Toast discreto: uma linha, fonte 11, fundo translúcido, borda fina, só um pontinho de cor; opacidade = Fill (entrada/saída suaves).</summary>
+    private void DrawToast(SKCanvas c, in TdUiItem it, float w, float h)
+    {
+        float k = Math.Clamp(it.Fill, 0f, 1f);
+        var dot = ToneColor(it.Tone);
+        using var layer = new SKPaint { Color = SKColors.White.WithAlpha((byte)(215 * k)) };
+        c.SaveLayer(layer);
+        RoundBox(c, new DipRect(0, 0, w, h), Palette.BordaPainel, Palette.BgPainel, 4);
+        float tx = 12f;
+        if (it.Arg >= 0)
+        {
+            if (it.Sub == "glow") // brilho leve só na promoção
+                using (var glow = SKShader.CreateRadialGradient(new SKPoint(_p.Px(14), _p.Px(h / 2)), _p.Px(14), [RankColor(it.Arg).WithAlpha(40), RankColor(it.Arg).WithAlpha(0)], null, SKShaderTileMode.Clamp))
+                using (var gp = new SKPaint { Shader = glow, IsAntialias = true })
+                    c.DrawCircle(_p.Px(14), _p.Px(h / 2), _p.Px(14), gp);
+            DrawCrown(c, it.Arg, new DipRect(4, 1, 20, 20)); // coroa 20 px (pixel art: sem escala fracionária)
+            tx = 28f;
+        }
+        else
+        {
+            using var dp = new SKPaint { Color = dot, IsAntialias = true };
+            c.DrawCircle(_p.Px(8), _p.Px(h / 2), _p.Px(2.5f), dp);
+        }
+        _p.Text(c, it.Text, PanelFont.JetBrainsMono, TdUiController.ToastFont, new DipRect(tx, 3, w - tx - 6, 16), Palette.TxtRotulo);
+        c.Restore();
     }
 
     private static SKColor ToneColor(TdTone t) => t switch
@@ -1039,25 +1067,6 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     private void DrawItem(SKCanvas c, in TdUiItem it, bool hover, float width, bool small)
     {
         var r = it.Rect;
-        if (it.SArg == "rank-notice")
-        {
-            using (var glow = SKShader.CreateRadialGradient(new SKPoint(_p.Px(r.X + 24), _p.Px(r.Y + 26)), _p.Px(26),
-                [RankColor(it.Arg).WithAlpha(80), RankColor(it.Arg).WithAlpha(0)], null, SKShaderTileMode.Clamp))
-            using (var paint = new SKPaint { Shader = glow, IsAntialias = true })
-                c.DrawCircle(_p.Px(r.X + 24), _p.Px(r.Y + 26), _p.Px(26), paint);
-            // Pixel art: brasão sempre em 1x (escala inteira); a entrada anima só opacidade e moldura.
-            float fade = Math.Clamp(0.4f + 0.6f * it.Fill, 0f, 1f);
-            using (var frame = new SKPaint { IsAntialias = false, Style = SKPaintStyle.Stroke, StrokeWidth = Math.Max(1f, _p.Px(1f)), Color = RankColor(it.Arg).WithAlpha((byte)(200 * (1f - it.Fill))) })
-                c.DrawRect(_p.Px(r.X - 1), _p.Px(r.Y + 1), _p.Px(50), _p.Px(50), frame);
-            using (var fadePaint = new SKPaint { Color = SKColors.White.WithAlpha((byte)(255 * fade)) })
-            {
-                c.SaveLayer(fadePaint);
-                DrawBrasao(c, it.Arg, new DipRect(r.X, r.Y + 2, 48, 48));
-                c.Restore();
-            }
-            _p.Text(c, it.Text, PanelFont.SpaceGrotesk, 12, new DipRect(r.X + 54, r.Y + 14, r.W - 54, 24), RankColor(it.Arg));
-            return;
-        }
         float size = small ? 9f : 9.5f;
         var color = ToneColor(it.Tone);
         switch (it.Kind)
