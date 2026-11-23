@@ -450,10 +450,10 @@ public sealed class TdUiControllerTests
         r.Match.Apply(new BuildTower("bolt", 100));
         r.Ui.ClickPoint(300);
         var pop = r.Ui.BuildPopover()!;
-        Assert.Equal("$112", Find(pop, TdUiAction.ChooseTower, "bolt").Right);  // 2ª torre do tipo: 90 x 1,25 = 112,5 -> 112
+        Assert.Equal("$304", Find(pop, TdUiAction.ChooseTower, "bolt").Right);  // 2ª torre do tipo: 243 x 1,25 = 303,75 -> 304
         Assert.Contains("x1", Find(pop, TdUiAction.ChooseTower, "bolt").Text);
         r.Ui.Activate(Find(pop, TdUiAction.TowerCategory, "control"));
-        Assert.Equal("$90", Find(r.Ui.BuildPopover()!, TdUiAction.ChooseTower, "frost").Right);
+        Assert.Equal("$243", Find(r.Ui.BuildPopover()!, TdUiAction.ChooseTower, "frost").Right);
     }
 
     [Fact]
@@ -482,7 +482,7 @@ public sealed class TdUiControllerTests
         r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.Targeting, "Weak"));
         Assert.Equal((byte)TdTargeting.Weak, r.Match.Towers[0].Targeting);
         long before = r.Match.Credits, refund = r.Match.SellValue(id);
-        Assert.Equal(63, refund); // floor(90 x 0,7)
+        Assert.Equal(170, refund); // floor(243 x 0,7)
         r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.Sell));
         Assert.Empty(r.Match.Towers);
         Assert.Equal(before + refund, r.Match.Credits);

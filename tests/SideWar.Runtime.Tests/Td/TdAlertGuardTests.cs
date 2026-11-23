@@ -140,6 +140,7 @@ public sealed class TdAlertGuardTests
         Assert.Equal(TdAlertType.FewTowers, guard.Current?.Type);
         typeof(TdMatchState).GetProperty(nameof(TdMatchState.Tick))!.SetValue(r.Match, (long)TdAlertGuard.CooldownTicks);
         typeof(TdMatchState).GetProperty(nameof(TdMatchState.WaveNumber))!.SetValue(r.Match, 2);
+        typeof(TdMatchState).GetProperty(nameof(TdMatchState.Credits))!.SetValue(r.Match, 5000L); // preços da f4242ce: IdleCredits exige 2x a torre mais barata
         guard.Evaluate(r.Match);
         Assert.Equal(TdAlertType.IdleCredits, guard.Current?.Type);
         int raised = guard.Raised;
