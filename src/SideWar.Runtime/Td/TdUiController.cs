@@ -352,11 +352,11 @@ public sealed partial class TdUiController
                 // TD.30c: clicar num nó disponível gasta 1 fragmento (o Core desperta exatamente esse nó); bloqueado/despertado só seleciona.
                 _selectedRune = item.SArg;
                 var rm = _match();
-                if (rm.Phase is MatchPhase.Preparo or MatchPhase.Onda && rm.Fragments > 0 && !rm.IsAwakened(item.SArg) && rm.Frontier.Contains(item.SArg)) _send(new AwakenRune(item.SArg));
+                if (rm.Phase is MatchPhase.Preparo or MatchPhase.Onda && rm.Fragments >= rm.RuneCost(item.SArg) && !rm.IsAwakened(item.SArg) && rm.Frontier.Contains(item.SArg)) _send(new AwakenRune(item.SArg));
                 Changed?.Invoke(); break;
             }
             case TdUiAction.AwakenRune:
-                if (_match().Phase is MatchPhase.Preparo or MatchPhase.Onda && _selectedRune is not null && _match().Fragments > 0 && _match().Frontier.Contains(_selectedRune)) _send(new AwakenRune(_selectedRune));
+                if (_match().Phase is MatchPhase.Preparo or MatchPhase.Onda && _selectedRune is not null && _match().Fragments >= _match().RuneCost(_selectedRune) && _match().Frontier.Contains(_selectedRune)) _send(new AwakenRune(_selectedRune));
                 Changed?.Invoke(); break;
             case TdUiAction.GameOption:
             {
@@ -705,6 +705,7 @@ public sealed partial class TdUiController
         QuickTowersOpen = false;
         RuneWindowOpen = false;
         _hoverRune = null;
+        _webCentered = false; // cada abertura da aba Runas recentraliza na última runa
         _endCorner = false;
         _confirmRestart = false;
         Mode = mode;
@@ -838,7 +839,7 @@ public sealed partial class TdUiController
             offset = 0;
             items.Clear();
             bool actionReady = (showStart && StartButton(m).Enabled && !StartBlockedFor(m) && !ModalOpen)
-                || (m.Fragments > 0 && m.Frontier.Count > 0);
+                || m.CanAwakenAny;
             Add(12, 6, 73 + coreExtra, 28, TdUiKind.Button, repText, TdUiAction.HudRestore,
                 tag: "core", icon: TdIcon.Medal, fill: (float)repRank.Fraction, tip: coreTip + $" {stageText.Trim()} Onda {shown}/{m.TotalWaves}. Clique para expandir o HUD.", highlight: needed && PulseOn);
             Add(96 + coreExtra, 11, 1, 18, TdUiKind.Separator, "");
@@ -854,8 +855,8 @@ public sealed partial class TdUiController
         Add(109 + coreExtra, 6, 167 + waveExtra, 28, TdUiKind.Label, $"{shown}/{m.TotalWaves}", tag: "wave", tip: $"{stageText}Onda {shown}/{m.TotalWaves}");
         Add(288 + coreExtra + waveExtra, 11, 1, 18, TdUiKind.Separator, "");
         Add(301 + coreExtra + waveExtra, 6, 52 + moneyExtra, 28, TdUiKind.Money, _money.Display.ToString(System.Globalization.CultureInfo.InvariantCulture), tip: $"Créditos ¢{m.Credits}: ganhos de abates, bônus e perguntas; servem para comprar torres." + (_money.IncomeText is { } inc ? $" Renda recente {inc}." : ""), fill: _money.MilestoneGlow, sub: _money.IncomeText);
-        bool runeReady = m.Fragments > 0 && m.Frontier.Count > 0;
-        Add(359 + grow, 6, 28, 28, TdUiKind.Button, "", TdUiAction.RuneWindow, enabled: !ModalOpen, selected: RuneWindowOpen, icon: TdIcon.Star, tip: $"Runas {m.AwakenedCount}/{m.RuneWeb.Count}" + (runeReady ? $": {m.Fragments} fragmento(s) para despertar. " : ". ") + "Clique para abrir ou fechar a janela de runas.", fill: runeReady ? 1f : 0f);
+        bool runeReady = m.CanAwakenAny;
+        Add(359 + grow, 6, 28, 28, TdUiKind.Button, "", TdUiAction.RuneWindow, enabled: !ModalOpen, selected: RuneWindowOpen, icon: TdIcon.Star, tip: $"Runas {m.AwakenedCount}/{m.RuneWeb.Count}" + (runeReady ? $": {m.Fragments} fragmento(s), há runa para despertar. " : $": {m.Fragments} fragmento(s). ") + "Clique para abrir ou fechar a janela de runas.", fill: runeReady ? 1f : 0f);
         Add(399 + grow, 6, 28, 28, TdUiKind.Button, "", TdUiAction.QuickTowers, enabled: !ModalOpen, selected: QuickTowersOpen, icon: TdIcon.Castle, tip: PanelPinned ? "Torres (painel fixo: Jogo ou Configurações)" : "Torres: escolha e posicione sem pausar", fill: _money.BuyGlow);
         Add(439 + grow, 11, 1, 18, TdUiKind.Separator, "");
         bool paused = _userPaused && live;
@@ -1108,6 +1109,58 @@ public sealed partial class TdUiController
     private static readonly RuneSizes ModalRune = new(30f, 26f, 22f, 22f), HudRune = new(20f, 19f, 17f, 16f);
 
     public const float RuneWindowWidth = 288f, RuneWebWidth = 268f, RuneWebHeight = 168f;
+
+    /// <summary>
+    /// Escala do mundo da teia: DIP por unidade normalizada (x/y do conteúdo). A teia de 128 nós é grande demais para caber legível: a janela do HUD
+    /// mostra só a região ao redor da última runa despertada (zoom fixo <see cref="HudWorld"/>) e a aba Runas da modal rola (arrasto/setas) e dá
+    /// zoom (roda) sobre <see cref="ModalWorld"/> × zoom.
+    /// </summary>
+    public const float HudWorld = 820f, ModalWorld = 1100f, MinWebZoom = 0.3f, MaxWebZoom = 2.2f;
+    private float _webZoom = 1f, _webPanX = 0.5f, _webPanY = 0.5f;
+    private bool _webCentered;
+
+    /// <summary>Zoom atual da teia na aba Runas.</summary>
+    public float WebZoom => _webZoom;
+
+    /// <summary>Centro (coordenadas normalizadas) da região visível da teia na aba Runas.</summary>
+    public (float X, float Y) WebCenter => (_webPanX, _webPanY);
+
+    /// <summary>Roda do mouse na aba Runas: <paramref name="steps"/> &gt; 0 aproxima. Devolve true se a aba é a de runas.</summary>
+    public bool ZoomWeb(int steps)
+    {
+        if (Mode != TdUiMode.Runes) return false;
+        float z = Math.Clamp(_webZoom * MathF.Pow(1.18f, steps), MinWebZoom, MaxWebZoom);
+        if (z != _webZoom) { _webZoom = z; Changed?.Invoke(); }
+        return true;
+    }
+
+    /// <summary>Arrasto/rolagem da teia na aba Runas: deslocamento em DIP da modal (o conteúdo acompanha o ponteiro). Devolve true se a aba é a de runas.</summary>
+    public bool PanWeb(float dxDip, float dyDip)
+    {
+        if (Mode != TdUiMode.Runes) return false;
+        float k = ModalWorld * _webZoom;
+        _webPanX = Math.Clamp(_webPanX - dxDip / k, 0f, 1f);
+        _webPanY = Math.Clamp(_webPanY - dyDip / k, 0f, 1f);
+        Changed?.Invoke();
+        return true;
+    }
+
+    /// <summary>Volta o zoom e centraliza na última runa despertada (ou no núcleo).</summary>
+    public void RecenterWeb()
+    {
+        _webZoom = 1f;
+        var (x, y) = RuneFocus(_match());
+        _webPanX = x; _webPanY = y;
+        Changed?.Invoke();
+    }
+
+    /// <summary>Ponto de foco da teia (normalizado): a última runa despertada que o jogador viu; o núcleo se nenhuma.</summary>
+    private (float X, float Y) RuneFocus(TdMatchState m)
+    {
+        if (_lastRune is not null)
+            foreach (var n in m.RuneWeb) if (n.Id == _lastRune) return ((float)n.X, (float)n.Y);
+        return (0.5f, 0.5f);
+    }
     public const float ModalWebHeight = 318f, ModalLegendHeight = 32f, HudLegendHeight = 30f;
 
     /// <summary>Etiqueta de ramo para o nome acessível do nó.</summary>
@@ -1119,7 +1172,7 @@ public sealed partial class TdUiController
     /// bloqueada esmaecida. <c>Selected</c> marca os nós do ramo sob o mouse na legenda. O <c>Rect</c> é a área de acerto (mínimo
     /// <see cref="RuneSizes.MinHit"/>) e o diâmetro visual vai em <c>FontSize</c>. Devolve despertadas e o balão do nó sob o mouse (sempre nome do ramo + efeito).
     /// </summary>
-    private (int Total, TdRuneTip? Tip) AddRuneNodes(List<TdUiItem> items, TdMatchState m, DipRect area, RuneSizes sz)
+    private (int Total, TdRuneTip? Tip) AddRuneNodes(List<TdUiItem> items, TdMatchState m, DipRect area, RuneSizes sz, float world, (float X, float Y) center)
     {
         var types = m.Content.Runes.Types;
         var frontier = new HashSet<string>(m.Frontier);
@@ -1133,18 +1186,21 @@ public sealed partial class TdUiController
             var st = on ? TdRuneState.Awake : av ? TdRuneState.Available : TdRuneState.Locked;
             if (on) total++;
             float vis = on ? sz.On : av ? sz.Available : sz.Locked, hit = Math.Max(vis, sz.MinHit);
-            float cx = area.X + (float)n.X * area.W, cy = area.Y + (float)n.Y * area.H;
+            float cx = area.X + area.W / 2f + ((float)n.X - center.X) * world, cy = area.Y + area.H / 2f + ((float)n.Y - center.Y) * world;
+            if (cx - hit / 2 < area.X || cy - hit / 2 < area.Y || cx + hit / 2 > area.X + area.W || cy + hit / 2 > area.Y + area.H) continue; // fora da região visível
             items.Add(new(new DipRect(cx - hit / 2, cy - hit / 2, hit, hit), TdUiKind.Button, $"{types[ti].Name}, {RuneStateWord(st)}", TdUiAction.SelectRune,
                 PackRune(ti, n.Ring, n.Sector), SArg: n.Id, Right: n.Id == _lastRune ? "last" : null,
                 Fill: on ? RuneOn : av ? RuneAvailable : RuneLocked, Selected: _hoverBranch is not null && _hoverBranch == n.Type, FontSize: vis));
             if (n.Id != _hoverRune) continue;
             string name = "Runa de " + types[ti].Name;
+            int cost = m.RuneCost(n.Id);
+            string effect = types[ti].Text + (n.Power > 1 ? $" (valor ×{n.Power})" : "");
             tip = st switch
             {
-                TdRuneState.Awake => new TdRuneTip(n.Id, st, ti, name, "DESPERTADA", types[ti].Text, "Efeito ativo", TdTone.Good, cx, cy, vis),
-                TdRuneState.Available => new TdRuneTip(n.Id, st, ti, name, "DISPONÍVEL", types[ti].Text,
-                    frag > 0 ? "Clique para despertar · 1 fragmento" : "Sem fragmentos", frag > 0 ? TdTone.Accent : TdTone.Bad, cx, cy, vis),
-                _ => new TdRuneTip(n.Id, st, ti, name, "BLOQUEADA", types[ti].Text, "Desperte uma vizinha antes", TdTone.Dim, cx, cy, vis),
+                TdRuneState.Awake => new TdRuneTip(n.Id, st, ti, name, "DESPERTADA", effect, "Efeito ativo", TdTone.Good, cx, cy, vis),
+                TdRuneState.Available => new TdRuneTip(n.Id, st, ti, name, "DISPONÍVEL", effect,
+                    frag >= cost ? $"Clique para despertar · {cost} fragmento{(cost == 1 ? "" : "s")}" : $"Custo {cost} fragmento{(cost == 1 ? "" : "s")} · faltam {cost - frag}", frag >= cost ? TdTone.Accent : TdTone.Bad, cx, cy, vis),
+                _ => new TdRuneTip(n.Id, st, ti, name, "BLOQUEADA", effect, $"Desperte uma vizinha antes · custo {cost}", TdTone.Dim, cx, cy, vis),
             };
         }
         return (total, tip);
@@ -1178,17 +1234,24 @@ public sealed partial class TdUiController
     /// Aba Runas da modal (Main.dc.html): teia de 688×318 com FRAGMENTOS no canto esquerdo, contador no direito, dica embaixo, a legenda de ramos
     /// abaixo da teia e o balão do nó sob o mouse (desenhado pelo renderer, dentro da janela). Lê só o <see cref="TdMatchState"/>; o despertar envia <see cref="AwakenRune"/>.
     /// </summary>
+    /// <summary>Item invisível que marca onde fica o centro da teia (núcleo) na tela: o renderer desenha o fundo e as curvas em torno dele. <c>FontSize</c> = DIP por unidade normalizada.</summary>
+    private static void AddWebCenter(List<TdUiItem> items, DipRect area, (float X, float Y) center, float world) =>
+        items.Add(new(new DipRect(area.X + area.W / 2f + (0.5f - center.X) * world, area.Y + area.H / 2f + (0.5f - center.Y) * world, 0f, 0f), TdUiKind.Label, "", SArg: "webctr", FontSize: world));
+
     private TdRuneTip? AddRuneWeb(List<TdUiItem> items, TdMatchState m)
     {
         var area = new DipRect(16, 102, 688, ModalWebHeight);
+        if (!_webCentered) { _webCentered = true; var f = RuneFocus(m); _webPanX = f.X; _webPanY = f.Y; _webZoom = 1f; }
         items.Add(new(area, TdUiKind.Label, "", SArg: "webbg"));
-        var (total, tip) = AddRuneNodes(items, m, area, ModalRune);
+        float world = ModalWorld * _webZoom;
+        AddWebCenter(items, area, (_webPanX, _webPanY), world);
+        var (total, tip) = AddRuneNodes(items, m, area, ModalRune, world, (_webPanX, _webPanY));
         bool done = m.Frontier.Count == 0;
         long frag = m.Fragments;
         items.Add(new(new DipRect(area.X + 14, area.Y + 12, 200, 24), TdUiKind.Label, frag.ToString(System.Globalization.CultureInfo.InvariantCulture), SArg: "rfrag"));
         items.Add(new(new DipRect(area.X + area.W - 214, area.Y + 12, 200, 34), TdUiKind.Label, $"{total}/{m.RuneWeb.Count} runas", SArg: "rtot"));
         items.Add(new(new DipRect(area.X + 14, area.Y + area.H - 24, area.W - 28, 16), TdUiKind.Label,
-            done ? "Teia completa." : frag > 0 ? "Clique numa runa tracejada para despertar." : "Sem fragmentos: conquiste mais.",
+            done ? "Teia completa." : m.CanAwakenAny ? "Clique numa runa tracejada para despertar · arraste/setas: mover · roda: zoom" : "Faltam fragmentos para a fronteira · arraste/setas: mover · roda: zoom",
             SArg: "rhint"));
         AddRuneLegend(items, m, area.X, area.Y + area.H + 6f, area.W, ModalLegendHeight);
         int totalLegacy = _host.LegacyTotal;
@@ -1209,7 +1272,9 @@ public sealed partial class TdUiController
         };
         var area = new DipRect(10, 40, RuneWebWidth, RuneWebHeight);
         items.Add(new(area, TdUiKind.Label, "", SArg: "webbg"));
-        var (total, tip) = AddRuneNodes(items, m, area, HudRune);
+        var focus = RuneFocus(m);
+        AddWebCenter(items, area, focus, HudWorld);
+        var (total, tip) = AddRuneNodes(items, m, area, HudRune, HudWorld, focus);
         items.Add(new(new DipRect(10, 8, 150, 24), TdUiKind.Label, $"{total}/{m.RuneWeb.Count}", SArg: "rcount"));
         items.Add(new(new DipRect(RuneWindowWidth - 10 - 24 - 6 - 54, 9, 54, 22), TdUiKind.Label, m.Fragments.ToString(System.Globalization.CultureInfo.InvariantCulture), SArg: "rpill"));
         // TD.30e: a legenda de ramos cabe (8 chips compactos em 268 DIP) e a janela cresce só HudLegendHeight + 4.

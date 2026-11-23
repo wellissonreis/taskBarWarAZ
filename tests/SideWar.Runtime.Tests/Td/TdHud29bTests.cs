@@ -165,8 +165,8 @@ public sealed class TdHud29bTests
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.ModalTab, (int)TdUiMode.Runes));
         var items = r.Ui.BuildPopover()!.Items;
         var nodes = items.Where(i => i.Action == TdUiAction.SelectRune).ToArray();
-        Assert.Equal(32, nodes.Length);
-        Assert.Equal(8, nodes.Count(n => n.Fill == TdUiController.RuneAvailable)); // só o anel interno está disponível no começo
+        Assert.InRange(nodes.Length, 16, 128); // só a região visível (rola e dá zoom)
+        Assert.Equal(16, nodes.Count(n => n.Fill == TdUiController.RuneAvailable)); // só o anel interno está disponível no começo
         Assert.DoesNotContain(items, i => i.Action == TdUiAction.AwakenRune); // TD.30c: clicar no nó tracejado desperta (sem botão separado)
         typeof(TdMatchState).GetProperty("Fragments")!.SetValue(r.Match, 2L);
         var avail = r.Ui.BuildPopover()!.Items.First(i => i.Action == TdUiAction.SelectRune && i.Fill == TdUiController.RuneAvailable);

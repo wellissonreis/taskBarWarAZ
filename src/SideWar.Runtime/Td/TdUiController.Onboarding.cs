@@ -147,7 +147,7 @@ public sealed partial class TdUiController
         if (m.Phase == MatchPhase.Onda && !m.Options.ContinuousWaves && (_ack & Ack.Call) == 0 && CallReady(m)) return TdTutorialStep.CallNext;
         if (m.Phase == MatchPhase.Preparo && _quizQ is not null) return TdTutorialStep.Quiz;
         if ((m.Phase == MatchPhase.Preparo || m.Options.ContinuousWaves) && (_ack & Ack.Sell) == 0 && PlacedTowers(m) > 0 && m.WaveNumber >= 1) return TdTutorialStep.Sell;
-        if ((_ack & Ack.Runes) == 0 && m.Fragments > 0 && m.WaveNumber >= 1) return TdTutorialStep.Runes;
+        if ((_ack & Ack.Runes) == 0 && m.CanAwakenAny && m.WaveNumber >= 1) return TdTutorialStep.Runes;
         if ((_ack & Ack.Fusion) == 0 && m.FusionUnlocked && PlacedTowers(m) >= 2 && !FusionHasModule(m)) return TdTutorialStep.Fusion;
         if (!_abilityDone && ReadyAbility(m) >= 0) return TdTutorialStep.Ability;
         return TdTutorialStep.None;

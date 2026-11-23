@@ -48,6 +48,8 @@ public sealed class TdUiWindow : OverlayChildWindow
     public event Action<int>? Wheel;
     private protected override void OnMouseWheel(int delta) { if (IsVisible) Wheel?.Invoke(delta); }
 
+    /// <summary>Botão esquerdo pressionado no último movimento do mouse (arrastar a teia de runas).</summary>
+    public bool LeftHeld => MouseLeftHeld;
     private protected override void OnMouseMove(int x, int y) => Moved?.Invoke(x, y);
     private protected override void OnMouseLeave() => Left?.Invoke();
     private protected override void OnLeftButtonUp(int x, int y) { if (IsVisible) LeftUp?.Invoke(x, y); }

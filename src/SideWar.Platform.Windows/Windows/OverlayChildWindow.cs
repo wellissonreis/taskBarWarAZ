@@ -114,6 +114,8 @@ public abstract unsafe class OverlayChildWindow : IDisposable
 
     /// <summary>Mouse move / leave / right button inside the client area (TD.8 UI windows); defaults ignore them.</summary>
     private protected virtual void OnMouseMove(int x, int y) { }
+    /// <summary>Botão esquerdo pressionado durante o último WM_MOUSEMOVE (MK_LBUTTON); usado para arrastar a teia de runas.</summary>
+    private protected bool MouseLeftHeld;
     private protected virtual void OnMouseLeave() { }
     private protected virtual void OnRightButtonUp(int x, int y) { }
     /// <summary>Roda do mouse (WM_MOUSEWHEEL): <paramref name="delta"/> em múltiplos de 120 (positivo = para cima).</summary>
@@ -255,6 +257,7 @@ public abstract unsafe class OverlayChildWindow : IDisposable
                         };
                         window.trackingLeave = PInvoke.TrackMouseEvent(ref track);
                     }
+                    window.MouseLeftHeld = (wParam.Value & 0x1) != 0;
                     window.OnMouseMove((short)(lParam.Value & 0xFFFF), (short)((lParam.Value >> 16) & 0xFFFF));
                     return new LRESULT(0);
                 case PInvoke.WM_MOUSELEAVE when window is not null:

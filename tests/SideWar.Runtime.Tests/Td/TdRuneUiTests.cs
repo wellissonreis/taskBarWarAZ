@@ -101,7 +101,8 @@ public sealed class TdRuneUiTests
         Assert.True(pop.RuneWindow);
         Assert.Equal(TdUiController.RuneWindowWidth, pop.Width);
         Assert.Equal("Runas", pop.Title);
-        Assert.Equal(32, pop.Items.Count(i => i.Action == TdUiAction.SelectRune));
+        int visible = pop.Items.Count(i => i.Action == TdUiAction.SelectRune);
+        Assert.InRange(visible, 8, 60); // a janela mostra só a região em volta da última runa (zoom fixo), não os 128 nós
         Assert.Contains(pop.Items, i => i.SArg == "rhintw" && i.Text == "Passe o mouse para ver; clique para despertar.");
         Assert.Contains(pop.Items, i => i.SArg == "rlink" && i.Text == "Teia completa");
         Assert.True(r.Rune.Selected);
@@ -189,7 +190,8 @@ public sealed class TdRuneUiTests
         var avail = r.Node(i => i.Fill == TdUiController.RuneAvailable);
         r.Ui.Hover(avail);
         var t = r.Ui.BuildPopover()!.Tip!;
-        Assert.Equal(("DISPONÍVEL", "Sem fragmentos"), (t.Tag, t.Action));
+        Assert.Equal("DISPONÍVEL", t.Tag);
+        Assert.StartsWith("Custo ", t.Action);
         Assert.StartsWith("Runa de ", t.Name);
         Assert.Equal(TdTone.Bad, t.ActionTone);
         r.Fragments(2);
@@ -228,7 +230,7 @@ public sealed class TdRuneUiTests
                 var tip = r.Ui.BuildPopover()!.Tip!;
                 Assert.Equal(ti, tip.TypeIndex);
                 Assert.Equal("Runa de " + type.Name, tip.Name);
-                Assert.Equal(type.Text, tip.Text);               // nome do ramo + efeito sempre
+                Assert.StartsWith(type.Text, tip.Text);            // nome do ramo + efeito sempre
                 r.Ui.Hover(null);
             }
         }
@@ -241,10 +243,12 @@ public sealed class TdRuneUiTests
         r.Click(TdUiAction.ModalTab, (int)TdUiMode.Runes);
         r.Ui.Hover(r.Node(i => i.Fill == TdUiController.RuneLocked));
         var t = r.Ui.BuildPopover()!.Tip!;
-        Assert.Equal(("BLOQUEADA", "Desperte uma vizinha antes", TdTone.Dim), (t.Tag, t.Action, t.ActionTone));
+        Assert.Equal(("BLOQUEADA", TdTone.Dim), (t.Tag, t.ActionTone));
+        Assert.StartsWith("Desperte uma vizinha antes", t.Action);
         r.Ui.Hover(r.Node(i => i.Fill == TdUiController.RuneAvailable));
         t = r.Ui.BuildPopover()!.Tip!;
-        Assert.Equal(("DISPONÍVEL", "Sem fragmentos"), (t.Tag, t.Action));
+        Assert.Equal("DISPONÍVEL", t.Tag);
+        Assert.StartsWith("Custo ", t.Action);
         r.Fragments(1);
         Assert.Equal("Clique para despertar · 1 fragmento", r.Ui.BuildPopover()!.Tip!.Action);
         foreach (var it in r.Ui.BuildPopover()!.Items)
@@ -280,7 +284,7 @@ public sealed class TdRuneUiTests
                 Assert.Equal(types[c.Arg].Name, c.Text);
                 Assert.True(c.Rect.X >= 0 && c.Rect.X + c.Rect.W <= pop.Width && c.Rect.Y + c.Rect.H <= pop.Height, scene);
             }
-            Assert.Equal(32, chips.Sum(c => int.Parse(c.Right!.Split((char)47)[1], System.Globalization.CultureInfo.InvariantCulture)));
+            Assert.Equal(128, chips.Sum(c => int.Parse(c.Right!.Split((char)47)[1], System.Globalization.CultureInfo.InvariantCulture)));
             Assert.All(pop.Items.Where(i => i.Action != TdUiAction.RuneBranch).Select(i => i.Rect),
                 rc => Assert.True(rc.X + rc.W <= pop.Width + 0.01f && rc.Y + rc.H <= pop.Height + 0.01f));
         }

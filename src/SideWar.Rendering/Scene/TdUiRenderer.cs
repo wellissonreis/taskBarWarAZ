@@ -522,6 +522,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
                 return;
             case "c13": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 11, r, Palette.Td.Muted, TextAlign.Center); return;
             case "webbg": return; // desenhada antes dos itens (DrawRuneWeb)
+            case "webctr": return; // marca o núcleo da teia na tela (DrawRuneWeb)
             case "optname": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 12, r, Palette.Td.Text); return;
             case "c11l": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 9, r, Palette.Td.Muted); return;
             case "secR": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 10, r, Palette.Td.Amber, TextAlign.Right); return;
@@ -596,21 +597,26 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     /// </summary>
     private void DrawRuneWeb(SKCanvas c, TdUiItem[] items, bool big)
     {
-        TdUiItem? bg = null;
+        TdUiItem? bg = null, ctr = null;
         var nodes = new Dictionary<(int Ring, int Sector), TdUiItem>();
         foreach (var it in items)
         {
             if (it.SArg == "webbg" && it.Kind == TdUiKind.Label) bg = it;
+            else if (it.SArg == "webctr" && it.Kind == TdUiKind.Label) ctr = it;
             else if (it.Action == TdUiAction.SelectRune) { var (_, ring, sector) = TdUiController.UnpackRune(it.Arg); nodes[(ring, sector)] = it; }
         }
         if (bg is not { } b) return;
         var area = b.Rect;
         RoundBox(c, area, Palette.Td.Border, Palette.Td.Background, big ? 12 : 8);
-        float cx = area.X + area.W / 2f, cy = area.Y + area.H / 2f;
+        // Centro da teia na tela (a teia rola e dá zoom): o item "webctr" informa onde está o núcleo; sem ele, o meio da área.
+        float cx = ctr is { } cc ? cc.Rect.X : area.X + area.W / 2f, cy = ctr is { } cd ? cd.Rect.Y : area.Y + area.H / 2f;
+        float zoom = ctr is { FontSize: > 0f } cz ? cz.FontSize / (big ? TdUiController.ModalWorld : TdUiController.HudWorld) : 1f;
+        c.Save();
+        c.ClipRect(new SKRect(_p.Px(area.X + 1), _p.Px(area.Y + 1), _p.Px(area.X + area.W - 1), _p.Px(area.Y + area.H - 1)));
         if (big)
         {
-            using var glow = new SKPaint { IsAntialias = true, Shader = SKShader.CreateRadialGradient(new SKPoint(_p.Px(cx), _p.Px(cy)), _p.Px(150f), [Palette.Td.Amber.WithAlpha(26), Palette.Td.Amber.WithAlpha(0)], [0f, 1f], SKShaderTileMode.Clamp) };
-            c.DrawCircle(_p.Px(cx), _p.Px(cy), _p.Px(150f), glow);
+            using var glow = new SKPaint { IsAntialias = true, Shader = SKShader.CreateRadialGradient(new SKPoint(_p.Px(cx), _p.Px(cy)), _p.Px(150f * Math.Max(0.4f, zoom)), [Palette.Td.Amber.WithAlpha(26), Palette.Td.Amber.WithAlpha(0)], [0f, 1f], SKShaderTileMode.Clamp) };
+            c.DrawCircle(_p.Px(cx), _p.Px(cy), _p.Px(150f * Math.Max(0.4f, zoom)), glow);
         }
         if (nodes.Count > 0)
         {
@@ -623,7 +629,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             {
                 bool on = n.Fill >= TdUiController.RuneOn;
                 var a = Mid(n);
-                if (nodes.TryGetValue((ring, (sector + 1) % 8), out var side))
+                if (nodes.TryGetValue((ring, (sector + 1) % TdContentValidatorWebSectors), out var side))
                 {
                     var z = Mid(side);
                     float qx = cx + ((a.X + z.X) / 2f - cx) * pull, qy = cy + ((a.Y + z.Y) / 2f - cy) * pull;
@@ -633,7 +639,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
                 }
                 if (ring == 0) Line(on ? lit : dim, (cx, cy), a);
                 else if (nodes.TryGetValue((ring - 1, sector), out var inner)) Line(on && inner.Fill >= TdUiController.RuneOn ? lit : dim, Mid(inner), a);
-                if (ring == 3) Line(dim, a, (cx + (a.X - cx) * 1.05f, cy + (a.Y - cy) * 1.05f));
+                if (ring == TdContentValidatorWebRings - 1) Line(dim, a, (cx + (a.X - cx) * 1.05f, cy + (a.Y - cy) * 1.05f));
             }
             using var dimPath = dim.Detach();
             using var litPath = lit.Detach();
@@ -645,12 +651,16 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             paint.Color = Palette.Td.Amber.WithAlpha(217); paint.StrokeWidth = Math.Max(1f, _p.Px(big ? 1.6f : 1.4f));
             c.DrawPath(litPath, paint);
         }
-        float core = big ? 52f : 28f;
+        float core = (big ? 52f : 28f) * Math.Clamp(zoom, 0.5f, 1.2f);
         using (var halo = new SKPaint { IsAntialias = true, Color = Palette.Td.Amber.WithAlpha((byte)(big ? 20 : 30)) })
             c.DrawCircle(_p.Px(cx), _p.Px(cy), _p.Px(core / 2f + (big ? 6f : 3f)), halo);
         RoundBox(c, new DipRect(cx - core / 2f, cy - core / 2f, core, core), Palette.Td.Amber, Palette.Td.Button, core / 2f);
         DrawStar(c, cx, cy, core / 2f, big ? 1.6f : 2f);
+        c.Restore();
     }
+
+    // Dimensões da teia (SideWar.Core TdContentValidator.WebRings/WebSectors são internos): 8 anéis × 16 setores.
+    private const int TdContentValidatorWebRings = 8, TdContentValidatorWebSectors = 16;
 
     /// <summary>Cores do nó bloqueado: o glifo do ramo esmaecido continua legível (contraste ≥ 3:1 contra o fundo do nó; teste em TdRuneTypesVisibleRenderTests).</summary>
     public static readonly SKColor LockedGlyphColor = Palette.Td.Dim, LockedNodeFill = Palette.Td.Border;

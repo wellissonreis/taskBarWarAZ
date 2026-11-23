@@ -257,6 +257,19 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         popWindow.Moved += (x, y) =>
         {
             Present();
+            // Aba Runas: arrastar com o botão esquerdo rola a teia (e suprime o clique de despertar ao soltar).
+            if (controller.Mode == TdUiMode.Runes && popWindow.LeftHeld)
+            {
+                if (runeDragLast is { } last)
+                {
+                    float dx = (x - last.X) / PopScale, dy = (y - last.Y) / PopScale;
+                    runeDragTravel += MathF.Abs(dx) + MathF.Abs(dy);
+                    if (controller.PanWeb(dx, dy)) Refresh(true);
+                }
+                runeDragLast = (x, y);
+                return;
+            }
+            runeDragLast = null; runeDragTravel = 0f;
             int h = pop?.HitTest(x / PopScale, y / PopScale) ?? -1;
             if (h < 0 && pop is not null)
                 for (int i = pop.Items.Length - 1; i >= 0; i--)
@@ -271,9 +284,15 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
             Refresh(true);
         };
         popWindow.Left += () => { if (popHover != -1) { popHover = -1; controller.Hover(null); Refresh(true); } };
-        popWindow.LeftUp += (x, y) => Click(pop?.Items, pop?.HitTest(x / PopScale, y / PopScale) ?? -1, x / PopScale);
+        popWindow.LeftUp += (x, y) =>
+        {
+            bool dragged = runeDragTravel > 6f;
+            runeDragLast = null; runeDragTravel = 0f;
+            if (dragged && controller.Mode == TdUiMode.Runes) return; // foi arrasto, não clique
+            Click(pop?.Items, pop?.HitTest(x / PopScale, y / PopScale) ?? -1, x / PopScale);
+        };
         popWindow.RightUp += (_, _) => controller.Cancel();
-        popWindow.Wheel += delta => { if (controller.ScrollBy(-Math.Sign(delta))) Refresh(true); };
+        popWindow.Wheel += delta => { if (controller.ZoomWeb(Math.Sign(delta)) || controller.ScrollBy(-Math.Sign(delta))) Refresh(true); };
         tipWindow.LeftUp += (_, _) => { Present(); controller.DismissTip(); };
 
         game.Mode.TdPointerMoved += (x, _) => { Present(); controller.PointerMoved(x / k); };
@@ -299,6 +318,9 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         Kick();
     }
 
+    private (int X, int Y)? runeDragLast;
+    private float runeDragTravel;
+
     private void CollapseIfOutside(int x, int y)
     {
         if (disposed || bossHidden || (!expansionTracked && controller.CurrentTip is null) || game.Dock.Current is not { } layout) return;
@@ -322,6 +344,18 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     private void ModalKey(int key)
     {
         if (key == 27) { controller.Cancel(); return; }
+        if (controller.Mode == TdUiMode.Runes && key is 37 or 38 or 39 or 40 or 33 or 34 or 36 or 107 or 109 or 187 or 189)
+        {
+            const float step = 96f;
+            bool moved = key switch
+            {
+                37 => controller.PanWeb(step, 0), 39 => controller.PanWeb(-step, 0), 38 or 33 => controller.PanWeb(0, step), 40 or 34 => controller.PanWeb(0, -step),
+                107 or 187 => controller.ZoomWeb(1), 109 or 189 => controller.ZoomWeb(-1), _ => false,
+            };
+            if (key == 36) { controller.RecenterWeb(); moved = true; }
+            if (moved) Refresh(true);
+            return;
+        }
         // Rolagem por teclado nas listas da modal: setas esquerda/direita e PgUp/PgDn = página; Home/End = extremos.
         if (key is 33 or 34 or 37 or 39 && controller.ScrollKey(key is 33 or 37 ? -1 : 1)) return;
         if (key is 36 or 35 && controller.ScrollBy(key == 36 ? -int.MaxValue / 2 : int.MaxValue / 2)) return;
