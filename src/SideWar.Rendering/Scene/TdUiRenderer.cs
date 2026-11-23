@@ -7,6 +7,7 @@ using TdFusionMark = SideWar.Rendering.Scene.TdFusionMark;
 using SideWar.Rendering.Sprites;
 using SideWar.Rendering.Text;
 using SideWar.Rendering.Theme;
+using SideWar.Core.Td;
 using SideWar.Runtime.Geometry;
 using SideWar.Runtime.Panel;
 using SideWar.Runtime.Td;
@@ -27,8 +28,11 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     private readonly bool _ownsAtlas = atlas is null;
     private readonly Dictionary<(string Id, int Px), SKImage> _icons = [];
     private readonly Dictionary<int, SKImage> _rankCrowns = [];
-    private SKImage? _rankEmblem;
+    private readonly Dictionary<int, SKImage> _rankEmblems = [];
     private static readonly string[] RankNames = ["estagiario", "junior", "pleno", "senior", "especialista", "arquiteto"];
+    private readonly SKColorFilter _gray = SKColorFilter.CreateColorMatrix([
+        .2126f, .7152f, .0722f, 0, 0, .2126f, .7152f, .0722f, 0, 0,
+        .2126f, .7152f, .0722f, 0, 0, 0, 0, 0, 1, 0]);
 
     private static SKColor RankColor(int rank) => rank switch
     {
@@ -51,9 +55,23 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         if (alpha == 255) c.DrawImage(image, rect, Nearest);
         else
         {
-            using var paint = new SKPaint { Color = SKColors.White.WithAlpha(alpha) };
+            using var paint = new SKPaint { Color = SKColors.White.WithAlpha(alpha), ColorFilter = _gray };
             c.DrawImage(image, rect, Nearest, paint);
         }
+    }
+
+    private void DrawBrasao(SKCanvas c, int index, DipRect r)
+    {
+        index = Math.Clamp(index, 0, 5);
+        if (!_rankEmblems.TryGetValue(index, out var image))
+        {
+            using var stream = typeof(TdUiRenderer).Assembly.GetManifestResourceStream("SideWar.Rendering.Assets.Patentes." + TdRank.Brasao((TdRankLevel)index));
+            if (stream is null) return;
+            using var bitmap = SKBitmap.Decode(stream);
+            image = SKImage.FromBitmap(bitmap);
+            _rankEmblems[index] = image;
+        }
+        c.DrawImage(image, SKRect.Create(_p.Px(r.X), _p.Px(r.Y), _p.Px(r.W), _p.Px(r.H)), Nearest);
     }
 
     /// <summary>Falso = layout idêntico sem glifos (goldens comparáveis entre SOs).</summary>
@@ -181,6 +199,16 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             _p.Text(c, lines[i], PanelFont.JetBrainsMono, TipFont, new DipRect(6, 5 + i * TipLine, TooltipWidthDip - 12f, TipLine), Palette.TxtPrincipal);
     }
 
+    public void DrawRankTooltip(SKCanvas c, int rank)
+    {
+        c.Clear(SKColors.Transparent);
+        var r = new DipRect(0, 0, TooltipWidthDip, 58);
+        RoundBox(c, r, RankColor(rank), Palette.Td.Card, 6);
+        DrawBrasao(c, rank, new DipRect(5, 5, 48, 48));
+        _p.Text(c, TdRank.DisplayName((TdRankLevel)rank), PanelFont.SpaceGrotesk, 14, new DipRect(60, 12, TooltipWidthDip - 66, 18), RankColor(rank));
+        _p.Text(c, $"NV {rank + 1}", PanelFont.JetBrainsMono, 10, new DipRect(60, 32, TooltipWidthDip - 66, 14), Palette.Td.Muted);
+    }
+
     private void DrawIcon(SKCanvas c, TdIcon icon, float xDip, float yDip, float sizeDip, SKColor color) =>
         TdIconPainter.Draw(c, icon, _p.Px(xDip), _p.Px(yDip), _p.Px(sizeDip), color, Palette.Ambar);
 
@@ -190,7 +218,9 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         var r = it.Rect;
         if (it.SArg == "rank-crown")
         {
-            DrawCrown(c, it.Arg, r);
+            RoundBox(c, r, RankColor(it.Arg).WithAlpha(180), Palette.Td.PauseBadge, 5);
+            float inset = r.W * 0.12f;
+            DrawCrown(c, it.Arg, new DipRect(r.X + inset, r.Y + inset, r.W - 2 * inset, r.H - 2 * inset));
             return;
         }
         if (it.Kind == TdUiKind.Separator) { _p.Fill(c, r, Palette.Td.BorderStrong); return; }
@@ -340,10 +370,12 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     private void DrawModalItem(SKCanvas c, in TdUiItem it, bool hover)
     {
         var r = it.Rect;
+        if (it.SArg == "rank-step") return;
         if (it.SArg == "rank-chip")
         {
-            DrawCrown(c, it.Arg, new DipRect(r.X, r.Y + 2, 20, 20));
-            _p.Text(c, $"{it.Text}  NV {it.Arg + 1}", PanelFont.JetBrainsMono, 10, new DipRect(r.X + 24, r.Y + 5, r.W - 24, 14), RankColor(it.Arg));
+            RoundBox(c, r, RankColor(it.Arg).WithAlpha(180), Palette.Td.PauseBadge, 12);
+            DrawCrown(c, it.Arg, new DipRect(r.X + 6, r.Y + 2, 20, 20));
+            _p.Text(c, $"{it.Text}  NV {it.Arg + 1}", PanelFont.JetBrainsMono, 10, new DipRect(r.X + 30, r.Y + 5, r.W - 34, 14), RankColor(it.Arg));
             return;
         }
         if (it.Action == TdUiAction.ModalTab)
@@ -396,7 +428,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         }
         if (it.Action == TdUiAction.GameOption)
         {
-            if (it.Arg == 0) RoundBox(c, new DipRect(r.X, r.Y, r.W, 9 * 31), Palette.Td.BorderStrong, Palette.Td.Surface, 8);
+            if (it.Arg == 0) RoundBox(c, new DipRect(r.X, r.Y, r.W, 9 * 31), Palette.Td.BorderStrong, Palette.Td.Card, 8);
             if (hover) _p.Fill(c, new DipRect(r.X + 1, r.Y + 1, r.W - 2, r.H - 2), Palette.Td.BorderStrong.WithAlpha((byte)90));
             int colon = it.Text.IndexOf(':');
             string name = colon > 0 ? it.Text[..colon] : it.Text, val = colon > 0 ? it.Text[(colon + 1)..].Trim() : "";
@@ -407,11 +439,18 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
                 bool on = val.StartsWith("lig", StringComparison.Ordinal);
                 if (it.Right is not null) _p.Text(c, it.Right, PanelFont.JetBrainsMono, 9, new DipRect(r.X + r.W - 160, r.Y + 13 + dy, 100, 14), Palette.Td.Amber, TextAlign.Right);
                 RoundBox(c, new DipRect(r.X + r.W - 52, r.Y + 11 + dy, 38, 18), on ? Palette.Td.Amber : Palette.Td.BorderStrong, on ? Palette.Td.Amber : Palette.Td.Background, 9);
-                _p.Fill(c, new DipRect(r.X + r.W - (on ? 32 : 48), r.Y + 14 + dy, 12, 12), on ? Palette.Td.Background : Palette.Td.Muted);
+                RoundBox(c, new DipRect(r.X + r.W - (on ? 32 : 48), r.Y + 14 + dy, 12, 12), on ? Palette.Td.Background : Palette.Td.Muted, on ? Palette.Td.Background : Palette.Td.Muted, 6);
             }
             else
             {
                 if (it.Right is not null) _p.Text(c, it.Right, PanelFont.JetBrainsMono, 9, new DipRect(r.X + r.W - 160, r.Y + 13 + dy, 90, 14), Palette.Td.Amber, TextAlign.Right);
+                if (it.Arg == 3)
+                {
+                    float left = r.X + 88, trackW = r.W - 142;
+                    RoundBox(c, new DipRect(left, r.Y + (r.H - 4) / 2, trackW, 4), Palette.Td.BorderStrong, Palette.Td.BorderStrong, 2);
+                    if (it.Fill > 0) _p.Fill(c, new DipRect(left, r.Y + (r.H - 4) / 2, trackW * it.Fill, 4), Palette.Td.Amber);
+                    RoundBox(c, new DipRect(left + trackW * it.Fill - 4, r.Y + (r.H - 8) / 2, 8, 8), Palette.Td.Amber, Palette.Td.Amber, 4);
+                }
                 _p.Text(c, val, PanelFont.JetBrainsMono, 12, new DipRect(r.X + r.W - 68, r.Y + 12 + dy, 56, 16), Palette.Td.Text, TextAlign.Right);
             }
             if (it.Arg < 8) _p.Fill(c, new DipRect(r.X + 1, r.Y + r.H - 1, r.W - 2, 1), Palette.Td.Border);
@@ -449,8 +488,8 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
                 tx = r.X + photo + 16;
             }
             else if (it.Icon != TdIcon.None) { DrawIcon(c, it.Icon, tx, r.Y + (r.H - 14) / 2, 14, fg); tx += 22; }
-            float bfs = it.FontSize > 0f ? it.FontSize : r.H >= 34 ? 12 : 10, bh = it.FontSize > 0f ? it.FontSize * 1.3f : 13;
-            _p.Text(c, it.Text, PanelFont.JetBrainsMono, bfs, new DipRect(tx, r.Y + Math.Max(2, (r.H - bh) / 2), r.W - (tx - r.X) - 10, bh), fg);
+            float bfs = it.FontSize > 0f ? it.FontSize : it.SArg == "menu-action" || r.H >= 34 ? 12 : 10, bh = it.FontSize > 0f ? it.FontSize * 1.3f : 13;
+            _p.Text(c, it.Text, it.SArg == "menu-action" ? PanelFont.SpaceGrotesk : PanelFont.JetBrainsMono, bfs, new DipRect(tx, r.Y + Math.Max(2, (r.H - bh) / 2), r.W - (tx - r.X) - 10, bh), fg);
             if (it.Right is not null) _p.Text(c, it.Right, PanelFont.JetBrainsMono, 10, new DipRect(r.X + 10, r.Y + Math.Max(2, (r.H - 13) / 2), r.W - 20, 13), Palette.Td.Amber, TextAlign.Right);
             return;
         }
@@ -842,25 +881,28 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         if (it.SArg == "rank-card")
         {
             RoundBox(c, r, Palette.Td.Amber.WithAlpha(115), Palette.Td.Card, 10);
-            if (_rankEmblem is null)
-            {
-                using var stream = typeof(TdUiRenderer).Assembly.GetManifestResourceStream("SideWar.Rendering.Assets.Patentes.emblema_estagiario.png");
-                if (stream is not null) { using var bitmap = SKBitmap.Decode(stream); _rankEmblem = SKImage.FromBitmap(bitmap); }
-            }
-            if (_rankEmblem is not null) c.DrawImage(_rankEmblem, SKRect.Create(_p.Px(r.X + 12), _p.Px(r.Y + 12), _p.Px(96), _p.Px(96)), Nearest);
+            c.Save();
+            c.ClipRect(SKRect.Create(_p.Px(r.X + 1), _p.Px(r.Y + 1), _p.Px(r.W - 2), _p.Px(r.H - 2)));
+            using (var glow = SKShader.CreateRadialGradient(new SKPoint(_p.Px(r.X + 60), _p.Px(r.Y + 54)), _p.Px(70),
+                [Palette.Td.Amber.WithAlpha(46), Palette.Td.Amber.WithAlpha(0)], null, SKShaderTileMode.Clamp))
+            using (var paint = new SKPaint { Shader = glow, IsAntialias = true })
+                c.DrawCircle(_p.Px(r.X + 60), _p.Px(r.Y + 54), _p.Px(70), paint);
+            c.Restore();
+            DrawBrasao(c, it.Arg, new DipRect(r.X + 12, r.Y + 12, 96, 96));
             _p.Text(c, $"PATENTE ATUAL · NÍVEL {it.Arg + 1}/6", PanelFont.JetBrainsMono, 10, new DipRect(r.X + 120, r.Y + 12, 204, 14), Palette.Td.Muted);
-            _p.Text(c, it.Text, PanelFont.JetBrainsMono, 20, new DipRect(r.X + 120, r.Y + 30, 204, 25), RankColor(it.Arg));
-            if (it.Arg == 0) _p.Text(c, "Ainda no período de experiência.", PanelFont.JetBrainsMono, 9, new DipRect(r.X + 120, r.Y + 58, 204, 12), Palette.Td.Muted);
+            _p.Text(c, it.Text, PanelFont.SpaceGrotesk, 24, new DipRect(r.X + 120, r.Y + 28, 204, 28), RankColor(it.Arg));
+            if (it.Arg == 0) _p.Text(c, "Ainda no período de experiência.", PanelFont.SpaceGrotesk, 11, new DipRect(r.X + 120, r.Y + 58, 204, 12), Palette.Td.Muted);
             for (int i = 0; i < 6; i++)
             {
                 var cell = new DipRect(r.X + 120 + i * 32, r.Y + 76, 28, 28);
                 if (i == it.Arg) RoundBox(c, cell, Palette.Td.Amber, Palette.Td.PauseBadge, 5);
-                else if (i == it.Arg + 1) DashedBox(c, cell, Palette.Td.Amber, 5);
-                DrawCrown(c, i, new DipRect(cell.X + 3, cell.Y + 3, 22, 22), i == it.Arg ? (byte)255 : (byte)90);
+                else if (i == it.Arg + 1) DashedBox(c, cell, Palette.Td.Amber, 5, Palette.Td.Amber.WithAlpha(20));
+                else RoundBox(c, cell, Palette.Td.Border, Palette.Td.Background, 5);
+                DrawCrown(c, i, new DipRect(cell.X + 4, cell.Y + 4, 20, 20), i == it.Arg || i == it.Arg + 1 ? (byte)255 : (byte)89);
             }
             RoundBox(c, new DipRect(r.X + 57, r.Y + 83, 58, 21), Palette.Td.Amber, Palette.Td.PauseBadge, 10);
             DrawIcon(c, TdIcon.Crown, r.X + 61, r.Y + 87, 13, Palette.Td.Amber);
-            _p.Text(c, it.Sub ?? "0", PanelFont.JetBrainsMono, 10, new DipRect(r.X + 77, r.Y + 87, 34, 12), Palette.Td.Amber);
+            _p.Text(c, $"{it.Sub ?? "0"} coroas", PanelFont.JetBrainsMono, 7, new DipRect(r.X + 76, r.Y + 88, 37, 10), Palette.Td.Amber);
             RoundBox(c, new DipRect(r.X + 12, r.Y + 116, r.W - 24, 10), Palette.Td.BorderStrong, Palette.Td.Background, 5);
             if (it.Fill > 0) _p.Fill(c, new DipRect(r.X + 13, r.Y + 117, (r.W - 26) * it.Fill, 8), Palette.Td.Amber);
             var labels = (it.Right ?? "").Split('|');
@@ -978,8 +1020,14 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         var r = it.Rect;
         if (it.SArg == "rank-notice")
         {
-            DrawCrown(c, it.Arg, new DipRect(r.X, r.Y + 1, 20, 20));
-            _p.Text(c, it.Text, PanelFont.JetBrainsMono, 10, new DipRect(r.X + 24, r.Y + 4, r.W - 24, 16), Palette.Td.Text);
+            using (var glow = SKShader.CreateRadialGradient(new SKPoint(_p.Px(r.X + 24), _p.Px(r.Y + 26)), _p.Px(26),
+                [RankColor(it.Arg).WithAlpha(80), RankColor(it.Arg).WithAlpha(0)], null, SKShaderTileMode.Clamp))
+            using (var paint = new SKPaint { Shader = glow, IsAntialias = true })
+                c.DrawCircle(_p.Px(r.X + 24), _p.Px(r.Y + 26), _p.Px(26), paint);
+            float scale = 0.6f + 0.4f * it.Fill;
+            float badgeSize = 48f * scale;
+            DrawBrasao(c, it.Arg, new DipRect(r.X + (48 - badgeSize) / 2, r.Y + 2 + (48 - badgeSize) / 2, badgeSize, badgeSize));
+            _p.Text(c, it.Text, PanelFont.SpaceGrotesk, 12, new DipRect(r.X + 54, r.Y + 14, r.W - 54, 24), RankColor(it.Arg));
             return;
         }
         float size = small ? 9f : 9.5f;
@@ -1171,7 +1219,8 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     {
         foreach (var i in _icons.Values) i.Dispose();
         foreach (var image in _rankCrowns.Values) image.Dispose();
-        _rankEmblem?.Dispose();
+        foreach (var image in _rankEmblems.Values) image.Dispose();
+        _gray.Dispose();
         _icons.Clear();
         _p.Dispose();
         if (_ownsAtlas) _atlas.Dispose();

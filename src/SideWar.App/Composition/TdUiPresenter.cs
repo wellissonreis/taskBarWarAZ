@@ -271,7 +271,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
             Refresh(true);
         };
         popWindow.Left += () => { if (popHover != -1) { popHover = -1; controller.Hover(null); Refresh(true); } };
-        popWindow.LeftUp += (x, y) => Click(pop?.Items, pop?.HitTest(x / PopScale, y / PopScale) ?? -1);
+        popWindow.LeftUp += (x, y) => Click(pop?.Items, pop?.HitTest(x / PopScale, y / PopScale) ?? -1, x / PopScale);
         popWindow.RightUp += (_, _) => controller.Cancel();
         tipWindow.LeftUp += (_, _) => { Present(); controller.DismissTip(); };
 
@@ -342,20 +342,22 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
             for (int i = 0; i < pop.Items.Length; i++)
             {
                 keyboardItem = (keyboardItem + 1) % pop.Items.Length;
-                if (pop.Items[keyboardItem].Clickable) break;
+                if (pop.Items[keyboardItem].Clickable || pop.Items[keyboardItem].SArg == "rank-step") break;
             }
             popHover = keyboardItem; Refresh(true);
         }
         if (key == 13 && keyboardItem >= 0 && keyboardItem < pop.Items.Length) Click(pop.Items, keyboardItem);
     }
 
-    private void Click(TdUiItem[]? items, int index)
+    private void Click(TdUiItem[]? items, int index, float? x = null)
     {
         if (items is null || index < 0 || index >= items.Length) return;
         Present();
         runtime.NotifyInteraction();
         var item = items[index];
-        controller.Activate(item);
+        if (x is { } pointerX && item.Action == TdUiAction.GameOption && item.Arg == 3)
+            controller.SetVolumeAt(item, pointerX);
+        else controller.Activate(item);
         Kick();
     }
 
@@ -547,7 +549,8 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
             return;
         }
         float s = UiScale;
-        int w = (int)MathF.Round(TdUiRenderer.TooltipWidthDip * s), h = (int)MathF.Round(renderer!.TooltipHeightDip(tip.Text) * s);
+        int rankTip = pop is not null && popHover >= 0 && popHover < pop.Items.Length && pop.Items[popHover].SArg == "rank-step" ? pop.Items[popHover].Arg : -1;
+        int w = (int)MathF.Round(TdUiRenderer.TooltipWidthDip * s), h = (int)MathF.Round((rankTip >= 0 ? 58f : renderer!.TooltipHeightDip(tip.Text)) * s);
         var work = c.Monitor.WorkArea;
         int left = Math.Clamp(hudBounds.Left + (int)MathF.Round(tip.AnchorX * s) - w / 2, work.Left, Math.Max(work.Left, work.Right - w));
         int bottom = hudBounds.Top - (int)MathF.Round(2 * Scale);
@@ -560,7 +563,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         tipCanvas.Invalidate();
         tipText = tip.Text;
         tipFirstTime = firstTime;
-        Draw(window, tipCanvas, cv => renderer.DrawTooltip(cv, tip.Text, firstTime));
+        Draw(window, tipCanvas, cv => { if (rankTip >= 0) renderer!.DrawRankTooltip(cv, rankTip); else renderer!.DrawTooltip(cv, tip.Text, firstTime); });
     }
 
     private static void Draw(TdUiWindow window, SkiaFrameCanvas canvas, Action<SkiaSharp.SKCanvas> draw)

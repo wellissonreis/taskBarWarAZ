@@ -28,6 +28,18 @@ public static class TdRank
 
     public static int Threshold(TdRankLevel level) => Thresholds[(int)level];
 
+    /// <summary>Nome do sprite do brasão desta patente, incluído nos recursos de apresentação.</summary>
+    public static string Brasao(TdRankLevel level) => level switch
+    {
+        TdRankLevel.Estagiario => "brasao_estagiario.png",
+        TdRankLevel.Junior => "brasao_junior.png",
+        TdRankLevel.Pleno => "brasao_pleno.png",
+        TdRankLevel.Senior => "brasao_senior.png",
+        TdRankLevel.Especialista => "brasao_especialista.png",
+        TdRankLevel.Arquiteto => "brasao_arquiteto.png",
+        _ => throw new ArgumentOutOfRangeException(nameof(level)),
+    };
+
     public static string DisplayName(TdRankLevel level) => level switch
     {
         TdRankLevel.Estagiario => "Estagiário",

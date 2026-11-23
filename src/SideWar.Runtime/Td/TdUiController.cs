@@ -44,6 +44,7 @@ public sealed partial class TdUiController
     public const double StageNoticeSeconds = 4.0;
     private string? _noticeText;
     private double _noticeUntil;
+    private double _noticeStarted;
     private int _seenStages = -1;
     private TdRankLevel _seenRank;
     private int _seenRankScore;
@@ -120,6 +121,16 @@ public sealed partial class TdUiController
 
     /// <summary>Notifica a apresentação (HUD/popover/faixa) de que algo mudou.</summary>
     public event Action? Changed;
+
+    /// <summary>Define o volume pela posição no controle da aba Jogo, em passos de 5%.</summary>
+    public void SetVolumeAt(TdUiItem item, float x)
+    {
+        if (item.Action != TdUiAction.GameOption || item.Arg != 3 || item.Rect.W <= 100) return;
+        float left = item.Rect.X + 88, right = item.Rect.X + item.Rect.W - 54;
+        int value = (int)Math.Round(Math.Clamp((x - left) / (right - left), 0f, 1f) * 20f, MidpointRounding.AwayFromZero) * 5;
+        _host.SetGameOptions(_host.GameOptions with { Volume = value });
+        Changed?.Invoke();
+    }
 
     // ================================================================ entradas
 
@@ -302,7 +313,7 @@ public sealed partial class TdUiController
                     _send(_userPaused ? new Pause() : new Resume());
                 }
                 Changed?.Invoke(); break;
-            case TdUiAction.SetSpeed when !ModalOpen:
+            case TdUiAction.SetSpeed when !ModalOpen || Mode == TdUiMode.Menu:
                 _host.SetGameOptions(_host.GameOptions with { GameSpeed = Math.Clamp(item.Arg, 1, 3) });
                 Changed?.Invoke(); break;
             case TdUiAction.SelectRune when item.SArg is not null:
@@ -615,6 +626,7 @@ public sealed partial class TdUiController
             _noticeTitle = "Promoção";
             _noticeText = $"Promovido a {TdRank.DisplayName(rank)}!";
             _noticeRank = rank;
+            _noticeStarted = _now();
             _noticeUntil = _now() + StageNoticeSeconds;
             Changed?.Invoke();
         }
@@ -629,10 +641,11 @@ public sealed partial class TdUiController
     {
         var s = new Stack(200f);
         if (_noticeRank is { } rank)
-            s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, s.Width - 2 * Pad, 22), TdUiKind.Label, _noticeText!, Arg: (int)rank, SArg: "rank-notice"));
+            s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, s.Width - 2 * Pad, 52), TdUiKind.Label, _noticeText!, Arg: (int)rank, SArg: "rank-notice",
+                Fill: (float)Math.Clamp((_now() - _noticeStarted) / 0.3, 0, 1)));
         else
             s.Add(TdUiKind.Label, _noticeText!, 18f, tone: TdTone.Good, icon: TdIcon.Check);
-        if (_noticeRank is not null) s.Y += 22;
+        if (_noticeRank is not null) s.Y += 52;
         return Finish(_noticeTitle ?? "Fase concluida", s, 0);
     }
 
@@ -1183,7 +1196,7 @@ public sealed partial class TdUiController
             }
             case TdUiMode.Menu:
             {
-                float lx = 16, rx = 368, w = 336;
+                float lx = 16, rx = 366, w = 336, rw = 338;
                 int ab = 0, opt = 0;
                 foreach (var it in src)
                 {
@@ -1193,25 +1206,28 @@ public sealed partial class TdUiController
                             var rank = _host.Rank;
                             int crowns = Enumerable.Range(1, _host.StageCount).Count(_host.StageCrown);
                             items.Add(Put(it, lx, 104, w, 156) with { SArg = "rank-card", Arg = (int)rank.Current,
-                                Text = TdRank.DisplayName(rank.Current), Sub = crowns.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                                Text = TdRank.DisplayName(rank.Current), Tip = $"Brasão {TdRank.DisplayName(rank.Current)}", Sub = crowns.ToString(System.Globalization.CultureInfo.InvariantCulture),
                                 Right = rank.Next is { } next ? $"{rank.Total} / {rank.NextThreshold} p.|faltam {Math.Max(0, rank.NextThreshold - rank.Total)} p. para {TdRank.DisplayName(next)}" : $"{rank.Total} p.|Patente máxima" });
+                            for (int i = 0; i < 6; i++)
+                                items.Add(new(new DipRect(lx + 120 + i * 32, 180, 28, 28), TdUiKind.Label, "", Arg: i,
+                                    SArg: "rank-step", Tip: $"Brasão {TdRank.DisplayName((TdRankLevel)i)} · NV {i + 1}"));
                             break;
                         case TdUiAction.ResumeAbility: items.Add(Put(it, lx + ab++ * 114, 284, 108, 42)); break;
-                        case TdUiAction.Preview: items.Add(Put(it, lx, 334, 165, 32)); break;
-                        case TdUiAction.TowersOpen: items.Add(Put(it, lx + 171, 334, 165, 32)); break;
-                        case TdUiAction.MapOpen: items.Add(Put(it, lx, 372, 165, 32)); break;
-                        case TdUiAction.HowTo: items.Add(Put(it, lx + 171, 372, 165, 32)); break;
-                        case TdUiAction.RestartPrompt: items.Add(Put(it, lx, 410, w, 32)); break;
+                        case TdUiAction.Preview: items.Add(Put(it, lx, 334, 165, 32) with { Icon = TdIcon.FastForward, SArg = "menu-action" }); break;
+                        case TdUiAction.TowersOpen: items.Add(Put(it, lx + 171, 334, 165, 32) with { Icon = TdIcon.Target, SArg = "menu-action" }); break;
+                        case TdUiAction.MapOpen: items.Add(Put(it, lx, 372, 165, 32) with { Icon = TdIcon.Portal, SArg = "menu-action" }); break;
+                        case TdUiAction.HowTo: items.Add(Put(it, lx + 171, 372, 165, 32) with { Icon = TdIcon.Question, SArg = "menu-action" }); break;
+                        case TdUiAction.RestartPrompt: items.Add(Put(it, lx, 410, w, 32) with { Icon = TdIcon.Restore, SArg = "menu-action" }); break;
                         case TdUiAction.Restart: items.Add(Put(it, lx, 410, 165, 32)); break;
                         case TdUiAction.None when it.Text == "Reiniciar?": items.Add(Put(it, lx, 396, w, 14) with { SArg = "sec", Tone = TdTone.Warn }); break;
                         case TdUiAction.RestartCancel: items.Add(Put(it, lx + 171, 410, 165, 32)); break;
-                        case TdUiAction.GameOption: items.Add(Put(it, rx, 122 + opt++ * 31, w, 31)); break;
-                        case TdUiAction.SetSpeed: items.Add(Put(it, rx + w - 12 - 3 * 36 + (it.Arg - 1) * 36, 122 + 8 * 31 + 4, 32, 23)); break;
-                        case TdUiAction.Exit: items.Add(Put(it, rx, 408, w, 40)); break;
+                        case TdUiAction.GameOption: items.Add(Put(it, rx, 122 + opt++ * 31, rw, 31)); break;
+                        case TdUiAction.SetSpeed: items.Add(Put(it, rx + rw - 12 - 3 * 36 + (it.Arg - 1) * 36, 122 + 8 * 31 + 4, 32, 23)); break;
+                        case TdUiAction.Exit: items.Add(Put(it, rx, 408, rw, 34)); break;
                     }
                 }
                 items.Add(new(new DipRect(lx, 266, w, 14), TdUiKind.Label, "HABILIDADES", SArg: "sec"));
-                items.Add(new(new DipRect(rx, 104, w, 14), TdUiKind.Label, "CONFIGURAÇÕES", SArg: "sec"));
+                items.Add(new(new DipRect(rx, 104, rw, 14), TdUiKind.Label, "CONFIGURAÇÕES", SArg: "sec"));
                 items.Add(new(new DipRect(rx + 12, 122 + 8 * 31 + 8, 150, 16), TdUiKind.Label, "Velocidade", SArg: "optname"));
                 break;
             }
@@ -1509,6 +1525,7 @@ public sealed partial class TdUiController
         s.Add(TdUiKind.Button, options.AutoStart ? "Auto-início: ligado" : "Auto-início: desligado", RowH, TdUiAction.GameOption, 1);
         s.Add(TdUiKind.Button, options.Sound ? "Som: ligado" : "Som: desligado", RowH, TdUiAction.GameOption, 2);
         s.Add(TdUiKind.Button, $"Volume: {options.Volume}%", RowH, TdUiAction.GameOption, 3);
+        s.Items[^1] = s.Items[^1] with { Fill = Math.Clamp(options.Volume, 0, 100) / 100f };
         s.Add(TdUiKind.Button, options.Questions ? "Perguntas V/F: ligado" : "Perguntas V/F: desligado", RowH, TdUiAction.GameOption, 4);
         s.Add(TdUiKind.Button, options.Fade ? "Esmaecer: ligado" : "Esmaecer: desligado", RowH, TdUiAction.GameOption, 5);
         s.Add(TdUiKind.Button, options.Continuous ? "Ondas contínuas: ligado" : "Ondas contínuas: desligado", RowH, TdUiAction.GameOption, 6, right: "Próxima corrida");
