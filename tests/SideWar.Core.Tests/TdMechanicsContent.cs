@@ -48,7 +48,7 @@ internal static class TdMechanicsContent
 [
   { "id": "scale",    "name": "Escalar",            "effect": "+50% de cadência em todas as torres por 8 s.", "cooldownSeconds": 60, "durationSeconds": 8, "unlockStage": 1, "unlockMetaNode": null, "usesPerStage": null, "stats": { "cadenceBonus": 0.5 } },
   { "id": "firewall", "name": "Firewall global",    "effect": "Lentidão de 50% (20% em chefes) em todos os inimigos por 6 s.", "cooldownSeconds": 75, "durationSeconds": 6, "unlockStage": 3, "unlockMetaNode": null, "usesPerStage": null, "stats": { "slow": 0.5, "bossSlow": 0.2 } },
-  { "id": "snapshot", "name": "Restaurar snapshot", "effect": "Recupera 3 de integridade; 1 uso por fase.", "cooldownSeconds": 0, "durationSeconds": 0, "unlockStage": null, "unlockMetaNode": "operation.snapshot", "usesPerStage": 1, "stats": { "integrity": 3 } }
+  { "id": "snapshot", "name": "Restaurar snapshot", "effect": "Recupera até 75 de XP perdido nesta fase; 1 uso por fase.", "cooldownSeconds": 0, "durationSeconds": 0, "unlockStage": null, "unlockMetaNode": "operation.snapshot", "usesPerStage": 1, "stats": { "integrity": 3 } }
 ]
 """;
 
@@ -104,8 +104,8 @@ internal static class TdMechanicsContent
     { "id": "defense", "name": "Defesa", "nodes": [
       { "id": "defense.damage1",    "name": "Dano +3%",        "cost": 1, "effects": [ { "kind": "damagePercent", "value": 3, "target": null } ] },
       { "id": "defense.range",      "name": "Alcance +5%",     "cost": 2, "effects": [ { "kind": "rangePercent", "value": 5, "target": null } ] },
-      { "id": "defense.integrity1", "name": "Integridade +1",  "cost": 3, "effects": [ { "kind": "integrity", "value": 1, "target": null } ] },
-      { "id": "defense.integrity2", "name": "Integridade +1 e dano +3%", "cost": 4, "effects": [ { "kind": "integrity", "value": 1, "target": null }, { "kind": "damagePercent", "value": 3, "target": null } ] }
+      { "id": "defense.integrity1", "name": "Reputação -3% perdida",  "cost": 3, "effects": [ { "kind": "xpShield", "value": 1, "target": null } ] },
+      { "id": "defense.integrity2", "name": "-3% de XP perdida e dano +3%", "cost": 4, "effects": [ { "kind": "xpShield", "value": 1, "target": null }, { "kind": "damagePercent", "value": 3, "target": null } ] }
     ] },
     { "id": "operation", "name": "Operação", "nodes": [
       { "id": "operation.cooldown1", "name": "Recarga -10%",         "cost": 1, "effects": [ { "kind": "abilityCooldownPercent", "value": 10, "target": null } ] },

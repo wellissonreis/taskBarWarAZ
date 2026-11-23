@@ -261,7 +261,7 @@ public sealed class TdMoneyTests
         Assert.Equal(r.Match.Credits.ToString(System.Globalization.CultureInfo.InvariantCulture), money.Text);
         var chip = hud.Items.Single(i => i.Action == TdUiAction.HudRestore);
         Assert.DoesNotContain('¢', chip.Text);
-        Assert.Contains("20/20", chip.Text);
+        Assert.Equal("0", chip.Text); // reputação (XP), não mais a vida do núcleo
         Assert.Equal(TdHudView.MoneyWidth(4), TdHudView.MoneyWidth(1));   // tabular: o contador não dança até 4 dígitos
         Assert.True(TdHudView.MoneyWidth(5) > TdHudView.MoneyWidth(4));
         Assert.False(hud.OverButton(money.Rect.X + money.Rect.W / 2f, 14f)); // não clicável: o clique passa

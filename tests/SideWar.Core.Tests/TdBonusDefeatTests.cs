@@ -90,14 +90,13 @@ public sealed class TdBonusDefeatTests
     {
         var s = New();
         s.Apply(new StartWave());
-        for (int i = 0; i < 30 * 900 && s.Phase != MatchPhase.Derrota; i++)
+        for (int i = 0; i < 30 * 900 && s.ReputationLostTotal < 20 * TdReputation.XpPerCoreDamage; i++)
         {
             if (s.Phase == MatchPhase.Preparo) s.Apply(new StartWave());
             s.Step();
         }
-        Assert.Equal(MatchPhase.Derrota, s.Phase);
         Assert.NotEmpty(s.Leaks);
-        Assert.Equal(s.IntegrityMax, s.Leaks.Sum(l => l.Damage));
+        Assert.True(s.Leaks.Sum(l => l.Damage) >= 20);
         var d = s.DefeatAnalysis();
         Assert.Equal(TdDefeatReason.FewTowersNearPortal, d.Reason);
         Assert.Equal(TdDefeatTip.BuildNearPortal, d.Tip);

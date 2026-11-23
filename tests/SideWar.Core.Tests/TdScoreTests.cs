@@ -136,11 +136,11 @@ public sealed class TdScoreTests
         Assert.False(over.Result.Medals.HasFlag(TdMedals.Desafio));
     }
 
-    [Fact(DisplayName = "RF-28.21 Defeat has no crown, medals or score")]
+    [Fact(DisplayName = "RF-28.21 Collapsed bot run has no crown, medals or score")]
     public void Defeat_NoRewards()
     {
         var r = TdSanityBot.Run(Real, 2, TdBotProfile.SemContra, 100);
-        Assert.Equal(MatchPhase.Derrota, r.Phase);
+        Assert.True(r.Collapsed);
         Assert.False(r.Match.Crown);
         Assert.Equal(TdMedals.None, r.Match.Medals);
         Assert.Equal(0, r.Match.Score);

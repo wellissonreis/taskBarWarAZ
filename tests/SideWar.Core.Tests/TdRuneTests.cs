@@ -52,7 +52,7 @@ public sealed class TdRuneTests
         Assert.Equal(r.Types.Select(t => t.Id).Order(), r.Nodes.Select(n => n.Type).Distinct().Order()); // todos os tipos aparecem
         Assert.All(r.Nodes, n => Assert.True(n.X is >= 0 and <= 1 && n.Y is >= 0 and <= 1));
         Assert.Equal(["range", "bolt", "credits", "frost", "core", "cannon", "cooldown", "shield"], r.Types.Select(t => t.Id));
-        Assert.Equal([400, 500, 3, 3, 1, 500, -400, 5], r.Types.Select(t => t.Value));
+        Assert.Equal([400, 500, 3, 3, 3, 500, -400, 5], r.Types.Select(t => t.Value));
         Assert.Equal((1, 1, 2), (Base.Stages.Rules.Fragments.PerWave, Base.Stages.Rules.Fragments.PerQuestion, Base.Stages.Rules.Fragments.PerBoss));
     }
 
@@ -182,17 +182,14 @@ public sealed class TdRuneTests
     }
 
     [Fact]
-    public void Core_runes_raise_max_integrity_and_credit_runes_pay_at_the_end_of_each_wave()
+    public void Core_runes_shield_reputation_and_credit_runes_pay_at_the_end_of_each_wave()
     {
         var s = New(40);
         Earn(s, 32);
-        int baseMax = s.IntegrityMax;
-        int integrity = s.Integrity;
         while (s.Fragments > 0 && s.Frontier.Count > 0 && s.Apply(new AwakenRune(s.Frontier[0])).IsOk) { }
         int cores = s.AwakenedOfType("core");
         Assert.True(cores > 0);
-        Assert.Equal(baseMax + cores, s.IntegrityMax);
-        Assert.Equal(Math.Min(s.IntegrityMax, integrity + cores), s.Integrity);
+        Assert.Equal(Math.Min(TdReputation.MaxShieldPercent, cores * 3), s.XpShieldPercent);
         // todas despertadas (ou ao menos as de crédito): bônus de onda inclui +3 por runa de Créditos
         int credits = s.AwakenedOfType("credits");
         s.ClearEvents();
@@ -218,7 +215,7 @@ public sealed class TdRuneTests
     }
 
     [Fact]
-    public void Enemy_reaching_the_drawn_core_damages_integrity_and_disappears_there()
+    public void Enemy_reaching_the_drawn_core_costs_reputation_and_disappears_there()
     {
         var s = New(3); // 3 ondas: a fase não termina (sem cura de fim de fase) logo após o vazamento
         double leakX = s.LeakX;
@@ -234,7 +231,7 @@ public sealed class TdRuneTests
         var leak = Assert.Single(s.Events, e => e.Type == TdEventType.EnemyLeaked);
         Assert.True(lastX > leakX && lastX < leakX + 5, $"o inimigo some ao tocar o núcleo (último X {lastX}, borda {leakX})");
         Assert.Empty(s.Enemies);
-        Assert.Equal(s.IntegrityMax - (int)leak.B, s.Integrity); // dano = CoreDamage do inimigo
         Assert.True(leak.B > 0);
+        Assert.Equal(leak.B * TdReputation.XpPerCoreDamage, s.ReputationLostTotal);
     }
 }

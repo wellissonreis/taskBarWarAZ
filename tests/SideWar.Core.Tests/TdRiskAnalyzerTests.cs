@@ -8,24 +8,6 @@ namespace SideWar.Core.Tests;
 public sealed class TdRiskAnalyzerTests
 {
     [Fact]
-    public void Projection_includes_replicas_and_boss_splits_without_mutating_match()
-    {
-        var content = TdContentLoader.LoadEmbedded();
-        var match = TdMatchState.Create(content, 1, Rng.Seed(42, 54));
-        match.Apply(new StartWave());
-        int fork = Array.FindIndex(content.Enemies.Enemies, e => e.Id == "fork");
-        int boss = content.Enemies.Enemies.Length + Array.FindIndex(content.Enemies.Bosses, e => e.Id == "botnet");
-        var enemies = Assert.IsType<List<TdEnemy>>(match.Enemies);
-        enemies.Add(new TdEnemy { DefIndex = fork, X = match.LeakX - 12, Hp = 0, CoreDamage = 1 });
-        enemies.Add(new TdEnemy { DefIndex = boss, X = match.LeakX - 12, Hp = 1, CoreDamage = 0 });
-        ulong hash = match.ComputeStateHash();
-        long damage = match.ProjectNextStepLeakDamage();
-        Assert.Equal(10, damage); // duas cópias e duas divisões de quatro enxames
-        Assert.Equal(damage, match.ProjectNextStepLeakDamage());
-        Assert.Equal(hash, match.ComputeStateHash());
-    }
-
-    [Fact]
     public void NextStep_sums_simultaneous_leaks_and_ignores_distant_or_dead_enemies()
     {
         TdEnemy[] enemies =

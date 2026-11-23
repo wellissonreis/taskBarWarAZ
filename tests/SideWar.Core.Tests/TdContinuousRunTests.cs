@@ -39,7 +39,6 @@ public sealed class TdContinuousRunTests
             s.ClearEvents();
             s.Step();
             if (s.Events.Any(e => e.Type == type)) return [.. s.Events];
-            if (s.Phase == MatchPhase.Derrota) break;
         }
         throw new Xunit.Sdk.XunitException("evento " + type + " não ocorreu");
     }
@@ -102,7 +101,7 @@ public sealed class TdContinuousRunTests
         Assert.Equal(fragments + 2, s.Fragments); // a teia e os fragmentos acompanham a corrida (+1 por onda vencida, 2 ondas)
         Assert.True(s.Credits >= creditsBefore); // só bônus de onda entram; nada é recriado
         Assert.True(s.Credits > Base.Stages.Stages[1].StartingCredits);
-        Assert.Equal(s.IntegrityMax, s.Integrity); // coroa: nada vazou e a cura é limitada ao máximo
+        Assert.Equal(0, s.ReputationLostTotal); // coroa: nada vazou
         var sum = s.StageResults.Single();
         Assert.Equal((1, 1, 0, 3), (sum.StageNumber, sum.StageId, sum.Cycle, sum.Stars));
         Assert.True(sum.Crown);
@@ -120,7 +119,7 @@ public sealed class TdContinuousRunTests
         var sum = s.StageResults.Single();
         Assert.True(sum.IntegrityLost > 0);
         Assert.False(sum.Crown);
-        Assert.Equal(Math.Min(s.IntegrityMax, s.IntegrityMax - sum.IntegrityLost + 5), s.Integrity);
+        Assert.True(s.ReputationLostTotal > 0); // vazou: perdeu XP, sem game over
     }
 
     [Fact]
@@ -137,21 +136,6 @@ public sealed class TdContinuousRunTests
         double grunt = Base.Enemies.Enemies[s.Enemies[0].DefIndex].Hp;
         Assert.Equal(grunt * (1.0 + Base.Stages.Rules.HpStageStep * 6) * TdMatchState.CycleHpGrowth, s.Enemies[0].MaxHp, 6);
         Assert.True(s.Towers.Count == 0 && s.Phase == MatchPhase.Onda);
-    }
-
-    [Fact]
-    public void Defeat_ends_the_whole_run()
-    {
-        var s = New(Base, 6);
-        Armed(s);
-        Assert.True(s.Apply(new StartWave()).IsOk);
-        for (int i = 0; i < 200_000 && s.Phase != MatchPhase.Derrota; i++) s.Step();
-        Assert.Equal(MatchPhase.Derrota, s.Phase);
-        Assert.Equal(0, s.StagesCleared);
-        long tick = s.Tick;
-        for (int i = 0; i < 300; i++) s.Step();
-        Assert.Equal(tick, s.Tick);
-        Assert.Equal(MatchPhase.Derrota, s.Phase);
     }
 
     [Fact]

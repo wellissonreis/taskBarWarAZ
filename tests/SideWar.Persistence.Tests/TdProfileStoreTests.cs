@@ -50,14 +50,14 @@ public class TdProfileStoreTests
     {
         var (fs, store) = Make();
         var payload = System.Text.Json.Nodes.JsonNode.Parse(J(Full()))!.AsObject();
-        foreach (var key in new[] { "legacyTotal", "bestRunWaves", "legacyLastRun", "runsPlayed" }) payload.Remove(key);
+        foreach (var key in new[] { "legacyTotal", "bestRunWaves", "legacyLastRun", "runsPlayed", "reputation" }) payload.Remove(key);
         fs.Files[F] = Envelope(payload.ToJsonString(), TdProfileData.Schema, 3);
         var p = store.Load().Profile;
-        Assert.Equal(J(TdProfileSerializer.Sanitize(Full())), J(p));
+        Assert.Equal(J(TdProfileSerializer.Sanitize(Full() with { Reputation = Full().Stages.Sum(x => x.BestScore) })), J(p)); // v5: reputação inicial = soma dos recordes
         Assert.Equal(0, p.LegacyTotal);
         Assert.Equal(0, p.BestRunWaves);
         Assert.Equal("", p.LegacyLastRun);
-        Assert.Equal(4, SchemaVersionOnDisk(fs.Files[F]));
+        Assert.Equal(5, SchemaVersionOnDisk(fs.Files[F]));
         p = p with { LegacyTotal = 12, BestRunWaves = 37, LegacyLastRun = "abc-def", RunsPlayed = 4 };
         Assert.True(store.Save(p));
         Assert.Equal(J(p), J(store.Load().Profile));
@@ -79,7 +79,7 @@ public class TdProfileStoreTests
     {
         var (fs, st) = Make();
         Assert.True(st.Save(Full()));
-        Assert.Equal(4, SchemaVersionOnDisk(fs.Files[F]));
+        Assert.Equal(5, SchemaVersionOnDisk(fs.Files[F]));
         var r = st.Load();
         Assert.Equal(TdProfileSource.File, r.Source);
         Assert.Equal(J(TdProfileSerializer.Sanitize(Full())), J(r.Profile));
@@ -303,7 +303,7 @@ public class TdProfileStoreTests
         Assert.All(p.Stages, s => { Assert.False(s.Crown); Assert.Equal(0, s.Medals); Assert.Equal(0, s.BestScore); });
         Assert.Equal(["defense.damage1"], p.PurchasedNodes);
         Assert.Equal((ulong)7, p.InfiniteRuns.Single().Seed);
-        Assert.Equal(4, SchemaVersionOnDisk(fs.Files[F])); // gravado de volta na versão nova
+        Assert.Equal(5, SchemaVersionOnDisk(fs.Files[F])); // gravado de volta na versão nova
         Assert.Equal(J(p), J(st.Load().Profile));
     }
 
@@ -329,7 +329,7 @@ public class TdProfileStoreTests
         Assert.True(p.IdleImportDone);
         Assert.Equal(J(TdProfileSerializer.Sanitize(Full() with { SealsEarned = 30, PurchasedNodes = ["defense.damage1", "infrastructure.credits"] })), J(p));
         Assert.Equal(28, TdProfileRules.SealsAvailable(p, Meta)); // antes: 19; reembolso integral 2+3+4
-        Assert.Equal(4, SchemaVersionOnDisk(fs.Files[F]));
+        Assert.Equal(5, SchemaVersionOnDisk(fs.Files[F]));
         Assert.Equal(J(p), J(store.Load().Profile));
         Assert.True(store.Save(p));
         Assert.Equal(J(p), J(store.Load().Profile));
@@ -387,7 +387,7 @@ public class TdProfileStoreTests
     }
 
     [Fact]
-    public void RecordMatch_NewMedalLater_PaysOnlyTheNewOne_DefeatChangesNothing()
+    public void RecordMatch_NewMedalLater_PaysOnlyTheNewOne()
     {
         var p = TdProfileRules.RecordMatch(TdProfileData.Default, Meta, 1, Win(1, 5, false, TdMedals.SemVender, 1500), 6, out _);
         int seals = p.SealsEarned; // 1 estrela + 1 medalha
@@ -395,14 +395,10 @@ public class TdProfileStoreTests
         p = TdProfileRules.RecordMatch(p, Meta, 1, Win(1, 5, false, TdMedals.SemVender | TdMedals.Pressa, 1800), 6, out var o);
         Assert.Equal(seals + TdProfileRules.SealsPerMedal, p.SealsEarned);
         Assert.Equal(TdMedals.Pressa, o.NewMedals);
-        var lost = TdProfileRules.RecordMatch(p, Meta, 1, new TdMatchResult(MatchPhase.Derrota, 0, 20, false, TdMedals.None, 0), 6, out var ol);
-        Assert.Equal(p.SealsEarned, lost.SealsEarned);
-        Assert.Equal(p.Stages.Single(s => s.StageId == 1), lost.Stages.Single(s => s.StageId == 1));
-        Assert.False(ol.NewRecord);
     }
 
     [Fact]
-    public void Rank_IsTheSumOfStageRecords()
+    public void Rank_FollowsReputation_AndTotalScoreStaysTheSumOfStageRecords()
     {
         var p = new TdProfileData
         {
@@ -410,7 +406,8 @@ public class TdProfileStoreTests
                       new TdStageProgressData { StageId = 3, Unlocked = true, BestScore = 4000 }],
         };
         Assert.Equal(12_100, TdProfileRules.TotalScore(p));
-        Assert.Equal(TdRankLevel.Pleno, TdProfileRules.Rank(p).Current);
+        Assert.Equal(TdRankLevel.Estagiario, TdProfileRules.Rank(p).Current); // a patente vem da reputação, não dos recordes
+        Assert.Equal(TdRankLevel.Pleno, TdProfileRules.Rank(p with { Reputation = 12_100 }).Current);
         Assert.Equal(TdRankLevel.Estagiario, TdProfileRules.Rank(TdProfileData.Default).Current);
     }
 
@@ -424,5 +421,34 @@ public class TdProfileStoreTests
         Assert.Equal(15, p.Stages[0].Medals);
         Assert.Equal(0, p.Stages[0].BestScore);
         Assert.Equal(TdProfileSerializer.MaxScore, p.Stages[1].BestScore);
+    }
+}
+
+public class TdReputationProfileTests
+{
+    [Fact]
+    public void ApplyReputation_floors_at_zero_and_rank_goes_down_and_up()
+    {
+        var p = TdProfileData.Default with { Reputation = 12_100 };
+        Assert.Equal(TdRankLevel.Pleno, TdProfileRules.Rank(p).Current);
+        var down = TdProfileRules.ApplyReputation(p, -300);
+        Assert.Equal(11_800, down.Reputation);
+        Assert.Equal(TdRankLevel.Junior, TdProfileRules.Rank(down).Current); // rebaixado
+        Assert.Equal(TdRankLevel.Pleno, TdProfileRules.Rank(TdProfileRules.ApplyReputation(down, 300)).Current); // e sobe de novo
+        Assert.Equal(0, TdProfileRules.ApplyReputation(p, -1_000_000).Reputation);
+        Assert.Same(p, TdProfileRules.ApplyReputation(p, 0));
+    }
+
+    [Fact]
+    public void Migration_V4ToV5_seeds_reputation_from_the_stage_records()
+    {
+        var fs = new FakeFileSystem();
+        var store = new TdProfileStore(fs, "/data", utcNow: () => Now);
+        var payload = """{"sealsEarned":1,"stages":[{"stageId":1,"unlocked":true,"stars":3,"bestScore":4000},{"stageId":2,"unlocked":true,"stars":1,"bestScore":2500}]}""";
+        fs.Files["/data/profile-td.json"] = Envelope(payload, TdProfileData.Schema, 4);
+        var p = store.Load().Profile;
+        Assert.Equal(6_500, p.Reputation);
+        Assert.Equal(TdRankLevel.Junior, TdProfileRules.Rank(p).Current);
+        Assert.Equal(5, SchemaVersionOnDisk(fs.Files["/data/profile-td.json"]));
     }
 }

@@ -71,7 +71,7 @@ public sealed class TdRuneTutorialTests
             return m;
         }
 
-        public void Damage(int n = 1) => typeof(TdMatchState).GetProperty("Integrity")!.SetValue(Match, Match.Integrity - n);
+        public void Damage(int n = 1) => typeof(TdMatchState).GetProperty("ReputationLostTotal")!.SetValue(Match, Match.ReputationLostTotal + 25 * n);
         public void Tick(double seconds = 0.5) { Now += seconds; Ui.Sync(); }
         public TdUiItem Card(TdUiAction a) => Ui.BuildPopover()!.Items.First(i => i.Action == a);
         public bool CardShown => Ui.RuneCardOpen && Ui.BuildPopover() is { } p && p.Items.Any(i => i.Action == TdUiAction.RuneTutorialOpen);

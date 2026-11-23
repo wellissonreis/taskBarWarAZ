@@ -334,16 +334,16 @@ public sealed class TdCombatTests
         Assert.Equal(40.0 / 30, Delta("grunt", false), 9);
     }
 
-    [Fact(DisplayName = "RF-28.9 snapshot: restores 3 integrity once per stage; needs the meta node and missing integrity")]
+    [Fact(DisplayName = "RF-28.9 snapshot: recovers up to 75 lost XP once per stage; needs the meta node and lost XP")]
     public void Ability_Snapshot()
     {
         var s = New(Arena([new G("grunt", 2, 0.5)]), 1, ["operation.snapshot"]);
         Go(s);
-        Assert.Equal(CommandReason.NotAvailable, s.Apply(new UseAbility("snapshot")).Reason); // integridade cheia
-        Until(s, () => s.Integrity < s.IntegrityMax, 4000);
-        int lost = s.IntegrityMax - s.Integrity;
+        Assert.Equal(CommandReason.NotAvailable, s.Apply(new UseAbility("snapshot")).Reason); // nenhum XP perdido
+        Until(s, () => s.ReputationLostTotal > 0, 4000);
+        long lost = s.ReputationLostTotal;
         Assert.True(s.Apply(new UseAbility("snapshot")).IsOk);
-        Assert.Equal(Math.Min(s.IntegrityMax, s.IntegrityMax - lost + 3), s.Integrity);
+        Assert.Equal(Math.Min(lost, 3 * TdReputation.XpPerCoreDamage), s.ReputationGainedTotal);
         Assert.Equal(CommandReason.AlreadyUsed, s.Apply(new UseAbility("snapshot")).Reason);
         Assert.Equal(0, s.AbilityStatuses.Single(a => a.Id == "snapshot").UsesLeft);
     }
@@ -409,7 +409,7 @@ public sealed class TdCombatTests
         Assert.True(s.Enemies.Count(e => _swarm(s, e)) >= 6);
         Until(s, () => s.Events.Count(e => e.Type == TdEventType.BossSplit) >= 2);
         Assert.Equal(12, s.Events.Where(e => e.Type == TdEventType.BossSplit).Sum(e => e.B));
-        Until(s, () => s.Phase is MatchPhase.Vitoria or MatchPhase.Derrota, 30000);
+        Until(s, () => s.Phase is MatchPhase.Vitoria, 30000);
         Assert.Equal(MatchPhase.Vitoria, s.Phase);
     }
 
@@ -445,7 +445,7 @@ public sealed class TdCombatTests
 
     // ---------------------------------------------------------------- determinismo
 
-    private const ulong GoldenStage3 = 11050919302657599693UL;
+    private const ulong GoldenStage3 = 132938475614366098UL;
 
     private static List<TdLogEntry> ScriptLog() => new List<TdLogEntry>
         {

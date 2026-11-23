@@ -150,7 +150,7 @@ public sealed class TdOnboardingTests
         var r = new Rig(tutorialDone: true);
         r.BuildBolt();
         r.Click(TdUiAction.StartWave);
-        typeof(TdMatchState).GetProperty("Integrity")!.SetValue(r.Match, r.Match.Integrity - 1);
+        typeof(TdMatchState).GetProperty("ReputationLostTotal")!.SetValue(r.Match, r.Match.ReputationLostTotal + 25 * 1);
         r.Ui.Sync();
         Assert.Equal(TdTutorialStep.None, r.Ui.Step);
     }
@@ -180,7 +180,7 @@ public sealed class TdOnboardingTests
             if (r.Match.Phase == MatchPhase.Preparo) r.Match.Apply(new StartWave());
             r.Match.Step();
         }
-        Assert.True(r.Match.Phase is MatchPhase.Vitoria or MatchPhase.Derrota);
+        Assert.True(r.Match.Phase is MatchPhase.Vitoria);
         r.Ui.Sync();
         Assert.True(r.Store.Done);
     }

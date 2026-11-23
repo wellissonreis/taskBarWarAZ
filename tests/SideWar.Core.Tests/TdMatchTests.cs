@@ -49,7 +49,7 @@ public sealed class TdMatchTests
         var s = New(3);
         Assert.Equal(MatchPhase.Preparo, s.Phase);
         Assert.Equal(280, s.Credits);
-        Assert.Equal(20, s.Integrity);
+        Assert.Equal(0, s.ReputationLostTotal);
         Assert.Equal(0, s.WaveNumber);
         Assert.Equal(12, s.TotalWaves);
         Assert.Equal(AutoStartMode.Off, s.AutoStart);
@@ -140,7 +140,7 @@ public sealed class TdMatchTests
         Assert.Equal(230 + 10, s.Credits); // ceil(14 × 0.65) = 10
     }
 
-    [Fact(DisplayName = "RF-28.3 After a wave ends the countdown restarts, and Vitória/Derrota never auto-restart")]
+    [Fact(DisplayName = "RF-28.3 After a wave ends the countdown restarts, and Vitória never auto-restarts")]
     public void AutoStart_RestartsAfterWave_NeverAfterEnd()
     {
         var s = New(content: Variant([1, 1]), seed: 7);
@@ -153,7 +153,7 @@ public sealed class TdMatchTests
         Steps(s, 150);
         Assert.Equal(2, s.WaveNumber);
         while (s.Phase == MatchPhase.Onda) s.Step();
-        Assert.Equal(MatchPhase.Derrota == s.Phase ? MatchPhase.Derrota : MatchPhase.Vitoria, s.Phase);
+        Assert.Equal(MatchPhase.Vitoria, s.Phase);
         long frame = s.Frame;
         Steps(s, 1000);
         Assert.Equal(2, s.WaveNumber);
@@ -358,7 +358,7 @@ public sealed class TdMatchTests
         long credits = s.Credits;
         while (s.Phase == MatchPhase.Onda) s.Step();
         Assert.Equal(MatchPhase.Vitoria, s.Phase);
-        Assert.Equal(20, s.Integrity);
+        Assert.Equal(0, s.ReputationLostTotal);
         Assert.Equal(3, s.Stars);
         Assert.Equal(credits + 3 * 6 + 65 + 42, s.Credits);
     }
@@ -375,23 +375,6 @@ public sealed class TdMatchTests
             max = Math.Max(max, s.Enemies.Count);
         }
         Assert.Equal(44, max);
-    }
-
-    [Fact(DisplayName = "CA-28.1 Defeat when integrity reaches 0; commands afterwards are rejected and stars are 0")]
-    public void Defeat_WhenIntegrityZero()
-    {
-        var s = New(content: Variant([30]));
-        RunUntilPhase(s, MatchPhase.Derrota);
-        Assert.Equal(0, s.Integrity);
-        Assert.Equal(0, s.Stars);
-        long frame = s.Frame;
-        s.Step();
-        Assert.Equal(frame + 1, s.Frame);
-        Assert.Equal(MatchPhase.Derrota, s.Phase);
-        Assert.Equal(CommandReason.InvalidPhase, s.Apply(new StartWave()).Reason);
-        Assert.Equal(CommandReason.InvalidPhase, s.Apply(new BuildTower("bolt", 10)).Reason);
-        Assert.Equal(CommandReason.InvalidPhase, s.Apply(new SellTower(1)).Reason);
-        Assert.Contains(s.Events, e => e.Type == TdEventType.Defeat);
     }
 
     [Theory(DisplayName = "CA-28.1 / DP-28.8 Victory stars by integrity lost (≤2 → 3★, ≤6 → 2★, else 1★)")]
@@ -448,7 +431,7 @@ public sealed class TdMatchTests
         Assert.True(r.Ticks > 0);
     }
 
-    private const ulong GoldenReplay = 12906711075818434073UL;
+    private const ulong GoldenReplay = 13236571623588833160UL;
 
     private static TdReplayResult RunScript(ulong seed)
     {

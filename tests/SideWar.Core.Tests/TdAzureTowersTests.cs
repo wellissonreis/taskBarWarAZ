@@ -203,10 +203,9 @@ public sealed class TdAzureTowersTests
         var s = Arena("grunt"); Build(s, "bastion", 1100); Build(s, "dns", 1080);
         var towers = (List<TdTower>)s.Towers;
         var target = towers[1]; target.DisabledTicks = 300; towers[1] = target;
-        var integrity = s.Integrity;
         Assert.True(s.Apply(new StartWave()).IsOk); Steps(s, 1);
         Assert.Equal(0, s.Towers[1].DisabledTicks);
-        Assert.Equal(integrity, s.Integrity);
+        Assert.Equal(0, s.ReputationGainedTotal); // reativar torre não devolve XP
     }
 
     private static TdMatchState Arena(string enemy, int count = 1, double armor = 0)
@@ -462,14 +461,14 @@ public sealed class TdAzureTowersTests
         var enemies = (List<TdEnemy>)s.Enemies;
         var leaker = enemies[0]; leaker.X = 0; leaker.CoreDamage = 3; enemies[0] = leaker;
         var remaining = enemies[1]; remaining.Speed = 0; enemies[1] = remaining;
-        Steps(s, 1); int lost = s.IntegrityLost; int damaged = s.Integrity;
+        Steps(s, 1); int lost = s.IntegrityLost; long gained = s.ReputationGainedTotal;
         Assert.True(lost > 0); Steps(s, 1350);
-        Assert.Equal(damaged + 1, s.Integrity);
+        Assert.Equal(gained + TdReputation.XpPerCoreDamage, s.ReputationGainedTotal); // Backup devolve 1 ponto de XP perdido
         Assert.Equal(lost, s.IntegrityLost);
         var last = enemies[0]; last.Hp = 0; enemies[0] = last; Steps(s, 1);
         Assert.Equal(2, s.Stars);
         Assert.Equal(3, s.IntegrityLost);
-        Assert.Equal(TdScoring.Compute(s.IntegrityMax - s.IntegrityLost, s.CombatSeconds, s.EarlyCalls, s.Credits, s.Stars, false), s.Result.Score);
+        Assert.Equal(TdScoring.Compute(20 - s.IntegrityLost, s.CombatSeconds, s.EarlyCalls, s.Credits, s.Stars, false), s.Result.Score);
     }
 
     [Fact]
@@ -489,9 +488,9 @@ public sealed class TdAzureTowersTests
         var enemies = (List<TdEnemy>)s.Enemies;
         var leaker = enemies[0]; leaker.X = 0; leaker.CoreDamage = 6; enemies[0] = leaker;
         var other = enemies[1]; other.Speed = 0; enemies[1] = other;
-        Steps(s, 1); int damaged = s.Integrity;
+        Steps(s, 1); long gained = s.ReputationGainedTotal;
         Steps(s, 45 * 30 * 5);
-        Assert.Equal(damaged + 3, s.Integrity);
+        Assert.Equal(gained + 3 * TdReputation.XpPerCoreDamage, s.ReputationGainedTotal); // limite de 3 curas por fase
         Assert.Equal(6, s.IntegrityLost);
     }
 

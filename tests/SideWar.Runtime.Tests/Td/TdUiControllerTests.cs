@@ -75,7 +75,7 @@ public sealed class TdUiControllerTests
     }
 
     [Fact]
-    public void Promotion_notice_only_appears_on_increase_and_expires()
+    public void Promotion_and_demotion_notices_follow_the_rank_and_expire()
     {
         var r = new Rig();
         r.Ui.Sync();
@@ -89,7 +89,30 @@ public sealed class TdUiControllerTests
         Assert.False(r.Ui.NoticeOpen);
         r.Host.Score = 5000;
         r.Ui.Sync();
+        Assert.Equal("Rebaixado a Júnior", r.Ui.NoticeText); // REPUTACAO: perder XP rebaixa a patente, com toast equivalente
+        r.Now += TdUiController.StageNoticeSeconds + 1;
+        r.Ui.Sync();
         Assert.False(r.Ui.NoticeOpen);
+    }
+
+    [Fact]
+    public void Base_attacked_notice_is_discreet_single_and_respects_the_cooldown()
+    {
+        var r = new Rig();
+        r.Ui.Sync();
+        void Hit() { typeof(TdMatchState).GetProperty("ReputationLostTotal")!.SetValue(r.Match, r.Match.ReputationLostTotal + 25); r.Ui.Sync(); }
+        Hit();
+        Assert.Equal("Base sendo atacada", r.Ui.NoticeText);
+        Assert.True(r.Ui.CornerPopover);
+        Assert.False(r.Ui.ModalOpen);
+        r.Now += TdUiController.StageNoticeSeconds + 0.1;
+        r.Ui.Sync();
+        Assert.False(r.Ui.NoticeOpen);
+        Hit(); // dentro do cooldown de 8 s: não repete
+        Assert.False(r.Ui.NoticeOpen);
+        r.Now += TdUiController.AttackNoticeCooldownSeconds;
+        Hit();
+        Assert.Equal("Base sendo atacada", r.Ui.NoticeText);
     }
 
     [Fact]
@@ -106,7 +129,7 @@ public sealed class TdUiControllerTests
         r.Host.Score = 0;
         r.Ui.Sync();
         Assert.True(changes > 0);
-        Assert.Null(r.Ui.NoticeText);
+        Assert.Equal("Rebaixado a Estagiário", r.Ui.NoticeText);
     }
 
     [Theory]
@@ -136,10 +159,10 @@ public sealed class TdUiControllerTests
     }
 
     [Theory]
-    [InlineData(0, "Brasão Estagiário", "0 / 5000 p.|faltam 5000 p. para Júnior")]
-    [InlineData(4999, "Brasão Estagiário", "4999 / 5000 p.|faltam 1 p. para Júnior")]
-    [InlineData(5000, "Brasão Júnior", "5000 / 12000 p.|faltam 7000 p. para Pleno")]
-    [InlineData(34000, "Brasão Arquiteto", "34000 p.|Patente máxima")]
+    [InlineData(0, "Brasão Estagiário", "0 / 5000 XP|faltam 5000 XP para Júnior")]
+    [InlineData(4999, "Brasão Estagiário", "4999 / 5000 XP|faltam 1 XP para Júnior")]
+    [InlineData(5000, "Brasão Júnior", "5000 / 12000 XP|faltam 7000 XP para Pleno")]
+    [InlineData(34000, "Brasão Arquiteto", "34000 XP|Patente máxima")]
     public void Menu_rank_card_swaps_badge_name_and_bar_at_the_limits(int score, string tip, string bar)
     {
         var r = new Rig();
@@ -253,67 +276,6 @@ public sealed class TdUiControllerTests
         Assert.True(TdTooltipView.AcceptsPointer(firstTime: true));
         r.Ui.Activate(tower);
         for (int frame = 0; frame < 20; frame++) { r.Ui.Sync(); Assert.True(r.Ui.BuildActive); }
-    }
-
-    [Fact]
-    public void Persistent_defeat_countdown_restarts_at_eight_seconds_and_view_runes_cancels()
-    {
-        var r = new Rig();
-        r.Match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 1, Rng.Seed(7, 54), null, TdMatchOptions.Default);
-        r.Match.Apply(new LayoutChanged(StripLayout.Create(Width, Width - 46, 88, 4, Width - 80, TowerHost.Band, [new FreeZone(32, Width - 32)])));
-        for (int i = 0; i < 30 * 3000 && r.Match.Phase is MatchPhase.Onda or MatchPhase.Preparo; i++)
-        {
-            if (r.Match.Phase == MatchPhase.Preparo) r.Match.Apply(new StartWave());
-            r.Match.Step();
-        }
-        Assert.Equal(MatchPhase.Derrota, r.Match.Phase);
-        r.Host.SetGameOptions(new TdGameOptions(AutoRestart: true));
-        r.Ui.Sync();
-        var card = r.Ui.BuildPopover()!;
-        Assert.Equal("CORRIDA ENCERRADA", card.Title);
-        Assert.Contains(card.Items, x => x.Text == "Recomecando em 8 s");
-        r.Now = 2; r.Ui.Sync();
-        r.Host.Paused = true;
-        r.Now = 12; r.Ui.Sync();
-        r.Host.Paused = false;
-        r.Ui.SetBossHidden(true);
-        r.Now = 22; r.Ui.Sync();
-        r.Ui.SetBossHidden(false);
-        r.Ui.Sync();
-        r.Now = 27; r.Ui.Sync();
-        Assert.DoesNotContain("stage1", r.Host.Calls);
-        r.Now = 28; r.Ui.Sync();
-        Assert.Contains("stage1", r.Host.Calls);
-
-        var second = new Rig { Match = r.Match };
-        second.Host.SetGameOptions(new TdGameOptions(AutoRestart: true));
-        second.Ui.Sync();
-        second.Ui.Activate(Find(second.Ui.BuildPopover()!, TdUiAction.ViewRunes));
-        second.Now = 20; second.Ui.Sync();
-        Assert.DoesNotContain("stage1", second.Host.Calls);
-        Assert.Contains(second.Ui.BuildPopover()!.Items, x => x.Text.StartsWith("Legado", StringComparison.Ordinal));
-    }
-
-    [Fact]
-    public void Persistent_defeat_card_sheds_rank_bar_then_leaks_when_space_is_limited()
-    {
-        var r = new Rig { Match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 1, Rng.Seed(7, 54), null, TdMatchOptions.Default) };
-        r.Match.Apply(new LayoutChanged(StripLayout.Create(Width, Width - 46, 88, 4, Width - 80, TowerHost.Band, [new FreeZone(32, Width - 32)])));
-        for (int i = 0; i < 30 * 3000 && r.Match.Phase is MatchPhase.Onda or MatchPhase.Preparo; i++)
-        {
-            if (r.Match.Phase == MatchPhase.Preparo) r.Match.Apply(new StartWave());
-            r.Match.Step();
-        }
-        r.Ui.Sync();
-        var full = r.Ui.BuildPopover()!;
-        Assert.Contains(full.Items, x => x.Kind == TdUiKind.Bar);
-        Assert.Contains(full.Items, x => x.Text.StartsWith("Vazou:", StringComparison.Ordinal));
-        r.Host.EndCardAvailableHeight = full.Height - 1;
-        var smaller = r.Ui.BuildPopover()!;
-        Assert.DoesNotContain(smaller.Items, x => x.Kind == TdUiKind.Bar);
-        Assert.Contains(smaller.Items, x => x.Text.StartsWith("Vazou:", StringComparison.Ordinal));
-        r.Host.EndCardAvailableHeight = full.Height - 10;
-        Assert.DoesNotContain(r.Ui.BuildPopover()!.Items, x => x.Text.StartsWith("Vazou:", StringComparison.Ordinal));
     }
 
     private static TdUiItem Find(TdPopoverView v, TdUiAction a, string? sarg = null) =>
@@ -536,7 +498,7 @@ public sealed class TdUiControllerTests
         var r = new Rig();
         var hud = r.Ui.BuildHud();
         Assert.False(hud.Minimized);
-        Assert.Contains(hud.Items, i => i.Action == TdUiAction.HudRestore && i.Text.Contains("20/20") && !i.Text.Contains('¢'));
+        Assert.Contains(hud.Items, i => i.Action == TdUiAction.HudRestore && i.SArg == "core" && i.Text == "7000" && !i.Text.Contains('¢'));
         Assert.Contains(hud.Items, i => i.Kind == TdUiKind.Money);
         Assert.DoesNotContain(hud.Items, i => i.Action == TdUiAction.Ability);
         Assert.All(hud.Items.Where(i => i.Kind != TdUiKind.Separator && i.SArg != "seg"), i => Assert.False(string.IsNullOrEmpty(i.Tip)));
@@ -606,45 +568,6 @@ public sealed class TdUiControllerTests
         Assert.Equal(12, tree.Items.Count(i => i.Action == TdUiAction.BuyNode));
         r.Ui.Activate(tree.Items.First(i => i.Action == TdUiAction.BuyNode && i.Enabled));
         Assert.StartsWith("buy:", r.Host.Calls.Single(), StringComparison.Ordinal);
-    }
-
-    [Fact]
-    public void End_card_opens_on_defeat_and_actions_reach_the_host()
-    {
-        var r = new Rig();
-        for (int i = 0; i < 30 * 3000 && r.Match.Phase is MatchPhase.Onda or MatchPhase.Preparo; i++)
-        {
-            if (r.Match.Phase == MatchPhase.Preparo) r.Match.Apply(new StartWave());
-            r.Match.Step();
-        }
-        Assert.Equal(MatchPhase.Derrota, r.Match.Phase);
-        r.Ui.Sync();
-        Assert.Equal(TdUiMode.End, r.Ui.Mode);
-        var card = r.Ui.BuildPopover()!;
-        Assert.StartsWith("DERROTA", card.Title, StringComparison.Ordinal);
-        Assert.DoesNotContain(card.Items, i => i.Action == TdUiAction.NextStage);
-        Assert.Contains(card.Items, i => i.Action == TdUiAction.MapOpen);
-        Assert.Contains(card.Items, i => i.Action == TdUiAction.Restart); // o card do cantinho mantém "Reiniciar fase"
-        Assert.True(r.Ui.EndCardOpen);
-        Assert.True(r.Ui.CornerPopover);
-        Assert.False(r.Ui.ModalOpen); // automático: cantinho, sem modal central
-        Assert.DoesNotContain(card.Items, i => i.Action == TdUiAction.ModalTab);
-        r.Ui.Cancel();
-        r.Ui.Activate(r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.HudRestore));
-        Assert.Equal(TdUiMode.End, r.Ui.Mode);
-        Assert.False(r.Ui.EndCardOpen);
-        Assert.True(r.Ui.ModalOpen); // clique do usuário no chip abre a modal central
-        card = r.Ui.BuildPopover()!;
-        r.Host.OnStartStage = stage => r.Match = Create(stage);
-        r.Ui.Activate(Find(card, TdUiAction.Restart));
-        Assert.Equal("stage1", r.Host.Calls.Single());
-        // nova partida: o card some
-        r.Ui.Sync();
-        Assert.Equal(TdUiMode.None, r.Ui.Mode);
-        Assert.Equal(MatchPhase.Preparo, r.Match.Phase);
-        Assert.False(r.Match.Paused);
-        r.Ui.Activate(r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.StartWave));
-        Assert.Equal(MatchPhase.Onda, r.Match.Phase);
     }
 
     [Fact]

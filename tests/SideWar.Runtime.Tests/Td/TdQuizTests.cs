@@ -324,22 +324,4 @@ public sealed class TdQuizTests
         Assert.Equal(Run(), Run());
     }
 
-    [Fact]
-    public void Defeat_card_shows_reason_and_tip_with_icons()
-    {
-        var r = new Rig();
-        r.Match.Apply(new StartWave());
-        for (int i = 0; i < 30 * 900 && r.Match.Phase != MatchPhase.Derrota; i++)
-        {
-            if (r.Match.Phase == MatchPhase.Preparo) r.Match.Apply(new StartWave());
-            r.Match.Step();
-        }
-        Assert.Equal(MatchPhase.Derrota, r.Match.Phase);
-        r.Ui.Sync();
-        var card = r.Ui.BuildPopover()!;
-        var labels = card.Items.Where(i => i.Kind == TdUiKind.Label && i.Icon != TdIcon.None).ToArray();
-        Assert.Equal(2, labels.Length);
-        Assert.Equal(TdIcon.Alert, labels[0].Icon);
-        Assert.All(labels, l => Assert.True(l.Text.Split(' ').Length <= 8, l.Text));
-    }
 }

@@ -71,14 +71,15 @@ public sealed class TdCompositionTests : IDisposable
     }
 
     [Fact]
-    public void Match_result_is_written_to_the_profile()
+    public void Wave_reputation_is_written_to_the_profile()
     {
         Directory.CreateDirectory(dir);
         var clock = new ManualClock();
         var settings = new AppSettings { Td = new TdSettings { AutoStartEnabled = true, AutoStartSeconds = 5 } };
         var td = TdComposition.Create(dir, "0.1.0", VisibleApp(), clock, settings, _ => { }, seed: 7);
-        for (int i = 0; i < 400_000 && td.Host.Match.Phase != MatchPhase.Derrota; i++) { clock.NowTicks += 34; td.Host.OnWake(clock); }
-        Assert.Equal(MatchPhase.Derrota, td.Host.Match.Phase); // sem torres, as ondas vazam
+        for (int i = 0; i < 400_000 && td.Host.Match.ReputationGainedTotal == 0; i++) { clock.NowTicks += 34; td.Host.OnWake(clock); }
+        Assert.True(td.Host.Match.ReputationLostTotal > 0); // sem torres, as ondas vazam e tiram XP (sem derrota)
+        Assert.True(td.Host.Match.ReputationGainedTotal > 0); // e a onda vencida grava a reputação
         var saved = new TdProfileStore(RealFileSystem.Instance, dir).Load();
         Assert.Equal(TdProfileSource.File, saved.Source);
         Assert.Contains(saved.Profile.Stages, s => s.StageId == 1 && s.Unlocked && s.Stars == 0);

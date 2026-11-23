@@ -38,26 +38,6 @@ public sealed class TdAlertProtectionTests
         Assert.Equal(s.ComputeStateHash(), c.ComputeStateHash()); // mesma sequência => mesmo estado
     }
 
-    [Theory]
-    [InlineData(1)] [InlineData(3)] [InlineData(6)]
-    public void Projection_is_an_upper_bound_and_NextStepIsFatal_predicts_every_step(int stage)
-    {
-        var s = New(stage);
-        for (int i = 0; i < 60_000 && s.Phase is MatchPhase.Onda or MatchPhase.Preparo; i++)
-        {
-            if (s.Phase == MatchPhase.Preparo) { s.Apply(new StartWave()); continue; }
-            long bound = s.ProjectNextStepLeakDamage();
-            int before = s.Integrity;
-            ulong h = s.ComputeStateHash();
-            bool predicted = s.NextStepIsFatal();
-            Assert.Equal(h, s.ComputeStateHash()); // predizer não muda nada
-            s.Step();
-            Assert.True(before - s.Integrity <= bound, $"passo {i}: dano real {before - s.Integrity} > limite {bound}");
-            Assert.Equal(s.Phase == MatchPhase.Derrota, predicted);
-        }
-        Assert.Equal(MatchPhase.Derrota, s.Phase); // sem torres a partida é perdida: a predição foi exercitada
-    }
-
     [Fact]
     public void Defense_line_is_the_placed_active_tower_nearest_the_portal_and_follows_sell_and_disable()
     {
@@ -90,18 +70,6 @@ public sealed class TdAlertProtectionTests
         var ids = TdRiskAnalyzer.PastDefenseLine(s);
         Assert.Equal([902, 904], ids);
         Assert.Equal(ids, TdRiskAnalyzer.PastDefenseLine(s));
-    }
-
-    [Fact]
-    public void Fork_bomb_copies_and_botnet_splits_make_the_next_step_fatal_when_they_would_leak()
-    {
-        var s = New();
-        int fork = Array.FindIndex(Content.Enemies.Enemies, e => e.Id == "fork");
-        var enemies = Assert.IsType<List<TdEnemy>>(s.Enemies);
-        enemies.Clear();
-        // Fork morto no limite: as cópias nascem no passo, e vazam no mesmo passo.
-        enemies.Add(new TdEnemy { Id = 7, Wave = 1, DefIndex = fork, X = s.LeakX + 0.01, Speed = 30, Hp = 0, MaxHp = 1, CoreDamage = 1, Gold = 0 });
-        Assert.True(s.ProjectNextStepLeakDamage() >= 1);
     }
 
     [Fact]

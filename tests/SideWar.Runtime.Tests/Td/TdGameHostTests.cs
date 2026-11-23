@@ -230,25 +230,6 @@ public sealed class TdGameHostTests
     }
 
     [Fact]
-    public void Match_end_is_reported_once_and_stepping_stops()
-    {
-        var r = new Rig();
-        r.Host.ApplyAutoStart(true, 5);
-        r.Wake();
-        for (int i = 0; i < 400 && r.Match.Phase != MatchPhase.Derrota; i++) r.Run(10); // sem torres: as ondas vazam até a Derrota
-        Assert.Equal(MatchPhase.Derrota, r.Match.Phase);
-        Assert.Equal(1, r.Obs.Ended);
-        Assert.Equal(MatchPhase.Derrota, r.Obs.Last!.Value.Phase);
-        long steps = r.Host.StepsExecuted;
-        r.Run(5);
-        Assert.Equal(steps, r.Host.StepsExecuted);
-        Assert.Equal(1, r.Obs.Ended);
-        Assert.Null(r.Host.NextDeadline);
-        Assert.True(r.Obs.EventBatches > 0);
-        Assert.Empty(r.Match.Events); // o host limpa os eventos depois de entregar
-    }
-
-    [Fact]
     public void Shutdown_drops_pending_and_stops()
     {
         var r = new Rig();
