@@ -142,7 +142,7 @@ public sealed class TdUiGoldenTests
         return (ui, match);
     }
 
-    private static SKBitmap Render(UiScene scene, int dpi, bool text)
+    private static SKBitmap Render(UiScene scene, int dpi, bool text, bool arrowTop = false)
     {
         var (ui, _) = Setup(scene);
         using var typo = new Typography();
@@ -174,6 +174,7 @@ public sealed class TdUiGoldenTests
             return bmp;
         }
         var p = ui.BuildPopover() ?? throw new InvalidOperationException(scene.ToString());
+        if (arrowTop) p = p with { ArrowTop = true };
         var (pw, ph) = r.PhysicalSize(p.Width, p.Height);
         var pb = new SKBitmap(new SKImageInfo(pw, ph, SKColorType.Bgra8888, SKAlphaType.Premul));
         using var pc = new SKCanvas(pb);
@@ -193,6 +194,17 @@ public sealed class TdUiGoldenTests
         Assert.SkipUnless(OperatingSystem.IsLinux(), "texto Skia difere entre SOs; golden com texto só no Linux (RF-17.3)");
         using var bmp = Render(scene, dpi, text: true);
         string? failure = GoldenImage.Verify($"td-ui-{scene.ToString().ToLowerInvariant()}-{dpi * 100 / 96}", bmp);
+        Assert.True(failure is null, failure);
+    }
+
+    [Theory]
+    [InlineData(96)]
+    [InlineData(144)]
+    public void Rune_window_below_hud_matches_golden(int dpi)
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "golden com texto só no Linux");
+        using var bmp = Render(UiScene.RuneWindow, dpi, text: true, arrowTop: true);
+        string? failure = GoldenImage.Verify($"td-ui-runewindow-below-{dpi * 100 / 96}", bmp);
         Assert.True(failure is null, failure);
     }
 
@@ -227,15 +239,15 @@ public sealed class TdUiGoldenTests
     [Fact]
     public void Hud_wave_ticks_follow_the_displayed_wave()
     {
-        var item = new TdUiItem(new SideWar.Runtime.Geometry.DipRect(0, 0, 58, 28), TdUiKind.Button,
-            "20/20 5/10", TdUiAction.HudRestore);
+        var item = new TdUiItem(new SideWar.Runtime.Geometry.DipRect(0, 0, 167, 28), TdUiKind.Label,
+            "5/10", SArg: "wave");
         using var typo = new Typography();
         using var renderer = new TdUiRenderer(typo, 96) { TextEnabled = false };
-        using var bmp = new SKBitmap(58, 28);
+        using var bmp = new SKBitmap(167, 28);
         using (var canvas = new SKCanvas(bmp))
-            renderer.DrawHud(canvas, new TdHudView([item], 58, 28, Wave: 5, TotalWaves: 10), -1);
-        Assert.Equal(Palette.Td.Amber, bmp.GetPixel(7, 24));
-        Assert.Equal(Palette.Td.BorderStrong, bmp.GetPixel(49, 24));
+            renderer.DrawHud(canvas, new TdHudView([item], 167, 28, Wave: 5, TotalWaves: 10), -1);
+        Assert.Equal(Palette.Td.Amber, bmp.GetPixel(107, 13));
+        Assert.Equal(new SKColor(0x2a, 0x3d, 0x58), bmp.GetPixel(161, 13));
     }
 
     private static double Contrast(SKColor a, SKColor b)

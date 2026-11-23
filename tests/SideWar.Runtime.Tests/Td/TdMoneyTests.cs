@@ -268,25 +268,33 @@ public sealed class TdMoneyTests
         Assert.False(string.IsNullOrEmpty(money.Tip));
     }
 
-    [Fact] // T-33.18
-    public void Chip_stays_within_220_dip_at_rest_and_the_counter_grows_to_the_left()
+    [Fact]
+    public void Hud_has_space_for_credit_counter_and_controls()
     {
-        Assert.True(TdHudView.RestWidth <= 220f, $"{TdHudView.RestWidth}");
         var r = new Rig();
         r.Match.Apply(new SideWar.Core.Td.BuildTower("bolt", 600));
         r.Match.Apply(new StartWave());
         var hud = r.Ui.BuildHud();
-        Assert.True(r.Match.Credits < 10000);
-        Assert.Equal(TdHudView.RestWidth, hud.Width);
         var money = hud.Items.Single(i => i.Kind == TdUiKind.Money);
-        var chip = hud.Items.Single(i => i.Action == TdUiAction.HudRestore);
-        Assert.Equal(0f, money.Rect.X);
-        Assert.True(money.Rect.X + money.Rect.W <= chip.Rect.X);
+        var rune = hud.Items.Single(i => i.Action == TdUiAction.RuneWindow);
+        Assert.True(money.Rect.X + money.Rect.W <= rune.Rect.X);
         Assert.All(hud.Items, i => Assert.True(i.Rect.X + i.Rect.W <= hud.Width + 0.01f));
-        // créditos de 5 dígitos: o contador cresce e o grupo à direita fica colado à borda direita
-        float fixedGroup = hud.Width - chip.Rect.X;
-        Assert.True(TdHudView.MoneyWidth(5) - TdHudView.MoneyWidth(4) > 0f);
-        Assert.Equal(TdHudView.ChipWidth + TdHudView.Gap + 4 * TdHudView.ButtonWidth + 3 * TdHudView.Gap, fixedGroup, 0.01f);
+    }
+
+    [Fact]
+    public void Long_credit_value_expands_without_overlapping_rune_button()
+    {
+        var r = new Rig();
+        typeof(TdMatchState).GetProperty("Credits")!.SetValue(r.Match, 123456789L);
+        var hud = r.Ui.BuildHud();
+        var money = hud.Items.Single(i => i.Kind == TdUiKind.Money);
+        var rune = hud.Items.Single(i => i.Action == TdUiAction.RuneWindow);
+        Assert.True(hud.Width > 720);
+        Assert.Equal("123456789", money.Text);
+        Assert.True(money.Rect.X + money.Rect.W < rune.Rect.X);
+        Assert.Equal(TdUiAction.RuneWindow, hud.Items[hud.HitTest(rune.Rect.X + 14, rune.Rect.Y + 14)].Action);
+        foreach (var speed in hud.Items.Where(i => i.Action == TdUiAction.SetSpeed))
+            Assert.Equal(speed.Arg, hud.Items[hud.HitTest(speed.Rect.X + 15, speed.Rect.Y + 11)].Arg);
     }
 
     [Fact] // T-33.21
@@ -317,14 +325,14 @@ public sealed class TdMoneyTests
         var r = new Rig();
         var rest = r.Ui.BuildHud();
         Assert.Equal(0f, rest.TopPad);
-        Assert.Equal(28f, rest.Height);
+        Assert.Equal(40f, rest.Height);
         r.Match.Apply(new SideWar.Core.Td.BuildTower("bolt", 300));
         r.Match.Apply(new StartWave());
         for (int i = 0; i < 4000 && r.Ui.Money.Floats.Count == 0; i++) { r.Match.Step(); r.Now += Dt; r.Ui.BuildHud(); }
         var hud = r.Ui.BuildHud();
         Assert.NotEmpty(hud.Floats!);
         Assert.Equal(TdHudView.FloatPad, hud.TopPad);
-        Assert.Equal(28f + TdHudView.FloatPad, hud.Height);
+        Assert.Equal(40f + TdHudView.FloatPad, hud.Height);
         Assert.All(hud.Items, it => Assert.True(it.Rect.Y >= hud.TopPad));
         Assert.False(hud.OverButton(5f, 4f));                       // a faixa do topo é transparente ao mouse
         var money = hud.Items.Single(i => i.Kind == TdUiKind.Money);

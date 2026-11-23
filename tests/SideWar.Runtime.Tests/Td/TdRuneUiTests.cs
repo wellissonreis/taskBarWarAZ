@@ -58,7 +58,7 @@ public sealed class TdRuneUiTests
     }
 
     [Fact]
-    public void Rune_button_sits_in_the_chip_and_keeps_the_rest_width_within_220()
+    public void Rune_button_sits_in_the_hud()
     {
         var r = new Rig();
         var hud = r.Ui.BuildHud();
@@ -70,7 +70,7 @@ public sealed class TdRuneUiTests
         // sem Iniciar (corrida contínua em andamento) a largura é exatamente a de repouso
         r.Match.Apply(new SideWar.Core.Td.BuildTower("bolt", 600));
         r.Match.Apply(new StartWave());
-        Assert.Equal(TdHudView.RestWidth, r.Ui.BuildHud().Width);
+        Assert.Equal(720f, r.Ui.BuildHud().Width);
     }
 
     [Fact]
@@ -333,7 +333,8 @@ public sealed class TdRuneUiTests
         var hud = r.Ui.BuildHud();
         var b = hud.Items.Single(i => i.Action == TdUiAction.RuneWindow);
         Assert.True(pop.HasArrow);
-        Assert.Equal(pop.Width - (hud.Width - (b.Rect.X + b.Rect.W / 2f)), pop.ArrowX, 0.01f);
+        Assert.Equal(pop.Width / 2f, pop.ArrowX, 0.01f);
+        Assert.Equal(TdUiAction.RuneWindow, hud.Items[hud.HitTest(b.Rect.X + b.Rect.W / 2f, b.Rect.Y + b.Rect.H / 2f)].Action);
     }
 
     [Fact]

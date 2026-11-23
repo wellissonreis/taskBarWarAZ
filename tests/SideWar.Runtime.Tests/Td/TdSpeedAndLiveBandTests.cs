@@ -102,17 +102,18 @@ public sealed class TdSpeedAndLiveBandTests
         var match = TdMatchState.Create(Content, 1, Rng.Seed(1, 54));
         var ui = new TdUiController(() => match, _ => { }, host, () => 0.0, null);
         var chip = ui.BuildHud();
-        // chip: UM botão pequeno que mostra a velocidade atual e alterna 1x -> 2x -> 3x -> 1x
-        var btn = chip.Items.Single(i => i.Action == TdUiAction.SetSpeed);
-        Assert.Equal("1x", btn.Text);
-        ui.Activate(btn);
-        Assert.Equal(2, host.GameOptions.GameSpeed);
-        btn = ui.BuildHud().Items.Single(i => i.Action == TdUiAction.SetSpeed);
-        Assert.Equal("2x", btn.Text);
-        ui.Activate(btn);
-        Assert.Equal(3, host.GameOptions.GameSpeed);
-        ui.Activate(ui.BuildHud().Items.Single(i => i.Action == TdUiAction.SetSpeed));
-        Assert.Equal(1, host.GameOptions.GameSpeed);
+        var buttons = chip.Items.Where(i => i.Action == TdUiAction.SetSpeed).ToArray();
+        Assert.Equal(["1x", "2x", "3x"], buttons.Select(i => i.Text));
+        foreach (var button in buttons)
+        {
+            var hud = ui.BuildHud();
+            int hit = hud.HitTest(button.Rect.X + button.Rect.W / 2, button.Rect.Y + button.Rect.H / 2);
+            Assert.True(hit >= 0);
+            ui.Activate(hud.Items[hit]);
+            Assert.Equal(button.Arg, host.GameOptions.GameSpeed);
+            Assert.True(ui.BuildHud().Items.Single(i => i.Action == TdUiAction.SetSpeed && i.Arg == button.Arg).Selected);
+        }
+        ui.Activate(buttons[0]);
         // aba Jogo: seletor segmentado completo
         ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
         var seg = ui.BuildPopover()!.Items.Where(i => i.Action == TdUiAction.SetSpeed).ToArray();

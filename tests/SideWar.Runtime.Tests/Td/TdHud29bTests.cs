@@ -62,18 +62,18 @@ public sealed class TdHud29bTests
     }
 
     [Fact]
-    public void Chip_is_compact_at_rest_and_the_extras_only_exist_when_needed()
+    public void Hud_has_design_width_and_start_only_when_needed()
     {
         var r = new Rig();
         var hud = r.Ui.BuildHud();
         // em Preparo o botão Iniciar existe; depois da 1ª onda (contínua) o chip em repouso tem ≤ 220 DIP
-        Assert.True(hud.Width <= TdHudView.FullWidth);
-        Assert.True(TdHudView.RestWidth <= 220f, $"chip em repouso: {TdHudView.RestWidth}");
+        Assert.Equal(720f + TdHudView.StartWidth + 4f, hud.Width);
+        Assert.Equal(40f, hud.Height);
         r.Match.Apply(new SideWar.Core.Td.BuildTower("bolt", 600));
         var sw = r.Match.Apply(new StartWave());
         Assert.Equal(MatchPhase.Onda, r.Match.Phase);
         var rest = r.Ui.BuildHud();
-        Assert.Equal(TdHudView.RestWidth, rest.Width);
+        Assert.Equal(720f, rest.Width);
         Assert.DoesNotContain(rest.Items, i => i.Action is TdUiAction.StartWave);
         Assert.All(rest.Items, i => Assert.True(i.Rect.X + i.Rect.W <= rest.Width + 0.01f));
         Assert.All(rest.Items.Where(i => i.Kind == TdUiKind.Button), i => Assert.True(i.Rect.W <= 118f, i.Text));

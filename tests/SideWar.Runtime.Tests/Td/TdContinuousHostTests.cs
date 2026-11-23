@@ -118,7 +118,7 @@ public sealed class TdContinuousHostTests
         r.RunUntil(() => r.Match.WaveNumber == 2);
         Assert.Equal(MatchPhase.Onda, r.Match.Phase); // nunca voltou ao Preparo
         Assert.DoesNotContain(r.Ui.BuildHud().Items, i => i.Action == TdUiAction.StartWave);
-        Assert.EndsWith(" 2/2", r.Ui.BuildHud().Items.Single(i => i.Action == TdUiAction.HudRestore).Text);
+        Assert.Equal("2/2", r.Ui.BuildHud().Items.Single(i => i.SArg == "wave").Text);
     }
 
     [Fact]
