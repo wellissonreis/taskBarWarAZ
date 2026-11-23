@@ -22,7 +22,7 @@
     ]
   },
   "stages": [
-    { "id": 1, "title": "Brazil South",    "region": "brazilsouth",   "concept": "Tutorial: construir e iniciar a onda", "waves": 10, "startingCredits": 220, "challenge": "frugal" },
+    { "id": 1, "title": "Brazil South",    "region": "brazilsouth",   "concept": "Tutorial: construir e iniciar a onda", "waves": 10, "startingCredits": 280, "challenge": "frugal" },
     { "id": 2, "title": "East US",         "region": "eastus",        "concept": "Blindados e mira", "waves": 12, "startingCredits": 300, "challenge": "purist" },
     { "id": 3, "title": "West Europe",     "region": "westeurope",    "concept": "Controle, habilidade e o primeiro chefe", "waves": 12, "startingCredits": 300, "challenge": "marathon" },
     { "id": 4, "title": "Japan East",      "region": "japaneast",     "concept": "Voadores e suporte (respiro)", "waves": 14, "startingCredits": 340, "challenge": "frugal" },

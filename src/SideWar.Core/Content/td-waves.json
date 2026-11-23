@@ -3,13 +3,13 @@
     {
       "stage": 1,
       "waves": [
-        {"number": 1, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 4, "offset": 0.0, "interval": 2.53}]},
-        {"number": 2, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 5, "offset": 0.0, "interval": 2.53}]},
-        {"number": 3, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 4, "offset": 0.0, "interval": 2.53}, {"enemy": "runner", "count": 3, "offset": 18.6, "interval": 0.8}]},
-        {"number": 4, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 5, "offset": 0.0, "interval": 2.53}, {"enemy": "runner", "count": 4, "offset": 23.7, "interval": 0.8}]},
-        {"number": 5, "rest": true, "bonusFactor": 1.5, "groups": [{"enemy": "grunt", "count": 3, "offset": 0.0, "interval": 2.53}]},
-        {"number": 6, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 4, "offset": 0.0, "interval": 2.53}, {"enemy": "runner", "count": 8, "offset": 23.7, "interval": 0.8}, {"enemy": "swarm", "count": 1, "offset": 26.0, "interval": 0.8}]},
-        {"number": 7, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 5, "offset": 0.0, "interval": 2.53}, {"enemy": "runner", "count": 10, "offset": 28.7, "interval": 0.8}]},
+        {"number": 1, "rest": false, "bonusFactor": 1.6, "groups": [{"enemy": "grunt", "count": 3, "offset": 0.0, "interval": 4.0}]},
+        {"number": 2, "rest": false, "bonusFactor": 1.5, "groups": [{"enemy": "grunt", "count": 3, "offset": 0.0, "interval": 3.6}]},
+        {"number": 3, "rest": false, "bonusFactor": 1.4, "groups": [{"enemy": "grunt", "count": 3, "offset": 0.0, "interval": 3.4}, {"enemy": "runner", "count": 1, "offset": 16.0, "interval": 1.6}]},
+        {"number": 4, "rest": false, "bonusFactor": 1.3, "groups": [{"enemy": "grunt", "count": 4, "offset": 0.0, "interval": 3.2}, {"enemy": "runner", "count": 2, "offset": 20.0, "interval": 1.5}]},
+        {"number": 5, "rest": true, "bonusFactor": 1.7, "groups": [{"enemy": "grunt", "count": 3, "offset": 0.0, "interval": 3.0}]},
+        {"number": 6, "rest": false, "bonusFactor": 1.2, "groups": [{"enemy": "grunt", "count": 4, "offset": 0.0, "interval": 2.9}, {"enemy": "runner", "count": 5, "offset": 22.0, "interval": 1.2}, {"enemy": "swarm", "count": 1, "offset": 26.0, "interval": 0.8}]},
+        {"number": 7, "rest": false, "bonusFactor": 1.1, "groups": [{"enemy": "grunt", "count": 5, "offset": 0.0, "interval": 2.7}, {"enemy": "runner", "count": 8, "offset": 26.0, "interval": 1.0}]},
         {"number": 8, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "runner", "count": 20, "offset": 0.0, "interval": 0.8}, {"enemy": "grunt", "count": 2, "offset": 18.2, "interval": 2.53}, {"enemy": "synflood", "count": 4, "offset": 25.0, "interval": 0.8}]},
         {"number": 9, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 4, "offset": 0.0, "interval": 2.53}, {"enemy": "runner", "count": 18, "offset": 33.8, "interval": 0.8}, {"enemy": "swarm", "count": 2, "offset": 35.0, "interval": 0.8}]},
         {"number": 10, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 4, "offset": 0.0, "interval": 2.53}, {"enemy": "runner", "count": 26, "offset": 38.9, "interval": 0.8}]}

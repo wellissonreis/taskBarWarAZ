@@ -151,11 +151,11 @@ public sealed class TdContentTests
     [Fact(DisplayName = "TD.1 Validator checks wave authoring rules")]
     public void Validator_ChecksWaves()
     {
-        AssertError(With("td-waves.json", "{\"enemy\": \"grunt\", \"count\": 4, \"offset\": 0.0, \"interval\": 2.53}", "{\"enemy\": \"flyer\", \"count\": 4, \"offset\": 0.0, \"interval\": 2.53}"), "só é introduzido na fase 2");
-        AssertError(With("td-waves.json", "{\"enemy\": \"grunt\", \"count\": 4, \"offset\": 0.0, \"interval\": 2.53}", "{\"enemy\": \"fantasma\", \"count\": 4, \"offset\": 0.0, \"interval\": 2.53}"), "'fantasma' não existe");
-        AssertError(With("td-waves.json", "{\"enemy\": \"grunt\", \"count\": 4, \"offset\": 0.0, \"interval\": 2.53}", "{\"enemy\": \"grunt\", \"count\": 1, \"offset\": 0.0, \"interval\": 2.53}"), "fora de [3, 32]");
+        AssertError(With("td-waves.json", "{\"enemy\": \"grunt\", \"count\": 3, \"offset\": 0.0, \"interval\": 4.0}", "{\"enemy\": \"flyer\", \"count\": 4, \"offset\": 0.0, \"interval\": 2.53}"), "só é introduzido na fase 2");
+        AssertError(With("td-waves.json", "{\"enemy\": \"grunt\", \"count\": 3, \"offset\": 0.0, \"interval\": 4.0}", "{\"enemy\": \"fantasma\", \"count\": 4, \"offset\": 0.0, \"interval\": 2.53}"), "'fantasma' não existe");
+        AssertError(With("td-waves.json", "{\"enemy\": \"grunt\", \"count\": 3, \"offset\": 0.0, \"interval\": 4.0}", "{\"enemy\": \"grunt\", \"count\": 1, \"offset\": 0.0, \"interval\": 2.53}"), "fora de [3, 32]");
         AssertError(With("td-stages.json", "\"waves\": 10,", "\"waves\": 11,"), "td-waves.1");
-        AssertError(With("td-waves.json", "\"number\": 5, \"rest\": true, \"bonusFactor\": 1.5, \"groups\": [{\"enemy\": \"grunt\", \"count\": 3,", "\"number\": 5, \"rest\": false, \"bonusFactor\": 1.0, \"groups\": [{\"enemy\": \"grunt\", \"count\": 3,"), "sem respiro");
+        AssertError(With("td-waves.json", "\"number\": 5, \"rest\": true, \"bonusFactor\": 1.7, \"groups\": [{\"enemy\": \"grunt\", \"count\": 3,", "\"number\": 5, \"rest\": false, \"bonusFactor\": 1.0, \"groups\": [{\"enemy\": \"grunt\", \"count\": 3,"), "sem respiro");
     }
 
     [Fact(DisplayName = "TD.1 Validator checks the meta tree and abilities")]
