@@ -509,6 +509,60 @@
    "sha256": "716d73df84b80c72f0248e8aee53099724cacda9648f764ea30f3290ace570b9"
   },
   {
+   "file": "pipeline-attack.png",
+   "design": "original",
+   "role": "attack",
+   "frames": 6,
+   "durationSeconds": 0.5,
+   "fps": 12.0,
+   "sheetPixels": [
+    768,
+    128
+   ],
+   "framePixels": [
+    128,
+    128
+   ],
+   "sha256": "a0ad48960a003f1f46cc555b31f495a1d87909ad4aae3f89fb91fcead7e5b459",
+   "generator": "tools/sprites/gen_pipeline.py"
+  },
+  {
+   "file": "pipeline-fx.png",
+   "design": "original",
+   "role": "fx",
+   "frames": 4,
+   "durationSeconds": 0.4,
+   "fps": 10.0,
+   "sheetPixels": [
+    256,
+    64
+   ],
+   "framePixels": [
+    64,
+    64
+   ],
+   "sha256": "109a28672fdfed6c7bf2cf4816b3913ad9d95abbcce2b4e03caf33c4560c28a3",
+   "generator": "tools/sprites/gen_pipeline.py"
+  },
+  {
+   "file": "pipeline-idle.png",
+   "design": "original",
+   "role": "idle",
+   "frames": 4,
+   "durationSeconds": 0.667,
+   "fps": 6.0,
+   "sheetPixels": [
+    512,
+    128
+   ],
+   "framePixels": [
+    128,
+    128
+   ],
+   "sha256": "68ab7cf1c12b8688354a7406e6e5f9c1ff7123542d5d219ca2d65d8d404073e0",
+   "generator": "tools/sprites/gen_pipeline.py"
+  },
+  {
    "file": "policy-attack.png",
    "design": "policy",
    "blob": "837d0fa0b5bddce7c22ca9843d2a10ea",
