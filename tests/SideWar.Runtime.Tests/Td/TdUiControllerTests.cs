@@ -136,6 +136,22 @@ public sealed class TdUiControllerTests
     }
 
     [Theory]
+    [InlineData(0, "Brasão Estagiário", "0 / 5000 p.|faltam 5000 p. para Júnior")]
+    [InlineData(4999, "Brasão Estagiário", "4999 / 5000 p.|faltam 1 p. para Júnior")]
+    [InlineData(5000, "Brasão Júnior", "5000 / 12000 p.|faltam 7000 p. para Pleno")]
+    [InlineData(34000, "Brasão Arquiteto", "34000 p.|Patente máxima")]
+    public void Menu_rank_card_swaps_badge_name_and_bar_at_the_limits(int score, string tip, string bar)
+    {
+        var r = new Rig();
+        r.Host.Score = score;
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
+        var card = r.Ui.BuildPopover()!.Items.Single(i => i.SArg == "rank-card");
+        Assert.Equal(tip, card.Tip);
+        Assert.Equal(bar, card.Right);
+        Assert.Equal(SideWar.Core.Td.TdRank.Brasao((SideWar.Core.Td.TdRankLevel)card.Arg), SideWar.Core.Td.TdRank.Brasao(SideWar.Core.Td.TdRank.Progress(score).Current));
+    }
+
+    [Theory]
     [InlineData(0, 0, "Estagiário")]
     [InlineData(4999, 0, "Estagiário")]
     [InlineData(5000, 1, "Júnior")]
