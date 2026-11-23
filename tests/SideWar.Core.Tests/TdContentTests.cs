@@ -114,7 +114,7 @@ public sealed class TdContentTests
     [Fact(DisplayName = "TD.1 Validator rejects a tower without declared weakness or with an unknown trait")]
     public void Validator_RejectsTowerWithoutWeakness()
     {
-        AssertError(With("td-towers.json", "\"weak\": [\"swarm\", \"replicator\"], \"weaknessText\"", "\"weak\": [], \"weaknessText\""), "td-towers.bolt.weak");
+        AssertError(With("td-towers.json", "\"weak\": [\"swarm\", \"replicator\", \"armored\"], \"weaknessText\"", "\"weak\": [], \"weaknessText\""), "td-towers.bolt.weak");
         AssertError(With("td-towers.json", "\"weak\": [\"flying\"], \"weaknessText\": \"Não segura", "\"weak\": [\"fogo\"], \"weaknessText\": \"Não segura"), "traço desconhecido 'fogo'");
         AssertError(With("td-towers.json", "\"weaknessText\": \"Dano quase nulo: não mata sozinha; chefes resistem ao controle.\"", "\"weaknessText\": \"\""), "td-towers.frost.weaknessText");
     }
@@ -209,13 +209,12 @@ public sealed class TdContentTests
         AssertError(With("td-stages.json", "\"towerCostTableLow\": [100, 120, 144, 173,", "\"towerCostTableLow\": [100, 120, 144,"), "towerCostTableLow deve ter 48 entradas");
     }
 
-    [Fact(DisplayName = "TD.19 / SDD-29 §6 Credit-source targets are stored in td-runes.json (not yet wired into the Core)")]
+    [Fact(DisplayName = "Créditos: fontes calibradas para decisões espaçadas")]
     public void CreditSources_AreStored()
     {
         var c = TdContentLoader.LoadEmbedded().Runes.CreditSources;
-        Assert.Equal((80, 120, 10), (c.StartingCreditsBonus, c.WaveBonusBase, c.WaveBonusPerWave)); // TD.29a: dobrados (sem créditos para runas, só torres)
-        // TD.30a: a caixa-bomba saiu; seu valor médio por onda (chance 0,5 × (40 + 2·onda) = 20 + 1·onda) foi somado ao bônus "sem vazar".
-        Assert.Equal((100, 5), (c.NoLeakBase, c.NoLeakPerWave));
-        Assert.Equal((40, 3, 120), (c.BonusQuestionBase, c.BonusQuestionPerWave, c.BossCredits));
+        Assert.Equal((80, 50, 3), (c.StartingCreditsBonus, c.WaveBonusBase, c.WaveBonusPerWave));
+        Assert.Equal((15, 1), (c.NoLeakBase, c.NoLeakPerWave));
+        Assert.Equal((35, 2, 90), (c.BonusQuestionBase, c.BonusQuestionPerWave, c.BossCredits));
     }
 }

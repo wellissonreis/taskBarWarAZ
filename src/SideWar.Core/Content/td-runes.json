@@ -1,5 +1,5 @@
 {
-  "creditSources": {"startingCreditsBonus": 80, "waveBonusBase": 120, "waveBonusPerWave": 10, "noLeakBase": 100, "noLeakPerWave": 5, "bonusQuestionBase": 40, "bonusQuestionPerWave": 3, "bossCredits": 120},
+  "creditSources": {"startingCreditsBonus": 80, "waveBonusBase": 50, "waveBonusPerWave": 3, "noLeakBase": 15, "noLeakPerWave": 1, "bonusQuestionBase": 35, "bonusQuestionPerWave": 2, "bossCredits": 90},
   "ringCosts": [1, 2, 5, 12, 24, 48, 80, 125],
   "types": [
     {"id": "range", "name": "Alcance", "effect": "rangeBp", "value": 100, "text": "+1% de alcance em todas as torres."},

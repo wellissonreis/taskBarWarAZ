@@ -76,6 +76,28 @@ public sealed class TdMutationTests
 
     private static string Label(TdMatchState s, ushort mask) => string.Join("+", s.MutationTraitIds(mask));
 
+    [Fact(DisplayName = "Raio também respeita a fraqueza contra blindagem adquirida por mutação")]
+    public void BoltWeakness_AppliesToArmoredMutation()
+    {
+        double Shot(bool armored)
+        {
+            var content = Rig(Mut(0, 0, Cat("armored")), "grunt", 1,
+                edit: e => e.Id == "grunt" ? e with { Hp = 10000, Speed = 0, Armor = 0 } : e);
+            var state = New(content);
+            Assert.True(state.Apply(new BuildTower("bolt", 1100)).IsOk);
+            Assert.True(state.Apply(new StartWave()).IsOk);
+            state.Step();
+            var enemies = (List<TdEnemy>)state.Enemies;
+            var enemy = enemies[0];
+            enemy.Hp = enemy.MaxHp; enemy.Mutations = armored ? (ushort)1 : (ushort)0; enemies[0] = enemy;
+            var towers = (List<TdTower>)state.Towers;
+            var tower = towers[0]; tower.CooldownTicks = 0; towers[0] = tower;
+            state.Step();
+            return enemy.MaxHp - enemies[0].Hp;
+        }
+        Assert.True(Shot(true) < Shot(false));
+    }
+
     // ---------------------------------------------------------------- conteúdo
 
     [Fact(DisplayName = "RF-37.12 mutation content: embedded is valid, enters the ContentHash and the validator rejects bad catalogs and tiers")]
@@ -213,7 +235,7 @@ public sealed class TdMutationTests
         Assert.Empty(Run(Rig(all, "grunt", 10, rest: true), 1).Mutated);
 
         // Fork mutado morre numa defesa forte: as réplicas nascem sem mutação (e sem recompensa).
-        var c = Rig(Mut(0, 5, Cat("durable")), "fork", 10, edit: e => e.Id == "fork" ? e with { Hp = 30, Speed = 20 } : e);
+        var c = Rig(Mut(0, 5, Cat("durable")), "fork", 10, edit: e => e.Id == "fork" ? e with { Hp = 100, Speed = 20 } : e);
         var s = New(c);
         Assert.True(s.Apply(new BuildTower("bolt", 1100)).IsOk);
         Assert.True(s.Apply(new StartWave()).IsOk);

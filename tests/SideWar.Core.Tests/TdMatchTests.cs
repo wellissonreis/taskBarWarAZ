@@ -240,10 +240,10 @@ public sealed class TdMatchTests
         var s = TdMatchState.Create(c, 6, Rng.Seed(1, 54));
         int bolt = Array.FindIndex(c.Towers, t => t.Id == "bolt"), cannon = Array.FindIndex(c.Towers, t => t.Id == "cannon");
         int bal = Array.FindIndex(c.Towers, t => t.Id == "balancer"), set = Array.FindIndex(c.Towers, t => t.Id == "scaleset");
-        Assert.Equal([90L, 112, 140, 176, 241, 332, 456, 628, 864, 1188, 1633], Enumerable.Range(0, 11).Select(n => s.TowerCostAt(bolt, n)));
-        Assert.Equal([120L, 150, 187, 234, 322, 443, 608, 838, 1152, 1584, 2177], Enumerable.Range(0, 11).Select(n => s.TowerCostAt(cannon, n)));
-        Assert.Equal([100L, 125, 156, 195, 268, 369, 507, 698, 960, 1320, 1814], Enumerable.Range(0, 11).Select(n => s.TowerCostAt(bal, n)));
-        Assert.Equal([150L, 188, 234, 292, 402, 554, 760, 1047, 1440, 1980, 2721], Enumerable.Range(0, 11).Select(n => s.TowerCostAt(set, n)));
+        Assert.Equal([243L, 304, 379, 474, 651, 897, 1232, 1696, 2333, 3208, 4408], Enumerable.Range(0, 11).Select(n => s.TowerCostAt(bolt, n)));
+        Assert.Equal([324L, 405, 505, 632, 868, 1196, 1643, 2262, 3110, 4277, 5877], Enumerable.Range(0, 11).Select(n => s.TowerCostAt(cannon, n)));
+        Assert.Equal([270L, 338, 421, 526, 724, 996, 1369, 1885, 2592, 3564, 4898], Enumerable.Range(0, 11).Select(n => s.TowerCostAt(bal, n)));
+        Assert.Equal([405L, 506, 632, 790, 1085, 1494, 2053, 2827, 3888, 5346, 7347], Enumerable.Range(0, 11).Select(n => s.TowerCostAt(set, n)));
     }
 
     [Fact(DisplayName = "TD.20 / CA-29.2 Buying then selling always loses at least 15% with the simple sell rate (no sell runes)")]
@@ -453,7 +453,7 @@ public sealed class TdMatchTests
         Assert.True(r.Ticks > 0);
     }
 
-    private const ulong GoldenReplay = 10790471270796824650UL;
+    private const ulong GoldenReplay = 1427579694745150227UL;
 
     private static TdReplayResult RunScript(ulong seed)
     {

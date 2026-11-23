@@ -406,6 +406,12 @@ public sealed partial class TdMatchState
     {
         double raw = def.Damage * Stat(tower, def, "damageMultiplier", 1.0) * factor;
         if (st.Armored || st.IsBoss) raw *= Stat(tower, def, "damageMultiplierVsArmoredAndBoss", 1.0);
+        bool armored = st.Armored;
+        if (!armored && target.Mutations != 0)
+            for (int i = 0; i < _content.Mutations.Traits.Length && i < 16; i++)
+                if ((target.Mutations & (1 << i)) != 0 && _content.Mutations.Traits[i].Id == "armored") { armored = true; break; }
+        if (armored) raw *= Stat(tower, def, "damageMultiplierVsArmored", 1.0);
+        if (st.NativeTraits.Contains("swarm")) raw *= Stat(tower, def, "damageMultiplierVsSwarm", 1.0);
         raw *= burst;
         if (target.VulnTicks > 0) raw *= 1.0 + target.VulnBonus;
         raw *= 1.0 + _auraDamage[towerIndex];

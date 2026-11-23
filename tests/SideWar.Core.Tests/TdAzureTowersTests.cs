@@ -214,7 +214,7 @@ public sealed class TdAzureTowersTests
 
     private static TdMatchState Arena(string enemy, int count = 1, double armor = 0)
     {
-        var c = TdContentLoader.LoadEmbedded();
+        var c = TdAzureMechanicsContent.Load();
         c = c with
         {
             Enemies = c.Enemies with { Enemies = c.Enemies.Enemies.Select(e => e.Id == enemy ? e with { Hp = 10000, Armor = armor, Speed = 30 } : e).ToArray() },

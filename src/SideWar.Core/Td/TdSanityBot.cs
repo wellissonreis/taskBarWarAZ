@@ -210,17 +210,6 @@ public static class TdSanityBot
         {
             while (Awaken && _s.Fragments > 0 && _s.Frontier.Count > 0 && _s.Apply(new AwakenRune(_s.Frontier[0])).IsOk) { } // teia: despertar sempre que houver fragmento
             TrackRunes();
-            // Mesmo o perfil sem contra precisa de uma defesa para iniciar a partida.
-            if (_profile == TdBotProfile.SemContra && !_s.HasPlacedTower && _s.Phase == MatchPhase.Preparo)
-            {
-                foreach (int x in Candidates(900))
-                    if (_s.Apply(new BuildTower("bolt", x)).IsOk)
-                    {
-                        _types[_s.Towers[^1].Id] = "bolt";
-                        _builtCount++;
-                        break;
-                    }
-            }
             while (_next < _plan.Length)
             {
                 var st = _plan[_next];

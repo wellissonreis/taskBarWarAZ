@@ -19,10 +19,22 @@ public sealed class TdFusionTests
     private static TdContent Rig(string enemy, int count, double armor, bool flying = false)
     {
         var c = TdContentLoader.LoadEmbedded();
+        // Fixar valores de combate da arena deixa os testes de mecânica independentes da calibração de conteúdo;
+        // os preços permanecem os reais para verificar custo e venda dos componentes.
+        var towers = c.Towers.Select(t => t.Id switch
+        {
+            "bolt" => t with { Damage = 24 },
+            "frost" => t with { Damage = 9, Stats = new(t.Stats) { ["slowFactor"] = 0.7 } },
+            "cannon" => t with { Damage = 100 },
+            "vault" => t with { Stats = new(t.Stats) { ["creditsPerWave"] = 14, ["noLeakBonus"] = 10 } },
+            "scaleset" => t with { Stats = new() },
+            _ => t,
+        }).ToArray();
         return c with
         {
+            Towers = towers,
             Enemies = c.Enemies with { Enemies = c.Enemies.Enemies.Select(e => e.Id == enemy ? e with { Hp = 10000, Armor = armor, Speed = 30 } : e).ToArray() },
-            Stages = c.Stages with { Stages = c.Stages.Stages.Select(s => s.Id == 6 ? s with { StartingCredits = 1000000, Waves = 1 } : s).ToArray() },
+            Stages = c.Stages with { Stages = c.Stages.Stages.Select(s => s.Id == 6 ? s with { StartingCredits = 100000000, Waves = 1 } : s).ToArray() },
             Waves = new TdWavesDef([.. c.Waves.Stages.Take(5), new TdStageWavesDef(6, [new TdWaveDef(1, false, 1, [new TdWaveGroupDef(enemy, count, 0, 0.01)])])]),
         };
     }
