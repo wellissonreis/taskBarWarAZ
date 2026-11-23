@@ -726,7 +726,7 @@ public sealed partial class TdUiController
             Add(109 + coreExtra, 6, 167 + waveExtra, 28, TdUiKind.Label, $"{shown}/{m.TotalWaves}", tag: "wave", tip: $"{stageText}Onda {shown}/{m.TotalWaves}");
             Add(282 + coreExtra + waveExtra, 6, 28, 28, TdUiKind.Button, "", TdUiAction.HudExpand,
                 icon: TdIcon.Expand, tip: actionReady ? "Expandir HUD: há uma ação disponível" : "Expandir HUD", fill: actionReady ? 1f : 0f);
-            return CompactHud(new TdHudView(HighlightHud(items), 316 + coreExtra + waveExtra, 40, Minimized: true, Wave: shown, TotalWaves: m.TotalWaves), 0.55f);
+            return CompactHud(AddRankToHud(new TdHudView(HighlightHud(items), 316 + coreExtra + waveExtra, 40, Minimized: true, Wave: shown, TotalWaves: m.TotalWaves)), 0.55f);
         }
         float moneyExtra = Math.Max(0, Math.Max(_money.Real, _money.Display).ToString(System.Globalization.CultureInfo.InvariantCulture).Length - 3) * 8f;
         float grow = coreExtra + waveExtra + moneyExtra;
@@ -748,7 +748,17 @@ public sealed partial class TdUiController
         // O TD não tem caixa coletável desde TD.30a; a ação permanece desabilitada.
         Add(604 + grow, 6, 135, 28, TdUiKind.Button, "Coletar caixa", tag: "crate", enabled: false, tip: "Nenhuma caixa disponível no modo TD.");
         Add(745 + grow, 6, 28, 28, TdUiKind.Button, "", TdUiAction.HudMinimize, icon: TdIcon.Collapse, tip: "Recolher HUD");
-        return CompactHud(new TdHudView(HighlightHud(items), offset + 779 + grow, 40 + y0, Minimized: false, Wave: shown, TotalWaves: m.TotalWaves, Floats: _money.Floats, TopPad: y0), 0.7f);
+        return CompactHud(AddRankToHud(new TdHudView(HighlightHud(items), offset + 779 + grow, 40 + y0, Minimized: false, Wave: shown, TotalWaves: m.TotalWaves, Floats: _money.Floats, TopPad: y0)), 0.7f);
+    }
+
+    private TdHudView AddRankToHud(TdHudView view)
+    {
+        const float space = 34f;
+        var rank = _host.Rank.Current;
+        var crown = new TdUiItem(new DipRect(4, view.TopPad + 4, 32, 32), TdUiKind.Label, "", Arg: (int)rank,
+            SArg: "rank-crown", Tip: $"Patente: {TdRank.DisplayName(rank)}");
+        return view with { Width = view.Width + space, Items = [crown, .. view.Items.Select(i => i with
+            { Rect = new DipRect(i.Rect.X + space, i.Rect.Y, i.Rect.W, i.Rect.H) })] };
     }
 
     private static TdHudView CompactHud(TdHudView view, float scale) => view with

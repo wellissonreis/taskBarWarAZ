@@ -26,6 +26,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     private readonly SpriteAtlas _atlas = atlas ?? SpriteAtlas.LoadEmbedded();
     private readonly bool _ownsAtlas = atlas is null;
     private readonly Dictionary<(string Id, int Px), SKImage> _icons = [];
+    private readonly Dictionary<int, SKImage> _rankCrowns = [];
 
     /// <summary>Falso = layout idêntico sem glifos (goldens comparáveis entre SOs).</summary>
     public bool TextEnabled { get => _p.TextEnabled; set => _p.TextEnabled = value; }
@@ -159,6 +160,21 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     private void DrawHudItem(SKCanvas c, in TdUiItem it, bool hover, float layoutScale)
     {
         var r = it.Rect;
+        if (it.SArg == "rank-crown")
+        {
+            string[] names = ["estagiario", "junior", "pleno", "senior", "especialista", "arquiteto"];
+            int index = Math.Clamp(it.Arg, 0, names.Length - 1);
+            if (!_rankCrowns.TryGetValue(index, out var image))
+            {
+                using var stream = typeof(TdUiRenderer).Assembly.GetManifestResourceStream("SideWar.Rendering.Assets.Patentes.coroa_" + names[index] + ".png");
+                if (stream is null) return;
+                using var bitmap = SKBitmap.Decode(stream);
+                image = SKImage.FromBitmap(bitmap);
+                _rankCrowns[index] = image;
+            }
+            c.DrawImage(image, SKRect.Create(_p.Px(r.X), _p.Px(r.Y), _p.Px(r.W), _p.Px(r.H)), Nearest);
+            return;
+        }
         if (it.Kind == TdUiKind.Separator) { _p.Fill(c, r, Palette.Td.BorderStrong); return; }
         if (it.SArg == "core")
         {
@@ -1093,6 +1109,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     public void Dispose()
     {
         foreach (var i in _icons.Values) i.Dispose();
+        foreach (var image in _rankCrowns.Values) image.Dispose();
         _icons.Clear();
         _p.Dispose();
         if (_ownsAtlas) _atlas.Dispose();

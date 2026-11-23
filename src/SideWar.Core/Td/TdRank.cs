@@ -7,8 +7,8 @@ public enum TdRankLevel
     Junior,
     Pleno,
     Senior,
+    Especialista,
     Arquiteto,
-    Mvp,
 }
 
 /// <summary>Progresso até a próxima patente: <see cref="Next"/> nulo na patente máxima.</summary>
@@ -20,7 +20,7 @@ public readonly record struct TdRankProgress(TdRankLevel Current, TdRankLevel? N
 
 /// <summary>
 /// Limiares recalibrados com 20 seeds por fase no TdSanityBot (TD.22): Médio Sênior,
-/// Otimizado MVP e SemContra Estagiário. Evidência em specs/evidencias/TD.22.md.
+/// Otimizado na patente máxima e SemContra Estagiário. Evidência em specs/evidencias/TD.22.md.
 /// </summary>
 public static class TdRank
 {
@@ -34,8 +34,9 @@ public static class TdRank
         TdRankLevel.Junior => "Júnior",
         TdRankLevel.Pleno => "Pleno",
         TdRankLevel.Senior => "Sênior",
+        TdRankLevel.Especialista => "Especialista",
         TdRankLevel.Arquiteto => "Arquiteto",
-        _ => "MVP",
+        _ => throw new ArgumentOutOfRangeException(nameof(level)),
     };
 
     /// <summary>Nome sem acento (HUD em Silkscreen, só ASCII).</summary>
@@ -59,7 +60,7 @@ public static class TdRank
     {
         totalScore = Math.Max(0, totalScore);
         var cur = For(totalScore);
-        if (cur == TdRankLevel.Mvp) return new(cur, null, totalScore, Thresholds[^1], Thresholds[^1]);
+        if (cur == TdRankLevel.Arquiteto) return new(cur, null, totalScore, Thresholds[^1], Thresholds[^1]);
         var next = cur + 1;
         return new(cur, next, totalScore, Thresholds[(int)cur], Thresholds[(int)next]);
     }

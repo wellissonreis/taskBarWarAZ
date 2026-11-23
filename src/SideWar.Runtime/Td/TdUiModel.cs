@@ -167,7 +167,7 @@ public sealed record TdHudView(TdUiItem[] Items, float Width, float Height, bool
         var h = new HashCode();
         foreach (var it in Items)
         {
-            h.Add(it.Text); h.Add(it.Right); h.Add(it.Sub); h.Add(it.Enabled); h.Add(it.Selected); h.Add(it.Highlight); h.Add((int)it.Tone); h.Add((int)(it.Fill * 100)); h.Add((int)it.Icon); h.Add((int)it.RightIcon);
+            h.Add(it.Text); h.Add(it.Right); h.Add(it.Sub); h.Add(it.Arg); h.Add(it.Enabled); h.Add(it.Selected); h.Add(it.Highlight); h.Add((int)it.Tone); h.Add((int)(it.Fill * 100)); h.Add((int)it.Icon); h.Add((int)it.RightIcon);
         }
         h.Add(Minimized); h.Add(Wave); h.Add(TotalWaves); h.Add(TopPad);
         if (Floats is { Count: > 0 })
