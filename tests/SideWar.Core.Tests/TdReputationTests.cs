@@ -16,7 +16,9 @@ public sealed class TdReputationTests
         var s = TdMatchState.Create(Base, 1, Rng.Seed(7, 54), null, o);
         Assert.True(s.Apply(new LayoutChanged(TdSanityBot.TypicalLayout())).IsOk);
         Assert.True(s.Apply(new SetPresence(false)).IsOk);
+        Assert.True(s.Apply(new SideWar.Core.Td.BuildTower("bolt", 900)).IsOk);
         Assert.True(s.Apply(new StartWave()).IsOk);
+        Assert.True(s.Apply(new SellTower(s.Towers[0].Id)).IsOk);
         return s;
     }
 

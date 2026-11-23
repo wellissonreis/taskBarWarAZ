@@ -194,6 +194,7 @@ public sealed class TdSpeedAndLiveBandTests
             var sink = new CountingSink();
             var driver = new TdRenderDriver(host, app, clock, sink) { Absent = absent };
             driver.OnWake(clock);
+            host.OnCommand(new BuildTower("bolt", 600)); // o Core exige torre para iniciar
             host.OnCommand(new StartWave());
             long step = (long)(clock.TicksPerSecond / 30);
             host.OnWake(clock);

@@ -28,8 +28,15 @@ public sealed class TdScoreTests
 
     private static TdMatchState New(int[] counts, long credits = 150) => TdMatchState.Create(Variant(counts, credits), 1, Rng.Seed(42, 54));
 
+    /// <summary>O Core exige uma torre posicionada para iniciar a onda.</summary>
+    private static void Support(TdMatchState s)
+    {
+        if (s.Phase == MatchPhase.Preparo && !s.HasPlacedTower) Assert.True(s.Apply(new BuildTower("bolt", 900)).IsOk);
+    }
+
     private static void Finish(TdMatchState s)
     {
+        Support(s);
         int guard = 0;
         while (s.Phase is MatchPhase.Preparo or MatchPhase.Onda && guard++ < 400_000)
         {
@@ -82,6 +89,9 @@ public sealed class TdScoreTests
     public void Leak_RemovesCrown()
     {
         var s = New([1]);
+        Assert.True(s.Apply(new BuildTower("bolt", 900)).IsOk);
+        Assert.True(s.Apply(new StartWave()).IsOk);
+        Assert.True(s.Apply(new SellTower(s.Towers[0].Id)).IsOk); // sem torre em campo, o grunt vaza
         Finish(s);
         Assert.Equal(MatchPhase.Vitoria, s.Phase);
         Assert.False(s.Result.Crown);
@@ -104,6 +114,7 @@ public sealed class TdScoreTests
     public void Pressa_AllCalledEarly()
     {
         var s = New([2, 2, 2]);
+        Support(s);
         s.Apply(new StartWave());
         int guard = 0;
         while (s.Phase is MatchPhase.Preparo or MatchPhase.Onda && guard++ < 400_000)

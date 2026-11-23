@@ -11,7 +11,9 @@ public sealed class TdAzureTowersTests
     public void ForkCreatesTwoNonReplicatingCopiesAtFortyPercent()
     {
         var s = Arena("fork");
-        Assert.True(s.Apply(new StartWave()).IsOk); Steps(s, 1);
+        Build(s, "bolt", 900);
+        Assert.True(s.Apply(new StartWave()).IsOk);
+        Assert.True(s.Apply(new SellTower(s.Towers[0].Id)).IsOk); Steps(s, 1);
         var enemies = (List<TdEnemy>)s.Enemies;
         var parent = enemies[0]; parent.Hp = 0; parent.X = 1000; parent.Speed = 0; enemies[0] = parent; Steps(s, 1);
         Assert.Equal(2, enemies.Count);
@@ -49,7 +51,9 @@ public sealed class TdAzureTowersTests
     public void FragmentCopiesKeepWaveOpenAndGiveNoGold()
     {
         var s = Arena("fragment");
-        Assert.True(s.Apply(new StartWave()).IsOk); Steps(s, 1);
+        Build(s, "bolt", 900);
+        Assert.True(s.Apply(new StartWave()).IsOk);
+        Assert.True(s.Apply(new SellTower(s.Towers[0].Id)).IsOk); Steps(s, 1);
         var enemies = (List<TdEnemy>)s.Enemies;
         var parent = enemies[0]; parent.Hp = 0; parent.Speed = 0; enemies[0] = parent;
         long credits = s.Credits; Steps(s, 1);
@@ -553,9 +557,11 @@ public sealed class TdAzureTowersTests
     public void NewTowersDoNotConsumeRng()
     {
         var baseline = Arena("grunt", 4); var towers = Arena("grunt", 4);
+        Build(baseline, "bolt", 900);
         Build(towers, "aks", 1100); Build(towers, "backup", 1050); Build(towers, "vault", 1000);
         Build(towers, "sentinel", 950); Build(towers, "queue", 900); Build(towers, "pipeline", 850); Build(towers, "cosmos", 800);
         Assert.True(baseline.Apply(new StartWave()).IsOk); Assert.True(towers.Apply(new StartWave()).IsOk);
+        Assert.True(baseline.Apply(new SellTower(baseline.Towers[0].Id)).IsOk);
         Steps(baseline, 300); Steps(towers, 300);
         var field = typeof(TdMatchState).GetField("_rng", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
         var a = (Rng)field.GetValue(baseline)!; var b = (Rng)field.GetValue(towers)!;

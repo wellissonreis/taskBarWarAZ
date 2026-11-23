@@ -89,10 +89,14 @@ public sealed class TdBonusDefeatTests
     public void Leak_stats_and_defeat_analysis_without_towers_blame_the_portal_side()
     {
         var s = New();
-        s.Apply(new StartWave());
         for (int i = 0; i < 30 * 900 && s.ReputationLostTotal < 20 * TdReputation.XpPerCoreDamage; i++)
         {
-            if (s.Phase == MatchPhase.Preparo) s.Apply(new StartWave());
+            if (s.Phase == MatchPhase.Preparo)
+            {
+                Assert.True(s.Apply(new BuildTower("bolt", 900)).IsOk);
+                Assert.True(s.Apply(new StartWave()).IsOk);
+                Assert.True(s.Apply(new SellTower(s.Towers[0].Id)).IsOk);
+            }
             s.Step();
         }
         Assert.NotEmpty(s.Leaks);
@@ -106,7 +110,12 @@ public sealed class TdBonusDefeatTests
     public void Leak_stats_do_not_change_the_state_hash()
     {
         var a = New(); var b = New();
-        a.Apply(new StartWave()); b.Apply(new StartWave());
+        foreach (var s in new[] { a, b })
+        {
+            Assert.True(s.Apply(new BuildTower("bolt", 900)).IsOk);
+            Assert.True(s.Apply(new StartWave()).IsOk);
+            Assert.True(s.Apply(new SellTower(s.Towers[0].Id)).IsOk);
+        }
         for (int i = 0; i < 600; i++) { a.Step(); b.Step(); }
         _ = a.Leaks; _ = a.DefeatAnalysis();
         Assert.Equal(a.ComputeStateHash(), b.ComputeStateHash());

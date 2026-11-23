@@ -49,11 +49,14 @@ public sealed class TdMutationTests
     private static (List<Wave> Waves, List<Seen> Mutated, TdMatchState State) Run(TdContent c, int target, int stage = 6, ulong seed = 7, TdMatchOptions? o = null)
     {
         var s = New(c, stage, seed, o);
+        Assert.True(s.Apply(new SideWar.Core.Td.LayoutChanged(TdSanityBot.TypicalLayout())).IsOk);
+        Assert.True(s.Apply(new BuildTower("bolt", 900)).IsOk);
         var waves = new List<Wave>();
         var mutated = new List<Seen>();
         var ids = new HashSet<int>();
         IReadOnlyList<TdMutationPreview> prev = s.PreviewNextWaveMutations();
         Assert.True(s.Apply(new StartWave()).IsOk);
+        Assert.True(s.Apply(new SellTower(s.Towers[0].Id)).IsOk);
         int guard = 0;
         while (guard++ < 3_000_000)
         {
@@ -283,7 +286,9 @@ public sealed class TdMutationTests
     {
         var c = Rig(Mut(0, 5, Cat("fast")), "grunt", 10);
         var s = New(c);
+        Assert.True(s.Apply(new BuildTower("bolt", 900)).IsOk);
         Assert.True(s.Apply(new StartWave()).IsOk);
+        Assert.True(s.Apply(new SellTower(s.Towers[0].Id)).IsOk);
         bool sawMutated = false, sawPassed = false;
         for (int i = 0; i < 2500; i++)
         {
@@ -443,6 +448,7 @@ public sealed class TdMutationTests
     public void Clone_KeepsMutationState()
     {
         var s = New(Mixed(), 3);
+        Assert.True(s.Apply(new BuildTower("bolt", 900)).IsOk);
         var copy = s.CloneForSimulation();
         Assert.Equal(s.ComputeStateHash(), copy.ComputeStateHash());
         Assert.True(s.Apply(new StartWave()).IsOk);

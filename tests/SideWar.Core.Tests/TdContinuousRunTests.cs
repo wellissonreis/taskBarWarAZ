@@ -31,6 +31,14 @@ public sealed class TdContinuousRunTests
         Assert.True(s.Apply(new SetPresence(false)).IsOk);
     }
 
+    private static void StartWithTemporaryTowerIfNeeded(TdMatchState s)
+    {
+        bool temporary = !s.HasPlacedTower;
+        if (temporary) Assert.True(s.Apply(new BuildTower("bolt", 900)).IsOk);
+        Assert.True(s.Apply(new StartWave()).IsOk);
+        if (temporary) Assert.True(s.Apply(new SellTower(s.Towers[^1].Id)).IsOk);
+    }
+
     /// <summary>Passa até o evento <paramref name="type"/>; devolve os eventos do passo em que ocorreu.</summary>
     private static List<TdEvent> StepUntil(TdMatchState s, TdEventType type, int max = 100_000)
     {
@@ -57,7 +65,7 @@ public sealed class TdContinuousRunTests
     {
         var s = New(Tiny(3), 1);
         Armed(s);
-        Assert.True(s.Apply(new StartWave()).IsOk);
+        StartWithTemporaryTowerIfNeeded(s);
         var ev = StepUntil(s, TdEventType.WaveCompleted);
         Assert.Contains(ev, e => e is { Type: TdEventType.WaveCompleted, A: 1 });
         Assert.Contains(ev, e => e is { Type: TdEventType.WaveStarted, A: 2 });
@@ -71,7 +79,7 @@ public sealed class TdContinuousRunTests
     {
         var s = New(Tiny(3), 1, TdMatchOptions.Classic);
         Armed(s);
-        Assert.True(s.Apply(new StartWave()).IsOk);
+        StartWithTemporaryTowerIfNeeded(s);
         StepUntil(s, TdEventType.WaveCompleted);
         Assert.Equal(MatchPhase.Preparo, s.Phase);
         Assert.Equal(1, s.WaveNumber);
@@ -86,7 +94,7 @@ public sealed class TdContinuousRunTests
         var towers = s.Towers.ToArray();
         long fragments = s.Fragments;
         long creditsBefore = s.Credits;
-        Assert.True(s.Apply(new StartWave()).IsOk);
+        StartWithTemporaryTowerIfNeeded(s);
         var ev = StepUntil(s, TdEventType.StageCleared);
         var cleared = ev.Single(e => e.Type == TdEventType.StageCleared);
         Assert.Equal(1, cleared.A);
@@ -114,7 +122,7 @@ public sealed class TdContinuousRunTests
     {
         var s = New(Tiny(2), 1);
         Armed(s); // sem torres: o grunt vaza
-        Assert.True(s.Apply(new StartWave()).IsOk);
+        StartWithTemporaryTowerIfNeeded(s);
         StepUntil(s, TdEventType.StageCleared);
         var sum = s.StageResults.Single();
         Assert.True(sum.IntegrityLost > 0);
@@ -127,7 +135,7 @@ public sealed class TdContinuousRunTests
     {
         var s = New(Tiny(1, stage: 6), 6);
         Armed(s);
-        Assert.True(s.Apply(new StartWave()).IsOk);
+        StartWithTemporaryTowerIfNeeded(s);
         StepUntil(s, TdEventType.StageCleared);
         Assert.Equal((7, 1, 1), (s.StageNumber, s.StageId, s.Cycle));
         Assert.Equal(MatchPhase.Onda, s.Phase);
@@ -143,7 +151,7 @@ public sealed class TdContinuousRunTests
     {
         var s = New(Tiny(1), 1, new TdMatchOptions(false, true, 5));
         Armed(s);
-        Assert.True(s.Apply(new StartWave()).IsOk);
+        StartWithTemporaryTowerIfNeeded(s);
         StepUntil(s, TdEventType.StageCleared);
         Assert.Equal((MatchPhase.Preparo, 2, 0), (s.Phase, s.StageNumber, s.WaveNumber));
     }
@@ -153,7 +161,7 @@ public sealed class TdContinuousRunTests
     {
         var s = New(Tiny(3), 1);
         Armed(s);
-        Assert.True(s.Apply(new StartWave()).IsOk);
+        StartWithTemporaryTowerIfNeeded(s);
         long before = s.Credits;
         Assert.True(s.Apply(new AnswerBonus(1, true)).IsOk);
         Assert.Equal(before + s.BonusCreditsFor(1), s.Credits);
@@ -161,7 +169,7 @@ public sealed class TdContinuousRunTests
         StepUntil(s, TdEventType.WaveStarted); // onda 2
         Assert.True(s.Apply(new AnswerBonus(3, false)).IsOk);
         var classic = New(Tiny(3), 1, TdMatchOptions.Classic);
-        Assert.True(classic.Apply(new StartWave()).IsOk);
+        StartWithTemporaryTowerIfNeeded(classic);
         Assert.True(classic.Apply(new AnswerBonus(1, true)).IsOk); // clássico também em Onda
     }
 
@@ -171,7 +179,7 @@ public sealed class TdContinuousRunTests
         var s = New(Tiny(2), 1);
         Armed(s);
         Assert.True(s.Apply(new SetPresence(true)).IsOk);
-        Assert.True(s.Apply(new StartWave()).IsOk);
+        StartWithTemporaryTowerIfNeeded(s);
         StepUntil(s, TdEventType.StageCleared);
         Assert.Contains(s.Events, e => e.Type == TdEventType.StageCleared);
     }

@@ -9,6 +9,7 @@ using Xunit;
 using BuildTower = SideWar.Core.Td.BuildTower;
 using LayoutChanged = SideWar.Core.Td.LayoutChanged;
 using StartWave = SideWar.Core.Td.StartWave;
+using SellTower = SideWar.Core.Td.SellTower;
 
 namespace SideWar.Runtime.Tests.Td;
 
@@ -104,7 +105,14 @@ public sealed class TdContinuousHostTests
             Assert.True(done());
         }
 
-        public void Start() { Game.OnCommand(new StartWave()); Game.OnWake(Clock); Ui.Sync(); }
+        /// <summary>O Core exige torre posicionada para iniciar: constrói uma provisória, inicia e vende em seguida.</summary>
+        public void Start()
+        {
+            Game.OnCommand(new BuildTower("bolt", 900)); Game.OnWake(Clock);
+            Game.OnCommand(new StartWave()); Game.OnWake(Clock);
+            Game.OnCommand(new SellTower(Match.Towers[^1].Id)); Game.OnWake(Clock);
+            Ui.Sync();
+        }
     }
 
     [Fact]

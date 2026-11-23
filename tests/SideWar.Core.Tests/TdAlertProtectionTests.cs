@@ -20,7 +20,9 @@ public sealed class TdAlertProtectionTests
     {
         var s = TdMatchState.Create(content ?? Content, stage, Rng.Seed(seed, 54));
         Assert.True(s.Apply(new LayoutChanged(Full())).IsOk);
+        Assert.True(s.Apply(new BuildTower("bolt", 900)).IsOk);
         Assert.True(s.Apply(new StartWave()).IsOk);
+        Assert.True(s.Apply(new SellTower(s.Towers[0].Id)).IsOk);
         return s;
     }
 
@@ -101,7 +103,10 @@ public sealed class TdAlertProtectionTests
     {
         var s = New();
         Assert.True(TdAlertCatalog.Test(s, TdAlertType.IdleCredits, out _)); // créditos iniciais >= 2x a torre mais barata
-        for (int x = 100; x < 1100 && TdAlertCatalog.Test(s, TdAlertType.IdleCredits, out _); x += 60) s.Apply(new BuildTower("bolt", x));
+        for (int x = 100; x < 1100 && TdAlertCatalog.Test(s, TdAlertType.IdleCredits, out _); x += 60)
+        {
+            if (!s.Apply(new BuildTower("bolt", x)).IsOk) s.Apply(new BuildTower("frost", x));
+        }
         Assert.False(TdAlertCatalog.Test(s, TdAlertType.IdleCredits, out _));
         Assert.False(TdAlertCatalog.Test(s, TdAlertType.RuneAvailable, out _));
         Assert.False(TdAlertCatalog.Test(s, TdAlertType.VaultBackupIdle, out _));

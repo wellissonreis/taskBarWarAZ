@@ -5,13 +5,17 @@ using SideWar.Runtime.Lifecycle;
 using SideWar.Runtime.Td;
 using Xunit;
 using LayoutChanged = SideWar.Core.Td.LayoutChanged;
+using BuildTower = SideWar.Core.Td.BuildTower;
+using SellTower = SideWar.Core.Td.SellTower;
 
 namespace SideWar.Runtime.Tests.Td;
 
 /// <summary>TD.40c: cartão de alerta (crítico e aviso), clique-fora, boss key, silenciar e pulso (sem foco, sem mouse).</summary>
 public sealed class TdAlertCardTests
 {
-    private static readonly TdContent Content = TdContentLoader.LoadEmbedded();
+    private static readonly TdContent Embedded = TdContentLoader.LoadEmbedded();
+
+    private static readonly TdContent Content = Embedded;
 
     private sealed class Host(TdGameHost game, bool discreet = false) : ITdUiHost
     {
@@ -61,8 +65,22 @@ public sealed class TdAlertCardTests
             Ui = new TdUiController(() => Match, c => Game.OnCommand(c), Host, () => Now);
             App.LeaveHidden(HiddenReason.Starting);
             Game.OnCommand(new LayoutChanged(StripLayout.Create(1200, 1200, 0f, 0f, 1200, TowerHost.Taskbar, [new FreeZone(0, 1200)])));
+            // O Core exige uma torre posicionada para iniciar; usa uma provisória e vende em seguida (campo sem torres).
+            Game.OnCommand(new BuildTower("bolt", 900));
+            Game.OnWake(Clock);
             Game.OnCommand(new StartWave());
             Game.OnWake(Clock);
+            Game.OnCommand(new SellTower(Match.Towers[0].Id));
+            Game.OnWake(Clock);
+        }
+
+        /// <summary>Em Preparo, inicia a próxima onda com uma torre provisória vendida em seguida (o Core exige torre para iniciar).</summary>
+        public void StartBareIfPreparo()
+        {
+            if (Match.Phase != MatchPhase.Preparo) return;
+            Game.OnCommand(new BuildTower("bolt", 900)); Game.OnWake(Clock);
+            Game.OnCommand(new StartWave()); Game.OnWake(Clock);
+            Game.OnCommand(new SellTower(Match.Towers[^1].Id)); Game.OnWake(Clock);
         }
 
         public void Run(double seconds)
@@ -182,7 +200,8 @@ public sealed class TdAlertCardTests
         r.Ui.CollapseOutside();
         Assert.False(r.Ui.AlertCardOpen);
         int before = r.Game.Alerts.Raised;
-        r.RunUntil(() => r.Game.Alerts.Raised > before, 300);
+        r.RunUntil(() => { r.StartBareIfPreparo(); return r.Game.Alerts.Raised > before; }, 300);
+        r.Ui.Sync();
         Assert.True(r.Game.Alerts.Raised > before, "o cenário deve gerar um segundo alerta (cooldown de 60 s)");
         Assert.True(r.Ui.AlertCardOpen);
         Assert.True(r.Ui.AlertPulsing);

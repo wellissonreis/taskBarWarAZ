@@ -7,6 +7,7 @@ using SideWar.Runtime.Timing;
 using Xunit;
 using BuildTower = SideWar.Core.Td.BuildTower;
 using LayoutChanged = SideWar.Core.Td.LayoutChanged;
+using SellTower = SideWar.Core.Td.SellTower;
 
 namespace SideWar.Runtime.Tests.Td;
 
@@ -28,7 +29,12 @@ public sealed class TdAlertGuardTests
             Host.Alerts.Settings.AutoPause = autoPause;
             App.LeaveHidden(HiddenReason.Starting);
             Host.OnCommand(new LayoutChanged(StripLayout.Create(1200, 1200, 0f, 0f, 1200, TowerHost.Taskbar, [new FreeZone(0, 1200)])));
+            // O Core exige uma torre posicionada para iniciar; usa uma provisória e vende em seguida (campo sem torres).
+            Host.OnCommand(new BuildTower("bolt", 900));
+            Wake();
             Host.OnCommand(new StartWave());
+            Wake();
+            Host.OnCommand(new SellTower(Match.Towers[0].Id));
             Wake();
         }
 
@@ -46,7 +52,12 @@ public sealed class TdAlertGuardTests
         {
             for (double t = 0; t < maxSeconds && Match.Phase is MatchPhase.Onda or MatchPhase.Preparo; t += 1)
             {
-                if (Match.Phase == MatchPhase.Preparo) { Host.OnCommand(new StartWave()); Wake(); }
+                if (Match.Phase == MatchPhase.Preparo)
+                {
+                    Host.OnCommand(new BuildTower("bolt", 900)); Wake();
+                    Host.OnCommand(new StartWave()); Wake();
+                    Host.OnCommand(new SellTower(Match.Towers[^1].Id)); Wake();
+                }
                 Run(1);
             }
         }

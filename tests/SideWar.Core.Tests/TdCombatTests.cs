@@ -52,7 +52,11 @@ public sealed class TdCombatTests
 
     private static void Go(TdMatchState s)
     {
+        // O Core exige uma torre posicionada para iniciar; usa uma torre provisória e vende em seguida.
+        bool temp = !s.HasPlacedTower;
+        if (temp) Assert.True(s.Apply(new BuildTower("bolt", 900)).IsOk);
         Assert.True(s.Apply(new StartWave()).IsOk);
+        if (temp) Assert.True(s.Apply(new SellTower(s.Towers[^1].Id)).IsOk);
     }
 
     private static void Steps(TdMatchState s, int n)
@@ -309,7 +313,7 @@ public sealed class TdCombatTests
     public void Ability_LockedByStage()
     {
         var s = TdMatchState.Create(Content, 1, Rng.Seed(1, 1));
-        s.Apply(new StartWave());
+        Go(s);
         Assert.Equal(CommandReason.NotAvailable, s.Apply(new UseAbility("firewall")).Reason);
         Assert.False(s.AbilityStatuses.Single(a => a.Id == "firewall").Unlocked);
         Assert.True(s.AbilityStatuses.Single(a => a.Id == "scale").Unlocked);
@@ -352,6 +356,7 @@ public sealed class TdCombatTests
     public void Ability_CooldownReductionOnCall()
     {
         var s = New(Arena([new G("grunt", 1)], [new G("grunt", 1)]));
+        Build(s, "bolt", 150); // CallNextWave exige torre em campo (longe do spawn)
         Go(s);
         Assert.True(s.Apply(new UseAbility("scale")).IsOk);
         Steps(s, 5);

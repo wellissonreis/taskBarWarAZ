@@ -50,6 +50,9 @@ public sealed class TdGameHostTests
 
         public void Wake() => Host.OnWake(Clock);
 
+        /// <summary>O Core exige uma torre posicionada para iniciar a onda.</summary>
+        public void Tower(int x = 900) { Host.OnCommand(new BuildTower("bolt", x)); Wake(); }
+
         /// <summary>Avança o relógio em passos de 1/30 s e acorda o host a cada passo.</summary>
         public void Run(double seconds)
         {
@@ -63,6 +66,7 @@ public sealed class TdGameHostTests
     public void Modal_pause_has_no_tick_deadline_and_logs_commands_in_frame_sequence()
     {
         var r = new Rig();
+        r.Tower();
         r.Host.OnCommand(new StartWave()); r.Wake();
         r.Host.OnCommand(new Pause()); r.Wake();
         long frame = r.Match.Frame;
@@ -92,6 +96,7 @@ public sealed class TdGameHostTests
     public void StartWave_command_starts_the_wave_and_steps_run_at_30Hz()
     {
         var r = new Rig();
+        r.Tower();
         r.Host.OnCommand(new StartWave());
         Assert.NotNull(r.Host.NextDeadline); // comando pendente acorda o laço
         r.Wake();
@@ -100,6 +105,7 @@ public sealed class TdGameHostTests
         Assert.InRange(r.Host.StepsExecuted, 58, 61);
         Assert.NotNull(r.Host.NextDeadline);
         Assert.Contains(r.Host.CommandLog, e => e.Command is StartWave);
+        Assert.True(r.Host.TryDequeueResult(out _, out _)); // BuildTower
         Assert.True(r.Host.TryDequeueResult(out _, out var res));
         Assert.True(res.IsOk);
     }
@@ -108,22 +114,25 @@ public sealed class TdGameHostTests
     public void Wave_request_starts_in_Preparo_and_is_logged_as_StartWave()
     {
         var r = new Rig();
+        r.Tower();
         r.Host.RequestWave();
         r.Wake();
         Assert.Equal(MatchPhase.Onda, r.Match.Phase);
-        Assert.IsType<StartWave>(Assert.Single(r.Host.CommandLog).Command);
+        Assert.IsType<StartWave>(r.Host.CommandLog[^1].Command);
     }
 
     [Fact]
     public void Wave_request_during_Onda_becomes_CallNextWave()
     {
         var r = new Rig();
+        r.Tower();
         r.Host.RequestWave();
         r.Wake();
         r.Host.RequestWave(); // spawns ainda não esgotados: rejeitado pelo estado, mas traduzido para CallNextWave
         r.Wake();
-        Assert.IsType<CallNextWave>(r.Host.CommandLog[1].Command);
-        Assert.True(r.Host.TryDequeueResult(out _, out _));
+        Assert.IsType<CallNextWave>(r.Host.CommandLog[^1].Command);
+        Assert.True(r.Host.TryDequeueResult(out _, out _)); // BuildTower
+        Assert.True(r.Host.TryDequeueResult(out _, out _)); // StartWave
         Assert.True(r.Host.TryDequeueResult(out _, out var second));
         Assert.False(second.IsOk);
     }
@@ -132,6 +141,7 @@ public sealed class TdGameHostTests
     public void Commands_apply_between_ticks_with_frame_in_log()
     {
         var r = new Rig();
+        r.Tower();
         r.Host.OnCommand(new StartWave());
         r.Wake();
         r.Run(1);
@@ -146,6 +156,7 @@ public sealed class TdGameHostTests
     public void Hiding_pauses_the_simulation_and_resuming_does_not_catch_up()
     {
         var r = new Rig();
+        r.Tower();
         r.Host.OnCommand(new StartWave());
         r.Wake();
         r.Run(1);
@@ -169,6 +180,7 @@ public sealed class TdGameHostTests
     public void User_pause_stops_steps_but_commands_still_apply()
     {
         var r = new Rig();
+        r.Tower();
         r.Host.OnCommand(new StartWave());
         r.Wake();
         r.App.SetPause(PauseReason.User);
@@ -178,13 +190,14 @@ public sealed class TdGameHostTests
         r.Host.OnCommand(new BuildTower("bolt", 300));
         r.Wake();
         Assert.Equal(before, r.Host.StepsExecuted);
-        Assert.Equal(2, r.Host.CommandLog.Count);
+        Assert.Equal(3, r.Host.CommandLog.Count);
     }
 
     [Fact]
     public void AutoStart_off_by_default_and_on_counts_down_then_starts_the_wave()
     {
         var r = new Rig();
+        r.Tower();
         r.Run(20);
         Assert.Equal(MatchPhase.Preparo, r.Match.Phase); // padrão desligado: nunca inicia sozinha
 
@@ -203,6 +216,7 @@ public sealed class TdGameHostTests
     public void AutoStart_countdown_freezes_while_hidden()
     {
         var r = new Rig();
+        r.Tower();
         r.Host.ApplyAutoStart(true, 5);
         r.Wake();
         r.Run(2);
@@ -244,6 +258,7 @@ public sealed class TdGameHostTests
     public void Replaying_the_command_log_reproduces_the_state_hash()
     {
         var r = new Rig();
+        r.Tower();
         r.Host.OnCommand(new StartWave());
         r.Wake();
         r.Host.OnCommand(new BuildTower("bolt", 300));
@@ -266,6 +281,7 @@ public sealed class TdGameHostTests
         var r = new Rig(input: input);
         r.Run(1);
         Assert.DoesNotContain(r.Host.CommandLog, e => e.Command is SetPresence); // Preparo: não observa
+        r.Tower();
         r.Host.OnCommand(new StartWave());
         r.Run(2);
         Assert.Single(r.Host.CommandLog, e => e.Command is SetPresence { Present: true }); // presente, enviado uma vez
@@ -286,6 +302,7 @@ public sealed class TdGameHostTests
     public void Without_an_input_source_presence_is_never_sent()
     {
         var r = new Rig();
+        r.Tower();
         r.Host.OnCommand(new StartWave());
         r.Run(3);
         Assert.DoesNotContain(r.Host.CommandLog, e => e.Command is SetPresence);

@@ -192,6 +192,7 @@ public sealed class TdBandTests
             for (int i = 0; i < n; i++) { clock.AdvanceTicks(step); host.OnWake(clock); driver.OnWake(clock); }
         }
         driver.OnWake(clock);
+        host.OnCommand(new BuildTower("bolt", 600)); // o Core exige torre para iniciar
         host.OnCommand(new StartWave());
         Tick(31);
         int normal = sink.Frames;

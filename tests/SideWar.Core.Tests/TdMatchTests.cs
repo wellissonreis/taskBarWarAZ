@@ -33,11 +33,29 @@ public sealed class TdMatchTests
         };
     }
 
+    /// <summary>O Core exige uma torre posicionada para iniciar: constrói uma provisória, inicia e vende. Devolve os créditos gastos nisso.</summary>
+    private static long Begin(TdMatchState s)
+    {
+        long before = s.Credits;
+        bool temp = !s.HasPlacedTower;
+        if (temp) Assert.True(s.Apply(new BuildTower("bolt", 900)).IsOk);
+        Assert.True(s.Apply(new StartWave()).IsOk);
+        if (temp) Assert.True(s.Apply(new SellTower(s.Towers[^1].Id)).IsOk);
+        return before - s.Credits;
+    }
+
+    /// <summary>Inicia mantendo uma torre longe do spawn (CallNextWave também exige torre em campo).</summary>
+    private static void BeginKeep(TdMatchState s)
+    {
+        Assert.True(s.Apply(new BuildTower("bolt", 150)).IsOk);
+        Assert.True(s.Apply(new StartWave()).IsOk);
+    }
+
     private static void RunUntilPhase(TdMatchState s, MatchPhase phase, int maxFrames = 200_000)
     {
         while (s.Phase != phase && s.Frame < maxFrames)
         {
-            if (s.Phase == MatchPhase.Preparo) Assert.True(s.Apply(new StartWave()).IsOk);
+            if (s.Phase == MatchPhase.Preparo) Begin(s);
             s.Step();
         }
         Assert.Equal(phase, s.Phase);
@@ -74,7 +92,8 @@ public sealed class TdMatchTests
     public void StartWave_StartsOnda()
     {
         var s = New();
-        Assert.True(s.Apply(new StartWave()).IsOk);
+        Assert.Equal(CommandReason.NotAvailable, s.Apply(new StartWave()).Reason); // sem torre não inicia
+        Begin(s);
         Assert.Equal(MatchPhase.Onda, s.Phase);
         Assert.Equal(1, s.WaveNumber);
         Steps(s, 40);
@@ -89,8 +108,8 @@ public sealed class TdMatchTests
     {
         var a = New(seed: 1);
         var b = New(seed: 2);
-        a.Apply(new StartWave());
-        b.Apply(new StartWave());
+        Begin(a);
+        Begin(b);
         var wa = a.ActiveWaves[0];
         var wb = b.ActiveWaves[0];
         Assert.Equal(6, wa.SpawnCount);
@@ -113,13 +132,14 @@ public sealed class TdMatchTests
     public void AutoStart_Countdown()
     {
         var s = New();
+        Assert.True(s.Apply(new BuildTower("bolt", 900)).IsOk); // a contagem só corre com torre posicionada
         Assert.True(s.Apply(new SetAutoStart(AutoStartMode.Countdown, 15)).IsOk);
         Steps(s, 449);
         Assert.Equal(MatchPhase.Preparo, s.Phase);
         s.Step();
         Assert.Equal(MatchPhase.Onda, s.Phase);
         Assert.Equal(1, s.WaveNumber);
-        Assert.Equal(230, s.Credits); // contagem esgotada: sem bônus
+        Assert.Equal(230 - 70, s.Credits); // contagem esgotada: sem bônus (só o custo da torre)
 
         s.Apply(new SetAutoStart(AutoStartMode.Countdown, 1));
         Assert.Equal(5, s.AutoStartSeconds);
@@ -133,17 +153,19 @@ public sealed class TdMatchTests
     public void AutoStart_EarlyStartPaysBonus()
     {
         var s = New();
+        Assert.True(s.Apply(new BuildTower("bolt", 900)).IsOk);
         s.Apply(new SetAutoStart(AutoStartMode.Countdown, 15));
         Steps(s, 30);
         Assert.Equal(14.0, s.CountdownRemainingSeconds);
         Assert.True(s.Apply(new StartWave()).IsOk);
-        Assert.Equal(230 + 10, s.Credits); // ceil(14 × 0.65) = 10
+        Assert.Equal(230 - 70 + 10, s.Credits); // ceil(14 × 0.65) = 10
     }
 
     [Fact(DisplayName = "RF-28.3 After a wave ends the countdown restarts, and Vitória never auto-restarts")]
     public void AutoStart_RestartsAfterWave_NeverAfterEnd()
     {
         var s = New(content: Variant([1, 1]), seed: 7);
+        Assert.True(s.Apply(new BuildTower("bolt", 900)).IsOk);
         s.Apply(new SetAutoStart(AutoStartMode.Countdown, 5));
         Steps(s, 150); // inicia a onda 1
         Assert.Equal(1, s.WaveNumber);
@@ -165,10 +187,10 @@ public sealed class TdMatchTests
     public void BuildSell_DuringWave()
     {
         var s = New();
-        s.Apply(new StartWave());
-        Steps(s, 10);
-        Assert.True(s.Apply(new BuildTower("bolt", 300)).IsOk);
+        Assert.True(s.Apply(new BuildTower("bolt", 300)).IsOk); // sem torre o Core não inicia a onda
         Assert.Equal(230 - 70, s.Credits);
+        Assert.True(s.Apply(new StartWave()).IsOk);
+        Steps(s, 10);
         int id = s.Towers[0].Id;
         Assert.True(s.Apply(new SellTower(id)).IsOk);
         Assert.Equal(160 + 49, s.Credits); // floor(70 × 0,7)
@@ -278,7 +300,7 @@ public sealed class TdMatchTests
     public void CallNextWave_PaysBonus()
     {
         var s = New();
-        s.Apply(new StartWave());
+        BeginKeep(s);
         Steps(s, 20);
         Assert.Equal(CommandReason.NotAvailable, s.Apply(new CallNextWave()).Reason);
         while (!s.ActiveWaves[0].SpawnsDone) s.Step();
@@ -311,7 +333,7 @@ public sealed class TdMatchTests
             Stages = Content.Stages with { Stages = [stage1, .. Content.Stages.Stages.Skip(1)] },
         };
         var s = New(content: c);
-        s.Apply(new StartWave());
+        BeginKeep(s);
         Steps(s, 40); // chefe a 20 un/s → ETA ≈ 59 s → bônus bruto ≈ 41 > teto 2 × 28 = 56? (0,7 × 59 = 41): usa teto real
         double eta = s.EtaSeconds();
         long raw = Ceil(eta * 0.7);
@@ -326,9 +348,9 @@ public sealed class TdMatchTests
     {
         var s = New(content: Variant([1, 1], credits: 0));
         Assert.Equal(80, s.Credits);
-        RunUntilPhase(s, MatchPhase.Vitoria);
-        // Sem torres: o grunt vaza (sem ouro e sem bônus de onda perfeita).
-        Assert.Equal(80 + 65 + 70, s.Credits);
+        RunUntilPhase(s, MatchPhase.Vitoria); // cada início usa uma torre provisória vendida em seguida (70 - 49 = 21)
+        // Sem torres ao longo da onda: o grunt vaza (sem ouro e sem bônus de onda perfeita).
+        Assert.Equal(80 - 2 * 21 + 65 + 70, s.Credits);
     }
 
     [Fact(DisplayName = "CA-28.1 Preparo freezes towers: no cooldown recovery between waves")]
@@ -367,7 +389,7 @@ public sealed class TdMatchTests
     public void EnemyCap()
     {
         var s = New(content: Variant([80], interval: 0.0));
-        s.Apply(new StartWave());
+        Begin(s);
         int max = 0;
         for (int i = 0; i < 300; i++)
         {

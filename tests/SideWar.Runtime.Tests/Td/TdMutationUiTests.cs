@@ -163,6 +163,7 @@ public sealed class TdMutationUiTests
         Assert.Contains(TdUiController.MutationTipKey, r.Store.Seen);
         r.Ui.Activate(r.Ui.BuildPopover()!.Items.First(i => i.Action == TdUiAction.MutationWarnDismiss));
 
+        Assert.True(r.Match.Apply(new SideWar.Core.Td.BuildTower("bolt", 900)).IsOk);
         Assert.True(r.Match.Apply(new StartWave()).IsOk);   // a prévia passa para a onda 2
         r.Tick(0.1);
         Assert.True(r.Ui.MutationWarnOpen);
@@ -214,7 +215,9 @@ public sealed class TdMutationUiTests
     private static (Rig R, TdEnemy E) WithMutant(params string[] traits)
     {
         var r = new Rig(MutContent(traits));
+        Assert.True(r.Match.Apply(new SideWar.Core.Td.BuildTower("bolt", 900)).IsOk);
         Assert.True(r.Match.Apply(new StartWave()).IsOk);
+        Assert.True(r.Match.Apply(new SideWar.Core.Td.SellTower(r.Match.Towers[^1].Id)).IsOk);
         for (int i = 0; i < 3000; i++)
         {
             r.Match.Step();

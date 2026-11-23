@@ -221,7 +221,9 @@ public sealed class TdRuneTests
         double leakX = s.LeakX;
         Assert.InRange(leakX, 30, 60); // 63 DIP em ~1920 DIP de barra → ~39 unidades lógicas
         Assert.Equal(TdWorld.CoreEdgeDip * TdWorld.PathLength / TdSanityBot.TypicalLayout().Width, leakX, 6);
+        Assert.True(s.Apply(new BuildTower("bolt", 900)).IsOk);
         Assert.True(s.Apply(new StartWave()).IsOk);
+        Assert.True(s.Apply(new SellTower(s.Towers[0].Id)).IsOk);
         double lastX = double.MaxValue;
         for (int i = 0; i < 200_000 && !s.Events.Any(e => e.Type == TdEventType.EnemyLeaked); i++)
         {
