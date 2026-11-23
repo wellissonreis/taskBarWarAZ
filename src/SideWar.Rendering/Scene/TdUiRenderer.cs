@@ -39,11 +39,27 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         for (int i = 0; i < hud.Items.Length; i++)
         {
             DrawHudItem(c, hud.Items[i], i == hover);
+            if (hud.Items[i].Action == TdUiAction.HudRestore)
+                DrawWaveTicks(c, hud.Items[i].Rect, hud.Wave, hud.TotalWaves);
             if (hud.Items[i].Highlight) DrawHighlight(c, hud.Items[i].Rect);
         }
         if (hud.Floats is { Count: > 0 } floats)
             foreach (var it in hud.Items)
                 if (it.Kind == TdUiKind.Money) { DrawMoneyFloats(c, it.Rect, floats); break; }
+    }
+
+    // As barras do design cabem no chip existente e acompanham a onda exibida, sem ampliar o HUD.
+    private void DrawWaveTicks(SKCanvas c, DipRect r, int wave, int total)
+    {
+        if (total <= 0) return;
+        int count = Math.Min(total, 10);
+        float step = (r.W - 12f) / count;
+        for (int i = 0; i < count; i++)
+        {
+            bool reached = (long)i * total < (long)Math.Clamp(wave, 0, total) * count;
+            _p.Fill(c, new DipRect(r.X + 6f + i * step, r.Y + r.H - 5f, Math.Max(1f, step - 1f), 2f),
+                reached ? Palette.Td.Amber : Palette.Td.BorderStrong);
+        }
     }
 
     /// <summary>TD.33d: "+N" (11 DIP, âmbar translúcido) sobe 12 DIP acima do contador e some; só na faixa transparente do topo da janela do chip (nunca sobre a faixa de torres).</summary>
