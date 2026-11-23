@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using SideWar.Core.Content.Td;
+using SideWar.Core.Td;
 using SideWar.Rendering.Scene;
 using SideWar.Rendering.Tests.Golden;
 using SideWar.Rendering.Text;
@@ -94,4 +95,42 @@ public sealed class TdAnimArtTests
         Assert.True(a.Bytes.AsSpan().SequenceEqual(a2.Bytes));
         Assert.False(a.Bytes.AsSpan().SequenceEqual(b.Bytes));
     }
+    [Fact]
+    public void DnsUsesTintedBoltSheets()
+    {
+        Assert.True(TdAnimArt.HasTower("dns"));
+        Assert.Equal("bolt", TdAnimArt.TowerSheetId("dns"));
+        Assert.True(TdArtMap.TryTower("dns", out var dns));
+        Assert.True(dns.TintAlpha > 0);
+    }
+
+    [Fact]
+    public void TowerFacesTargetOnEitherSide()
+    {
+        var (match, _, now) = TdStripScenes.Build(TdStripScene.PrepRange);
+        var enemies = (List<TdEnemy>)typeof(TdMatchState).GetField("_enemies", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(match)!;
+        using var typo = new Typography();
+        using var renderer = new TdBandRenderer(typo);
+        renderer.SetDpi(96);
+        var (w, h) = renderer.PhysicalSize(TdStripScenes.WidthDip);
+        SKBitmap Draw(int x)
+        {
+            enemies.Clear();
+            enemies.Add(new TdEnemy { Id = 99, DefIndex = 0, X = x, Hp = 100, MaxHp = 100 });
+            var bmp = new SKBitmap(w, h);
+            using var c = new SKCanvas(bmp);
+            renderer.Draw(c, match, now, TdView.None);
+            return bmp;
+        }
+        using var left = Draw(270);
+        using var right = Draw(390);
+        int different = 0;
+        for (int y = 0; y < h; y++)
+        for (int x = 315; x < 345; x++)
+        {
+            if (left.GetPixel(x, y) != right.GetPixel(x, y)) different++;
+        }
+        Assert.True(different > 10, "a torre deve mudar de orientação");
+    }
+
 }
