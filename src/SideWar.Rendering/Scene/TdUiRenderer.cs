@@ -27,6 +27,34 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     private readonly bool _ownsAtlas = atlas is null;
     private readonly Dictionary<(string Id, int Px), SKImage> _icons = [];
     private readonly Dictionary<int, SKImage> _rankCrowns = [];
+    private SKImage? _rankEmblem;
+    private static readonly string[] RankNames = ["estagiario", "junior", "pleno", "senior", "especialista", "arquiteto"];
+
+    private static SKColor RankColor(int rank) => rank switch
+    {
+        0 => Palette.Td.RankIntern, 1 => Palette.Td.RankJunior, 2 => Palette.Td.RankPleno,
+        3 => Palette.Td.Amber, 4 => Palette.Td.RankEspecialista, _ => Palette.Td.Bolt,
+    };
+
+    private void DrawCrown(SKCanvas c, int index, DipRect r, byte alpha = 255)
+    {
+        index = Math.Clamp(index, 0, RankNames.Length - 1);
+        if (!_rankCrowns.TryGetValue(index, out var image))
+        {
+            using var stream = typeof(TdUiRenderer).Assembly.GetManifestResourceStream("SideWar.Rendering.Assets.Patentes.coroa_" + RankNames[index] + ".png");
+            if (stream is null) return;
+            using var bitmap = SKBitmap.Decode(stream);
+            image = SKImage.FromBitmap(bitmap);
+            _rankCrowns[index] = image;
+        }
+        var rect = SKRect.Create(_p.Px(r.X), _p.Px(r.Y), _p.Px(r.W), _p.Px(r.H));
+        if (alpha == 255) c.DrawImage(image, rect, Nearest);
+        else
+        {
+            using var paint = new SKPaint { Color = SKColors.White.WithAlpha(alpha) };
+            c.DrawImage(image, rect, Nearest, paint);
+        }
+    }
 
     /// <summary>Falso = layout idêntico sem glifos (goldens comparáveis entre SOs).</summary>
     public bool TextEnabled { get => _p.TextEnabled; set => _p.TextEnabled = value; }
@@ -63,7 +91,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         for (int i = 0; i < count; i++)
         {
             bool reached = (long)i * total < (long)Math.Clamp(wave, 0, total) * count;
-            RoundBox(c, new DipRect(r.X + 106f + (r.W - 167f) + i * 6f, r.Y + 9f, 4f, 10f), reached ? Palette.Td.Amber : new SKColor(0x2a, 0x3d, 0x58), reached ? Palette.Td.Amber : new SKColor(0x2a, 0x3d, 0x58), 1);
+            RoundBox(c, new DipRect(r.X + 106f + (r.W - 167f) + i * 6f, r.Y + 9f, 4f, 10f), reached ? Palette.Td.Amber : Palette.Td.WavePending, reached ? Palette.Td.Amber : Palette.Td.WavePending, 1);
         }
     }
 
@@ -162,30 +190,20 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         var r = it.Rect;
         if (it.SArg == "rank-crown")
         {
-            string[] names = ["estagiario", "junior", "pleno", "senior", "especialista", "arquiteto"];
-            int index = Math.Clamp(it.Arg, 0, names.Length - 1);
-            if (!_rankCrowns.TryGetValue(index, out var image))
-            {
-                using var stream = typeof(TdUiRenderer).Assembly.GetManifestResourceStream("SideWar.Rendering.Assets.Patentes.coroa_" + names[index] + ".png");
-                if (stream is null) return;
-                using var bitmap = SKBitmap.Decode(stream);
-                image = SKImage.FromBitmap(bitmap);
-                _rankCrowns[index] = image;
-            }
-            c.DrawImage(image, SKRect.Create(_p.Px(r.X), _p.Px(r.Y), _p.Px(r.W), _p.Px(r.H)), Nearest);
+            DrawCrown(c, it.Arg, r);
             return;
         }
         if (it.Kind == TdUiKind.Separator) { _p.Fill(c, r, Palette.Td.BorderStrong); return; }
         if (it.SArg == "core")
         {
-            DrawIcon(c, TdIcon.Heart, r.X, r.Y + 7, 14, new SKColor(0xf2, 0x6d, 0x7d));
-            _p.Text(c, it.Text, PanelFont.JetBrainsMono, Math.Max(13, 11 / layoutScale), new DipRect(r.X + 20, r.Y + 2, r.W - 20, 24), new SKColor(0xf4, 0xf7, 0xfb));
+            DrawIcon(c, TdIcon.Heart, r.X, r.Y + 7, 14, Palette.Td.Red);
+            _p.Text(c, it.Text, PanelFont.JetBrainsMono, Math.Max(13, 11 / layoutScale), new DipRect(r.X + 20, r.Y + 2, r.W - 20, 24), Palette.Td.BrightText);
             return;
         }
         if (it.SArg == "wave")
         {
             _p.Text(c, "Onda", PanelFont.SpaceGrotesk, Math.Max(12, 11 / layoutScale), new DipRect(r.X, r.Y + 2, 44, 24), Palette.Td.Muted);
-            _p.Text(c, it.Text, PanelFont.JetBrainsMono, Math.Max(13, 11 / layoutScale), new DipRect(r.X + 52, r.Y + 2, 52 + (r.W - 167), 24), new SKColor(0xf4, 0xf7, 0xfb));
+            _p.Text(c, it.Text, PanelFont.JetBrainsMono, Math.Max(13, 11 / layoutScale), new DipRect(r.X + 52, r.Y + 2, 52 + (r.W - 167), 24), Palette.Td.BrightText);
             return;
         }
         if (it.Kind == TdUiKind.Money)
@@ -194,7 +212,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             using var coin = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, Color = Palette.Td.Amber, StrokeWidth = Math.Max(1f, _p.Px(1.3f)) };
             c.DrawCircle(_p.Px(r.X + 7), _p.Px(r.Y + 14), _p.Px(5), coin);
             c.DrawCircle(_p.Px(r.X + 7), _p.Px(r.Y + 14), _p.Px(2.2f), coin);
-            _p.Text(c, it.Text, PanelFont.JetBrainsMono, Math.Max(13, 11 / layoutScale), new DipRect(r.X + 20, r.Y + (it.Sub is null ? 3 : 1), r.W - 20, 20), new SKColor(0xf4, 0xf7, 0xfb));
+            _p.Text(c, it.Text, PanelFont.JetBrainsMono, Math.Max(13, 11 / layoutScale), new DipRect(r.X + 20, r.Y + (it.Sub is null ? 3 : 1), r.W - 20, 20), Palette.Td.BrightText);
             if (it.Sub is not null) _p.Text(c, it.Sub, PanelFont.JetBrainsMono, 8, new DipRect(r.X + 20, r.Y + 17, r.W - 20, 10), Palette.Td.Muted);
             return;
         }
@@ -322,6 +340,12 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     private void DrawModalItem(SKCanvas c, in TdUiItem it, bool hover)
     {
         var r = it.Rect;
+        if (it.SArg == "rank-chip")
+        {
+            DrawCrown(c, it.Arg, new DipRect(r.X, r.Y + 2, 20, 20));
+            _p.Text(c, $"{it.Text}  NV {it.Arg + 1}", PanelFont.JetBrainsMono, 10, new DipRect(r.X + 24, r.Y + 5, r.W - 24, 14), RankColor(it.Arg));
+            return;
+        }
         if (it.Action == TdUiAction.ModalTab)
         {
             if (it.Selected) RoundBox(c, r, Palette.Td.BorderStrong, Palette.Td.BorderStrong, 5);
@@ -339,9 +363,9 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         {
             RoundBox(c, r, Palette.Td.BorderStrong, hover && it.Enabled ? Palette.Td.BorderStrong : Palette.Td.Surface, 6);
             var fg = it.Enabled ? Palette.Td.Text : Palette.Td.Muted;
-            DrawIcon(c, it.Text switch { "Escalar" => TdIcon.Scale, "Firewall" => TdIcon.Firewall, _ => TdIcon.Snapshot }, r.X + r.W / 2 - 7, r.Y + 8, 14, fg);
-            _p.Text(c, it.Text, PanelFont.JetBrainsMono, 11, new DipRect(r.X + 2, r.Y + 26, r.W - 4, 14), fg, TextAlign.Center);
-            _p.Text(c, it.Right ?? "", PanelFont.JetBrainsMono, 9, new DipRect(r.X + 2, r.Y + 40, r.W - 4, 12), it.Enabled ? Palette.Td.Amber : Palette.Td.Muted, TextAlign.Center);
+            DrawIcon(c, it.Text switch { "Escalar" => TdIcon.Scale, "Firewall" => TdIcon.Firewall, _ => TdIcon.Snapshot }, r.X + 7, r.Y + 14, 14, fg);
+            _p.Text(c, it.Text, PanelFont.JetBrainsMono, 11, new DipRect(r.X + 26, r.Y + 6, r.W - 28, 14), fg);
+            _p.Text(c, it.Right ?? "", PanelFont.JetBrainsMono, 9, new DipRect(r.X + 26, r.Y + 22, r.W - 28, 12), it.Enabled ? Palette.Td.Amber : Palette.Td.Muted);
             return;
         }
         if (it.Action == TdUiAction.SelectRune) { DrawRuneNode(c, it, hover); return; }
@@ -815,6 +839,35 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     private void DrawRankCard(SKCanvas c, in TdUiItem it)
     {
         var r = it.Rect;
+        if (it.SArg == "rank-card")
+        {
+            RoundBox(c, r, Palette.Td.Amber.WithAlpha(115), Palette.Td.Card, 10);
+            if (_rankEmblem is null)
+            {
+                using var stream = typeof(TdUiRenderer).Assembly.GetManifestResourceStream("SideWar.Rendering.Assets.Patentes.emblema_estagiario.png");
+                if (stream is not null) { using var bitmap = SKBitmap.Decode(stream); _rankEmblem = SKImage.FromBitmap(bitmap); }
+            }
+            if (_rankEmblem is not null) c.DrawImage(_rankEmblem, SKRect.Create(_p.Px(r.X + 12), _p.Px(r.Y + 12), _p.Px(96), _p.Px(96)), Nearest);
+            _p.Text(c, $"PATENTE ATUAL · NÍVEL {it.Arg + 1}/6", PanelFont.JetBrainsMono, 10, new DipRect(r.X + 120, r.Y + 12, 204, 14), Palette.Td.Muted);
+            _p.Text(c, it.Text, PanelFont.JetBrainsMono, 20, new DipRect(r.X + 120, r.Y + 30, 204, 25), RankColor(it.Arg));
+            if (it.Arg == 0) _p.Text(c, "Ainda no período de experiência.", PanelFont.JetBrainsMono, 9, new DipRect(r.X + 120, r.Y + 58, 204, 12), Palette.Td.Muted);
+            for (int i = 0; i < 6; i++)
+            {
+                var cell = new DipRect(r.X + 120 + i * 32, r.Y + 76, 28, 28);
+                if (i == it.Arg) RoundBox(c, cell, Palette.Td.Amber, Palette.Td.PauseBadge, 5);
+                else if (i == it.Arg + 1) DashedBox(c, cell, Palette.Td.Amber, 5);
+                DrawCrown(c, i, new DipRect(cell.X + 3, cell.Y + 3, 22, 22), i == it.Arg ? (byte)255 : (byte)90);
+            }
+            RoundBox(c, new DipRect(r.X + 57, r.Y + 83, 58, 21), Palette.Td.Amber, Palette.Td.PauseBadge, 10);
+            DrawIcon(c, TdIcon.Crown, r.X + 61, r.Y + 87, 13, Palette.Td.Amber);
+            _p.Text(c, it.Sub ?? "0", PanelFont.JetBrainsMono, 10, new DipRect(r.X + 77, r.Y + 87, 34, 12), Palette.Td.Amber);
+            RoundBox(c, new DipRect(r.X + 12, r.Y + 116, r.W - 24, 10), Palette.Td.BorderStrong, Palette.Td.Background, 5);
+            if (it.Fill > 0) _p.Fill(c, new DipRect(r.X + 13, r.Y + 117, (r.W - 26) * it.Fill, 8), Palette.Td.Amber);
+            var labels = (it.Right ?? "").Split('|');
+            _p.Text(c, labels[0], PanelFont.JetBrainsMono, 10, new DipRect(r.X + 12, r.Y + 132, 120, 14), Palette.Td.Text);
+            if (labels.Length > 1) _p.Text(c, labels[1], PanelFont.JetBrainsMono, 9, new DipRect(r.X + 130, r.Y + 132, r.W - 142, 14), Palette.Td.Muted, TextAlign.Right);
+            return;
+        }
         RoundBox(c, r, Palette.Td.BorderStrong, Palette.Td.Surface, 8);
         RoundBox(c, new DipRect(r.X + 12, r.Y + 12, 32, 32), Palette.Td.Amber.WithAlpha(36), Palette.Td.Amber.WithAlpha(36), 6);
         DrawIcon(c, TdIcon.Medal, r.X + 20, r.Y + 20, 16, Palette.Td.Amber);
@@ -882,9 +935,11 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             _p.Fill(c, new DipRect(1, 1, v.Width - 2, 43), Palette.Td.Surface);
             _p.Fill(c, new DipRect(1, 44, v.Width - 2, 1), Palette.Td.Border);
             _p.Fill(c, new DipRect(1, 88, v.Width - 2, 1), Palette.Td.Border);
-            RoundBox(c, new DipRect(16, 10, 86, 24), Palette.Td.Surface, Palette.Td.PauseBadge, 4);
-            _p.Text(c, "Ⅱ PAUSADO", PanelFont.JetBrainsMono, 10, new DipRect(21, 15, 80, 14), Palette.Td.Amber);
-            _p.Text(c, v.Title, PanelFont.JetBrainsMono, 11, new DipRect(112, 15, 550, 16), Palette.Td.Muted);
+            bool rankChip = v.Items.Any(i => i.SArg == "rank-chip");
+            float headerX = rankChip ? 172 : 16;
+            RoundBox(c, new DipRect(headerX, 10, 86, 24), Palette.Td.Surface, Palette.Td.PauseBadge, 4);
+            _p.Text(c, "Ⅱ PAUSADO", PanelFont.JetBrainsMono, 10, new DipRect(headerX + 5, 15, 80, 14), Palette.Td.Amber);
+            _p.Text(c, v.Title, PanelFont.JetBrainsMono, 11, new DipRect(headerX + 96, 15, 662 - headerX - 96, 16), Palette.Td.Muted);
             DrawRuneWeb(c, v.Items, true);
             for (int i = 0; i < v.Items.Length; i++)
             {
@@ -921,6 +976,12 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     private void DrawItem(SKCanvas c, in TdUiItem it, bool hover, float width, bool small)
     {
         var r = it.Rect;
+        if (it.SArg == "rank-notice")
+        {
+            DrawCrown(c, it.Arg, new DipRect(r.X, r.Y + 1, 20, 20));
+            _p.Text(c, it.Text, PanelFont.JetBrainsMono, 10, new DipRect(r.X + 24, r.Y + 4, r.W - 24, 16), Palette.Td.Text);
+            return;
+        }
         float size = small ? 9f : 9.5f;
         var color = ToneColor(it.Tone);
         switch (it.Kind)
@@ -1110,6 +1171,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     {
         foreach (var i in _icons.Values) i.Dispose();
         foreach (var image in _rankCrowns.Values) image.Dispose();
+        _rankEmblem?.Dispose();
         _icons.Clear();
         _p.Dispose();
         if (_ownsAtlas) _atlas.Dispose();

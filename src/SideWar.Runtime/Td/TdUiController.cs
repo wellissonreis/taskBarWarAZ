@@ -45,6 +45,8 @@ public sealed partial class TdUiController
     private string? _noticeText;
     private double _noticeUntil;
     private int _seenStages = -1;
+    private TdRankLevel _seenRank;
+    private TdRankLevel? _noticeRank;
     private bool _pinnedOpen;
     private bool _outsideCollapsed;
     /// <summary>TD.28b: atalho global "minimizar tudo" ativo: nenhum cartão, painel ou modal é aberto e a pergunta-bônus espera.</summary>
@@ -93,6 +95,7 @@ public sealed partial class TdUiController
         _match = match ?? throw new ArgumentNullException(nameof(match));
         _send = send ?? throw new ArgumentNullException(nameof(send));
         _host = host ?? throw new ArgumentNullException(nameof(host));
+        _seenRank = _host.Rank.Current;
         _now = now ?? (() => 0.0);
     }
 
@@ -583,6 +586,9 @@ public sealed partial class TdUiController
 
     private void SyncNotice(TdMatchState m)
     {
+        var rank = _host.Rank.Current;
+        bool promoted = rank > _seenRank;
+        _seenRank = rank;
         int n = m.StageResults.Count;
         if (n > _seenStages)
         {
@@ -591,7 +597,16 @@ public sealed partial class TdUiController
             var r = m.StageResults[^1];
             var o = _host.LastOutcome;
             _noticeTitle = null;
+            _noticeRank = null;
             _noticeText = $"Fase {r.StageNumber}" + (r.Crown ? " +coroa" : "") + (o.NewRecord ? " +recorde" : "");
+            _noticeUntil = _now() + StageNoticeSeconds;
+            Changed?.Invoke();
+        }
+        if (promoted && !BossHidden)
+        {
+            _noticeTitle = "Promoção";
+            _noticeText = $"Promovido a {TdRank.DisplayName(rank)}!";
+            _noticeRank = rank;
             _noticeUntil = _now() + StageNoticeSeconds;
             Changed?.Invoke();
         }
@@ -605,7 +620,11 @@ public sealed partial class TdUiController
     private TdPopoverView BuildNotice()
     {
         var s = new Stack(200f);
-        s.Add(TdUiKind.Label, _noticeText!, 18f, tone: TdTone.Good, icon: TdIcon.Check);
+        if (_noticeRank is { } rank)
+            s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, s.Width - 2 * Pad, 22), TdUiKind.Label, _noticeText!, Arg: (int)rank, SArg: "rank-notice"));
+        else
+            s.Add(TdUiKind.Label, _noticeText!, 18f, tone: TdTone.Good, icon: TdIcon.Check);
+        if (_noticeRank is not null) s.Y += 22;
         return Finish(_noticeTitle ?? "Fase concluida", s, 0);
     }
 
@@ -1162,23 +1181,28 @@ public sealed partial class TdUiController
                 {
                     switch (it.Action)
                     {
-                        case TdUiAction.None when it.Kind == TdUiKind.Bar: items.Add(Put(it, lx, 104, w, 64)); break;
-                        case TdUiAction.ResumeAbility: items.Add(Put(it, lx + ab++ * 114, 196, 108, 56)); break;
-                        case TdUiAction.Preview: items.Add(Put(it, lx, 282, 165, 40)); break;
-                        case TdUiAction.TowersOpen: items.Add(Put(it, lx + 171, 282, 165, 40)); break;
-                        case TdUiAction.MapOpen: items.Add(Put(it, lx, 328, 165, 40)); break;
-                        case TdUiAction.HowTo: items.Add(Put(it, lx + 171, 328, 165, 40)); break;
-                        case TdUiAction.RestartPrompt: items.Add(Put(it, lx, 376, w, 40)); break;
-                        case TdUiAction.Restart: items.Add(Put(it, lx, 376, 165, 40)); break;
-                        case TdUiAction.None when it.Text == "Reiniciar?": items.Add(Put(it, lx, 358, w, 14) with { SArg = "sec", Tone = TdTone.Warn }); break;
-                        case TdUiAction.RestartCancel: items.Add(Put(it, lx + 171, 376, 165, 40)); break;
+                        case TdUiAction.None when it.Kind == TdUiKind.Bar:
+                            var rank = _host.Rank;
+                            int crowns = Enumerable.Range(1, _host.StageCount).Count(_host.StageCrown);
+                            items.Add(Put(it, lx, 104, w, 156) with { SArg = "rank-card", Arg = (int)rank.Current,
+                                Text = TdRank.DisplayName(rank.Current), Sub = crowns.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                                Right = rank.Next is { } next ? $"{rank.Total} / {rank.NextThreshold} p.|faltam {Math.Max(0, rank.NextThreshold - rank.Total)} p. para {TdRank.DisplayName(next)}" : $"{rank.Total} p.|Patente máxima" });
+                            break;
+                        case TdUiAction.ResumeAbility: items.Add(Put(it, lx + ab++ * 114, 284, 108, 42)); break;
+                        case TdUiAction.Preview: items.Add(Put(it, lx, 334, 165, 32)); break;
+                        case TdUiAction.TowersOpen: items.Add(Put(it, lx + 171, 334, 165, 32)); break;
+                        case TdUiAction.MapOpen: items.Add(Put(it, lx, 372, 165, 32)); break;
+                        case TdUiAction.HowTo: items.Add(Put(it, lx + 171, 372, 165, 32)); break;
+                        case TdUiAction.RestartPrompt: items.Add(Put(it, lx, 410, w, 32)); break;
+                        case TdUiAction.Restart: items.Add(Put(it, lx, 410, 165, 32)); break;
+                        case TdUiAction.None when it.Text == "Reiniciar?": items.Add(Put(it, lx, 396, w, 14) with { SArg = "sec", Tone = TdTone.Warn }); break;
+                        case TdUiAction.RestartCancel: items.Add(Put(it, lx + 171, 410, 165, 32)); break;
                         case TdUiAction.GameOption: items.Add(Put(it, rx, 122 + opt++ * 31, w, 31)); break;
                         case TdUiAction.SetSpeed: items.Add(Put(it, rx + w - 12 - 3 * 36 + (it.Arg - 1) * 36, 122 + 8 * 31 + 4, 32, 23)); break;
                         case TdUiAction.Exit: items.Add(Put(it, rx, 408, w, 40)); break;
                     }
                 }
-                items.Add(new(new DipRect(lx, 178, w, 14), TdUiKind.Label, "HABILIDADES", SArg: "sec"));
-                items.Add(new(new DipRect(lx, 264, w, 14), TdUiKind.Label, "AÇÕES", SArg: "sec"));
+                items.Add(new(new DipRect(lx, 266, w, 14), TdUiKind.Label, "HABILIDADES", SArg: "sec"));
                 items.Add(new(new DipRect(rx, 104, w, 14), TdUiKind.Label, "CONFIGURAÇÕES", SArg: "sec"));
                 items.Add(new(new DipRect(rx + 12, 122 + 8 * 31 + 8, 150, 16), TdUiKind.Label, "Velocidade", SArg: "optname"));
                 break;
@@ -1202,6 +1226,8 @@ public sealed partial class TdUiController
             items.AddRange(view.Items);
             return new TdPopoverView($"{view.Title}   ¢{_match().Credits}", [.. items], 720, 480, 0);
         }
+        var currentRank = _host.Rank.Current;
+        items.Add(new(new DipRect(16, 10, 150, 24), TdUiKind.Label, TdRank.DisplayName(currentRank), Arg: (int)currentRank, SArg: "rank-chip"));
         float factor = Math.Min(1f, 402f / Math.Max(1, view.Height));
         int towerRow = 0, categoryColumn = 0;
         if (Mode is TdUiMode.Menu or TdUiMode.Towers or TdUiMode.Help or TdUiMode.Runes)

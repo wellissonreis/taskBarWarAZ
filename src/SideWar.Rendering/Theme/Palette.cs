@@ -196,6 +196,12 @@ public static class Palette
         public static readonly SKColor Muted = new(0x93, 0xa4, 0xbc);
         public static readonly SKColor Dim = new(0x7f, 0x91, 0xab);
         public static readonly SKColor Amber = new(0xf5, 0xb5, 0x44);
+        public static readonly SKColor RankIntern = new(0xc9, 0xa0, 0x6a);
+        public static readonly SKColor RankJunior = new(0xc0, 0x7a, 0x3a);
+        public static readonly SKColor RankPleno = new(0xa9, 0xb6, 0xc8);
+        public static readonly SKColor RankEspecialista = new(0xb0, 0x7c, 0xff);
+        public static readonly SKColor WavePending = new(0x2a, 0x3d, 0x58);
+        public static readonly SKColor BrightText = new(0xf4, 0xf7, 0xfb);
         public static readonly SKColor Red = new(0xf2, 0x6d, 0x7d);
         public static readonly SKColor Green = new(0x5b, 0xd6, 0x9a);
         public static readonly SKColor Bolt = new(0x4f, 0xd1, 0xe8);
