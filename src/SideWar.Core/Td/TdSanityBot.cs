@@ -28,10 +28,14 @@ public sealed record TdBotResult(
     public bool Collapsed => XpLost >= TdSanityBot.CollapseXp;
 }
 
+/// <summary>Ponto da curva de runas na corrida do bot: segundos de jogo, runas despertadas e fragmentos ganhos até ali.</summary>
+public readonly record struct TdRuneProgress(double Seconds, int Awakened, long FragmentsEarned);
+
 /// <summary>Resultado de uma corrida contínua do SanityBot (TD.28a): fases concluídas em sequência com as mesmas torres/runas/créditos, até derrota ou limite.</summary>
 public sealed record TdRunBotResult(
     TdBotProfile Profile, ulong Seed, int StartStage, int StagesCleared, int StageNumber, int WaveInStage, MatchPhase Phase, long XpLost,
-    long CreditsLeft, int TowersBuilt, int TowersAtEnd, long Frames, double CombatSeconds, int CommandsRejected, IReadOnlyList<TdStageSummary> Stages, ulong StateHash)
+    long CreditsLeft, int TowersBuilt, int TowersAtEnd, long Frames, double CombatSeconds, int CommandsRejected, IReadOnlyList<TdStageSummary> Stages, ulong StateHash,
+    int RunesAwakened = 0, long FragmentsEarned = 0, IReadOnlyList<TdRuneProgress>? RuneTimeline = null)
 {
     /// <summary>Colapso: perdeu XP demais (o antigo "game over"); o bot para ali.</summary>
     public bool Defeated => XpLost >= TdSanityBot.CollapseXp;
@@ -133,7 +137,25 @@ public static class TdSanityBot
                 _s.Step();
             }
             return new TdRunBotResult(_profile, seed, startStage, _s.StagesCleared, _s.StageNumber, _s.WaveNumber, _s.Phase, _s.ReputationLostTotal, _s.Credits,
-                _builtCount, _s.Towers.Count, _s.Frame, _s.Tick / (double)TdWorld.TicksPerSecond, _rejected, [.. _s.StageResults], _s.ComputeStateHash());
+                _builtCount, _s.Towers.Count, _s.Frame, _s.Tick / (double)TdWorld.TicksPerSecond, _rejected, [.. _s.StageResults], _s.ComputeStateHash(),
+                _s.AwakenedCount, FragmentsEarned(), _runeTimeline);
+        }
+
+        private readonly List<TdRuneProgress> _runeTimeline = [];
+        private int _runeSeen;
+
+        private long FragmentsEarned()
+        {
+            long spent = 0;
+            foreach (var n in _s.RuneWeb) if (_s.IsAwakened(n.Id)) spent += _s.RuneCost(n.Id);
+            return _s.Fragments + spent;
+        }
+
+        private void TrackRunes()
+        {
+            if (_s.AwakenedCount == _runeSeen) return;
+            _runeSeen = _s.AwakenedCount;
+            _runeTimeline.Add(new TdRuneProgress(_s.Frame / 30.0, _runeSeen, FragmentsEarned()));
         }
 
         public TdBotResult Play(ulong seed)
@@ -187,6 +209,7 @@ public static class TdSanityBot
         private void Spend()
         {
             while (Awaken && _s.Fragments > 0 && _s.Frontier.Count > 0 && _s.Apply(new AwakenRune(_s.Frontier[0])).IsOk) { } // teia: despertar sempre que houver fragmento
+            TrackRunes();
             // Mesmo o perfil sem contra precisa de uma defesa para iniciar a partida.
             if (_profile == TdBotProfile.SemContra && !_s.HasPlacedTower && _s.Phase == MatchPhase.Preparo)
             {

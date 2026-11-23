@@ -78,16 +78,19 @@ public sealed record TdMetaDef(int SealsPerStar, int SealsPerChallenge, TdMetaBr
 /// <summary>Tipo de runa da teia (TD.29a): <c>Effect</c> é o identificador do efeito e <c>Value</c> o valor por runa despertada (bp, créditos ou décimos de segundo).</summary>
 public sealed record TdRuneTypeDef(string Id, string Name, string Effect, int Value, string Text);
 
-/// <summary>Nó fixo da teia: anel (0 a 3), setor (0 a 7), tipo (id de <see cref="TdRuneTypeDef"/>) e posição normalizada (0 a 1) para a UI.</summary>
-public sealed record TdRuneNodeDef(string Id, int Ring, int Sector, string Type, double X, double Y);
+/// <summary>
+/// Nó fixo da teia: anel (0 a 7), setor (0 a 15), tipo (id de <see cref="TdRuneTypeDef"/>), posição normalizada (0 a 1) para a UI e
+/// <c>Power</c> (multiplicador do valor do tipo; nós-chave do último anel valem mais).
+/// </summary>
+public sealed record TdRuneNodeDef(string Id, int Ring, int Sector, string Type, double X, double Y, int Power = 1);
 
 /// <summary>Fontes de crédito da §6 (moeda única), consumidas pelo Core desde a TD.21; calibração na TD.22.</summary>
 public sealed record TdCreditSourcesDef(
     int StartingCreditsBonus, int WaveBonusBase, int WaveBonusPerWave, int NoLeakBase, int NoLeakPerWave,
     int BonusQuestionBase, int BonusQuestionPerWave, int BossCredits);
 
-/// <summary>Teia de runas (td-runes.json): 32 nós fixos (4 anéis × 8 setores), 8 tipos e as fontes de crédito da §6.</summary>
-public sealed record TdRunesDef(TdCreditSourcesDef CreditSources, TdRuneTypeDef[] Types, TdRuneNodeDef[] Nodes);
+/// <summary>Teia de runas (td-runes.json): 128 nós fixos (8 anéis × 16 setores), 8 tipos, custo em fragmentos por anel e as fontes de crédito da §6.</summary>
+public sealed record TdRunesDef(TdCreditSourcesDef CreditSources, TdRuneTypeDef[] Types, TdRuneNodeDef[] Nodes, int[] RingCosts);
 
 // ---------------------------------------------------------------- fusão de torres (SDD-37 §3)
 

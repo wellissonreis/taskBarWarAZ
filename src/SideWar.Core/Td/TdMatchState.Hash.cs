@@ -83,7 +83,8 @@ public sealed partial class TdMatchState
         h.AddBool(_present);
         h.AddBool(_bonusAnswered);
         if (Paused) h.AddBool(true); // só quando verdadeiro: o hash de partidas sem pausa não muda
-        h.AddInt32((int)_awakened);
+        h.AddInt32((int)(uint)_awakened);
+        if ((_awakened >> 32) != UInt128.Zero) { h.AddUInt64((ulong)(_awakened >> 32)); h.AddUInt64((ulong)(_awakened >> 96)); } // só com nós acima do slot 31: hashes de partidas sem runas externas não mudam
         h.AddInt64(Fragments);
         h.AddBool(_hasLeaked);
         if (!_options.IsClassic) { h.AddBool(_options.ContinuousWaves); h.AddBool(_options.PersistentRun); h.AddInt32(_stageNumber); h.AddInt32(_stageClears); } // só fora do modo clássico: os hashes antigos não mudam

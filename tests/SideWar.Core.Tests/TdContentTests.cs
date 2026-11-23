@@ -189,7 +189,7 @@ public sealed class TdContentTests
         AssertError(With("td-runes.json", "\"type\": \"shield\"", "\"type\": \"laser\""), "tipo inexistente 'laser'");
         AssertError(With("td-runes.json", "\"effect\": \"firewallTenths\"", "\"effect\": \"laser\""), "effect desconhecido 'laser'");
         AssertError(With("td-runes.json", "\"id\": \"1-3\", \"ring\": 1, \"sector\": 3", "\"id\": \"1-3\", \"ring\": 1, \"sector\": 2"), "id deve ser 'anel-setor'");
-        AssertError(With("td-runes.json", "\"ring\": 3, \"sector\": 7", "\"ring\": 4, \"sector\": 7"), "fora da teia");
+        AssertError(With("td-runes.json", "\"ring\": 3, \"sector\": 7", "\"ring\": 8, \"sector\": 7"), "fora da teia");
         AssertError(With("td-stages.json", "\"fragments\": { \"perWave\": 1,", "\"fragments\": { \"perWave\": -1,"), "fragments: valores devem ser >= 0");
         var files = TdContentLoader.ReadEmbedded();
         files.Remove("td-runes.json");

@@ -348,8 +348,8 @@ public sealed class TdFusionTests
         var s = Arena(); int id = Build(s, "frost", 1100); Fuse(s, id, "bolt");
         var awakened = typeof(TdMatchState).GetField("_awakened", BindingFlags.NonPublic | BindingFlags.Instance)!;
         var web = s.RuneWeb;
-        uint bits = 0;
-        foreach (var n in web.Where(n => n.Type == "bolt").Take(2)) bits |= 1u << (n.Ring * 8 + n.Sector);
+        UInt128 bits = UInt128.Zero;
+        foreach (var n in web.Where(n => n.Type == "bolt" && n.Power == 3).Take(4)) bits |= UInt128.One << (n.Ring * 16 + n.Sector); // 4 × 3 × 0,75% = +9%
         awakened.SetValue(s, bits);
         typeof(TdMatchState).GetMethod("RebuildRuneEffects", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(s, null);
         Start(s, 1100); Steps(s, 2);

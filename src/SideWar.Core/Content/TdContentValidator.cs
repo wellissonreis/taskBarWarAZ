@@ -451,8 +451,8 @@ public static class TdContentValidator
     /// <summary>Efeitos que o Core sabe aplicar; cada tipo de runa do JSON aponta para um deles.</summary>
     internal static readonly string[] RuneEffects =
         ["rangeBp", "boltDamageBp", "waveCredits", "frostSlowTenths", "xpShield", "cannonDamageBp", "abilityCooldownBp", "firewallTenths"];
-    internal const int WebRings = 4;
-    internal const int WebSectors = 8;
+    internal const int WebRings = 8;
+    internal const int WebSectors = 16;
 
     private static void Runes(TdRunesDef r, List<string> e)
     {
@@ -477,11 +477,13 @@ public static class TdContentValidator
             Req(e, n.Id == $"{n.Ring}-{n.Sector}", $"{o}: id deve ser 'anel-setor'");
             Req(e, typeIds.Contains(n.Type), $"{o}.type referencia tipo inexistente '{n.Type}'");
             Req(e, n.X is >= 0 and <= 1 && n.Y is >= 0 and <= 1, $"{o}: x/y normalizados em [0, 1]");
+            Req(e, n.Power is >= 1 and <= 10, $"{o}.power deve estar em [1, 10]");
         }
         for (int ring = 0; ring < WebRings; ring++)
             for (int sector = 0; sector < WebSectors; sector++)
                 Req(e, r.Nodes.Count(n => n.Ring == ring && n.Sector == sector) == 1, $"{f}: falta exatamente um nó em {ring}-{sector}");
 
+        Req(e, r.RingCosts is { Length: WebRings } && r.RingCosts.All(c => c >= 1), $"{f}.ringCosts: {WebRings} custos (um por anel), cada um >= 1");
         var cs = r.CreditSources;
         Req(e, cs.StartingCreditsBonus >= 0 && cs.WaveBonusBase >= 0 && cs.WaveBonusPerWave >= 0 && cs.NoLeakBase >= 0 && cs.NoLeakPerWave >= 0
                && cs.BonusQuestionBase >= 0 && cs.BonusQuestionPerWave >= 0 && cs.BossCredits >= 0,

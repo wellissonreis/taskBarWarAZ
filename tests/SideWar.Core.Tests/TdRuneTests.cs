@@ -30,6 +30,10 @@ public sealed class TdRuneTests
         return s;
     }
 
+    /// <summary>Concede fragmentos direto (atalho de teste para teias grandes).</summary>
+    private static void Give(TdMatchState s, long fragments) =>
+        typeof(TdMatchState).GetProperty(nameof(TdMatchState.Fragments))!.SetValue(s, s.Fragments + fragments);
+
     /// <summary>Joga (com um Raio fixo) até acumular <paramref name="fragments"/> fragmentos.</summary>
     private static void Earn(TdMatchState s, long fragments)
     {
@@ -40,20 +44,40 @@ public sealed class TdRuneTests
     }
 
     [Fact]
-    public void Content_is_a_fixed_web_of_32_nodes_and_8_effect_types()
+    public void Content_is_a_fixed_web_of_128_nodes_and_8_effect_types()
     {
         var r = Base.Runes;
-        Assert.Equal(32, r.Nodes.Length);
+        Assert.Equal(128, r.Nodes.Length);
         Assert.Equal(8, r.Types.Length);
-        for (int ring = 0; ring < 4; ring++)
-            for (int sector = 0; sector < 8; sector++)
+        Assert.Equal(8, r.RingCosts.Length);
+        Assert.Equal(r.RingCosts.Order(), r.RingCosts); // custo cresce (ou fica igual) para fora
+        Assert.Equal(16, r.Nodes.Count(n => n.Ring == 7 && n.Power == 4)); // nós-chave: o último anel inteiro, o maior valor da teia
+        Assert.All(r.Nodes.Where(n => n.Ring < 7), n => Assert.InRange(n.Power, 1, 3)); // anéis internos valem mais que os externos
+        for (int ring = 0; ring < 8; ring++)
+            for (int sector = 0; sector < 16; sector++)
                 Assert.Single(r.Nodes, n => n.Ring == ring && n.Sector == sector);
         Assert.All(r.Nodes, n => Assert.Contains(r.Types, t => t.Id == n.Type));
         Assert.Equal(r.Types.Select(t => t.Id).Order(), r.Nodes.Select(n => n.Type).Distinct().Order()); // todos os tipos aparecem
         Assert.All(r.Nodes, n => Assert.True(n.X is >= 0 and <= 1 && n.Y is >= 0 and <= 1));
         Assert.Equal(["range", "bolt", "credits", "frost", "core", "cannon", "cooldown", "shield"], r.Types.Select(t => t.Id));
-        Assert.Equal([400, 500, 3, 3, 3, 500, -400, 5], r.Types.Select(t => t.Value));
+        Assert.Equal([100, 75, 1, 1, 1, 75, -85, 1], r.Types.Select(t => t.Value));
+        Assert.Equal([1, 2, 5, 12, 24, 48, 80, 125], r.RingCosts);
         Assert.Equal((1, 1, 2), (Base.Stages.Rules.Fragments.PerWave, Base.Stages.Rules.Fragments.PerQuestion, Base.Stages.Rules.Fragments.PerBoss));
+    }
+
+    [Fact]
+    public void Web_totals_stay_within_twice_the_old_32_node_web_and_the_cost_fits_tens_of_hours()
+    {
+        var r = Base.Runes;
+        // totais máximos da teia antiga (32 nós): alcance 2000, Raio 1500, créditos 9, Gelo 18, Núcleo 21, Canhão 1500, recarga -1600, Escudo 5
+        var oldTotals = new Dictionary<string, int> { ["range"] = 2000, ["bolt"] = 1500, ["credits"] = 9, ["frost"] = 18, ["core"] = 21, ["cannon"] = 1500, ["cooldown"] = -1600, ["shield"] = 5 };
+        foreach (var ty in r.Types)
+        {
+            int total = r.Nodes.Where(n => n.Type == ty.Id).Sum(n => ty.Value * n.Power);
+            Assert.True(Math.Abs(total) <= Math.Abs(oldTotals[ty.Id]) * 2.25, $"{ty.Id}: {total}");
+        }
+        long cost = r.Nodes.Sum(n => (long)r.RingCosts[n.Ring]);
+        Assert.InRange(cost, 4000, 5500); // ~35 h de jogo ativo a ~134 fragmentos/h (curva medida com o SanityBot)
     }
 
     [Fact]
@@ -62,7 +86,7 @@ public sealed class TdRuneTests
         var s = New();
         Assert.Equal(0, s.Fragments);
         Assert.Equal(0, s.AwakenedCount);
-        Assert.Equal(Enumerable.Range(0, 8).Select(k => "0-" + k), s.Frontier);
+        Assert.Equal(Enumerable.Range(0, 16).Select(k => "0-" + k), s.Frontier);
         ulong h = s.ComputeStateHash();
         var r = s.Apply(new AwakenRune("0-0"));
         Assert.Equal(CommandReason.NoFragments, r.Reason);
@@ -106,9 +130,9 @@ public sealed class TdRuneTests
         Assert.DoesNotContain(node.Id, s.Frontier);
         Assert.Equal(frags - 1, ev.B);
         // vizinhos do despertado entram na fronteira (mesmo anel ±1, anel interno e externo no mesmo setor)
-        var neighbors = new List<string> { $"{node.Ring}-{(node.Sector + 1) % 8}", $"{node.Ring}-{(node.Sector + 7) % 8}" };
+        var neighbors = new List<string> { $"{node.Ring}-{(node.Sector + 1) % 16}", $"{node.Ring}-{(node.Sector + 15) % 16}" };
         if (node.Ring > 0) neighbors.Add($"{node.Ring - 1}-{node.Sector}");
-        if (node.Ring < 3) neighbors.Add($"{node.Ring + 1}-{node.Sector}");
+        if (node.Ring < 7) neighbors.Add($"{node.Ring + 1}-{node.Sector}");
         Assert.All(neighbors, id => Assert.True(s.IsAwakened(id) || s.Frontier.Contains(id), id));
     }
 
@@ -137,7 +161,7 @@ public sealed class TdRuneTests
     {
         var s = New(40);
         Earn(s, 12);
-        while (s.Fragments > 0)
+        while (s.Fragments >= s.RuneCost(s.Frontier[0]))
         {
             var frontier = s.Frontier;
             Assert.All(frontier, id =>
@@ -145,8 +169,8 @@ public sealed class TdRuneTests
                 var n = s.RuneWeb.Single(x => x.Id == id);
                 Assert.False(s.IsAwakened(id));
                 if (n.Ring > 0)
-                    Assert.True(s.IsAwakened($"{n.Ring}-{(n.Sector + 1) % 8}") || s.IsAwakened($"{n.Ring}-{(n.Sector + 7) % 8}")
-                        || s.IsAwakened($"{n.Ring - 1}-{n.Sector}") || (n.Ring < 3 && s.IsAwakened($"{n.Ring + 1}-{n.Sector}")), id);
+                    Assert.True(s.IsAwakened($"{n.Ring}-{(n.Sector + 1) % 16}") || s.IsAwakened($"{n.Ring}-{(n.Sector + 15) % 16}")
+                        || s.IsAwakened($"{n.Ring - 1}-{n.Sector}") || (n.Ring < 7 && s.IsAwakened($"{n.Ring + 1}-{n.Sector}")), id);
             });
             Assert.True(s.Apply(new AwakenRune(frontier[0])).IsOk);
         }
@@ -169,12 +193,14 @@ public sealed class TdRuneTests
     }
 
     [Fact]
-    public void Full_web_awakens_all_32_then_rejects()
+    public void Full_web_awakens_all_128_then_rejects()
     {
         var s = New(40);
-        Earn(s, 32);
-        for (int i = 0; i < 32; i++) Assert.True(s.Apply(new AwakenRune(s.Frontier[0])).IsOk);
-        Assert.Equal(32, s.AwakenedCount);
+        long total = Base.Runes.Nodes.Sum(n => Base.Runes.RingCosts[n.Ring]);
+        Give(s, total);
+        for (int i = 0; i < 128; i++) Assert.True(s.Apply(new AwakenRune(s.Frontier[0])).IsOk);
+        Assert.Equal(128, s.AwakenedCount);
+        Assert.Equal(0, s.Fragments);
         Assert.Empty(s.Frontier);
         Assert.All(s.RuneWeb, n => Assert.True(s.IsAwakened(n.Id)));
         for (int i = 0; i < 100_000 && s.Fragments == 0; i++) s.Step();
@@ -185,12 +211,14 @@ public sealed class TdRuneTests
     public void Core_runes_shield_reputation_and_credit_runes_pay_at_the_end_of_each_wave()
     {
         var s = New(40);
-        Earn(s, 32);
+        Give(s, 60);
+        Assert.True(s.Apply(new BuildTower("bolt", 900)).IsOk);
+        Assert.True(s.Apply(new StartWave()).IsOk);
         while (s.Fragments > 0 && s.Frontier.Count > 0 && s.Apply(new AwakenRune(s.Frontier[0])).IsOk) { }
         int cores = s.AwakenedOfType("core");
         Assert.True(cores > 0);
-        Assert.Equal(Math.Min(TdReputation.MaxShieldPercent, cores * 3), s.XpShieldPercent);
-        // todas despertadas (ou ao menos as de crédito): bônus de onda inclui +3 por runa de Créditos
+        Assert.Equal(Math.Min(TdReputation.MaxShieldPercent, cores * 1), s.XpShieldPercent);
+        // todas despertadas (ou ao menos as de crédito): bônus de onda inclui +1 por runa de Créditos
         int credits = s.AwakenedOfType("credits");
         s.ClearEvents();
         int guard = 0;
@@ -202,7 +230,7 @@ public sealed class TdRuneTests
         }
         Assert.True(bonus > 0);
         var done = s.Events.First(e => e.Type == TdEventType.WaveCompleted);
-        long noLeak = bonus - s.WaveBonusFor((int)done.A) - 3L * credits; // o que sobra é o bônus "sem vazar" (ou 0)
+        long noLeak = bonus - s.WaveBonusFor((int)done.A) - 1L * credits; // o que sobra é o bônus "sem vazar" (ou 0)
         var src = Base.Runes.CreditSources;
         Assert.True(noLeak == 0 || noLeak == src.NoLeakBase + (long)src.NoLeakPerWave * done.A, $"sobra {noLeak}");
     }

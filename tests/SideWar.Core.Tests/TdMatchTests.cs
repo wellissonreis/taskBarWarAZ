@@ -453,7 +453,7 @@ public sealed class TdMatchTests
         Assert.True(r.Ticks > 0);
     }
 
-    private const ulong GoldenReplay = 13236571623588833160UL;
+    private const ulong GoldenReplay = 10790471270796824650UL;
 
     private static TdReplayResult RunScript(ulong seed)
     {

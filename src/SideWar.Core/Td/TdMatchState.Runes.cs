@@ -4,17 +4,17 @@ using SideWar.Core.Simulation;
 namespace SideWar.Core.Td;
 
 /// <summary>
-/// Teia de runas do design (TD.29a, SDD-29 §21): 32 nós fixos (4 anéis × 8 setores), 8 tipos de efeito. Cada FRAGMENTO desperta o nó
-/// ESCOLHIDO da fronteira (TD.30d: sem sorteio, sem consumo de <c>Rng</c>). Persiste na corrida contínua; some com a partida.
+/// Teia de runas do design (TD.29a, SDD-29 §21; ampliada 4x): 128 nós fixos (8 anéis × 16 setores), 8 tipos de efeito. Despertar o nó
+/// ESCOLHIDO da fronteira custa fragmentos conforme o anel (<c>RingCosts</c>) (TD.30d: sem sorteio, sem consumo de <c>Rng</c>). Persiste na corrida contínua; some com a partida.
 /// </summary>
 public sealed partial class TdMatchState
 {
     private const int WebRings = TdContentValidator.WebRings;
     private const int WebSectors = TdContentValidator.WebSectors;
 
-    private uint _awakened;
+    private UInt128 _awakened;
     private bool _hasLeaked;
-    private int[]? _webSlot; // anel*8+setor → índice em Content.Runes.Nodes
+    private int[]? _webSlot; // anel*setores+setor → índice em Content.Runes.Nodes
     private Dictionary<string, int> _runeEffects = [];
 
     /// <summary>Fragmentos disponíveis (moeda das runas; créditos ficam só para torres).</summary>
@@ -42,7 +42,16 @@ public sealed partial class TdMatchState
         return _webSlot = slots;
     }
 
-    private bool AwakenedAt(int ring, int sector) => (_awakened & (1u << Slot(ring, sector))) != 0;
+    private static UInt128 Bit(int ring, int sector) => UInt128.One << Slot(ring, sector);
+
+    private bool AwakenedAt(int ring, int sector) => (_awakened & Bit(ring, sector)) != UInt128.Zero;
+
+    /// <summary>Custo em fragmentos para despertar o nó <paramref name="id"/> (por anel); 0 se o id é desconhecido.</summary>
+    public int RuneCost(string id)
+    {
+        int i = NodeIndex(id);
+        return i < 0 ? 0 : _content.Runes.RingCosts[_content.Runes.Nodes[i].Ring];
+    }
 
     /// <summary>Despertada? (id desconhecido = false)</summary>
     public bool IsAwakened(string id)
@@ -54,7 +63,7 @@ public sealed partial class TdMatchState
     }
 
     /// <summary>Quantidade de runas despertadas.</summary>
-    public int AwakenedCount => System.Numerics.BitOperations.PopCount(_awakened);
+    public int AwakenedCount => (int)UInt128.PopCount(_awakened);
 
     /// <summary>Quantas runas despertadas do tipo <paramref name="typeId"/> (por id do tipo).</summary>
     public int AwakenedOfType(string typeId)
@@ -87,13 +96,25 @@ public sealed partial class TdMatchState
         }
     }
 
+    /// <summary>Há nó na fronteira que os fragmentos atuais já pagam? (alerta e botão de runas)</summary>
+    public bool CanAwakenAny
+    {
+        get
+        {
+            if (Fragments < 1) return false;
+            foreach (var id in Frontier)
+                if (Fragments >= RuneCost(id)) return true;
+            return false;
+        }
+    }
+
     private void ApplyLegacyRunes()
     {
         for (int i = 0; !_options.IsClassic && i < _options.LegacyRunes; i++)
         {
             var frontier = Frontier;
             var node = _content.Runes.Nodes[NodeIndex(frontier[(int)(_rng.NextUInt() % (uint)frontier.Count)])];
-            _awakened |= 1u << Slot(node.Ring, node.Sector);
+            _awakened |= Bit(node.Ring, node.Sector);
             RebuildRuneEffects();
         }
     }
@@ -103,14 +124,15 @@ public sealed partial class TdMatchState
         if (!Running) return Reject(CommandReason.InvalidPhase);
         int ni = nodeId is null ? -1 : NodeIndex(nodeId);
         if (ni < 0) return Reject(CommandReason.UnknownRuneNode);
-        if (Fragments < 1) return Reject(CommandReason.NoFragments, 1 - Fragments);
         var slots = WebSlots();
         var node = _content.Runes.Nodes[ni];
+        int cost = _content.Runes.RingCosts[node.Ring];
         if (AwakenedCount >= WebRings * WebSectors) return Reject(CommandReason.WebComplete);
         if (!InFrontier(node.Ring, node.Sector)) return Reject(CommandReason.RuneNotInFrontier);
+        if (Fragments < cost) return Reject(CommandReason.NoFragments, cost - Fragments);
         int pick = Slot(node.Ring, node.Sector);
-        Fragments--;
-        _awakened |= 1u << pick;
+        Fragments -= cost;
+        _awakened |= Bit(node.Ring, node.Sector);
         RebuildRuneEffects();
         Emit(TdEventType.RuneAwakened, slots[pick], Fragments);
         return CommandResult.Ok;
@@ -131,7 +153,7 @@ public sealed partial class TdMatchState
         {
             if (!AwakenedAt(n.Ring, n.Sector)) continue;
             foreach (var t in types)
-                if (t.Id == n.Type) _runeEffects[t.Effect] = _runeEffects.GetValueOrDefault(t.Effect) + t.Value;
+                if (t.Id == n.Type) _runeEffects[t.Effect] = _runeEffects.GetValueOrDefault(t.Effect) + t.Value * n.Power;
         }
         // Atualiza efeitos dos nós existentes, preservando vida e temporizadores em curso.
         for (int i = 0; i < _nodes.Count; i++)

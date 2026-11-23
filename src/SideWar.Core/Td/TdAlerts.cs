@@ -60,7 +60,7 @@ public static class TdAlertCatalog
             TdAlertType.IdleCredits => IdleCredits(m),
             TdAlertType.FlyerNoAntiAir => m.Enemies.Any(e => e.Hp > 0 && e.Flying) && !m.Towers.Any(t => t.Placed && m.Content.Towers[t.DefIndex].Targets == "both"),
             TdAlertType.BossIncoming => m.Enemies.Any(e => e.Hp > 0 && e.IsBoss),
-            TdAlertType.RuneAvailable => m.Fragments >= 1 && m.Frontier.Count > 0,
+            TdAlertType.RuneAvailable => m.CanAwakenAny,
             TdAlertType.AbilityIdle => m.Enemies.Count > 0 && m.AbilityStatuses.Any(a => a.Unlocked && a.CooldownTicks == 0 && a.ActiveTicks == 0 && a.UsesLeft != 0),
             TdAlertType.VaultBackupIdle => m.Towers.Any(t => t.Placed && t.DisabledTicks > 0 && m.Content.Towers[t.DefIndex].Id is "vault" or "backup"),
             TdAlertType.PhishingNoSentinel => m.Enemies.Any(e => e.Hp > 0 && m.EnemyDefId(e.DefIndex) == "phishing") && !HasPlaced(m, "sentinel"),
