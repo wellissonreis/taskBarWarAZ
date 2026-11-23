@@ -7,7 +7,7 @@ public sealed partial class TdMatchState
     /// <summary>
     /// Avança um passo. Em Preparo o mundo não anda (nenhum inimigo, nenhuma recarga): só corre a contagem de auto-início, se
     /// ligada (RF-28.3). Em Onda roda um tick de 30 Hz: spawns, torres, movimento/vazamento, conclusão de ondas.
-    /// Vitória e Derrota são terminais (o auto-início nunca reinicia a fase).
+    /// A Vitória é terminal (o auto-início nunca reinicia a fase).
     /// </summary>
     public void Step()
     {
@@ -101,18 +101,11 @@ public sealed partial class TdMatchState
             _enemies.RemoveAt(i);
             WaveOf(e.Wave).Alive--;
             _stageIntegrityLoss = (int)Math.Min(int.MaxValue, (long)_stageIntegrityLoss + e.CoreDamage);
-            Integrity = Math.Max(0, Integrity - e.CoreDamage);
             _hasLeaked = true;
             WaveOf(e.Wave).Leaked = true;
             RecordLeak(e);
             Emit(TdEventType.EnemyLeaked, e.Id, e.CoreDamage);
-            if (Integrity == 0)
-            {
-                Phase = MatchPhase.Derrota;
-                Stars = 0;
-                Emit(TdEventType.Defeat, WaveNumber, IntegrityLost);
-                return;
-            }
+            LoseReputation(e.CoreDamage); // sem game over: só perde XP de reputação
         }
     }
 
@@ -152,6 +145,7 @@ public sealed partial class TdMatchState
             }
             GainFragments(_content.Stages.Rules.Fragments.PerWave);
             Emit(TdEventType.WaveCompleted, w.Number, bonus);
+            WinWaveReputation(w.Number, w.Leaked);
         }
         SettlePhase();
     }

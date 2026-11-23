@@ -18,19 +18,23 @@ public enum TdBotProfile : byte
 
 /// <summary>Resultado de uma partida do SanityBot (uma fase, um perfil, uma seed).</summary>
 public sealed record TdBotResult(
-    int Stage, TdBotProfile Profile, ulong Seed, MatchPhase Phase, int Stars, int IntegrityLost, long CreditsLeft,
+    int Stage, TdBotProfile Profile, ulong Seed, MatchPhase Phase, int Stars, int IntegrityLost, long XpLost, long CreditsLeft,
     int WaveReached, double CombatSeconds, double TotalSeconds, int TowersBuilt, int CommandsRejected,
     IReadOnlyDictionary<string, int> KillsByTowerType, ulong StateHash, IReadOnlyList<int> LostByWave, TdMatchResult Match = default)
 {
-    public bool Won => Phase == MatchPhase.Vitoria;
+    /// <summary>Venceu e perdeu menos XP que o limite de colapso (<see cref="TdSanityBot.CollapseXp"/>).</summary>
+    public bool Won => Phase == MatchPhase.Vitoria && XpLost < TdSanityBot.CollapseXp;
+    /// <summary>Colapso: perdeu XP demais (o antigo "game over"); o bot para ali. Medida de balanceamento, não um fim de jogo.</summary>
+    public bool Collapsed => XpLost >= TdSanityBot.CollapseXp;
 }
 
 /// <summary>Resultado de uma corrida contínua do SanityBot (TD.28a): fases concluídas em sequência com as mesmas torres/runas/créditos, até derrota ou limite.</summary>
 public sealed record TdRunBotResult(
-    TdBotProfile Profile, ulong Seed, int StartStage, int StagesCleared, int StageNumber, int WaveInStage, MatchPhase Phase, int Integrity,
+    TdBotProfile Profile, ulong Seed, int StartStage, int StagesCleared, int StageNumber, int WaveInStage, MatchPhase Phase, long XpLost,
     long CreditsLeft, int TowersBuilt, int TowersAtEnd, long Frames, double CombatSeconds, int CommandsRejected, IReadOnlyList<TdStageSummary> Stages, ulong StateHash)
 {
-    public bool Defeated => Phase == MatchPhase.Derrota;
+    /// <summary>Colapso: perdeu XP demais (o antigo "game over"); o bot para ali.</summary>
+    public bool Defeated => XpLost >= TdSanityBot.CollapseXp;
 }
 
 /// <summary>
@@ -45,6 +49,9 @@ public sealed record TdRunBotResult(
 /// </remarks>
 public static class TdSanityBot
 {
+    /// <summary>XP perdido a partir do qual o bot considera a partida colapsada (equivale aos 20 pontos de vida que o núcleo tinha). O jogo real não tem game over.</summary>
+    public const int CollapseXp = 20 * TdReputation.XpPerCoreDamage;
+
     /// <summary>Segundos humanos estimados de Preparo por onda (olhar, construir, apertar iniciar) para a duração total (DP-28.10).</summary>
     public const double PrepSecondsPerWave = 22.0;
 
@@ -103,7 +110,7 @@ public static class TdSanityBot
             Send(new SetPresence(true));
             long maxFrames = 30L * 3600 * 2 * Math.Max(1, RunMaxStages);
             int cleared = 0;
-            while (_s.Frame < maxFrames && _s.Phase is MatchPhase.Preparo or MatchPhase.Onda && _s.StagesCleared < RunMaxStages)
+            while (_s.Frame < maxFrames && _s.Phase is MatchPhase.Preparo or MatchPhase.Onda && _s.StagesCleared < RunMaxStages && _s.ReputationLostTotal < CollapseXp)
             {
                 if (_s.StagesCleared != cleared)
                 {
@@ -125,7 +132,7 @@ public static class TdSanityBot
                 }
                 _s.Step();
             }
-            return new TdRunBotResult(_profile, seed, startStage, _s.StagesCleared, _s.StageNumber, _s.WaveNumber, _s.Phase, _s.Integrity, _s.Credits,
+            return new TdRunBotResult(_profile, seed, startStage, _s.StagesCleared, _s.StageNumber, _s.WaveNumber, _s.Phase, _s.ReputationLostTotal, _s.Credits,
                 _builtCount, _s.Towers.Count, _s.Frame, _s.Tick / (double)TdWorld.TicksPerSecond, _rejected, [.. _s.StageResults], _s.ComputeStateHash());
         }
 
@@ -134,7 +141,7 @@ public static class TdSanityBot
             Send(new LayoutChanged(TypicalLayout()));
             Send(new SetPresence(true));
             long maxFrames = 30L * 3600 * 2;
-            while (_s.Frame < maxFrames && _s.Phase is MatchPhase.Preparo or MatchPhase.Onda)
+            while (_s.Frame < maxFrames && _s.Phase is MatchPhase.Preparo or MatchPhase.Onda && _s.ReputationLostTotal < CollapseXp)
             {
                 if (_s.Phase == MatchPhase.Preparo)
                 {
@@ -159,7 +166,7 @@ public static class TdSanityBot
                 kills[type] = kills.GetValueOrDefault(type) + kv.Value;
             }
             double combat = _s.Tick / (double)TdWorld.TicksPerSecond;
-            return new TdBotResult(_s.StageId, _profile, seed, _s.Phase, _s.Stars, _s.IntegrityLost, _s.Credits, _s.WaveNumber,
+            return new TdBotResult(_s.StageId, _profile, seed, _s.Phase, _s.Stars, _s.IntegrityLost, _s.ReputationLostTotal, _s.Credits, _s.WaveNumber,
                 combat, combat + PrepSecondsPerWave * _s.WaveNumber, _builtCount, _rejected, kills, _s.ComputeStateHash(), _lostByWave, _s.Result);
         }
 
@@ -293,7 +300,7 @@ public static class TdSanityBot
                 {
                     "scale" => near >= (Expert ? 4 : 6) || boss,
                     "firewall" => near >= (Expert ? 5 : 8) || boss,
-                    "snapshot" => _s.Integrity <= _s.IntegrityMax - 4,
+                    "snapshot" => _s.ReputationLostTotal >= 4 * TdReputation.XpPerCoreDamage,
                     _ => false,
                 };
                 if (use) Send(new UseAbility(a.Id));

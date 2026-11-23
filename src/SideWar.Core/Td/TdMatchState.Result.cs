@@ -58,7 +58,7 @@ public sealed partial class TdMatchState
         if (!UsedAnyAbility) medals |= TdMedals.SemHabilidades;
         if (_waves.Length >= 2 && _earlyCalls >= _waves.Length - 1) medals |= TdMedals.Pressa;
         if (ChallengeMet) medals |= TdMedals.Desafio;
-        int score = TdScoring.Compute(Math.Max(0, _stageBaseIntegrity - lost), CombatSeconds, _earlyCalls, Credits, stars, crown);
+        int score = TdScoring.Compute(Math.Max(0, _content.Stages.Rules.CoreIntegrity - lost), CombatSeconds, _earlyCalls, Credits, stars, crown);
         return new(_stageNumber, _stage.Id, Cycle, stars, lost, crown, medals, score, CombatSeconds);
     }
 }

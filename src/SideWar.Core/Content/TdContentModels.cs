@@ -63,7 +63,7 @@ public sealed record TdAbilityDef(
     string Id, string Name, string Effect, double CooldownSeconds, double DurationSeconds, int? UnlockStage,
     string? UnlockMetaNode, int? UsesPerStage, Dictionary<string, double> Stats);
 
-/// <summary>Efeito de nó. <c>Kind</c>: startingCredits | sellRefund | maxTowers | damagePercent | rangePercent | integrity | abilityCooldownPercent | unlockAbility | autoStartBonusPercent.</summary>
+/// <summary>Efeito de nó. <c>Kind</c>: startingCredits | sellRefund | maxTowers | damagePercent | rangePercent | xpShield | abilityCooldownPercent | unlockAbility | autoStartBonusPercent.</summary>
 public sealed record TdMetaEffectDef(string Kind, double Value, string? Target);
 
 public sealed record TdMetaNodeDef(string Id, string Name, int Cost, TdMetaEffectDef[] Effects);

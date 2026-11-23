@@ -5,7 +5,7 @@
     {"id": "bolt", "name": "Raio", "effect": "boltDamageBp", "value": 500, "text": "+5% de dano do Raio."},
     {"id": "credits", "name": "Créditos", "effect": "waveCredits", "value": 3, "text": "+3 créditos ao fim de cada onda."},
     {"id": "frost", "name": "Gelo", "effect": "frostSlowTenths", "value": 3, "text": "+0,3 s de lentidão do Gelo."},
-    {"id": "core", "name": "Núcleo", "effect": "integrity", "value": 1, "text": "+1 de vida máxima do núcleo."},
+    {"id": "core", "name": "Núcleo", "effect": "xpShield", "value": 3, "text": "-3% de XP de reputação perdida."},
     {"id": "cannon", "name": "Canhão", "effect": "cannonDamageBp", "value": 500, "text": "+5% de dano do Canhão."},
     {"id": "cooldown", "name": "Recarga", "effect": "abilityCooldownBp", "value": -400, "text": "-4% no tempo de recarga das habilidades."},
     {"id": "shield", "name": "Escudo", "effect": "firewallTenths", "value": 5, "text": "Firewall dura +0,5 s."}

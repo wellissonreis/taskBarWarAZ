@@ -59,6 +59,7 @@ public static class TdProfileSerializer
             BestRunWaves = Math.Max(0, p.BestRunWaves),
             LegacyLastRun = p.LegacyLastRun ?? "",
             RunsPlayed = Math.Max(0, p.RunsPlayed),
+            Reputation = Math.Clamp(p.Reputation, 0, MaxScore),
             SealsEarned = earned,
             MigratedSeals = Math.Clamp(p.MigratedSeals, 0, earned),
             Stages = stages,

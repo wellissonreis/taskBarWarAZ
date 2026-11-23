@@ -19,10 +19,6 @@ public static class TdRiskAnalyzer
         return damage;
     }
 
-    /// <summary>O próximo passo pode zerar o núcleo, considerando vazamentos simultâneos.</summary>
-    public static bool FatalNextStep(TdMatchState match) =>
-        match.Phase == MatchPhase.Onda && match.Integrity > 0 && match.ProjectNextStepLeakDamage() >= match.Integrity;
-
     /// <summary>Menor tempo projetado até a borda à velocidade integral; infinito se não houver ameaça móvel.</summary>
     public static double SecondsToLeak(IReadOnlyList<TdEnemy> enemies, double leakX)
     {

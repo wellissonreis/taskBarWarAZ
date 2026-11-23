@@ -30,18 +30,4 @@ public sealed partial class TdMatchState
         c._leakDamage = (int[]?)_leakDamage?.Clone();
         return c;
     }
-
-    /// <summary>
-    /// O próximo <see cref="Step"/> leva a partida à Derrota? Simula UM passo numa cópia (exato: inclui torres, lentidão, mortes,
-    /// réplicas e divisões criadas no próprio passo e vários vazamentos). Só chama a cópia se o limite superior conservador
-    /// (<see cref="ProjectNextStepLeakDamage"/>) indicar risco; sem esse risco o passo não pode ser fatal. Nunca altera a partida.
-    /// </summary>
-    public bool NextStepIsFatal()
-    {
-        if (Phase != MatchPhase.Onda || Paused || Integrity <= 0) return false;
-        if (ProjectNextStepLeakDamage() < Integrity) return false;
-        var copy = CloneForSimulation();
-        copy.Step();
-        return copy.Phase == MatchPhase.Derrota;
-    }
 }

@@ -487,7 +487,10 @@ public sealed partial class TdMatchState
             if (t.NodeCdTicks >= Ticks(Stat(t, def, "coreHealEverySeconds", 45)))
             {
                 t.NodeCdTicks = 0;
-                if (Integrity < IntegrityMax && _backupHealsThisStage < Stat(t, def, "coreHealCapPerStage", 3)) { Integrity++; _backupHealsThisStage++; }
+                if (_backupHealsThisStage < Stat(t, def, "coreHealCapPerStage", 3))
+                {
+                    if (RecoverReputation(1) > 0) _backupHealsThisStage++;
+                }
             }
             _towers[i] = t;
         }

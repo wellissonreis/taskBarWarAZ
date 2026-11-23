@@ -96,7 +96,6 @@ public sealed partial class TdMatchState
             _awakened |= 1u << Slot(node.Ring, node.Sector);
             RebuildRuneEffects();
         }
-        _stageBaseIntegrity = Integrity;
     }
 
     private CommandResult DoAwakenRune(string nodeId)
@@ -126,7 +125,6 @@ public sealed partial class TdMatchState
 
     private void RebuildRuneEffects()
     {
-        int oldIntegrity = Rune("integrity");
         _runeEffects.Clear();
         var types = _content.Runes.Types;
         foreach (var n in _content.Runes.Nodes)
@@ -135,9 +133,6 @@ public sealed partial class TdMatchState
             foreach (var t in types)
                 if (t.Id == n.Type) _runeEffects[t.Effect] = _runeEffects.GetValueOrDefault(t.Effect) + t.Value;
         }
-        int delta = Rune("integrity") - oldIntegrity;
-        IntegrityMax += delta;
-        Integrity = Math.Clamp(Integrity + delta, 0, IntegrityMax);
         // Atualiza efeitos dos nós existentes, preservando vida e temporizadores em curso.
         for (int i = 0; i < _nodes.Count; i++)
         {

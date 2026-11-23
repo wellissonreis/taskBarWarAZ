@@ -18,7 +18,7 @@ public static class TdContentValidator
     private static readonly string[] Targetings = ["first", "last", "strong", "weak", "close"];
     private static readonly string[] AutoStartModes = ["off", "countdown"];
     private static readonly string[] EffectKinds =
-        ["startingCredits", "sellRefund", "maxTowers", "damagePercent", "rangePercent", "integrity", "abilityCooldownPercent", "unlockAbility", "autoStartBonusPercent"];
+        ["startingCredits", "sellRefund", "maxTowers", "damagePercent", "rangePercent", "xpShield", "abilityCooldownPercent", "unlockAbility", "autoStartBonusPercent"];
 
     private const int MinWaveEnemies = 3;
     private const int MaxWaveEnemies = 32;
@@ -450,7 +450,7 @@ public static class TdContentValidator
 
     /// <summary>Efeitos que o Core sabe aplicar; cada tipo de runa do JSON aponta para um deles.</summary>
     internal static readonly string[] RuneEffects =
-        ["rangeBp", "boltDamageBp", "waveCredits", "frostSlowTenths", "integrity", "cannonDamageBp", "abilityCooldownBp", "firewallTenths"];
+        ["rangeBp", "boltDamageBp", "waveCredits", "frostSlowTenths", "xpShield", "cannonDamageBp", "abilityCooldownBp", "firewallTenths"];
     internal const int WebRings = 4;
     internal const int WebSectors = 8;
 

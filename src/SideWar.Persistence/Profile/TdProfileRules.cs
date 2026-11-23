@@ -65,7 +65,15 @@ public static class TdProfileRules
     /// <summary>Soma dos recordes de pontuação por fase: define a patente (<see cref="TdRank"/>).</summary>
     public static int TotalScore(TdProfileData p) => (int)Math.Min(int.MaxValue, p.Stages.Sum(s => (long)Math.Max(0, s.BestScore)));
 
-    public static TdRankProgress Rank(TdProfileData p) => TdRank.Progress(TotalScore(p));
+    /// <summary>A patente vem da reputação (XP persistido), não mais da soma dos recordes: sobe e desce.</summary>
+    public static TdRankProgress Rank(TdProfileData p) => TdRank.Progress(p.Reputation);
+
+    /// <summary>Soma <paramref name="delta"/> (positivo ganha, negativo perde) à reputação, limitada a [0, <see cref="TdProfileSerializer.MaxScore"/>].</summary>
+    public static TdProfileData ApplyReputation(TdProfileData p, long delta)
+    {
+        long next = Math.Clamp(Math.Max(0, (long)p.Reputation) + delta, 0, TdProfileSerializer.MaxScore);
+        return next == p.Reputation ? p : p with { Reputation = (int)next };
+    }
 
     /// <summary>
     /// Registra o resultado completo de uma partida (RF-28.21): estrelas/selos como em <see cref="RecordStageResult"/>, mais coroa

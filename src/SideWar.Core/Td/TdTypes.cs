@@ -1,7 +1,7 @@
 namespace SideWar.Core.Td;
 
-/// <summary>Fase da partida (SDD-28 RF-28.1): Preparo (relógio do mundo parado), Onda, Vitória e Derrota (terminais).</summary>
-public enum MatchPhase : byte { Preparo = 0, Onda, Vitoria, Derrota }
+/// <summary>Fase da partida (SDD-28 RF-28.1): Preparo (relógio do mundo parado), Onda, Vitória (terminal; não há derrota: a base atacada só tira XP de reputação).</summary>
+public enum MatchPhase : byte { Preparo = 0, Onda, Vitoria }
 
 /// <summary>Auto-início (RF-28.3, <c>match.autoStart</c>): desligado por padrão.</summary>
 public enum AutoStartMode : byte { Off = 0, Countdown }
@@ -163,7 +163,7 @@ public sealed class TdActiveWave
 public enum TdEventType : byte
 {
     WaveStarted, WaveCompleted, EnemyKilled, EnemyLeaked, TowerBuilt, TowerSold, TowerUpgraded /* obsoleto (SDD-29): não é mais emitido */, WaveBonus,
-    CallNextBonus, Victory, Defeat,
+    CallNextBonus, Victory, Defeat /* obsoleto (REPUTACAO): não é mais emitido */,
     // TD.3 (anexados ao fim: valores anteriores não mudam).
     TowerBranched /* obsoleto (SDD-29): não é mais emitido */, TowerTargeting, AbilityUsed, TowerDisabled, BossSplit, NodeSpawned, NodeEnded,
     // TD.4 (anexados ao fim). A = id da torre; LayoutApplied: A = largura em DIP, B = torres sem posição.
@@ -177,6 +177,10 @@ public enum TdEventType : byte
     VaultIncome,
     // TD.37a: fusão de torres. A = id da torre; B = custo pago pelo módulo.
     TowerFused,
+    // REPUTACAO: A = XP de reputação ganho (vitória de onda ou recuperação); B = número da onda (0 se recuperação).
+    ReputationGained,
+    // REPUTACAO: inimigo chegou à base. A = XP de reputação perdido (já com o escudo); B = dano que ele daria ao núcleo.
+    BaseAttacked,
 }
 
 /// <summary>Evento observável (não entra no hash). <c>A</c>/<c>B</c>: valores do evento (onda, créditos, id etc.).</summary>
@@ -210,7 +214,7 @@ public readonly record struct TdRecordOutcome(bool NewRecord, bool NewCrown, TdM
 /// </summary>
 /// <param name="ContinuousWaves">A próxima onda começa no mesmo passo em que a anterior termina (Preparo de 0 s). O Preparo inicial (antes da onda 1 da corrida) continua existindo.</param>
 /// <param name="PersistentRun">Vencer a fase segue para a próxima sem recriar o estado; depois da última, ciclos infinitos mais difíceis. Só a derrota encerra.</param>
-/// <param name="StageClearHeal">Integridade do núcleo recuperada ao concluir cada fase (limitada ao máximo).</param>
+/// <param name="StageClearHeal">Obsoleto (REPUTACAO): a vida do núcleo não existe mais; ignorado.</param>
 public sealed record TdMatchOptions(bool ContinuousWaves = true, bool PersistentRun = true, int StageClearHeal = 5, int LegacyRunes = 0, int? HighestCompletedStage = null)
 {
     public static TdMatchOptions Default { get; } = new();

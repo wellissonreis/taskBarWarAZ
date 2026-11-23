@@ -65,7 +65,7 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
 
     public int StageBestScore(int id) => Profile.Stages.FirstOrDefault(s => s.StageId == id)?.BestScore ?? 0;
 
-    /// <summary>Patente local pela soma dos recordes (RF-28.21).</summary>
+    /// <summary>Patente local pela reputação (XP persistido; sobe e desce).</summary>
     public TdRankProgress Rank => TdProfileRules.Rank(Profile);
 
     /// <summary>Novidades do último resultado gravado (recorde, coroa, medalhas, selos bônus).</summary>
@@ -93,6 +93,14 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
     {
         for (int i = 0; i < events.Count; i++)
         {
+            if (events[i].Type == TdEventType.BaseAttacked) { Profile = TdProfileRules.ApplyReputation(Profile, -events[i].A); _repDirty = true; continue; }
+            if (events[i].Type == TdEventType.ReputationGained)
+            {
+                Profile = TdProfileRules.ApplyReputation(Profile, events[i].A);
+                _repDirty = true;
+                if (events[i].B > 0) Save(); // onda vencida: grava (inclui o XP perdido durante a onda)
+                continue;
+            }
             if (events[i].Type != TdEventType.StageCleared) continue;
             TdStageSummary? found = null;
             for (int j = match.StageResults.Count - 1; j >= 0; j--)
@@ -105,8 +113,17 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
         }
     }
 
+    private bool _repDirty;
+
+    /// <summary>Grava a reputação pendente (XP perdido sem onda vencida depois); chamado ao fim/abandono da partida.</summary>
+    public void FlushReputation()
+    {
+        if (_repDirty) Save();
+    }
+
     private void Save()
     {
+        _repDirty = false;
         if (_store.Save(Profile)) return;
         SaveFailures++;
         _log("falha ao gravar profile-td.json");
@@ -114,13 +131,7 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
 
     public void OnMatchEnded(TdMatchState match, TdMatchResult result)
     {
-        if (match.Options.PersistentRun && match.Phase == MatchPhase.Derrota)
-        {
-            if (Profile.LegacyLastRun == match.RunId) return;
-            PreviousBestRunWaves = Profile.BestRunWaves;
-            PreviousLegacyTotal = Profile.LegacyTotal;
-            Profile = TdProfileRules.RecordLegacy(Profile, match.RunId, match.WavesReached);
-        }
+        FlushReputation();
         Profile = TdProfileRules.RecordMatch(Profile, _meta, match.StageId, result, _stageCount, out var outcome);
         LastOutcome = outcome;
         Save();
@@ -128,6 +139,7 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
 
     public void OnMatchAbandoned(TdMatchState match)
     {
+        FlushReputation();
         if (!match.Options.PersistentRun || match.Phase is not (MatchPhase.Preparo or MatchPhase.Onda) || Profile.LegacyLastRun == match.RunId) return;
         Profile = TdProfileRules.RecordLegacy(Profile, match.RunId, match.WavesReached);
         Save();

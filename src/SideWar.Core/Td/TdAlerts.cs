@@ -3,6 +3,7 @@ namespace SideWar.Core.Td;
 /// <summary>Tipos de alerta do SDD-38 §2, na ordem fixa da tabela (a ordem numérica é o desempate).</summary>
 public enum TdAlertType : byte
 {
+    /// <summary>FatalDrop e CoreAtRisk (derrota por vida do núcleo) foram removidos na REPUTACAO: nunca são emitidos; os valores ficam só para a máscara de silenciados já gravada.</summary>
     FatalDrop, CoreAtRisk, ImminentLeak, TowerDamage, FewTowers, IdleCredits,
     FlyerNoAntiAir, BossIncoming, RuneAvailable, AbilityIdle, VaultBackupIdle, PhishingNoSentinel,
     /// <summary>Gatilho geométrico (SDD-38 §3): inimigo passou da torre posicionada mais próxima do portal (ou da distância de segurança, sem torres).</summary>
@@ -52,8 +53,6 @@ public static class TdAlertCatalog
         alert = default;
         bool hit = type switch
         {
-            TdAlertType.FatalDrop => m.NextStepIsFatal(),
-            TdAlertType.CoreAtRisk => CoreAtRisk(m),
             TdAlertType.PassedLastTower => TdRiskAnalyzer.PastDefenseLine(m).Count > 0,
             TdAlertType.ImminentLeak => m.Phase == MatchPhase.Onda && TdRiskAnalyzer.SecondsToLeak(m.Enemies, m.LeakX) <= ImminentSeconds,
             TdAlertType.TowerDamage => m.Phase == MatchPhase.Onda && TdRiskAnalyzer.SecondsToLeak(m.Enemies, m.LeakX) <= DamageSeconds,
@@ -75,14 +74,6 @@ public static class TdAlertCatalog
 
     private static bool HasPlaced(TdMatchState m, string id) => m.Towers.Any(t => t.Placed && m.Content.Towers[t.DefIndex].Id == id);
 
-    private static bool CoreAtRisk(TdMatchState m)
-    {
-        if (m.Phase != MatchPhase.Onda || m.Integrity <= 0) return false;
-        foreach (var e in m.Enemies)
-            if (e.Hp > 0 && e.Speed > 0 && e.CoreDamage >= m.Integrity && Math.Max(0, e.X - m.LeakX) <= e.Speed * AtRiskSeconds) return true;
-        return false;
-    }
-
     private static bool IdleCredits(TdMatchState m)
     {
         long cheapest = long.MaxValue;
@@ -98,8 +89,6 @@ public static class TdAlertCatalog
 
     private static TdAlert Make(TdAlertType type) => type switch
     {
-        TdAlertType.FatalDrop => new(type, TdAlertSeverity.Critical, "Sua torre vai cair.", "Construa ou use uma habilidade."),
-        TdAlertType.CoreAtRisk => new(type, TdAlertSeverity.Critical, "Sua torre pode cair.", "Reforce a defesa."),
         TdAlertType.ImminentLeak => new(type, TdAlertSeverity.Warning, "Inimigo perto do núcleo.", "Intercepte-o."),
         TdAlertType.TowerDamage => new(type, TdAlertSeverity.Warning, "Nesse ritmo sua torre tomará dano.", "Reforce a defesa."),
         TdAlertType.FewTowers => new(type, TdAlertSeverity.Tip, "Poucas torres para a onda.", "Construa mais."),

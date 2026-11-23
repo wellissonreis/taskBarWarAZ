@@ -5,7 +5,7 @@ namespace SideWar.Core.Td;
 
 /// <summary>
 /// Estado determinístico de uma partida TD (SDD-28 RF-28.1 a RF-28.4, RF-28.16). Coexiste com <see cref="SimState"/> (idle),
-/// que não é tocado. Máquina: Preparo → Onda → (Preparo | Vitória | Derrota). <see cref="Tick"/> é o relógio do mundo e só
+/// que não é tocado. Máquina: Preparo → Onda → (Preparo | Vitória). <see cref="Tick"/> é o relógio do mundo e só
 /// avança em Onda; <see cref="Frame"/> conta todas as chamadas de <see cref="Step"/> (referência do log de replay).
 /// Sem relógio real, sem <c>Random</c>, sem <c>Math.Pow</c>: o <see cref="Rng"/> é semeado pela seed da partida.
 /// Combate: dano direto por alvo (mira First) como mínimo; ganchos para a TD.3 em <c>TdMatchState.Tick.cs</c>.
@@ -19,9 +19,10 @@ public sealed partial class TdMatchState
     private int _stageNumber;
     private int _stageClears;
     private long _stageStartTick;
-    private int _stageBaseIntegrity;
     private int _stageIntegrityLoss;
     private int _backupHealsThisStage;
+    private int _repLostStage;
+    private int _metaShield;
     private List<TdStageSummary> _stageResults = [];
     private readonly TdEnemyStats[] _enemyStats;
     private readonly HashSet<string> _metaNodes;
@@ -68,18 +69,17 @@ public sealed partial class TdMatchState
         _abilityCd = new int[content.Abilities.Length];
         _abilityActive = new int[content.Abilities.Length];
         _abilityUses = new int[content.Abilities.Length];
-        Integrity = content.Stages.Rules.CoreIntegrity;
-        IntegrityMax = Integrity;
         Credits = stage.StartingCredits + content.Runes.CreditSources.StartingCreditsBonus;
         // Cada nó comprado conta uma vez; créditos de meta são aplicados somente na criação da partida.
         foreach (var node in content.Meta.Branches.SelectMany(b => b.Nodes))
             if (_metaNodes.Contains(node.Id))
                 foreach (var effect in node.Effects)
-                    if (effect.Kind == "startingCredits")
-                        Credits += (long)effect.Value;
+                    {
+                        if (effect.Kind == "startingCredits") Credits += (long)effect.Value;
+                        else if (effect.Kind == "xpShield") _metaShield += (int)effect.Value;
+                    }
         AutoStart = content.Stages.Rules.AutoStart.DefaultMode == "countdown" ? AutoStartMode.Countdown : AutoStartMode.Off;
         AutoStartSeconds = content.Stages.Rules.AutoStart.DefaultCountdownSeconds;
-        _stageBaseIntegrity = Integrity;
         RestartCountdown();
     }
 
@@ -147,8 +147,6 @@ public sealed partial class TdMatchState
     public int WaveNumber { get; private set; }
 
     public int TotalWaves => _waves.Length;
-    public int Integrity { get; private set; }
-    public int IntegrityMax { get; private set; }
     public int IntegrityLost => _stageIntegrityLoss;
     public long Credits { get; private set; }
     /// <summary>Teto técnico de segurança (SDD-29 §5.3): 48 torres no total, contando as SEM POSIÇÃO. Não é teto de design: o custo crescente limita antes.</summary>
@@ -538,8 +536,8 @@ public sealed partial class TdMatchState
         _stageClears++;
         Emit(TdEventType.StageCleared, summary.StageNumber, summary.Score);
 
-        Integrity = Math.Min(IntegrityMax, Integrity + Math.Max(0, _options.StageClearHeal));
-        _stageBaseIntegrity = Integrity;
+        GainReputation(TdReputation.StageClearXp(summary.StageNumber, starCount), 0);
+        _repLostStage = 0;
         _stageIntegrityLoss = 0;
         _backupHealsThisStage = 0;
         _stageNumber++;

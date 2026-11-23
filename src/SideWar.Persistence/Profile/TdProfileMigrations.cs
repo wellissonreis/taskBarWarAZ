@@ -10,7 +10,20 @@ public static class TdProfileMigrations
     public static MigrationRegistry Default { get; } = new MigrationRegistry()
         .Register(TdProfileData.Schema, 1, V1ToV2)
         .Register(TdProfileData.Schema, 2, V2ToV3)
-        .Register(TdProfileData.Schema, 3, V3ToV4);
+        .Register(TdProfileData.Schema, 3, V3ToV4)
+        .Register(TdProfileData.Schema, 4, V4ToV5);
+
+    /// <summary>v4 → v5: reputação inicial = soma dos recordes de pontuação por fase (o que definia a patente), sem perder progresso.</summary>
+    private static JsonNode V4ToV5(JsonNode root)
+    {
+        if (root["reputation"] is not null) return root;
+        long sum = 0;
+        if (root["stages"] is JsonArray stages)
+            foreach (var st in stages)
+                if (st is JsonObject o && o["bestScore"] is JsonValue v && v.TryGetValue<int>(out var s)) sum += Math.Max(0, s);
+        root["reputation"] = (int)Math.Min(TdProfileSerializer.MaxScore, sum);
+        return root;
+    }
 
     private static JsonNode V3ToV4(JsonNode root)
     {

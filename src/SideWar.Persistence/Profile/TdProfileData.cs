@@ -8,7 +8,7 @@ namespace SideWar.Persistence.Profile;
 public sealed record TdProfileData
 {
     public const string Schema = "sidewar.td-profile";
-    public const int SchemaVersion = 4;
+    public const int SchemaVersion = 5;
 
     /// <summary>Total de selos já ganhos (1 por estrela nova, 1 por desafio, mais os iniciais da migração do idle).</summary>
     public int SealsEarned { get; init; }
@@ -30,6 +30,9 @@ public sealed record TdProfileData
     public int BestRunWaves { get; init; }
     public string LegacyLastRun { get; init; } = "";
     public int RunsPlayed { get; init; }
+
+    /// <summary>Reputação (XP de patente, v5): sobe ao vencer ondas e desce quando inimigos chegam à base; nunca abaixo de 0. A patente deriva dela.</summary>
+    public int Reputation { get; init; }
 
     public static TdProfileData Default { get; } = new();
 }

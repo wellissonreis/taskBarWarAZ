@@ -213,7 +213,7 @@ public sealed partial class TdMatchState
     /// </summary>
     public IReadOnlyList<TdMutationPreview> PreviewNextWaveMutations()
     {
-        if (_options.IsClassic || Phase is MatchPhase.Vitoria or MatchPhase.Derrota) return [];
+        if (_options.IsClassic || Phase is MatchPhase.Vitoria) return [];
         TdWaveDef def;
         int stageNumber = _stageNumber;
         if (NextWaveNumber > 0) def = _waves[NextWaveNumber - 1];
