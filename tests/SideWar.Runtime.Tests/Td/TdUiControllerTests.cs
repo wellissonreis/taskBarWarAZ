@@ -110,6 +110,32 @@ public sealed class TdUiControllerTests
     }
 
     [Theory]
+    [InlineData(0f, 0)]
+    [InlineData(0.53f, 55)]
+    [InlineData(1f, 100)]
+    public void Volume_slider_writes_settings_in_five_percent_steps(float fraction, int expected)
+    {
+        var r = new Rig();
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
+        var item = r.Ui.BuildPopover()!.Items.Single(i => i.Action == TdUiAction.GameOption && i.Arg == 3);
+        float x = item.Rect.X + 88 + fraction * (item.Rect.W - 142);
+        r.Ui.SetVolumeAt(item, x);
+        Assert.Equal(expected, r.Host.GameOptions.Volume);
+        Assert.Equal(expected / 100f, r.Ui.BuildPopover()!.Items.Single(i => i.Action == TdUiAction.GameOption && i.Arg == 3).Fill);
+    }
+
+    [Fact]
+    public void Speed_buttons_in_pause_menu_update_settings()
+    {
+        var r = new Rig();
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
+        var button = r.Ui.BuildPopover()!.Items.Single(i => i.Action == TdUiAction.SetSpeed && i.Arg == 3);
+        r.Ui.Activate(button);
+        Assert.Equal(3, r.Host.GameOptions.GameSpeed);
+        Assert.True(r.Ui.BuildPopover()!.Items.Single(i => i.Action == TdUiAction.SetSpeed && i.Arg == 3).Selected);
+    }
+
+    [Theory]
     [InlineData(0, 0, "Estagiário")]
     [InlineData(4999, 0, "Estagiário")]
     [InlineData(5000, 1, "Júnior")]

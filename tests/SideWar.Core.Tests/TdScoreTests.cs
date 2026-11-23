@@ -213,6 +213,17 @@ public sealed class TdScoreTests
         Assert.Equal(fraction, progress.Fraction, 4);
     }
 
+    [Theory]
+    [InlineData(0, "brasao_estagiario.png")]
+    [InlineData(4999, "brasao_estagiario.png")]
+    [InlineData(5000, "brasao_junior.png")]
+    [InlineData(12000, "brasao_pleno.png")]
+    [InlineData(22000, "brasao_senior.png")]
+    [InlineData(29000, "brasao_especialista.png")]
+    [InlineData(34000, "brasao_arquiteto.png")]
+    public void Rank_brasao_matches_threshold(int points, string filename) =>
+        Assert.Equal(filename, TdRank.Brasao(TdRank.Progress(points).Current));
+
     private static int Record(int stage, TdBotProfile p)
     {
         int best = 0;
