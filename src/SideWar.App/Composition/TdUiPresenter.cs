@@ -157,10 +157,10 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     }
 
     /// <summary>HUD recolhido a um chip (lembrado em settings; a bandeja tem "Mostrar HUD").</summary>
-    public bool HudMinimized => !controller.ModalOpen;
+    public bool HudMinimized => hudMinimized;
 
     /// <summary>Item "Mostrar HUD/Recolher HUD" da bandeja.</summary>
-    public void ToggleHud() { if (controller.ModalOpen) controller.Cancel(); else controller.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.HudRestore)); }
+    public void ToggleHud() => controller.Activate(new TdUiItem(default, TdUiKind.Button, "", hudMinimized ? TdUiAction.HudRestore : TdUiAction.HudMinimize));
 
     /// <summary>"Como jogar" da bandeja (TD.15).</summary>
     public void OpenHowTo() { controller.OpenHowTo(); Kick(); }

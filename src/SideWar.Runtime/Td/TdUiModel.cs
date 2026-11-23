@@ -17,7 +17,7 @@ public enum TdTone : byte { Normal, Good, Warn, Bad, Accent, Dim }
 public enum TdUiAction : byte
 {
     None, Close, BuildToggle, ChooseTower, StartWave, Ability, Menu, Targeting, Sell, Reposition,
-    Preview, MapOpen, MapTab, SelectStage, BuyNode, Pause, Settings, Exit, Restart, NextStage, HudMinimize, HudRestore,
+    Preview, MapOpen, MapTab, SelectStage, BuyNode, Pause, Settings, Exit, Restart, NextStage, HudMinimize, HudRestore, HudExpand,
     /// <summary>TD.15: pular o tutorial, abrir "Como jogar" e refazer o tutorial.</summary>
     TutorialSkip, HowTo, RedoTutorial,
     /// <summary>TD.17: avançar passo informativo do tutorial (OK) e pergunta-bônus (V, F, ignorar).</summary>
@@ -104,7 +104,7 @@ public sealed record TdPopoverView(string Title, TdUiItem[] Items, float Width, 
 /// usa a escala configurada para o canto. <see cref="Minimized"/> = chip pequeno (núcleo e onda) no canto.
 /// </summary>
 public sealed record TdHudView(TdUiItem[] Items, float Width, float Height, bool Minimized = false, int Wave = 0, int TotalWaves = 0,
-    IReadOnlyList<TdMoneyFloat>? Floats = null, float TopPad = 0f)
+    IReadOnlyList<TdMoneyFloat>? Floats = null, float TopPad = 0f, float LayoutScale = 1f)
 {
     /// <summary>Faixa transparente (DIP) acima do chip enquanto há "+N" visíveis (TD.33d); o fundo do HUD começa em <c>TopPad</c>.</summary>
     public const float FloatPad = 16f;

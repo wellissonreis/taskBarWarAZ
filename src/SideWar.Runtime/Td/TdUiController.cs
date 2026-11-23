@@ -274,7 +274,11 @@ public sealed partial class TdUiController
                 break;
             case TdUiAction.Menu: Toggle(TdUiMode.Menu); break;
             case TdUiAction.HudMinimize: Close(); _host.SetHudMinimized(true); Changed?.Invoke(); break;
-            case TdUiAction.HudRestore: SetMode(_match().Phase is MatchPhase.Vitoria or MatchPhase.Derrota ? TdUiMode.End : TdUiMode.Build); break;
+            case TdUiAction.HudExpand:
+            case TdUiAction.HudRestore:
+                if (_host.HudMinimized) { _host.SetHudMinimized(false); Changed?.Invoke(); }
+                else SetMode(_match().Phase is MatchPhase.Vitoria or MatchPhase.Derrota ? TdUiMode.End : TdUiMode.Build);
+                break;
             case TdUiAction.ModalTab: SetMode((TdUiMode)item.Arg); break;
             case TdUiAction.Targeting when Enum.TryParse<TdTargeting>(item.SArg, out var mode):
                 _send(new SetTargeting(item.Arg, mode));
@@ -691,11 +695,12 @@ public sealed partial class TdUiController
         bool showStart = live && (!m.Options.ContinuousWaves || m.Phase == MatchPhase.Preparo);
         UpdateMoney(m);
         float y0 = _money.Floats.Count > 0 ? TdHudView.FloatPad : 0f;
-        float offset = showStart ? TdHudView.StartWidth + 4f : 0f;
+        const float startWidth = 88f;
+        float offset = showStart ? startWidth + 4f : 0f;
         if (showStart)
         {
             var (_, _, enabled, tone, tip) = StartButton(m);
-            items.Add(new TdUiItem(new DipRect(0, y0 + 6, TdHudView.StartWidth, 28), TdUiKind.Button,
+            items.Add(new TdUiItem(new DipRect(0, y0 + 6, startWidth, 28), TdUiKind.Button,
                 m.Phase == MatchPhase.Onda ? "Próxima" : "Iniciar", TdUiAction.StartWave,
                 Enabled: enabled && !StartBlockedFor(m) && !ModalOpen, Tone: tone,
                 Tip: StartBlockedFor(m) ? "Coloque 1 torre primeiro" : tip,
@@ -708,6 +713,21 @@ public sealed partial class TdUiController
         // Reserve space for large numbers before laying out later groups.
         float coreExtra = Math.Max(0, $"{integ}/{max}".Length - 5) * 8f;
         float waveExtra = Math.Max(0, $"{shown}/{m.TotalWaves}".Length - 4) * 8f;
+        if (_host.HudMinimized)
+        {
+            // O chip permanece no canto e nunca abre automaticamente ao haver uma ação pendente.
+            offset = 0;
+            items.Clear();
+            bool actionReady = (showStart && StartButton(m).Enabled && !StartBlockedFor(m) && !ModalOpen)
+                || (m.Fragments > 0 && m.Frontier.Count > 0);
+            Add(12, 6, 73 + coreExtra, 28, TdUiKind.Button, $"{integ}/{max}", TdUiAction.HudRestore,
+                tag: "core", icon: TdIcon.Heart, tip: coreTip + $" {stageText.Trim()} Onda {shown}/{m.TotalWaves}. Clique para expandir o HUD.", highlight: needed && PulseOn);
+            Add(96 + coreExtra, 11, 1, 18, TdUiKind.Separator, "");
+            Add(109 + coreExtra, 6, 167 + waveExtra, 28, TdUiKind.Label, $"{shown}/{m.TotalWaves}", tag: "wave", tip: $"{stageText}Onda {shown}/{m.TotalWaves}");
+            Add(282 + coreExtra + waveExtra, 6, 28, 28, TdUiKind.Button, "", TdUiAction.HudExpand,
+                icon: TdIcon.Expand, tip: actionReady ? "Expandir HUD: há uma ação disponível" : "Expandir HUD", fill: actionReady ? 1f : 0f);
+            return CompactHud(new TdHudView(HighlightHud(items), 316 + coreExtra + waveExtra, 40, Minimized: true, Wave: shown, TotalWaves: m.TotalWaves), 0.55f);
+        }
         float moneyExtra = Math.Max(0, Math.Max(_money.Real, _money.Display).ToString(System.Globalization.CultureInfo.InvariantCulture).Length - 3) * 8f;
         float grow = coreExtra + waveExtra + moneyExtra;
         Add(12, 6, 73 + coreExtra, 28, TdUiKind.Button, $"{integ}/{max}", TdUiAction.HudRestore, tag: "core", icon: TdIcon.Heart, tip: coreTip + $" {stageText.Trim()} Onda {shown}/{m.TotalWaves}. Créditos ¢{m.Credits}. Clique para abrir o menu.", highlight: needed && PulseOn);
@@ -726,9 +746,16 @@ public sealed partial class TdUiController
         for (int i = 1; i <= 3; i++)
             Add(495 + grow + (i - 1) * 32, 9, 30, 22, TdUiKind.Button, $"{i}x", TdUiAction.SetSpeed, i, enabled: !ModalOpen, selected: speed == i, tip: $"Velocidade {i}x");
         // O TD não tem caixa coletável desde TD.30a; a ação permanece desabilitada.
-        Add(604 + grow, 6, 110, 28, TdUiKind.Button, "Coletar caixa", tag: "crate", enabled: false, tip: "Nenhuma caixa disponível no modo TD.");
-        return new TdHudView(HighlightHud(items), offset + 720 + grow, 40 + y0, Minimized: true, Wave: shown, TotalWaves: m.TotalWaves, Floats: _money.Floats, TopPad: y0);
+        Add(604 + grow, 6, 135, 28, TdUiKind.Button, "Coletar caixa", tag: "crate", enabled: false, tip: "Nenhuma caixa disponível no modo TD.");
+        Add(745 + grow, 6, 28, 28, TdUiKind.Button, "", TdUiAction.HudMinimize, icon: TdIcon.Collapse, tip: "Recolher HUD");
+        return CompactHud(new TdHudView(HighlightHud(items), offset + 779 + grow, 40 + y0, Minimized: false, Wave: shown, TotalWaves: m.TotalWaves, Floats: _money.Floats, TopPad: y0), 0.7f);
     }
+
+    private static TdHudView CompactHud(TdHudView view, float scale) => view with
+    {
+        Width = view.Width * scale, Height = view.Height * scale, TopPad = view.TopPad * scale, LayoutScale = scale,
+        Items = view.Items.Select(i => i with { Rect = new DipRect(i.Rect.X * scale, i.Rect.Y * scale, i.Rect.W * scale, i.Rect.H * scale) }).ToArray(),
+    };
 
     // ================================================================ TD.33d: dinheiro visível (só apresentação)
 

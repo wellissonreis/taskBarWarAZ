@@ -256,7 +256,7 @@ public sealed partial class TdUiController
         UpdateTip(m);
         SyncHurt(m);
         if (_onb.TutorialDone) return;
-        bool min = !ModalOpen;
+        bool min = _host.HudMinimized;
         if (_hudPhase == 0 && !min) _hudPhase = 1;
         if (_hudPhase == 1 && min) _hudPhase = 3;
         if (_hudPhase == 2 && !min) _hudPhase = 3;
@@ -427,7 +427,7 @@ public sealed partial class TdUiController
     private (TdIcon Icon, string Text, string? Sub, bool Ok) StepLines(TdTutorialStep step, TdMatchState m) => step switch
     {
         TdTutorialStep.HudOpen => (TdIcon.Expand, "Toque no chip para abrir", null, false),
-        TdTutorialStep.HudCollapse => (TdIcon.Collapse, "Feche a modal: o jogo começa", "Esc ou ✕. Ela abre pelo chip.", false),
+        TdTutorialStep.HudCollapse => (TdIcon.Collapse, "Recolha o HUD", "Use o botão de recolher.", false),
         TdTutorialStep.Core => (TdIcon.Heart, "Proteja o núcleo!", "Chegar a 0 = derrota.", true),
         TdTutorialStep.Credits => (TdIcon.Coin, "Créditos compram torres.", "Cada onda rende mais.", true),
         TdTutorialStep.Portal => (TdIcon.Portal, "Inimigos saem do portal.", "Eles correm até o núcleo.", true),

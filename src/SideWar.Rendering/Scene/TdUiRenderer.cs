@@ -35,10 +35,15 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     public void DrawHud(SKCanvas c, TdHudView hud, int hover)
     {
         c.Clear(SKColors.Transparent);
+        float s = hud.LayoutScale;
+        c.Save();
+        c.Scale(s);
+        hud = hud with { Width = hud.Width / s, Height = hud.Height / s, TopPad = hud.TopPad / s,
+            Items = hud.Items.Select(i => i with { Rect = new DipRect(i.Rect.X / s, i.Rect.Y / s, i.Rect.W / s, i.Rect.H / s) }).ToArray() };
         RoundBox(c, new DipRect(0, hud.TopPad, hud.Width, hud.Height - hud.TopPad), Palette.Td.Border, Palette.Td.Surface, 5);
         for (int i = 0; i < hud.Items.Length; i++)
         {
-            DrawHudItem(c, hud.Items[i], i == hover);
+            DrawHudItem(c, hud.Items[i], i == hover, s);
             if (hud.Items[i].SArg == "wave")
                 DrawWaveTicks(c, hud.Items[i].Rect, hud.Wave, hud.TotalWaves);
             if (hud.Items[i].Highlight) DrawHighlight(c, hud.Items[i].Rect);
@@ -46,6 +51,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         if (hud.Floats is { Count: > 0 } floats)
             foreach (var it in hud.Items)
                 if (it.Kind == TdUiKind.Money) { DrawMoneyFloats(c, it.Rect, floats); break; }
+        c.Restore();
     }
 
     // As barras do design cabem no chip existente e acompanham a onda exibida, sem ampliar o HUD.
@@ -150,20 +156,20 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         TdIconPainter.Draw(c, icon, _p.Px(xDip), _p.Px(yDip), _p.Px(sizeDip), color, Palette.Ambar);
 
     /// <summary>Item do HUD (TD.14): rótulo/botão com ícone à esquerda, texto legível (JetBrains Mono), bônus com moeda e recarga em barra.</summary>
-    private void DrawHudItem(SKCanvas c, in TdUiItem it, bool hover)
+    private void DrawHudItem(SKCanvas c, in TdUiItem it, bool hover, float layoutScale)
     {
         var r = it.Rect;
         if (it.Kind == TdUiKind.Separator) { _p.Fill(c, r, Palette.Td.BorderStrong); return; }
         if (it.SArg == "core")
         {
             DrawIcon(c, TdIcon.Heart, r.X, r.Y + 7, 14, new SKColor(0xf2, 0x6d, 0x7d));
-            _p.Text(c, it.Text, PanelFont.JetBrainsMono, 13, new DipRect(r.X + 20, r.Y + 6, r.W - 20, 16), new SKColor(0xf4, 0xf7, 0xfb));
+            _p.Text(c, it.Text, PanelFont.JetBrainsMono, Math.Max(13, 11 / layoutScale), new DipRect(r.X + 20, r.Y + 2, r.W - 20, 24), new SKColor(0xf4, 0xf7, 0xfb));
             return;
         }
         if (it.SArg == "wave")
         {
-            _p.Text(c, "Onda", PanelFont.SpaceGrotesk, 12, new DipRect(r.X, r.Y + 6, 36, 16), Palette.Td.Muted);
-            _p.Text(c, it.Text, PanelFont.JetBrainsMono, 13, new DipRect(r.X + 44, r.Y + 6, 60 + (r.W - 167), 16), new SKColor(0xf4, 0xf7, 0xfb));
+            _p.Text(c, "Onda", PanelFont.SpaceGrotesk, Math.Max(12, 11 / layoutScale), new DipRect(r.X, r.Y + 2, 44, 24), Palette.Td.Muted);
+            _p.Text(c, it.Text, PanelFont.JetBrainsMono, Math.Max(13, 11 / layoutScale), new DipRect(r.X + 52, r.Y + 2, 52 + (r.W - 167), 24), new SKColor(0xf4, 0xf7, 0xfb));
             return;
         }
         if (it.Kind == TdUiKind.Money)
@@ -172,7 +178,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             using var coin = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, Color = Palette.Td.Amber, StrokeWidth = Math.Max(1f, _p.Px(1.3f)) };
             c.DrawCircle(_p.Px(r.X + 7), _p.Px(r.Y + 14), _p.Px(5), coin);
             c.DrawCircle(_p.Px(r.X + 7), _p.Px(r.Y + 14), _p.Px(2.2f), coin);
-            _p.Text(c, it.Text, PanelFont.JetBrainsMono, 13, new DipRect(r.X + 20, r.Y + (it.Sub is null ? 6 : 1), r.W - 20, 16), new SKColor(0xf4, 0xf7, 0xfb));
+            _p.Text(c, it.Text, PanelFont.JetBrainsMono, Math.Max(13, 11 / layoutScale), new DipRect(r.X + 20, r.Y + (it.Sub is null ? 3 : 1), r.W - 20, 20), new SKColor(0xf4, 0xf7, 0xfb));
             if (it.Sub is not null) _p.Text(c, it.Sub, PanelFont.JetBrainsMono, 8, new DipRect(r.X + 20, r.Y + 17, r.W - 20, 10), Palette.Td.Muted);
             return;
         }
@@ -185,13 +191,13 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             box.MoveTo(_p.Px(r.X + 10), _p.Px(r.Y + 10)); box.LineTo(_p.Px(r.X + 16), _p.Px(r.Y + 7)); box.LineTo(_p.Px(r.X + 22), _p.Px(r.Y + 10)); box.LineTo(_p.Px(r.X + 22), _p.Px(r.Y + 17)); box.LineTo(_p.Px(r.X + 16), _p.Px(r.Y + 20)); box.LineTo(_p.Px(r.X + 10), _p.Px(r.Y + 17)); box.Close();
             box.MoveTo(_p.Px(r.X + 10), _p.Px(r.Y + 10)); box.LineTo(_p.Px(r.X + 16), _p.Px(r.Y + 13)); box.LineTo(_p.Px(r.X + 22), _p.Px(r.Y + 10)); box.MoveTo(_p.Px(r.X + 16), _p.Px(r.Y + 13)); box.LineTo(_p.Px(r.X + 16), _p.Px(r.Y + 20));
             using var path = box.Detach(); c.DrawPath(path, paint);
-            _p.Text(c, it.Text, PanelFont.SpaceGrotesk, 12, new DipRect(r.X + 26, r.Y + 6, r.W - 28, 16), Palette.Td.Dim, TextAlign.Center);
+            _p.Text(c, it.Text, PanelFont.SpaceGrotesk, Math.Max(12, 11 / layoutScale), new DipRect(r.X + 26, r.Y + 3, r.W - 28, 20), Palette.Td.Dim, TextAlign.Center);
             return;
         }
         if (it.Action == TdUiAction.SetSpeed)
         {
             if (it.Selected) RoundBox(c, r, Palette.Td.Amber, Palette.Td.Amber, 5);
-            _p.Text(c, it.Text, PanelFont.JetBrainsMono, 11, new DipRect(r.X, r.Y + 4, r.W, 14), it.Selected ? Palette.Td.Background : Palette.Td.Muted, TextAlign.Center);
+            _p.Text(c, it.Text, PanelFont.JetBrainsMono, Math.Max(11, 11 / layoutScale), new DipRect(r.X, r.Y + 1, r.W, 20), it.Selected ? Palette.Td.Background : Palette.Td.Muted, TextAlign.Center);
             return;
         }
         if (it.Action == TdUiAction.PauseToggle)
@@ -224,7 +230,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             return;
         }
         var color = ToneColor(it.Tone);
-        float fs = it.Kind == TdUiKind.Button && r.W <= 80f ? 8.5f : 9f;
+        float fs = Math.Max(it.Kind == TdUiKind.Button && r.W <= 80f ? 8.5f : 9f, 11f / layoutScale);
         bool isButton = it.Kind == TdUiKind.Button;
         bool enabled = it.Enabled && it.Action != TdUiAction.None;
         if (isButton)
@@ -260,7 +266,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             _p.Text(c, it.Right, PanelFont.JetBrainsMono, fs, new DipRect(rx, r.Y + (r.H - 12f) / 2f, rightW - (it.RightCoin ? 12f : 0f), 12f), enabled ? Palette.Ambar : Palette.TxtRotulo);
             if (it.RightCoin) DrawIcon(c, TdIcon.Coin, r.X + r.W - 15f, r.Y + (r.H - 10f) / 2f, 10f, Palette.Ambar);
         }
-        _p.Text(c, it.Text, PanelFont.JetBrainsMono, fs, new DipRect(x, r.Y + (r.H - 12f) / 2f, r.W - (x - r.X) - rightW - 2f, 12f), color);
+        _p.Text(c, it.Text, PanelFont.JetBrainsMono, fs, new DipRect(x, r.Y + (r.H - fs) / 2f, r.W - (x - r.X) - rightW - 2f, fs), color);
     }
 
     /// <summary>Seta âmbar de 7 DIP apontando para cima/direita (marca do botão Torres: abre o painel).</summary>
