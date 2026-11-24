@@ -385,7 +385,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
             if (category.Action == TdUiAction.TowerCategory) controller.Activate(category);
             return;
         }
-        if (key is >= 49 and <= 53)
+        if (key is >= 49 and <= 54)
         {
             controller.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.ModalTab, (int)TdUiController.ModalTabs[key - 49]));
             return;

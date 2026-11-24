@@ -152,7 +152,7 @@ public sealed class TdUiControllerTests
         var r = new Rig();
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
         var item = r.Ui.BuildPopover()!.Items.Single(i => i.Action == TdUiAction.GameOption && i.Arg == 3);
-        float x = item.Rect.X + 88 + fraction * (item.Rect.W - 142);
+        float x = item.Rect.X + 8 + fraction * (item.Rect.W - 16);
         r.Ui.SetVolumeAt(item, x);
         Assert.Equal(expected, r.Host.GameOptions.Volume);
         Assert.Equal(expected / 100f, r.Ui.BuildPopover()!.Items.Single(i => i.Action == TdUiAction.GameOption && i.Arg == 3).Fill);
@@ -398,6 +398,20 @@ public sealed class TdUiControllerTests
     }
 
     [Fact]
+    public void Tab_bar_has_Jogo_first_and_Fases_between_Torres_and_Como_jogar_and_Jogo_tab_has_no_map_button()
+    {
+        var r = new Rig();
+        r.Ui.OpenStartupModal();
+        var pop = r.Ui.BuildPopover()!;
+        var names = pop.Items.Where(i => i.Action == TdUiAction.ModalTab).Select(i => i.Text).ToArray();
+        Assert.Equal(["Jogo", "Construir", "Runas", "Torres", "Fases", "Como jogar"], names);
+        Assert.DoesNotContain(pop.Items, i => i.Action == TdUiAction.MapOpen);
+        Assert.Equal(4, pop.Items.Count(i => i.SArg == "jg-stat"));
+        r.Ui.Activate(pop.Items.Single(i => i.Action == TdUiAction.ModalTab && i.Text == "Fases"));
+        Assert.Equal(TdUiMode.Map, r.Ui.Mode);
+    }
+
+    [Fact]
     public void Startup_modal_opens_on_the_first_tab_with_the_rank_card()
     {
         var r = new Rig();
@@ -549,7 +563,7 @@ public sealed class TdUiControllerTests
         r.Ui.Activate(hud.Items.First(i => i.Action == TdUiAction.HudRestore));
         Assert.True(r.Ui.ModalOpen);
         var tabs = r.Ui.BuildPopover()!.Items.Where(i => i.Action == TdUiAction.ModalTab).ToArray();
-        Assert.Equal(5, tabs.Length);
+        Assert.Equal(6, tabs.Length);
         Assert.Equal((int)TdUiMode.Menu, tabs[0].Arg); // Jogo (patente/XP) é a primeira aba
         Assert.Equal("Jogo", tabs[0].Text);
     }
@@ -608,7 +622,7 @@ public sealed class TdUiControllerTests
         Assert.StartsWith("Onda 1/", preview.Title, StringComparison.Ordinal);
         Assert.Contains(preview.Items, i => i.Text.Contains('x'));
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "...", TdUiAction.Menu));
-        r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.MapOpen));
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.ModalTab, (int)TdUiMode.Map));
         var map = r.Ui.BuildPopover()!;
         Assert.Equal(6, map.Items.Count(i => i.Action == TdUiAction.SelectStage));
         Assert.Equal(2, map.Items.Count(i => i is { Action: TdUiAction.SelectStage, SArg: "mapnode", Fill: > 0f }));
@@ -626,7 +640,7 @@ public sealed class TdUiControllerTests
     {
         var r = new Rig();
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "...", TdUiAction.Menu));
-        r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.MapOpen));
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.ModalTab, (int)TdUiMode.Map));
         var map = r.Ui.BuildPopover()!;
         r.Ui.Activate(map.Items.First(i => i is { Action: TdUiAction.SelectStage, Arg: 2 }));
         Assert.DoesNotContain(r.Host.Calls, c => c.StartsWith("stage", StringComparison.Ordinal));
@@ -683,7 +697,7 @@ public sealed class TdUiControllerTests
         var r = new Rig();
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "...", TdUiAction.Menu));
         Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Kind == TdUiKind.Bar && i.SArg == "rank-card" && i.Text == "Júnior");
-        r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.MapOpen));
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.ModalTab, (int)TdUiMode.Map));
         var map = r.Ui.BuildPopover()!;
         Assert.DoesNotContain(map.Items, i => i.Kind == TdUiKind.Bar); // patente só no chip do cabeçalho
         var d1 = map.Items.Single(i => i.SArg == "mapdetail"); // a fase atual (1) já vem selecionada
