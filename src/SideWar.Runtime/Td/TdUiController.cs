@@ -1798,47 +1798,8 @@ public sealed partial class TdUiController
         items.Add(new(new DipRect(dx, by + 48, dw, 14), TdUiKind.Label, "Jogar uma fase reinicia a partida atual.", SArg: "mapwarn"));
     }
 
-    private TdPopoverView BuildMap(TdMatchState m)
-    {
-        var s = new Stack(PopoverWidth);
-        float half = (PopoverWidth - 2 * Pad - 2) / 2f;
-        s.Items.Add(new TdUiItem(new DipRect(Pad, s.Y, half, RowH), TdUiKind.Button, "Fases", TdUiAction.MapTab, 0, Selected: !_mapSeals));
-        s.Items.Add(new TdUiItem(new DipRect(Pad + half + 2, s.Y, half, RowH), TdUiKind.Button, "Selos", TdUiAction.MapTab, 1, Selected: _mapSeals));
-        s.Y += RowH + 4;
-        if (!_mapSeals)
-        {
-            AddRankBar(s, _host.Rank);
-            foreach (var st in m.Content.Stages.Stages)
-            {
-                bool open = _host.StageUnlocked(st.Id);
-                int stars = _host.StageStars(st.Id);
-                string right = open ? new string('*', stars) + new string('-', 3 - stars) : "bloqueada";
-                s.Add(TdUiKind.Button, $"{st.Id}. {st.Title}", RowH + 2, TdUiAction.SelectStage, st.Id, right: right, sub: null, enabled: open,
-                    selected: st.Id == m.StageId, tone: open ? TdTone.Normal : TdTone.Dim);
-                if (open)
-                {
-                    int best = _host.StageBestScore(st.Id);
-                    AddBadges(s, _host.StageCrown(st.Id), _host.StageMedals(st.Id), best > 0 ? $"Recorde {best}" : "sem recorde");
-                }
-            }
-            s.Add(TdUiKind.Label, "Clicar numa fase reinicia a partida.", RowH - 4, tone: TdTone.Dim);
-        }
-        else
-        {
-            s.Add(TdUiKind.Label, $"Selos disponiveis: {_host.SealsAvailable}  (valem na proxima partida)", RowH - 4, tone: TdTone.Accent);
-            foreach (var b in m.Content.Meta.Branches)
-            {
-                s.Add(TdUiKind.Header, b.Name, RowH - 6);
-                foreach (var n in b.Nodes)
-                {
-                    bool bought = _host.NodePurchased(n.Id);
-                    s.Add(TdUiKind.Button, n.Name, RowH - 2, TdUiAction.BuyNode, sarg: n.Id, right: bought ? "COMPRADO" : $"{n.Cost} selo{(n.Cost > 1 ? "s" : "")}",
-                        enabled: !bought && _host.SealsAvailable >= n.Cost, tone: bought ? TdTone.Good : TdTone.Normal);
-                }
-            }
-        }
-        return Finish(_mapSeals ? "Selos: arvore de melhorias" : "Mapa de fases", s, 0);
-    }
+    /// <summary>Aba Fases: o conteúdo (mapa + selos) vem de <see cref="AddMapModal"/> no Modalize; aqui só o título.</summary>
+    private static TdPopoverView BuildMap(TdMatchState m) => Finish("Fases e selos", new Stack(PopoverWidth), 0);
 
     private TdPopoverView BuildEnd(TdMatchState m)
     {
