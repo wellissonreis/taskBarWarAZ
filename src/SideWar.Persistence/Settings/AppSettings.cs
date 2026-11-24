@@ -182,4 +182,7 @@ public sealed record TdSettings
 
     /// <summary>TD.33d (RF-33.21): modo discreto, sem brilhos nem contagem animada; "+N" só nos ganhos grandes. Desligado por padrão.</summary>
     public bool DiscreetMode { get; init; }
+
+    /// <summary>0 desliga avisos; 1, 2 e 3 definem seu tamanho.</summary>
+    public int NoticeSize { get; init; } = 1;
 }

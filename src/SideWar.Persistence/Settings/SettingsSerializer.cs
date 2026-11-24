@@ -83,6 +83,7 @@ public static class SettingsSerializer
         w.WriteString("questionsSeen", s.Td.QuestionsSeen);
         w.WriteBoolean("showIncome", s.Td.ShowIncome);
         w.WriteBoolean("discreetMode", s.Td.DiscreetMode);
+        w.WriteNumber("noticeSize", s.Td.NoticeSize);
         w.WriteEndObject();
         w.WriteEndObject();
     }
@@ -173,6 +174,7 @@ public static class SettingsSerializer
                 QuestionsSeen = Str(td, "questionsSeen", 1024) ?? d.Td.QuestionsSeen,
                 ShowIncome = Bool(td, "showIncome", d.Td.ShowIncome),
                 DiscreetMode = Bool(td, "discreetMode", d.Td.DiscreetMode),
+                NoticeSize = IntRange(td, "noticeSize", 0, 3, d.Td.NoticeSize),
             },
         };
     }

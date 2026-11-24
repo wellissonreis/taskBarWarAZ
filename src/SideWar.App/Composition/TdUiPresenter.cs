@@ -50,7 +50,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     public void LoadGameOptions(SideWar.Persistence.Settings.AppSettings settings)
     {
         gameOptions = new(settings.Td.BandHeightDip, settings.Td.AutoStartEnabled, settings.Audio.Enabled, (int)Math.Round(settings.Audio.Volume * 100), settings.Td.BonusQuestions, settings.Td.FadeWhenUnfocused,
-            settings.Td.ContinuousWaves, settings.Td.TowerPanelPinned, settings.Td.GameSpeed, settings.Td.ShowIncome, settings.Td.DiscreetMode, settings.Td.AutoRestart);
+            settings.Td.ContinuousWaves, settings.Td.TowerPanelPinned, settings.Td.GameSpeed, settings.Td.ShowIncome, settings.Td.DiscreetMode, settings.Td.AutoRestart, settings.Td.NoticeSize);
         SetCornerUiScale(settings.Td.CornerUiScalePercent);
         modalOffsetX = dragBaseX = settings.Td.ModalOffsetX; modalOffsetY = dragBaseY = settings.Td.ModalOffsetY;
         bossHotkey = settings.Hotkeys.ToggleVisibility;
@@ -342,6 +342,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
 
     private void CollapseIfOutside(int x, int y)
     {
+        if (controller.NoticeOpen) { controller.DismissNotice(); Refresh(true); }
         if (disposed || bossHidden || (!expansionTracked && controller.CurrentTip is null) || game.Dock.Current is not { } layout) return;
         static bool Inside(PixelRect r, int x, int y) => x >= r.Left && x < r.Right && y >= r.Top && y < r.Bottom;
         if (Inside(layout.Scene, x, y) || (hudWindow is { IsVisible: true } && Inside(hudWindow.Bounds, x, y))

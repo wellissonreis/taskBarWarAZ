@@ -59,14 +59,16 @@ public sealed partial class TdUiController
     private TdMatchState? _attackMatch;
     private long _seenLost;
     private double _attackNextAt = double.NegativeInfinity;
+    private double _criticalNoticeUntil;
     private bool _pinnedOpen;
     private bool _outsideCollapsed;
     /// <summary>TD.28b: atalho global "minimizar tudo" ativo: nenhum cartão, painel ou modal é aberto e a pergunta-bônus espera.</summary>
     public bool BossHidden { get; private set; }
     private bool PanelPinned => _host.GameOptions.PanelPinned;
     private bool PinnedIdle => QuickTowersOpen && PanelPinned && !BuildActive;
-    public bool NoticeOpen => _noticeText is not null && !BossHidden && _now() < _noticeUntil;
+    public bool NoticeOpen => _host.GameOptions.NoticeSize != 0 && _noticeText is not null && !BossHidden && _now() < _noticeUntil;
     public string? NoticeText => NoticeOpen ? _noticeText : null;
+    public void DismissNotice() { if (_noticeText is null) return; _noticeText = null; Changed?.Invoke(); }
     /// <summary>Qualquer popover pequeno ancorado ao chip: painel rápido, pergunta-bônus, aviso de fase ou cartão de fim. Nunca ativa janela.</summary>
     public bool CornerPopover => QuickTowersOpen || RuneWindowOpen || EndCardOpen || NoticeOpen || RuneCardOpen || AlertCardOpen || FuseCardOpen || FusionTipOpen || _fusionChoosingModule || FusionTargetActive || MutationWarnOpen || ((Mode == TdUiMode.None || QuickTowersOpen) && QuizActive);
     private int _chosenX = -1;       // X lógico já escolhido (passo "escolher a torre"); -1 = ainda no passo do ponto
@@ -376,6 +378,7 @@ public sealed partial class TdUiController
                     5 => o with { Fade = !o.Fade },
                     6 => o with { Continuous = !o.Continuous },
                     7 => o with { PanelPinned = !o.PanelPinned },
+                    8 => o with { NoticeSize = (Math.Clamp(o.NoticeSize, 0, 3) + 1) % 4 },
                     _ => o,
                 };
                 _host.SetGameOptions(next);
@@ -646,6 +649,7 @@ public sealed partial class TdUiController
         if (!ReferenceEquals(_attackMatch, m)) { _attackMatch = m; _seenLost = m.ReputationLostTotal; }
         bool attacked = m.ReputationLostTotal > _seenLost;
         _seenLost = m.ReputationLostTotal;
+        if (attacked && !BossHidden) _criticalNoticeUntil = _now() + StageNoticeSeconds;
         if (progress.Total != _seenRankScore)
         {
             _seenRankScore = progress.Total;
@@ -702,14 +706,14 @@ public sealed partial class TdUiController
 
     private TdPopoverView BuildNotice()
     {
-        // Toast discreto: uma linha, ~22 DIP, sem botão; o mais recente substitui (só existe um texto). Fill = opacidade (entrada/saída suaves).
-        double now = _now(), dur = _noticeTitle == "Promoção" ? PromoNoticeSeconds : StageNoticeSeconds, start = _noticeUntil - dur;
-        float alpha = (float)Math.Clamp(Math.Min((now - start) / NoticeFadeSeconds, (_noticeUntil - now) / NoticeFadeSeconds), 0.0, 1.0);
+        // Toast discreto: uma linha, tamanho configurável, sem animação e somente um por vez.
         var tone = _noticeRank is not null ? TdTone.Accent : _noticeTitle == AttackTitle ? TdTone.Warn : _noticeTitle == "Fusão recusada" ? TdTone.Warn : TdTone.Good;
-        float w = Math.Clamp(26f + _noticeText!.Length * 6.6f + (_noticeRank is not null ? 22f : 0f), 110f, 280f);
-        var item = new TdUiItem(new DipRect(0, 0, w, ToastH), TdUiKind.Label, _noticeText!, Arg: _noticeRank is { } r ? (int)r : -1, SArg: "toast", Tone: tone, Icon: tone == TdTone.Warn ? TdIcon.Alert : TdIcon.Check,
-            Fill: alpha, Sub: _noticeTitle == "Promoção" ? "glow" : null);
-        return new TdPopoverView(_noticeTitle ?? "Fase concluida", [item], w, ToastH, 0f);
+        float scale = _host.GameOptions.NoticeSize switch { 2 => 1.25f, 3 => 1.5f, _ => 1f };
+        float h = ToastH * scale;
+        float w = Math.Clamp(26f + _noticeText!.Length * 6.6f + (_noticeRank is not null ? 22f : 0f), 110f, 280f) * scale;
+        var item = new TdUiItem(new DipRect(0, 0, w, h), TdUiKind.Label, _noticeText!, Arg: _noticeRank is { } r ? (int)r : -1, SArg: "toast", Tone: tone, Icon: tone == TdTone.Warn ? TdIcon.Alert : TdIcon.Check,
+            Fill: 1f, FontSize: ToastFont * scale);
+        return new TdPopoverView(_noticeTitle ?? "Fase concluida", [item], w, h, 0f);
     }
 
     private void SetMode(TdUiMode mode)
@@ -857,7 +861,7 @@ public sealed partial class TdUiController
             bool actionReady = (showStart && StartButton(m).Enabled && !StartBlockedFor(m) && !ModalOpen)
                 || m.CanAwakenAny;
             Add(12, 6, 73 + coreExtra, 28, TdUiKind.Button, repText, TdUiAction.HudRestore,
-                tag: "core", icon: TdIcon.Medal, fill: (float)repRank.Fraction, tip: coreTip + $" {stageText.Trim()} Onda {shown}/{m.TotalWaves}. Clique para expandir o HUD.", highlight: needed && PulseOn);
+                tag: "core", icon: TdIcon.Medal, fill: (float)repRank.Fraction, tip: coreTip + $" {stageText.Trim()} Onda {shown}/{m.TotalWaves}. Clique para expandir o HUD.", highlight: needed && PulseOn, sub: _host.GameOptions.NoticeSize == 0 && _now() < _criticalNoticeUntil ? "critical-notice" : null);
             Add(96 + coreExtra, 11, 1, 18, TdUiKind.Separator, "");
             Add(109 + coreExtra, 6, 167 + waveExtra, 28, TdUiKind.Label, $"{shown}/{m.TotalWaves}", tag: "wave", tip: $"{stageText}Onda {shown}/{m.TotalWaves}");
             Add(282 + coreExtra + waveExtra, 6, 28, 28, TdUiKind.Button, "", TdUiAction.HudExpand,
@@ -866,7 +870,7 @@ public sealed partial class TdUiController
         }
         float moneyExtra = Math.Max(0, Math.Max(_money.Real, _money.Display).ToString(System.Globalization.CultureInfo.InvariantCulture).Length - 3) * 8f;
         float grow = coreExtra + waveExtra + moneyExtra;
-        Add(12, 6, 73 + coreExtra, 28, TdUiKind.Button, repText, TdUiAction.HudRestore, tag: "core", icon: TdIcon.Medal, fill: (float)repRank.Fraction, tip: coreTip + $" {stageText.Trim()} Onda {shown}/{m.TotalWaves}. Créditos ¢{m.Credits}. Clique para abrir o menu.", highlight: needed && PulseOn);
+        Add(12, 6, 73 + coreExtra, 28, TdUiKind.Button, repText, TdUiAction.HudRestore, tag: "core", icon: TdIcon.Medal, fill: (float)repRank.Fraction, tip: coreTip + $" {stageText.Trim()} Onda {shown}/{m.TotalWaves}. Créditos ¢{m.Credits}. Clique para abrir o menu.", highlight: needed && PulseOn, sub: _host.GameOptions.NoticeSize == 0 && _now() < _criticalNoticeUntil ? "critical-notice" : null);
         Add(96 + coreExtra, 11, 1, 18, TdUiKind.Separator, "");
         Add(109 + coreExtra, 6, 167 + waveExtra, 28, TdUiKind.Label, $"{shown}/{m.TotalWaves}", tag: "wave", tip: $"{stageText}Onda {shown}/{m.TotalWaves}");
         Add(288 + coreExtra + waveExtra, 11, 1, 18, TdUiKind.Separator, "");
@@ -1698,6 +1702,7 @@ public sealed partial class TdUiController
         s.Add(TdUiKind.Button, options.Fade ? "Esmaecer: ligado" : "Esmaecer: desligado", RowH, TdUiAction.GameOption, 5);
         s.Add(TdUiKind.Button, options.Continuous ? "Ondas contínuas: ligado" : "Ondas contínuas: desligado", RowH, TdUiAction.GameOption, 6, right: "Próxima corrida");
         s.Add(TdUiKind.Button, options.PanelPinned ? "Painel de torres fixo: ligado" : "Painel de torres fixo: desligado", RowH, TdUiAction.GameOption, 7);
+        s.Add(TdUiKind.Button, $"Avisos: {options.NoticeSize switch { 0 => "Desligado", 2 => "Médio", 3 => "Grande", _ => "Pequeno" }}", RowH, TdUiAction.GameOption, 8);
         for (int v = 1; v <= 3; v++)
             s.Add(TdUiKind.Button, $"{v}x", RowH, TdUiAction.SetSpeed, v, selected: Math.Clamp(options.GameSpeed, 1, 3) == v);
         if (_confirmWipe)

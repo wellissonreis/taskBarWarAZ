@@ -85,6 +85,34 @@ public sealed class TdUiControllerTests
         return m;
     }
 
+    [Theory]
+    [InlineData(1, 22f)]
+    [InlineData(2, 27.5f)]
+    [InlineData(3, 33f)]
+    public void Notice_sizes_and_click_dismissal(int size, float height)
+    {
+        var r = new Rig();
+        r.Host.SetGameOptions(r.Host.GameOptions with { NoticeSize = size });
+        r.Ui.Sync();
+        r.Host.Score = 12000;
+        r.Ui.Sync();
+        Assert.Equal(height, r.Ui.BuildPopover()!.Height);
+        r.Ui.DismissNotice();
+        Assert.False(r.Ui.NoticeOpen);
+    }
+
+    [Fact]
+    public void Disabled_notices_keep_a_small_critical_indicator()
+    {
+        var r = new Rig();
+        r.Host.SetGameOptions(r.Host.GameOptions with { NoticeSize = 0 });
+        r.Ui.Sync();
+        typeof(TdMatchState).GetProperty("ReputationLostTotal")!.SetValue(r.Match, 25L);
+        r.Ui.Sync();
+        Assert.False(r.Ui.NoticeOpen);
+        Assert.Contains(r.Ui.BuildHud().Items, i => i.SArg == "core" && i.Sub == "critical-notice");
+    }
+
     [Fact]
     public void Promotion_and_demotion_notices_follow_the_rank_and_expire()
     {

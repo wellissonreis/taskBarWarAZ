@@ -232,6 +232,7 @@ public sealed partial class TdUiRenderer(Typography typography, int dpi, SpriteA
             float barW = r.W - 6;
             _p.Fill(c, new DipRect(r.X, r.Y + r.H - 4, barW, 2), Palette.Td.BorderStrong);
             if (it.Fill > 0f) _p.Fill(c, new DipRect(r.X, r.Y + r.H - 4, barW * Math.Clamp(it.Fill, 0f, 1f), 2), Palette.Td.Amber);
+            if (it.Sub == "critical-notice") _p.Fill(c, new DipRect(r.X + barW - 4, r.Y + r.H - 8, 4, 4), Palette.Td.Amber);
             return;
         }
         if (it.SArg == "wave")
@@ -1063,7 +1064,10 @@ public sealed partial class TdUiRenderer(Typography typography, int dpi, SpriteA
         var dot = ToneColor(it.Tone);
         using var layer = new SKPaint { Color = SKColors.White.WithAlpha((byte)(215 * k)) };
         c.SaveLayer(layer);
-        RoundBox(c, new DipRect(0, 0, w, h), Palette.BordaPainel, Palette.BgPainel, 4);
+        float scale = h / TdUiController.ToastH;
+        c.Scale(scale);
+        w /= scale; h /= scale;
+        RoundBox(c, new DipRect(0, 0, w, h), Palette.BgPainel, Palette.BgPainel, 4);
         float tx = 12f;
         if (it.Arg >= 0)
         {

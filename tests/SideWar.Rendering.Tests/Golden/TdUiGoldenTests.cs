@@ -214,6 +214,32 @@ public sealed class TdUiGoldenTests
         Assert.True(failure is null, failure);
     }
 
+    [Theory]
+    [InlineData(1, 96)]
+    [InlineData(2, 96)]
+    [InlineData(3, 96)]
+    [InlineData(1, 144)]
+    [InlineData(2, 144)]
+    [InlineData(3, 144)]
+    public void Notice_sizes_match_golden(int size, int dpi)
+    {
+        Assert.SkipUnless(OperatingSystem.IsLinux(), "golden com texto só no Linux");
+        float scale = size == 2 ? 1.25f : size == 3 ? 1.5f : 1f;
+        float w = 180 * scale, h = TdUiController.ToastH * scale;
+        var item = new TdUiItem(new SideWar.Runtime.Geometry.DipRect(0, 0, w, h), TdUiKind.Label,
+            "Base sendo atacada", Arg: -1, SArg: "toast", Tone: TdTone.Warn, Fill: 1);
+        var view = new TdPopoverView("Base", [item], w, h, 0);
+        using var typo = new Typography();
+        using var renderer = new TdUiRenderer(typo, dpi);
+        var (pw, ph) = renderer.PhysicalSize(w, h);
+        using var bmp = new SKBitmap(pw, ph);
+        using var canvas = new SKCanvas(bmp);
+        canvas.Clear(Backdrop);
+        renderer.DrawPopover(canvas, view, -1);
+        string? failure = GoldenImage.Verify($"td-ui-notice-{size}-{dpi * 100 / 96}", bmp);
+        Assert.True(failure is null, failure);
+    }
+
     private static SKBitmap RenderRankToast(int rank, float fill, int dpi)
     {
         var item = new TdUiItem(new SideWar.Runtime.Geometry.DipRect(0, 0, 200, TdUiController.ToastH), TdUiKind.Label,

@@ -224,6 +224,21 @@ public class SettingsTdTests
         Assert.Equal("Ctrl+Alt+Space", s.Hotkeys.StartWave);
     }
 
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void Notice_size_defaults_and_round_trips(int size)
+    {
+        Assert.Equal(1, ReadPayload("{\"td\":{}}").Td.NoticeSize);
+        Assert.Equal(1, ReadPayload("{\"td\":{\"noticeSize\":4}}").Td.NoticeSize);
+        using var ms = new MemoryStream();
+        using (var w = new Utf8JsonWriter(ms)) SettingsSerializer.Write(w, new AppSettings { Td = new TdSettings { NoticeSize = size } });
+        using var doc = JsonDocument.Parse(ms.ToArray());
+        Assert.Equal(size, SettingsSerializer.Read(doc.RootElement).Td.NoticeSize);
+    }
+
     [Fact] // TD.33d
     public void Money_options_default_off_survive_old_files_and_round_trip()
     {

@@ -74,6 +74,9 @@ public sealed partial class TdUiController
                 case TdUiAction.WipeConfirm: items.Add(Put(it, 196, 350, 58, 18) with { FontSize = 10f }); break;
                 case TdUiAction.WipeCancel: items.Add(Put(it, 258, 350, 58, 18) with { FontSize = 10f }); break;
                 case TdUiAction.None when it.Text == "Apagar todo o progresso?": items.Add(Put(it, lx + 50, 352, 144, 14) with { SArg = "jg-warn", Tone = TdTone.Warn }); break;
+                case TdUiAction.GameOption when it.Arg == 8:
+                    items.Add(Put(it, lx, 448, 300, 24) with { SArg = "menu-action" });
+                    break;
                 case TdUiAction.GameOption:
                 {
                     int slot = it.Arg switch { 0 => 0, 1 => 1, 2 => 2, 4 => 3, 5 => 4, 6 => 5, 7 => 6, _ => 7 };
