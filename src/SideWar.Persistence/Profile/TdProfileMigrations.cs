@@ -16,7 +16,15 @@ public static class TdProfileMigrations
         .Register(TdProfileData.Schema, 5, V5ToV6)
         .Register(TdProfileData.Schema, 6, V6ToV7)
         .Register(TdProfileData.Schema, 7, V7ToV8)
-        .Register(TdProfileData.Schema, 8, V8ToV9);
+        .Register(TdProfileData.Schema, 8, V8ToV9)
+        .Register(TdProfileData.Schema, 9, V9ToV10);
+
+    /// <summary>v9 → v10: torres da corrida salvas no perfil; perfis antigos começam sem torres salvas.</summary>
+    private static JsonNode V9ToV10(JsonNode root)
+    {
+        root["runTowers"] ??= new JsonArray();
+        return root;
+    }
 
     private static JsonNode V8ToV9(JsonNode root)
     {

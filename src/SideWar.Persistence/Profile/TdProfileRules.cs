@@ -97,6 +97,10 @@ public static class TdProfileRules
         return stageNumber == p.RunStageNumber ? p : p with { RunStageNumber = stageNumber };
     }
 
+    /// <summary>Guarda as torres da corrida (null/vazio = nenhuma). Devolve o mesmo perfil se nada mudou.</summary>
+    public static TdProfileData SetRunTowers(TdProfileData p, IReadOnlyList<TdRunTowerData> towers) =>
+        p.RunTowers.SequenceEqual(towers) ? p : p with { RunTowers = towers };
+
     /// <summary>Fase de conteúdo concluída em ciclo 2+ (<paramref name="cycle"/> &gt;= 1): +<see cref="SealsPerCycleStage"/> selo (a recompensa continua depois da fase 6).</summary>
     public static TdProfileData RecordCycleStage(TdProfileData p, int cycle) =>
         cycle < 1 ? p : p with { SealsEarned = (int)Math.Min(int.MaxValue, (long)p.SealsEarned + SealsPerCycleStage) };

@@ -61,4 +61,20 @@ public sealed class TdBestiaryPersistenceTests
         Assert.Equal(2, read.Encounters.Single(e => e.Id == "swarm:elite").Count);
         Assert.Empty(TdProfileData.ResetToNew().Encounters);
     }
+
+    [Fact]
+    public void V9_migrates_without_run_towers_and_run_towers_survive_serialization_and_are_sanitized()
+    {
+        var old = JsonNode.Parse("{\"reputation\":10}")!;
+        Assert.True(TdProfileMigrations.Default.TryMigrate(TdProfileData.Schema, 9, 10, old, out var migrated, out _));
+        Assert.Empty(migrated["runTowers"]!.AsArray());
+        var p = TdProfileData.Default with { RunTowers = [new() { DefId = "cannon", X = 300, Placed = false, PurchasePrice = 90, Targeting = 2, ModuleDefId = "bolt", ModulePrice = 40 }, new() { DefId = "", X = 1 }] };
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream)) TdProfileSerializer.Write(writer, p);
+        using var doc = JsonDocument.Parse(stream.ToArray());
+        var read = TdProfileSerializer.Read(doc.RootElement);
+        var t = Assert.Single(read.RunTowers);
+        Assert.Equal(("cannon", 300, false, 90L, 2, "bolt", 40L), (t.DefId, t.X, t.Placed, t.PurchasePrice, t.Targeting, t.ModuleDefId, t.ModulePrice));
+        Assert.Empty(TdProfileData.ResetToNew().RunTowers);
+    }
 }

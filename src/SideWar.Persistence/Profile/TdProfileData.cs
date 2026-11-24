@@ -8,7 +8,7 @@ namespace SideWar.Persistence.Profile;
 public sealed record TdProfileData
 {
     public const string Schema = "sidewar.td-profile";
-    public const int SchemaVersion = 9;
+    public const int SchemaVersion = 10;
 
     /// <summary>Total de selos já ganhos (1 por estrela nova, 1 por desafio, mais os iniciais da migração do idle).</summary>
     public int SealsEarned { get; init; }
@@ -47,6 +47,9 @@ public sealed record TdProfileData
     /// <summary>Recorde da corrida infinita (v7): fase absoluta mais alta alcançada (ciclo = (n-1)/6 + 1) e a onda mais alta dentro dela. 0 = nunca jogou.</summary>
     public int BestStageNumber { get; init; }
     public int BestStageWave { get; init; }
+
+    /// <summary>Torres da corrida atual (v10): sobrevivem a reabrir o app, trocar de fase e reiniciar a corrida. Só "Recomeçar do zero" ou vender as apaga.</summary>
+    public IReadOnlyList<TdRunTowerData> RunTowers { get; init; } = [];
 
     /// <summary>Contadores persistentes por id de inimigo ou variação.</summary>
     public IReadOnlyList<TdEncounterData> Encounters { get; init; } = [];
@@ -98,4 +101,16 @@ public sealed record TdEncounterData
 {
     public string Id { get; init; } = "";
     public int Count { get; init; }
+}
+
+/// <summary>Torre da corrida salva: tipo (id do conteúdo), posição lógica, preço pago, mira e módulo de fusão.</summary>
+public sealed record TdRunTowerData
+{
+    public string DefId { get; init; } = "";
+    public int X { get; init; }
+    public bool Placed { get; init; } = true;
+    public long PurchasePrice { get; init; }
+    public int Targeting { get; init; }
+    public string? ModuleDefId { get; init; }
+    public long ModulePrice { get; init; }
 }
