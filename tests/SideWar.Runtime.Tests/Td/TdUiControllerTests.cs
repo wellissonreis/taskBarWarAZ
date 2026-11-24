@@ -229,6 +229,17 @@ public sealed class TdUiControllerTests
     }
 
     [Fact]
+    public void Settings_toggle_shows_type_and_effectiveness_and_is_on_by_default()
+    {
+        var r = OpenSettings();
+        Assert.True(r.Host.Settings.ShowTypeInfo);
+        var toggle = Reveal(r, TdUiAction.SettingToggle, "typeinfo");
+        Assert.True(toggle.Selected);
+        r.Ui.Activate(toggle);
+        Assert.False(r.Host.Settings.ShowTypeInfo);
+    }
+
+    [Fact]
     public void Leaving_shadow_in_the_middle_of_a_wave_shows_pending_label_and_waits()
     {
         var r = new Rig();

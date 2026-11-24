@@ -84,6 +84,7 @@ public static class SettingsSerializer
         w.WriteNumber("gameSpeed", s.Td.GameSpeed);
         w.WriteBoolean("extraSpeeds", s.Td.ExtraSpeeds);
         w.WriteBoolean("shadowOnAbsent", s.Td.ShadowOnAbsent);
+        w.WriteBoolean("showTypeInfo", s.Td.ShowTypeInfo);
         w.WriteNumber("extraSpeedMask", s.Td.ExtraSpeedMask);
         w.WriteString("questionsSeen", s.Td.QuestionsSeen);
         w.WriteBoolean("showIncome", s.Td.ShowIncome);
@@ -180,6 +181,7 @@ public static class SettingsSerializer
                 GameSpeed = IntRange(td, "gameSpeed", TdSettings.MinGameSpeed, TdSettings.MaxGameSpeed, d.Td.GameSpeed),
                 ExtraSpeeds = Bool(td, "extraSpeeds", d.Td.ExtraSpeeds),
                 ShadowOnAbsent = Bool(td, "shadowOnAbsent", d.Td.ShadowOnAbsent),
+                ShowTypeInfo = Bool(td, "showTypeInfo", d.Td.ShowTypeInfo),
                 ExtraSpeedMask = IntRange(td, "extraSpeedMask", 0, 255, d.Td.ExtraSpeedMask),
                 QuestionsSeen = Str(td, "questionsSeen", 1024) ?? d.Td.QuestionsSeen,
                 ShowIncome = Bool(td, "showIncome", d.Td.ShowIncome),

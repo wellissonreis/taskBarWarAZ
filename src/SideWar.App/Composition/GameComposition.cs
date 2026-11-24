@@ -189,6 +189,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             // O sink idle fica sem superfície (não desenha) e o idle está em NoRun.
             tdRenderer = new TdBandRenderer(typography, atlas);
             tdRenderer.SetBandHeight(tdBandHeight);
+            tdRenderer.ShowTypeInfo = settings.Td.ShowTypeInfo;
             tdSink = new TdFrameSink(surface, tdRenderer);
             tdDriver = new TdRenderDriver(td.Host, runtime.App, clock, tdSink);
             tdWatcher = new SceneLayoutWatcher(td.Host, null, layout => new SideWar.Core.Td.LayoutChanged(layout));
@@ -396,6 +397,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     {
         settings = value;
         td?.ApplySettings(value);
+        if (tdRenderer is not null) { tdRenderer.ShowTypeInfo = value.Td.ShowTypeInfo; tdDriver?.MarkDirty(); }
         tdFocus?.Configure(value.Td.FadeWhenUnfocused, value.Td.FadeOpacityPercent);
         tdUi?.SetBonusQuestions(value.Td.BonusQuestions);
         tdUi?.LoadGameOptions(value);

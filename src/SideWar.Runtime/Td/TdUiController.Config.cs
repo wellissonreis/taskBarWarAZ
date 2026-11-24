@@ -60,6 +60,7 @@ public sealed partial class TdUiController
                 Group("TOWER DEFENSE");
                 Toggle("questions", "Pergunta-bônus entre ondas");
                 Toggle("income", "Mostrar renda (+X/s)", "Mostra a renda de créditos abaixo do contador.");
+                Toggle("typeinfo", "Mostrar tipo e efetividade", "Barra de vida, ícone de tipo e número de dano forte/fraco sobre os inimigos.");
                 Toggle("discreet", "Modo discreto", "Sem brilhos nem contagem animada; +N só nos ganhos grandes.");
                 Toggle("continuous", "Ondas contínuas (próx. corrida)", "Corrida infinita, sem Preparo entre ondas. Vale na próxima corrida.");
                 Toggle("pinned", "Painel de torres sempre aberto", "Mantém o painel de torres aberto junto ao chip.");
@@ -155,7 +156,7 @@ public sealed partial class TdUiController
         if (k.StartsWith("xs:", StringComparison.Ordinal)) return (d.SpeedMask >> int.Parse(k.AsSpan(3), CultureInfo.InvariantCulture)) & 1;
         return k switch
         {
-            "xspeeds" => d.ExtraSpeeds ? 1 : 0, "speedx" => d.GameSpeed, "shadowabsent" => d.ShadowOnAbsent ? 1 : 0,
+            "xspeeds" => d.ExtraSpeeds ? 1 : 0, "speedx" => d.GameSpeed, "shadowabsent" => d.ShadowOnAbsent ? 1 : 0, "typeinfo" => d.ShowTypeInfo ? 1 : 0,
             "mode" => d.GameMode, "startup" => d.StartWithWindows ? 1 : 0, "hide" => d.HideOnFullscreen, "uia" => d.UseUia ? 1 : 0, "autoscale" => d.AutoScale ? 1 : 0,
             "questions" => d.BonusQuestions ? 1 : 0, "income" => d.ShowIncome ? 1 : 0, "discreet" => d.DiscreetMode ? 1 : 0, "continuous" => d.ContinuousWaves ? 1 : 0,
             "pinned" => d.TowerPanelPinned ? 1 : 0, "autostart" => d.AutoStart ? 1 : 0, "autoseconds" => d.AutoStartSeconds, "autorestart" => d.AutoRestart ? 1 : 0,
@@ -184,7 +185,7 @@ public sealed partial class TdUiController
         }
         return k switch
         {
-            "shadowabsent" => d with { ShadowOnAbsent = b },
+            "shadowabsent" => d with { ShadowOnAbsent = b }, "typeinfo" => d with { ShowTypeInfo = b },
             "xspeeds" => d with { ExtraSpeeds = b, GameSpeed = b ? d.GameSpeed : Math.Min(d.GameSpeed, 3), SpeedMask = b && d.SpeedMask == 0 ? TdSpeed.DefaultMask : d.SpeedMask }, "speedx" => d with { GameSpeed = v },
             "mode" => d with { GameMode = v }, "startup" => d with { StartWithWindows = b }, "hide" => d with { HideOnFullscreen = v }, "uia" => d with { UseUia = b },
             "autoscale" => d with { AutoScale = b }, "questions" => d with { BonusQuestions = b }, "income" => d with { ShowIncome = b }, "discreet" => d with { DiscreetMode = b },

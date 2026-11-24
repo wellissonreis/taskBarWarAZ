@@ -182,6 +182,8 @@ public sealed record TdSettings
     public bool ExtraSpeeds { get; init; }
     /// <summary>Entra em modo sombra sozinho ao ficar ausente (desligado por padrão).</summary>
     public bool ShadowOnAbsent { get; init; }
+    /// <summary>"Mostrar tipo e efetividade": barra de vida, ícone de tipo e número de dano forte/fraco nos inimigos (ligado por padrão).</summary>
+    public bool ShowTypeInfo { get; init; } = true;
     /// <summary>Quais extras aparecem (bit i = i-ésima extra); padrão 5x, 10x e Máx.</summary>
     public int ExtraSpeedMask { get; init; } = 0b1000_1010;
 

@@ -246,6 +246,7 @@ public sealed record TdSettingsData
     public int GameSpeed { get; init; } = 1;
     public bool ExtraSpeeds { get; init; }
     public bool ShadowOnAbsent { get; init; }
+    public bool ShowTypeInfo { get; init; } = true;
     public int SpeedMask { get; init; } = TdSpeed.DefaultMask;
     public int NoticeSize { get; init; } = 1;
     public bool Sound { get; init; }

@@ -136,6 +136,16 @@ public class SettingsTdTests
     }
 
     [Fact]
+    public void Show_type_info_defaults_on_and_roundtrips_off()
+    {
+        Assert.True(AppSettings.Default.Td.ShowTypeInfo);
+        var fs = new FakeFileSystem();
+        var st = new SettingsStore(fs, "/data", utcNow: () => Now);
+        Assert.True(st.Save(new AppSettings { Td = new TdSettings { ShowTypeInfo = false } }));
+        Assert.False(st.Load().Settings.Td.ShowTypeInfo);
+    }
+
+    [Fact]
     public void Shadow_on_absent_defaults_off_and_roundtrips_with_the_toggle_hotkey()
     {
         Assert.False(AppSettings.Default.Td.ShadowOnAbsent);

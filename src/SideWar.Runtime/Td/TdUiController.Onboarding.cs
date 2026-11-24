@@ -504,6 +504,7 @@ public sealed partial class TdUiController
         Card(TdIcon.Play, m.Options.ContinuousWaves ? "Inicie a 1ª onda; o resto flui." : "Inicie a onda quando estiver pronto.");
         Card(TdIcon.FastForward, "Chame a próxima onda para ganhar bônus.");
         Card(TdIcon.Alert, "Chefões especiais enfurecem com 50% de vida.");
+        Card(TdIcon.Target, "Leia o tipo; torre forte/fraca.");
         Card(TdIcon.Target, "Em Inimigos, veja traços e fraquezas.");
         Section("TORRES E ECONOMIA");
         Card(TdIcon.Build, "Construir mostra tipos, funções e fraquezas.");

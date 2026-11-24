@@ -22,7 +22,10 @@ namespace SideWar.Rendering.Scene;
 public sealed class TdBandRenderer : IDisposable
 {
 
-    private const byte FlyingBit = 1, ArmoredBit = 2, RegenBit = 4, DrainBit = 8, ReplicatorBit = 16, ShieldedBit = 32, StealthBit = 64;
+    private const ushort FlyingBit = 1, ArmoredBit = 2, RegenBit = 4, DrainBit = 8, ReplicatorBit = 16, ShieldedBit = 32, StealthBit = 64, FastBit = 128, SwarmBit = 256;
+
+    /// <summary>"Mostrar tipo e efetividade" (Configurações): barra de vida em todo inimigo, ícone de tipo (rápido/enxame) e número de dano forte/fraco.</summary>
+    public bool ShowTypeInfo { get; set; } = true;
 
     private readonly Typography _typography;
     private readonly SKPaint _fill = new() { IsAntialias = true, Style = SKPaintStyle.Fill };
@@ -61,7 +64,7 @@ public sealed class TdBandRenderer : IDisposable
     private const float Ground = 32f, EnemyFoot = 30.5f, FlyFoot = 24f, ChipSpriteDip = 11f;
     private readonly SKPathEffect _dash = SKPathEffect.CreateDash([2f, 2f], 0);
     private TdContent? _content;
-    private byte[] _traits = [];
+    private ushort[] _traits = [];
     private int _enemyDefs;
     private int _dpi = 96;
     private float _s = 1f;   // escala efetiva do desenho: dpi/96 × k (k = altura da faixa / 32, TD.14)
@@ -147,7 +150,7 @@ public sealed class TdBandRenderer : IDisposable
         var normal = content.Enemies.Enemies;
         var bosses = content.Enemies.Bosses;
         _enemyDefs = normal.Length + bosses.Length;
-        _traits = new byte[_enemyDefs];
+        _traits = new ushort[_enemyDefs];
         _mutIds = [.. content.Mutations.Traits.Select(t => t.Id)];
         for (int i = 0; i < normal.Length; i++) _traits[i] = TraitBits(normal[i].Traits);
         for (int i = 0; i < bosses.Length; i++) _traits[normal.Length + i] = TraitBits(bosses[i].Traits);
@@ -276,9 +279,9 @@ public sealed class TdBandRenderer : IDisposable
 
     private float HeightDip(SKImage? img) => img is null ? 0f : img.Height / _s;
 
-    private static byte TraitBits(string[] traits)
+    private static ushort TraitBits(string[] traits)
     {
-        byte b = 0;
+        ushort b = 0;
         foreach (var t in traits)
         {
             if (t == "flying") b |= FlyingBit;
@@ -288,6 +291,8 @@ public sealed class TdBandRenderer : IDisposable
             else if (t == "replicator") b |= ReplicatorBit;
             else if (t == "shielded") b |= ShieldedBit;
             else if (t == "stealth") b |= StealthBit;
+            else if (t == "fast") b |= FastBit;
+            else if (t == "swarm") b |= SwarmBit;
         }
         return b;
     }
@@ -372,7 +377,7 @@ public sealed class TdBandRenderer : IDisposable
         {
             var e = enemies[i];
             float x = TdBand.ToDip(e.X, w);
-            byte bits = e.DefIndex >= 0 && e.DefIndex < _enemyDefs ? _traits[e.DefIndex] : (byte)0;
+            ushort bits = e.DefIndex >= 0 && e.DefIndex < _enemyDefs ? _traits[e.DefIndex] : (ushort)0;
             bool flying = e.Flying || (bits & FlyingBit) != 0;
             var img = e.DefIndex >= 0 && e.DefIndex < _enemyImg.Length ? _enemyImg[e.DefIndex] : null;
             float foot = e.IsBoss ? Ground - 0.5f : flying ? FlyFoot : EnemyFoot;
@@ -415,6 +420,8 @@ public sealed class TdBandRenderer : IDisposable
             else if ((bits & ReplicatorBit) != 0) Pip(c, _cross, px, py, Palette.Td.TintViolet);
             else if ((bits & ShieldedBit) != 0) Pip(c, _diamond, px, py, Palette.Td.TintAmber);
             else if ((bits & StealthBit) != 0) Pip(c, _triangle, px, py, Palette.Td.TintCyan);
+            else if (ShowTypeInfo && (bits & FastBit) != 0) Pip(c, _bolt, px, py, Palette.Ambar);
+            else if (ShowTypeInfo && (bits & SwarmBit) != 0) Pip(c, _cross, px, py, Palette.Td.Muted);
 
             if (e.ParalyzeTicks > 0)
             {
@@ -437,9 +444,24 @@ public sealed class TdBandRenderer : IDisposable
                 c.DrawRect(x - barWidth / 2, foot - sh - 6, barWidth * (float)Math.Clamp(e.ShieldHp / shieldMax, 0, 1), 2, _fill);
             }
 
-            if (e.IsBoss || (e.Hp < e.MaxHp && e.MaxHp >= 90))
-                DrawLifeBar(c, x, e.IsBoss ? 0f : foot - sh - 3.5f, e.IsBoss ? 24f : 10f, (float)(e.Hp / e.MaxHp), e.IsBoss);
+            if (e.IsBoss || ShowTypeInfo || (e.Hp < e.MaxHp && e.MaxHp >= 90))
+                DrawLifeBar(c, x, e.IsBoss ? 0f : foot - sh - 3.5f, e.IsBoss ? 24f : 12f, (float)(e.Hp / e.MaxHp), e.IsBoss);
+            if (ShowTypeInfo && !e.IsBoss) DrawEffect(c, e, x, foot - sh - 5f);
+            else if (ShowTypeInfo && e.IsBoss) DrawEffect(c, e, x, 12f);
         }
+    }
+
+    // Efetividade do último acerto: número discreto sobe e some; verde = torre forte, vermelho com "fraco!" = torre fraca.
+    private void DrawEffect(SKCanvas c, in TdEnemy e, float x, float top)
+    {
+        if (e.EffectTicks <= 0 || e.EffectKind == 0) return;
+        float t = Math.Clamp(e.EffectTicks / (float)TdMatchState.EffectShowTicks, 0f, 1f);
+        string text = e.EffectKind == 1 ? $"-{e.EffectDamage}" : $"-{e.EffectDamage} fraco!";
+        var font = _typography.GetFont(FontRole.SilkscreenRegular, 7f, 96);
+        _text.Color = (e.EffectKind == 1 ? Palette.Menta : Palette.Perigo).WithAlpha((byte)(70 + 185 * t));
+        float width = font.MeasureText(text);
+        using var blob = SKTextBlob.Create(text, font);
+        if (blob is not null) c.DrawText(blob, x - width / 2f, MathF.Max(8f, top - 4f - (1f - t) * 5f), _text);
     }
 
     // Marcador de traço sobre fundo escuro (forma unitária de ±4 DIP reduzida a 75%).

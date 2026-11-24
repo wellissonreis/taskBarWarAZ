@@ -342,7 +342,7 @@ public sealed class TdGameHostTests
         var r = new Rig(input: input);
         r.Run(1);
         Assert.DoesNotContain(r.Host.CommandLog, e => e.Command is SetPresence); // Preparo: não observa
-        r.Tower();
+        r.Tower(100); // perto do núcleo: a onda dura (inimigos lentos)
         r.Host.OnCommand(new StartWave());
         r.Run(2);
         Assert.Single(r.Host.CommandLog, e => e.Command is SetPresence { Present: true }); // presente, enviado uma vez

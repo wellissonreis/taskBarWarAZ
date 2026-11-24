@@ -20,7 +20,7 @@ internal static class TdSettingsMap
         AlertsEnabled = s.Td.AlertsEnabled, AlertsAutoPause = s.Td.AlertsAutoPause, AlertsSound = s.Td.AlertsSound, AlertsMutedMask = s.Td.AlertsMutedMask,
         ContinuousWaves = s.Td.ContinuousWaves, TowerPanelPinned = s.Td.TowerPanelPinned,
         AutoStart = s.Td.AutoStartEnabled, AutoRestart = s.Td.AutoRestart, AutoStartSeconds = s.Td.AutoStartSeconds,
-        BandHeight = s.Td.BandHeightDip, CornerUiScale = s.Td.CornerUiScalePercent, GameSpeed = s.Td.GameSpeed, ExtraSpeeds = s.Td.ExtraSpeeds, ShadowOnAbsent = s.Td.ShadowOnAbsent, SpeedMask = s.Td.ExtraSpeedMask, NoticeSize = s.Td.NoticeSize,
+        BandHeight = s.Td.BandHeightDip, CornerUiScale = s.Td.CornerUiScalePercent, GameSpeed = s.Td.GameSpeed, ExtraSpeeds = s.Td.ExtraSpeeds, ShadowOnAbsent = s.Td.ShadowOnAbsent, ShowTypeInfo = s.Td.ShowTypeInfo, SpeedMask = s.Td.ExtraSpeedMask, NoticeSize = s.Td.NoticeSize,
         Sound = s.Audio.Enabled, Volume = (int)Math.Round(s.Audio.Volume * 100),
         PeekOnHover = s.Behavior.PeekOnHover, PeekOpacity = s.Opacity.Peek, FadeWhenAbsent = s.Opacity.FadeWhenAbsent, AbsentOpacity = s.Opacity.Absent,
         FadeWhenUnfocused = s.Td.FadeWhenUnfocused, FadePercent = s.Td.FadeOpacityPercent,
@@ -50,7 +50,7 @@ internal static class TdSettingsMap
             CornerUiScalePercent = Math.Clamp(d.CornerUiScale, TdSettings.MinCornerUiScalePercent, TdSettings.MaxCornerUiScalePercent),
             FadeWhenUnfocused = d.FadeWhenUnfocused, FadeOpacityPercent = Math.Clamp(d.FadePercent, TdSettings.MinFadePercent, TdSettings.MaxFadePercent),
             BonusQuestions = d.BonusQuestions, ContinuousWaves = d.ContinuousWaves, TowerPanelPinned = d.TowerPanelPinned,
-            GameSpeed = Math.Clamp(d.GameSpeed, TdSettings.MinGameSpeed, TdSettings.MaxGameSpeed), ExtraSpeeds = d.ExtraSpeeds, ShadowOnAbsent = d.ShadowOnAbsent, ExtraSpeedMask = d.SpeedMask & 0xFF, ShowIncome = d.ShowIncome, DiscreetMode = d.DiscreetMode, NoticeSize = Math.Clamp(d.NoticeSize, 0, 3),
+            GameSpeed = Math.Clamp(d.GameSpeed, TdSettings.MinGameSpeed, TdSettings.MaxGameSpeed), ExtraSpeeds = d.ExtraSpeeds, ShadowOnAbsent = d.ShadowOnAbsent, ShowTypeInfo = d.ShowTypeInfo, ExtraSpeedMask = d.SpeedMask & 0xFF, ShowIncome = d.ShowIncome, DiscreetMode = d.DiscreetMode, NoticeSize = Math.Clamp(d.NoticeSize, 0, 3),
             AlertsEnabled = d.AlertsEnabled, AlertsAutoPause = d.AlertsAutoPause, AlertsSound = d.AlertsSound, AlertsMutedMask = d.AlertsMutedMask,
         },
     };

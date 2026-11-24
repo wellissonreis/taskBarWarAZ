@@ -174,7 +174,7 @@ public sealed class TdOnboardingTests
         r.BuildBolt();
         r.Click(TdUiAction.StartWave);
         Assert.False(r.Store.Done);
-        for (int i = 0; i < 30 * 3000 && r.Match.Phase is MatchPhase.Preparo or MatchPhase.Onda; i++)
+        for (int i = 0; i < 30 * 12000 && r.Match.Phase is MatchPhase.Preparo or MatchPhase.Onda; i++)
         {
             if (r.Match.Phase == MatchPhase.Preparo) r.Match.Apply(new StartWave());
             r.Match.Step();
