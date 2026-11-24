@@ -85,6 +85,8 @@ public sealed partial class TdUiController
     private Ack _ack;
     private bool _abilityDone;
     private int _hudPhase; // 0 abrir, 1 recolher, 2 abrir de novo, 3 pronto
+    private int _helpScroll;
+    private const int HelpVisibleRows = 8;
     private readonly Queue<string> _tipQueue = [];
     private readonly HashSet<string> _tipKnown = [];
     private string? _tipText;
@@ -442,16 +444,16 @@ public sealed partial class TdUiController
     {
         TdTutorialStep.HudOpen => (TdIcon.Expand, "Toque no chip para abrir", null, false),
         TdTutorialStep.HudCollapse => (TdIcon.Collapse, "Recolha o HUD", "Use o botão de recolher.", false),
-        TdTutorialStep.Core => (TdIcon.Medal, "Defenda a base!", "Vazar tira XP e pode rebaixar.", true),
-        TdTutorialStep.Credits => (TdIcon.Coin, "Créditos compram torres.", "Cada onda rende mais.", true),
+        TdTutorialStep.Core => (TdIcon.Medal, "Defenda a base! Sem game over.", "Vazar tira XP e pode rebaixar.", true),
+        TdTutorialStep.Credits => (TdIcon.Coin, "Créditos compram torres.", "O Cofre ajuda a ganhar créditos.", true),
         TdTutorialStep.Portal => (TdIcon.Portal, "Inimigos saem do portal.", "Eles correm até a base.", true),
         TdTutorialStep.Build => (TdIcon.Castle, "Clique no castelo: Torres", null, false),
         TdTutorialStep.Point => (TdIcon.Build, "Clique num ponto da faixa", null, false),
         TdTutorialStep.Tower => (TdIcon.Build, "Escolha uma torre", null, false),
         TdTutorialStep.Controls => (TdIcon.Pause, "Pausar e velocidade 1x a 3x", "O botão ao lado pausa; 2x e 3x aceleram.", true),
-        TdTutorialStep.Runes => (TdIcon.Question, "Fragmentos despertam runas", "Botão Runas (estrela) do HUD.", true),
+        TdTutorialStep.Runes => (TdIcon.Question, "Fragmentos despertam runas permanentes", "Na teia, arraste e use zoom.", true),
         TdTutorialStep.Rank => (TdIcon.Medal, "Patente e brasão: seu progresso", "XP sobe e desce a patente; veja em Jogo.", true),
-        TdTutorialStep.Fusion => (TdIcon.Star, "Funda: solte uma torre sobre outra", "Escolha na barra e solte sobre ela.", true),
+        TdTutorialStep.Fusion => (TdIcon.Star, "Funda: solte uma torre sobre outra", "Ela fica mais forte e ganha nome.", true),
         TdTutorialStep.Range => (TdIcon.Target, "O círculo é o alcance.", "Ela só atira dentro dele.", true),
         TdTutorialStep.Wave => (TdIcon.Play, "Clique em Iniciar onda", null, false),
         TdTutorialStep.Hurt => (TdIcon.Alert, "Inimigo passou!", _hurtKind switch { 0 => "Construa perto do portal.", 1 => "Use uma habilidade.", _ => "Construa mais torres." }, false),
@@ -544,11 +546,12 @@ public sealed partial class TdUiController
         Card(TdIcon.Expand, "Chip do HUD: toque para abrir/recolher.");
         Card(TdIcon.Build, "Escolha a torre; toque na faixa.");
         Card(TdIcon.Star, "Torre sobre torre: solte e funde.", TdTone.Accent);
+        Card(TdIcon.Medal, "Patentes e brasões: seu XP.");
+        Card(TdIcon.Question, "Fragmentos despertam runas.");
         Card(TdIcon.Coin, "Cada torre igual custa +25%.");
         if (m.Options.ContinuousWaves)
         {
             Card(TdIcon.Play, "Inicie só a 1ª onda; o resto flui.");
-            Card(TdIcon.Minus, $"Esconder tudo: {_host.BossHotkey}.", TdTone.Accent);
         }
         else
         {
@@ -556,11 +559,27 @@ public sealed partial class TdUiController
             Card(TdIcon.FastForward, "Chame a próxima: ganhe bônus.");
         }
         Card(TdIcon.Coin, $"Venda na aba Torres: devolve {Math.Round(m.Content.Stages.Rules.SellRefund * 100):0}%.");
-        Card(TdIcon.Question, "Fragmentos despertam runas.");
         Card(TdIcon.Alert, MutationHelpText);
         Card(TdIcon.Question, "Responda V ou F: ganhe bônus.");
-        Card(TdIcon.Medal, "Patentes e brasões: seu XP.");
         Card(TdIcon.Crown, "Vença sem vazar nada: coroa.");
+        Card(TdIcon.Medal, "Não há game over: vazar pode rebaixar.");
+        Card(TdIcon.Build, "É preciso uma torre para iniciar a onda.");
+        Card(TdIcon.Build, "Construir mostra tipos e funções das torres.");
+        Card(TdIcon.Target, "Escolha torres para as fraquezas inimigas.");
+        Card(TdIcon.Build, "Arraste uma torre ao vazio para movê-la sem custo.");
+        Card(TdIcon.Star, "Fusões ficam mais fortes e ganham novos nomes.");
+        Card(TdIcon.Target, "Clique na torre para inspecionar e ajustar a mira.");
+        Card(TdIcon.Coin, "Cofre gera créditos; torres caras são eficazes.");
+        Card(TdIcon.Medal, "Em Jogo, veja XP e sequência sem dano.");
+        Card(TdIcon.Question, "Runas são permanentes; arraste e use zoom na teia.");
+        Card(TdIcon.Crown, "Fase / Selo mostra regiões, estrelas e coroas.");
+        Card(TdIcon.Star, "Gaste selos na árvore, comprando nós em ordem.");
+        Card(TdIcon.Medal, "A patente pode bloquear regiões; ciclos repetem fases.");
+        Card(TdIcon.Alert, "Chefões aparecem em fases especiais e enfurecem com 50% de vida.");
+        Card(TdIcon.Expand, "Arraste o cabeçalho para mover o menu.");
+        Card(TdIcon.Question, "Configurações ajustam avisos e tamanho.");
+        Card(TdIcon.Minus, $"Esconder tudo: {_host.BossHotkey}.", TdTone.Accent);
+        Card(TdIcon.Alert, "Em Jogo, Recomeçar do zero apaga seu progresso.");
         if (_onb is not null) s.Add(TdUiKind.Button, "Refazer tutorial", RowH + 2, TdUiAction.RedoTutorial, tone: TdTone.Good, icon: TdIcon.Play);
         return Finish("Como jogar", s, 0);
     }

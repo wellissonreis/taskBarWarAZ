@@ -308,14 +308,21 @@ public sealed class TdFusionDropTests
     }
 
     [Fact]
-    public void Scrolling_is_a_noop_on_tabs_without_a_long_list()
+    public void Help_scrolls_while_short_tower_list_does_not()
     {
-        var r = new Rig();
+        var r = new Rig(onboarding: true);
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.ModalTab, (int)TdUiMode.Towers));
         Assert.Null(r.Ui.BuildPopover()!.Scroll);
         Assert.False(r.Ui.ScrollBy(1));
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.ModalTab, (int)TdUiMode.Help));
-        Assert.False(r.Ui.ScrollKey(1));
+        Assert.True(r.Ui.ScrollKey(1));
+        Assert.True(r.Ui.BuildPopover()!.Scroll!.Value.Offset > 0);
+        Assert.True(r.Ui.ScrollBy(100));
+        var bottom = r.Ui.BuildPopover()!;
+        Assert.Contains(bottom.Items, i => i.Text.Contains("Recomeçar do zero"));
+        Assert.Contains(bottom.Items, i => i.Action == TdUiAction.RedoTutorial);
+        Assert.True(r.Ui.ScrollBy(-100));
+        Assert.Equal(0, r.Ui.BuildPopover()!.Scroll!.Value.Offset);
     }
 
     // ---------------------------------------------------------------- tutorial

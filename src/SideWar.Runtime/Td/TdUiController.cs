@@ -1342,7 +1342,8 @@ public sealed partial class TdUiController
                 {
                     if (it.Action == TdUiAction.Close) continue;
                     if (it.Action == TdUiAction.RedoTutorial) { items.Add(Put(it, 16, 400, 180, 40)); continue; }
-                    int row = n / 2, col = n % 2; n++;
+                    int row = n / 2 - _helpScroll, col = n % 2; n++;
+                    if (row < 0 || row >= HelpVisibleRows) continue;
                     items.Add(Put(it, 16 + col * 352, 108 + row * 36, 336, 30));
                 }
                 break;
@@ -1382,6 +1383,12 @@ public sealed partial class TdUiController
     /// <summary>Lista rolável da aba atual da modal (Construir: catálogo; Torres: torres em campo). Nulo se cabe inteira.</summary>
     private TdScrollInfo? ScrollInfo(TdMatchState m)
     {
+        if (Mode == TdUiMode.Help)
+        {
+            int count = BuildHelp(m).Items.Count(i => i.Action is not (TdUiAction.Close or TdUiAction.RedoTutorial));
+            int rows = (count + 1) / 2;
+            return rows > HelpVisibleRows ? new(rows, HelpVisibleRows, Math.Clamp(_helpScroll, 0, rows - HelpVisibleRows), 108f, HelpVisibleRows * 36f - 6f) : null;
+        }
         if (Mode == TdUiMode.Towers)
             return m.Towers.Count > ModalTowerRows ? new(m.Towers.Count, ModalTowerRows, _towerScroll, 132f, ModalTowerRows * 52f - 6f) : null;
         if (Mode == TdUiMode.Build && !BuildActive)
@@ -1401,7 +1408,9 @@ public sealed partial class TdUiController
         int next = Math.Clamp(info.Offset + rows, 0, max);
         if (next != info.Offset)
         {
-            if (Mode == TdUiMode.Towers) _towerScroll = next; else _buildScroll = next;
+            if (Mode == TdUiMode.Towers) _towerScroll = next;
+            else if (Mode == TdUiMode.Help) _helpScroll = next;
+            else _buildScroll = next;
             Changed?.Invoke();
         }
         return true;
