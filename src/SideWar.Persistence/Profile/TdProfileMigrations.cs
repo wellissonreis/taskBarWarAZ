@@ -17,7 +17,16 @@ public static class TdProfileMigrations
         .Register(TdProfileData.Schema, 6, V6ToV7)
         .Register(TdProfileData.Schema, 7, V7ToV8)
         .Register(TdProfileData.Schema, 8, V8ToV9)
-        .Register(TdProfileData.Schema, 9, V9ToV10);
+        .Register(TdProfileData.Schema, 9, V9ToV10)
+        .Register(TdProfileData.Schema, 10, V10ToV11);
+
+    /// <summary>v10 → v11: modo sombra desligado e sem resto de selos.</summary>
+    private static JsonNode V10ToV11(JsonNode root)
+    {
+        root["shadow"] ??= false;
+        root["shadowSealCents"] ??= 0;
+        return root;
+    }
 
     /// <summary>v9 → v10: torres da corrida salvas no perfil; perfis antigos começam sem torres salvas.</summary>
     private static JsonNode V9ToV10(JsonNode root)

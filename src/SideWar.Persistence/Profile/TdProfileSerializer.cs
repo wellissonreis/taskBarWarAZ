@@ -62,6 +62,7 @@ public static class TdProfileSerializer
             RuneWeb = TdRuneWeb.ToText(TdRuneWeb.Parse(p.RuneWeb)),
             RuneFragments = Math.Clamp(p.RuneFragments, 0, TdRuneWeb.MaxFragments),
             Reputation = Math.Clamp(p.Reputation, 0, MaxScore),
+            ShadowSealCents = Math.Clamp(p.ShadowSealCents, 0, 99),
             RunStageNumber = Math.Clamp(p.RunStageNumber, 0, MaxWave),
             BestStageNumber = Math.Clamp(p.BestStageNumber, 0, MaxWave),
             BestStageWave = p.BestStageNumber <= 0 ? 0 : Math.Clamp(p.BestStageWave, 0, MaxWave),

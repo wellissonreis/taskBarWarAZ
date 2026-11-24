@@ -8,7 +8,7 @@ namespace SideWar.Persistence.Profile;
 public sealed record TdProfileData
 {
     public const string Schema = "sidewar.td-profile";
-    public const int SchemaVersion = 10;
+    public const int SchemaVersion = 11;
 
     /// <summary>Total de selos já ganhos (1 por estrela nova, 1 por desafio, mais os iniciais da migração do idle).</summary>
     public int SealsEarned { get; init; }
@@ -50,6 +50,11 @@ public sealed record TdProfileData
 
     /// <summary>Torres da corrida atual (v10): sobrevivem a reabrir o app, trocar de fase e reiniciar a corrida. Só "Recomeçar do zero" ou vender as apaga.</summary>
     public IReadOnlyList<TdRunTowerData> RunTowers { get; init; } = [];
+
+    /// <summary>Modo sombra ativo (v11): XP congelado e recompensas reduzidas; só o usuário sai, entre ondas. "Recomeçar do zero" desliga.</summary>
+    public bool Shadow { get; init; }
+    /// <summary>Resto (0 a 99) dos selos de sombra: cada selo de fase de ciclo vale <c>TdShadow.RewardPercent</c>% e o resto acumula aqui.</summary>
+    public int ShadowSealCents { get; init; }
 
     /// <summary>Contadores persistentes por id de inimigo ou variação.</summary>
     public IReadOnlyList<TdEncounterData> Encounters { get; init; } = [];

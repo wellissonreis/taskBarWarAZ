@@ -77,4 +77,31 @@ public sealed class TdBestiaryPersistenceTests
         Assert.Equal(("cannon", 300, false, 90L, 2, "bolt", 40L), (t.DefId, t.X, t.Placed, t.PurchasePrice, t.Targeting, t.ModuleDefId, t.ModulePrice));
         Assert.Empty(TdProfileData.ResetToNew().RunTowers);
     }
+
+    [Fact]
+    public void Shadow_profile_fields_migrate_roundtrip_and_reset_and_cycle_seals_pay_a_fraction()
+    {
+        var old = JsonNode.Parse("{\"reputation\":10}")!;
+        Assert.True(TdProfileMigrations.Default.TryMigrate(TdProfileData.Schema, 10, 11, old, out var migrated, out _));
+        Assert.False(migrated["shadow"]!.GetValue<bool>());
+        Assert.Equal(0, migrated["shadowSealCents"]!.GetValue<int>());
+        var p = TdProfileData.Default with { Shadow = true, ShadowSealCents = 70 };
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream)) TdProfileSerializer.Write(writer, p);
+        using var doc = JsonDocument.Parse(stream.ToArray());
+        var read = TdProfileSerializer.Read(doc.RootElement);
+        Assert.True(read.Shadow);
+        Assert.Equal(70, read.ShadowSealCents);
+        Assert.False(TdProfileData.ResetToNew().Shadow);
+
+        // 35% por selo de fase de ciclo: o resto acumula e o 3º selo parcial completa 1 inteiro (35+35+35 = 105)
+        var q = TdProfileData.Default;
+        int total = 0;
+        for (int i = 0; i < 3; i++) { q = TdProfileRules.RecordShadowCycleStage(q, 1, out int s); total += s; }
+        Assert.Equal(1, total);
+        Assert.Equal(5, q.ShadowSealCents);
+        Assert.Equal(TdProfileData.Default.SealsEarned + 1, q.SealsEarned);
+        Assert.Same(q, TdProfileRules.RecordShadowCycleStage(q, 0, out int none));
+        Assert.Equal(0, none);
+    }
 }

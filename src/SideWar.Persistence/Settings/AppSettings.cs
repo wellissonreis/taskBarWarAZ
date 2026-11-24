@@ -81,6 +81,8 @@ public sealed record HotkeySettings
     public string StartWave { get; init; } = "Ctrl+Alt+Space";
     /// <summary>Cicla só as velocidades habilitadas (modo TD).</summary>
     public string CycleSpeed { get; init; } = "Ctrl+Alt+V";
+    /// <summary>Liga/desliga o modo sombra (modo TD).</summary>
+    public string ToggleShadow { get; init; } = "Ctrl+Alt+S";
 }
 
 public sealed record AudioSettings
@@ -178,6 +180,8 @@ public sealed record TdSettings
 
     /// <summary>Velocidades extras (4x, 5x, 8x, 10x, 16x, 20x, 50x, Máx) no seletor; desligado por padrão (só 1x/2x/3x).</summary>
     public bool ExtraSpeeds { get; init; }
+    /// <summary>Entra em modo sombra sozinho ao ficar ausente (desligado por padrão).</summary>
+    public bool ShadowOnAbsent { get; init; }
     /// <summary>Quais extras aparecem (bit i = i-ésima extra); padrão 5x, 10x e Máx.</summary>
     public int ExtraSpeedMask { get; init; } = 0b1000_1010;
 

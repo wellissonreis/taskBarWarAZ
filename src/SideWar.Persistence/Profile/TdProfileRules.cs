@@ -101,6 +101,16 @@ public static class TdProfileRules
     public static TdProfileData SetRunTowers(TdProfileData p, IReadOnlyList<TdRunTowerData> towers) =>
         p.RunTowers.SequenceEqual(towers) ? p : p with { RunTowers = towers };
 
+    /// <summary>Em sombra: o selo de fase de ciclo vale só <c>TdShadow.RewardPercent</c>%; o resto acumula (0 a 99). Devolve os selos inteiros ganhos.</summary>
+    public static TdProfileData RecordShadowCycleStage(TdProfileData p, int cycle, out int seals)
+    {
+        seals = 0;
+        if (cycle < 1) return p;
+        int cents = p.ShadowSealCents + (int)TdShadow.Scale(100L * SealsPerCycleStage);
+        seals = cents / 100;
+        return p with { ShadowSealCents = cents % 100, SealsEarned = (int)Math.Min(int.MaxValue, (long)p.SealsEarned + seals) };
+    }
+
     /// <summary>Fase de conteúdo concluída em ciclo 2+ (<paramref name="cycle"/> &gt;= 1): +<see cref="SealsPerCycleStage"/> selo (a recompensa continua depois da fase 6).</summary>
     public static TdProfileData RecordCycleStage(TdProfileData p, int cycle) =>
         cycle < 1 ? p : p with { SealsEarned = (int)Math.Min(int.MaxValue, (long)p.SealsEarned + SealsPerCycleStage) };

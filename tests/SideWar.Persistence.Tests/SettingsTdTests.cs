@@ -136,6 +136,19 @@ public class SettingsTdTests
     }
 
     [Fact]
+    public void Shadow_on_absent_defaults_off_and_roundtrips_with_the_toggle_hotkey()
+    {
+        Assert.False(AppSettings.Default.Td.ShadowOnAbsent);
+        Assert.Equal("Ctrl+Alt+S", AppSettings.Default.Hotkeys.ToggleShadow);
+        var fs = new FakeFileSystem();
+        var st = new SettingsStore(fs, "/data", utcNow: () => Now);
+        Assert.True(st.Save(new AppSettings { Td = new TdSettings { ShadowOnAbsent = true }, Hotkeys = new HotkeySettings { ToggleShadow = "Ctrl+Alt+M" } }));
+        var r = st.Load().Settings;
+        Assert.True(r.Td.ShadowOnAbsent);
+        Assert.Equal("Ctrl+Alt+M", r.Hotkeys.ToggleShadow);
+    }
+
+    [Fact]
     public void Continuous_waves_default_on_and_tower_panel_pinned_default_off_roundtrip_and_old_files_get_defaults()
     {
         Assert.True(AppSettings.Default.Td.ContinuousWaves);

@@ -48,6 +48,7 @@ public static class SettingsSerializer
         w.WriteString("TogglePause", s.Hotkeys.TogglePause);
         w.WriteString("StartTdWave", s.Hotkeys.StartWave);
         w.WriteString("CycleSpeed", s.Hotkeys.CycleSpeed);
+        w.WriteString("ToggleShadow", s.Hotkeys.ToggleShadow);
         w.WriteEndObject();
         w.WriteStartObject("audio");
         w.WriteBoolean("enabled", s.Audio.Enabled);
@@ -82,6 +83,7 @@ public static class SettingsSerializer
         w.WriteBoolean("towerPanelPinned", s.Td.TowerPanelPinned);
         w.WriteNumber("gameSpeed", s.Td.GameSpeed);
         w.WriteBoolean("extraSpeeds", s.Td.ExtraSpeeds);
+        w.WriteBoolean("shadowOnAbsent", s.Td.ShadowOnAbsent);
         w.WriteNumber("extraSpeedMask", s.Td.ExtraSpeedMask);
         w.WriteString("questionsSeen", s.Td.QuestionsSeen);
         w.WriteBoolean("showIncome", s.Td.ShowIncome);
@@ -142,6 +144,7 @@ public static class SettingsSerializer
                 TogglePause = Hotkey(hot, "TogglePause", d.Hotkeys.TogglePause),
                 StartWave = Hotkey(hot, "StartTdWave", d.Hotkeys.StartWave),
                 CycleSpeed = Hotkey(hot, "CycleSpeed", d.Hotkeys.CycleSpeed),
+                ToggleShadow = Hotkey(hot, "ToggleShadow", d.Hotkeys.ToggleShadow),
             },
             Audio = new AudioSettings
             {
@@ -176,6 +179,7 @@ public static class SettingsSerializer
                 TowerPanelPinned = Bool(td, "towerPanelPinned", d.Td.TowerPanelPinned),
                 GameSpeed = IntRange(td, "gameSpeed", TdSettings.MinGameSpeed, TdSettings.MaxGameSpeed, d.Td.GameSpeed),
                 ExtraSpeeds = Bool(td, "extraSpeeds", d.Td.ExtraSpeeds),
+                ShadowOnAbsent = Bool(td, "shadowOnAbsent", d.Td.ShadowOnAbsent),
                 ExtraSpeedMask = IntRange(td, "extraSpeedMask", 0, 255, d.Td.ExtraSpeedMask),
                 QuestionsSeen = Str(td, "questionsSeen", 1024) ?? d.Td.QuestionsSeen,
                 ShowIncome = Bool(td, "showIncome", d.Td.ShowIncome),
