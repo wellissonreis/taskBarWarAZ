@@ -378,6 +378,7 @@ public sealed partial class TdUiRenderer(Typography typography, int dpi, SpriteA
         if (it.SArg == "rank-step") return;
         if (DrawBestiaryItem(c, it, hover)) return;
         if (DrawMapItem(c, it, hover)) return;
+        if (DrawConfigItem(c, it, hover)) return;
         if (DrawJogoItem(c, it, hover)) return;
         if (it.SArg == "rank-chip")
         {

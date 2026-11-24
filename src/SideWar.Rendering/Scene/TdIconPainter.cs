@@ -135,6 +135,14 @@ internal static class TdIconPainter
             }
             case TdIcon.Check:
                 c.DrawLine(P(2.5f, 8.5f), P(6.5f, 12.5f), line); c.DrawLine(P(6.5f, 12.5f), P(13.5f, 3.5f), line); break;
+            case TdIcon.Gear: // engrenagem: anel central e 8 dentes
+                c.DrawCircle(P(8, 8), 4.2f * u, line); c.DrawCircle(P(8, 8), 1.6f * u, line);
+                for (int t = 0; t < 8; t++)
+                {
+                    float ang = t * MathF.PI / 4f, dx = MathF.Cos(ang), dy = MathF.Sin(ang);
+                    c.DrawLine(P(8 + dx * 4.4f, 8 + dy * 4.4f), P(8 + dx * 6.8f, 8 + dy * 6.8f), line);
+                }
+                break;
             case TdIcon.Cross:
                 c.DrawLine(P(3, 3), P(13, 13), line); c.DrawLine(P(13, 3), P(3, 13), line); break;
             case TdIcon.Target:
