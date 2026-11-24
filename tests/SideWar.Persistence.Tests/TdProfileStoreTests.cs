@@ -19,6 +19,28 @@ public class TdProfileStoreTests
     private static string[] Corrupt(FakeFileSystem fs) => fs.Files.Keys.Where(k => k.StartsWith("/data/corrupt/", StringComparison.Ordinal)).ToArray();
     private static string J(TdProfileData p) { using var b = new MemoryStream(); using (var w = new Utf8JsonWriter(b)) TdProfileSerializer.Write(w, p); return Encoding.UTF8.GetString(b.ToArray()); }
 
+    [Fact]
+    public void Seal_purchases_follow_branch_order_discount_the_seals_and_survive_a_reload()
+    {
+        var p = TdProfileData.Default with { SealsEarned = 10 };
+        // fora de ordem: o 2º nó do ramo não abre sem o 1º
+        Assert.Same(p, TdProfileRules.TryPurchase(p, Meta, "infrastructure.startingCredits1"));
+        p = TdProfileRules.TryPurchase(p, Meta, "infrastructure.credits");          // custo 1
+        Assert.Equal(9, TdProfileRules.SealsAvailable(p, Meta));
+        p = TdProfileRules.TryPurchase(p, Meta, "infrastructure.startingCredits1"); // custo 2
+        Assert.Equal(7, TdProfileRules.SealsAvailable(p, Meta));
+        Assert.Same(p, TdProfileRules.TryPurchase(p, Meta, "infrastructure.startingCredits1")); // já comprado
+        // ramos independentes: o 1º de Defesa abre mesmo sem nada em Infraestrutura/Operação
+        Assert.NotSame(p, TdProfileRules.TryPurchase(p, Meta, "defense.damage1"));
+        // sem selos: nada
+        Assert.Same(TdProfileData.Default, TdProfileRules.TryPurchase(TdProfileData.Default, Meta, "infrastructure.credits"));
+        var (_, st) = Make();
+        st.Save(p);
+        var again = st.Load().Profile;
+        Assert.Equal(["infrastructure.credits", "infrastructure.startingCredits1"], again.PurchasedNodes);
+        Assert.Equal(7, TdProfileRules.SealsAvailable(again, Meta));
+    }
+
     private static TdProfileData Full() => new()
     {
         SealsEarned = 9, MigratedSeals = 4, IdleImportDone = true,

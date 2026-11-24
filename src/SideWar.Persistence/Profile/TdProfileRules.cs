@@ -108,11 +108,24 @@ public static class TdProfileRules
         return next with { Stages = stages, SealsEarned = next.SealsEarned + bonus };
     }
 
-    /// <summary>Compra um nó se houver selos e ainda não foi comprado; devolve o mesmo perfil se não puder.</summary>
+    /// <summary>Compra em ordem: o nó só abre se o anterior do mesmo ramo já foi comprado (o primeiro de cada ramo está sempre aberto).</summary>
+    public static bool PrerequisiteOwned(TdProfileData p, TdMetaDef meta, string nodeId)
+    {
+        foreach (var b in meta.Branches)
+        {
+            int i = Array.FindIndex(b.Nodes, n => n.Id == nodeId);
+            if (i < 0) continue;
+            return i == 0 || p.PurchasedNodes.Contains(b.Nodes[i - 1].Id, StringComparer.Ordinal);
+        }
+        return false;
+    }
+
+    /// <summary>Compra um nó se houver selos, a ordem do ramo permitir e ainda não foi comprado; devolve o mesmo perfil se não puder.</summary>
     public static TdProfileData TryPurchase(TdProfileData p, TdMetaDef meta, string nodeId)
     {
         var node = meta.Branches.SelectMany(b => b.Nodes).FirstOrDefault(n => n.Id == nodeId);
         if (node is null || p.PurchasedNodes.Contains(nodeId, StringComparer.Ordinal)) return p;
+        if (!PrerequisiteOwned(p, meta, nodeId)) return p;
         if (SealsAvailable(p, meta) < node.Cost) return p;
         return p with { PurchasedNodes = [.. p.PurchasedNodes, nodeId] };
     }

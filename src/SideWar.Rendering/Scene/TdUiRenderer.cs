@@ -19,7 +19,7 @@ namespace SideWar.Rendering.Panel;
 /// Desenha o HUD compacto e o popover da partida TD (TD.8) a partir dos modelos puros de layout (<see cref="TdHudView"/>,
 /// <see cref="TdPopoverView"/>). Sem lógica de jogo: só paleta, caixas e texto (JetBrains Mono para texto com acento, Silkscreen para rótulos ASCII).
 /// </summary>
-public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? atlas = null) : IDisposable
+public sealed partial class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? atlas = null) : IDisposable
 {
     private const float ChooserIconDip = 30f, HeaderIconDip = 18f;
     private static readonly SKSamplingOptions Nearest = new(SKFilterMode.Nearest);
@@ -375,6 +375,8 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     {
         var r = it.Rect;
         if (it.SArg == "rank-step") return;
+        if (DrawMapItem(c, it, hover)) return;
+        if (DrawJogoItem(c, it, hover)) return;
         if (it.SArg == "rank-chip")
         {
             RoundBox(c, r, RankColor(it.Arg).WithAlpha(180), Palette.Td.PauseBadge, 12);
@@ -507,6 +509,13 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         var r = it.Rect;
         switch (it.SArg)
         {
+            case "mapnote":
+            {
+                var lines = WrapLines(it.Text, 11f, r.W);
+                for (int l = 0; l < lines.Count && l < 2; l++)
+                    _p.Text(c, lines[l], PanelFont.JetBrainsMono, 11, new DipRect(r.X, r.Y + l * 15, r.W, 14), Palette.Td.Dim);
+                return;
+            }
             case "sec": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 10, r, Palette.Td.Muted); return;
             case "hdr": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 12, r, Palette.Td.Muted); return;
             case "hdrR": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 10, r, Palette.Td.Muted, TextAlign.Right); return;
@@ -595,6 +604,9 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
     /// centro, como o design), raios do anel interno ao externo, estrela no centro. Aceso (âmbar, com brilho) quando as duas pontas estão
     /// despertadas; apagado caso contrário. Os nós são desenhados depois, por cima.
     /// </summary>
+    /// <summary>Nível de detalhe da teia no quadro atual (ver <see cref="TdUiController.RuneLod"/>): 0 completo, 1 sem glifos, 2 pontos.</summary>
+    private int _runeLod;
+
     private void DrawRuneWeb(SKCanvas c, TdUiItem[] items, bool big)
     {
         TdUiItem? bg = null, ctr = null;
@@ -611,9 +623,10 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         // Centro da teia na tela (a teia rola e dá zoom): o item "webctr" informa onde está o núcleo; sem ele, o meio da área.
         float cx = ctr is { } cc ? cc.Rect.X : area.X + area.W / 2f, cy = ctr is { } cd ? cd.Rect.Y : area.Y + area.H / 2f;
         float zoom = ctr is { FontSize: > 0f } cz ? cz.FontSize / (big ? TdUiController.ModalWorld : TdUiController.HudWorld) : 1f;
+        _runeLod = big ? TdUiController.RuneLod(zoom) : 0;
         c.Save();
         c.ClipRect(new SKRect(_p.Px(area.X + 1), _p.Px(area.Y + 1), _p.Px(area.X + area.W - 1), _p.Px(area.Y + area.H - 1)));
-        if (big)
+        if (big && _runeLod < 2)
         {
             using var glow = new SKPaint { IsAntialias = true, Shader = SKShader.CreateRadialGradient(new SKPoint(_p.Px(cx), _p.Px(cy)), _p.Px(150f * Math.Max(0.4f, zoom)), [Palette.Td.Amber.WithAlpha(26), Palette.Td.Amber.WithAlpha(0)], [0f, 1f], SKShaderTileMode.Clamp) };
             c.DrawCircle(_p.Px(cx), _p.Px(cy), _p.Px(150f * Math.Max(0.4f, zoom)), glow);
@@ -629,7 +642,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             {
                 bool on = n.Fill >= TdUiController.RuneOn;
                 var a = Mid(n);
-                if (nodes.TryGetValue((ring, (sector + 1) % TdContentValidatorWebSectors), out var side))
+                if (_runeLod < 2 && nodes.TryGetValue((ring, (sector + 1) % TdContentValidatorWebSectors), out var side))
                 {
                     var z = Mid(side);
                     float qx = cx + ((a.X + z.X) / 2f - cx) * pull, qy = cy + ((a.Y + z.Y) / 2f - cy) * pull;
@@ -644,11 +657,10 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             using var dimPath = dim.Detach();
             using var litPath = lit.Detach();
             using var paint = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, StrokeCap = SKStrokeCap.Round };
-            paint.Color = Palette.Td.BorderStrong; paint.StrokeWidth = Math.Max(1f, _p.Px(1f));
+            paint.Color = Palette.Td.BorderStrong; paint.StrokeWidth = Math.Max(1f, _p.Px(_runeLod >= 2 ? 0.6f : 1f));
             c.DrawPath(dimPath, paint);
-            paint.Color = Palette.Td.Amber.WithAlpha(46); paint.StrokeWidth = Math.Max(2f, _p.Px(big ? 6f : 5f));
-            c.DrawPath(litPath, paint);
-            paint.Color = Palette.Td.Amber.WithAlpha(217); paint.StrokeWidth = Math.Max(1f, _p.Px(big ? 1.6f : 1.4f));
+            if (_runeLod < 2) { paint.Color = Palette.Td.Amber.WithAlpha(46); paint.StrokeWidth = Math.Max(2f, _p.Px(big ? 6f : 5f)); c.DrawPath(litPath, paint); }
+            paint.Color = Palette.Td.Amber.WithAlpha(217); paint.StrokeWidth = Math.Max(1f, _p.Px(_runeLod >= 2 ? 0.8f : big ? 1.6f : 1.4f));
             c.DrawPath(litPath, paint);
         }
         float core = (big ? 52f : 28f) * Math.Clamp(zoom, 0.5f, 1.2f);
@@ -673,6 +685,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
         float vis = it.FontSize > 0f ? it.FontSize : r.W;
         if (hovered) vis *= 1.2f; // hover: o nó cresce 20%
         int type = UnpackType(it.Arg);
+        if (_runeLod >= 1 && DrawRuneNodeLod(c, cx, cy, vis, on, av, hovered)) return;
         float gs = vis * (vis >= 24f ? 0.52f : 0.62f), gx = cx - gs / 2f, gy = cy - gs / 2f;
         // legenda: nós do ramo em destaque (brilho leve), em qualquer estado
         if (it.Selected) DrawPebble(c, cx, cy, vis + 9f, Palette.Td.Amber.WithAlpha(70), default, true);
@@ -700,6 +713,17 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             c.DrawCircle(_p.Px(cx), _p.Px(cy), _p.Px(vis / 2f), l);
             DrawRuneGlyph(c, type, gx, gy, gs, it.Selected ? Palette.Td.Amber : LockedGlyphColor, 2.2f);
         }
+    }
+
+    /// <summary>LOD afastado da teia: nó como círculo simples (sem glifo, sem brilho); nível 2 vira um ponto menor. Seleção/hover ainda acendem.</summary>
+    private bool DrawRuneNodeLod(SKCanvas c, float cx, float cy, float vis, bool on, bool av, bool hovered)
+    {
+        float d = _runeLod >= 2 ? vis * 0.8f : vis;
+        using var f = new SKPaint { IsAntialias = true, Color = on ? Palette.Td.Amber : av ? Palette.Td.Background : LockedNodeFill };
+        using var l = new SKPaint { IsAntialias = true, Style = SKPaintStyle.Stroke, Color = on || av || hovered ? Palette.Td.Amber : Palette.Td.BorderStrong, StrokeWidth = Math.Max(1, _p.Px(1)) };
+        c.DrawCircle(_p.Px(cx), _p.Px(cy), _p.Px(d / 2f), f);
+        if (!on || hovered) c.DrawCircle(_p.Px(cx), _p.Px(cy), _p.Px(d / 2f), l);
+        return true;
     }
 
     /// <summary>
@@ -998,6 +1022,7 @@ public sealed class TdUiRenderer(Typography typography, int dpi, SpriteAtlas? at
             _p.Text(c, "PAUSADO", PanelFont.JetBrainsMono, 10, new DipRect(headerX + 22, 15, 62, 14), Palette.Td.Amber);
             _p.Text(c, v.Title, PanelFont.JetBrainsMono, 11, new DipRect(headerX + 96, 15, 662 - headerX - 96, 16), Palette.Td.Muted);
             DrawRuneWeb(c, v.Items, true);
+            DrawMapBack(c, v.Items);
             for (int i = 0; i < v.Items.Length; i++)
             {
                 DrawModalItem(c, v.Items[i], i == hover);

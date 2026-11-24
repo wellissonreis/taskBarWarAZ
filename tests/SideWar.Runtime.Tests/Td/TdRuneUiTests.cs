@@ -394,4 +394,33 @@ public sealed class TdRuneUiTests
         Assert.False(ui.RuneWindowOpen);
         Assert.Null(ui.HoverRune);
     }
+
+    [Fact]
+    public void Rune_web_lod_levels_follow_the_zoom()
+    {
+        Assert.Equal(0, TdUiController.RuneLod(1f));
+        Assert.Equal(0, TdUiController.RuneLod(TdUiController.LodFullZoom));
+        Assert.Equal(1, TdUiController.RuneLod(0.6f));
+        Assert.Equal(2, TdUiController.RuneLod(TdUiController.MinWebZoom));
+        Assert.True(TdUiController.RuneNodeScale(TdUiController.MinWebZoom) < TdUiController.RuneNodeScale(1f));
+    }
+
+    [Fact]
+    public void Rune_web_at_min_zoom_keeps_nodes_from_overlapping()
+    {
+        var r = new Rig();
+        r.Click(TdUiAction.ModalTab, (int)TdUiMode.Runes);
+        r.Ui.ZoomWeb(-100);
+        Assert.Equal(TdUiController.MinWebZoom, r.Ui.WebZoom);
+        var nodes = r.Ui.BuildPopover()!.Items.Where(i => i.Action == TdUiAction.SelectRune).ToArray();
+        Assert.True(nodes.Length > 20, $"{nodes.Length}");
+        foreach (var a in nodes)
+            foreach (var b in nodes)
+            {
+                if (a.SArg == b.SArg) continue;
+                float dx = a.Rect.X + a.Rect.W / 2f - (b.Rect.X + b.Rect.W / 2f), dy = a.Rect.Y + a.Rect.H / 2f - (b.Rect.Y + b.Rect.H / 2f);
+                float min = (a.FontSize + b.FontSize) / 2f;
+                Assert.True(MathF.Sqrt(dx * dx + dy * dy) >= min, $"{a.SArg} x {b.SArg}: {MathF.Sqrt(dx * dx + dy * dy)} < {min}");
+            }
+    }
 }

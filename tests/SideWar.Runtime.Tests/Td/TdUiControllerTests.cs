@@ -610,13 +610,35 @@ public sealed class TdUiControllerTests
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "...", TdUiAction.Menu));
         r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.MapOpen));
         var map = r.Ui.BuildPopover()!;
-        Assert.Equal(2, map.Items.Count(i => i.Action == TdUiAction.SelectStage && i.Enabled));
+        Assert.Equal(6, map.Items.Count(i => i.Action == TdUiAction.SelectStage));
+        Assert.Equal(2, map.Items.Count(i => i is { Action: TdUiAction.SelectStage, SArg: "mapnode", Fill: > 0f }));
+        Assert.DoesNotContain(map.Items, i => i.SArg == "rank-bar" || i.Kind == TdUiKind.Bar); // patente só no chip do cabeçalho
         r.Ui.Activate(Find(map, TdUiAction.MapTab));
         r.Ui.Activate(map.Items.First(i => i is { Action: TdUiAction.MapTab, Arg: 1 }));
         var tree = r.Ui.BuildPopover()!;
         Assert.Equal(12, tree.Items.Count(i => i.Action == TdUiAction.BuyNode));
         r.Ui.Activate(tree.Items.First(i => i.Action == TdUiAction.BuyNode && i.Enabled));
         Assert.StartsWith("buy:", r.Host.Calls.Single(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Map_play_asks_for_confirmation_before_starting_the_stage()
+    {
+        var r = new Rig();
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "...", TdUiAction.Menu));
+        r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.MapOpen));
+        var map = r.Ui.BuildPopover()!;
+        r.Ui.Activate(map.Items.First(i => i is { Action: TdUiAction.SelectStage, Arg: 2 }));
+        Assert.DoesNotContain(r.Host.Calls, c => c.StartsWith("stage", StringComparison.Ordinal));
+        r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.MapPlay));
+        var confirm = r.Ui.BuildPopover()!;
+        Assert.Contains(confirm.Items, i => i.Action == TdUiAction.MapPlayConfirm);
+        Assert.DoesNotContain(r.Host.Calls, c => c.StartsWith("stage", StringComparison.Ordinal));
+        r.Ui.Activate(Find(confirm, TdUiAction.MapPlayCancel));
+        Assert.DoesNotContain(r.Ui.BuildPopover()!.Items, i => i.Action == TdUiAction.MapPlayConfirm);
+        r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.MapPlay));
+        r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.MapPlayConfirm));
+        Assert.Contains(r.Host.Calls, c => c == "stage2");
     }
 
     [Fact]
@@ -643,7 +665,7 @@ public sealed class TdUiControllerTests
         Assert.True(badges.Selected);                                   // coroa
         Assert.True(((TdMedals)badges.Arg).HasFlag(TdMedals.SemVender)); // medalhas ganhas
         Assert.Contains(card.Items, i => i.Text.StartsWith("Pontuacao: ", StringComparison.Ordinal) && i.Right == "NOVO RECORDE");
-        Assert.Contains(card.Items, i => i.Text == "Selos bonus: +3");
+        Assert.Contains(card.Items, i => i.Text.StartsWith("Selos bonus: +3", StringComparison.Ordinal));
         Assert.Contains(card.Items, i => i.Kind == TdUiKind.Bar && i.Text.StartsWith("Patente: ", StringComparison.Ordinal));
         Assert.Contains(card.Items, i => i.Action == TdUiAction.Restart && i.Text == "Jogar de novo");
         Assert.Contains(card.Items, i => i.Action == TdUiAction.MapOpen);
@@ -663,13 +685,17 @@ public sealed class TdUiControllerTests
         Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Kind == TdUiKind.Bar && i.SArg == "rank-card" && i.Text == "Júnior");
         r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.MapOpen));
         var map = r.Ui.BuildPopover()!;
-        var badges = map.Items.Where(i => i.Kind == TdUiKind.Badges).ToArray();
-        Assert.Equal(2, badges.Length); // só as fases abertas
-        Assert.True(badges[0].Selected);
-        Assert.Equal(5, badges[0].Arg);
-        Assert.Equal("Recorde 4123", badges[0].Right);
-        Assert.False(badges[1].Selected);
-        Assert.Equal("sem recorde", badges[1].Right);
+        Assert.DoesNotContain(map.Items, i => i.Kind == TdUiKind.Bar); // patente só no chip do cabeçalho
+        var d1 = map.Items.Single(i => i.SArg == "mapdetail"); // a fase atual (1) já vem selecionada
+        Assert.Equal(1, d1.Arg >> 8);
+        Assert.True((d1.Arg & 4) != 0); // coroa
+        Assert.Equal(5, (d1.Arg >> 3) & 15); // medalhas
+        Assert.Equal("4123", d1.Right);
+        r.Ui.Activate(map.Items.First(i => i is { Action: TdUiAction.SelectStage, Arg: 2 }));
+        var d2 = r.Ui.BuildPopover()!.Items.Single(i => i.SArg == "mapdetail");
+        Assert.Equal(2, d2.Arg >> 8);
+        Assert.Equal(0, d2.Arg & 4);
+        Assert.Equal("—", d2.Right);
     }
 
     [Fact]

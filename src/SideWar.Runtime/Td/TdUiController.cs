@@ -85,7 +85,8 @@ public sealed partial class TdUiController
     private int _modalCount;
     public int ModalCount => _modalCount;
     public bool ModalOpen => !QuickTowersOpen && !BuildActive && Mode != TdUiMode.None && !EndCardOpen;
-    private bool _mapSeals;
+    private bool _mapSeals, _mapConfirm;
+    private int _mapSel;
     /// <summary>TD.29b: pausa pedida pelo botão Pausar do HUD (Pause/Resume reais do Core); zera a cada partida nova.</summary>
     private bool _userPaused;
     private string? _selectedRune;
@@ -140,7 +141,7 @@ public sealed partial class TdUiController
     public void SetVolumeAt(TdUiItem item, float x)
     {
         if (item.Action != TdUiAction.GameOption || item.Arg != 3 || item.Rect.W <= 100) return;
-        float left = item.Rect.X + 88, right = item.Rect.X + item.Rect.W - 54;
+        float left = item.Rect.X + 8, right = item.Rect.X + item.Rect.W - 8;
         int value = (int)Math.Round(Math.Clamp((x - left) / (right - left), 0f, 1f) * 20f, MidpointRounding.AwayFromZero) * 5;
         _host.SetGameOptions(_host.GameOptions with { Volume = value });
         Changed?.Invoke();
@@ -395,8 +396,11 @@ public sealed partial class TdUiController
                 break;
             case TdUiAction.Preview: Toggle(TdUiMode.Preview); break;
             case TdUiAction.MapOpen: SetMode(TdUiMode.Map); break;
-            case TdUiAction.MapTab: _mapSeals = item.Arg == 1; Changed?.Invoke(); break;
-            case TdUiAction.SelectStage: Close(); _host.StartStage(item.Arg); break;
+            case TdUiAction.MapTab: _mapSeals = item.Arg == 1; _mapConfirm = false; Changed?.Invoke(); break;
+            case TdUiAction.SelectStage: _mapSel = item.Arg; _mapConfirm = false; Changed?.Invoke(); break;
+            case TdUiAction.MapPlay: _mapConfirm = true; Changed?.Invoke(); break;
+            case TdUiAction.MapPlayCancel: _mapConfirm = false; Changed?.Invoke(); break;
+            case TdUiAction.MapPlayConfirm: _mapConfirm = false; Close(); _host.StartStage(item.Arg); break;
             case TdUiAction.BuyNode when item.SArg is not null: _host.PurchaseNode(item.SArg); Changed?.Invoke(); break;
             case TdUiAction.Pause: _host.TogglePause(); Close(); break;
             case TdUiAction.Settings: _host.OpenSettings(); break;
@@ -657,6 +661,7 @@ public sealed partial class TdUiController
             _noticeTitle = null;
             _noticeRank = null;
             _noticeText = $"Fase {r.StageNumber}" + (r.Crown ? " +coroa" : "") + (o.NewRecord ? " +recorde" : "");
+            if (o.BonusSeals > 0) _noticeText += $" · +{o.BonusSeals} selo{(o.BonusSeals > 1 ? "s" : "")}"; // o cartão de fim aponta a aba
             _noticeUntil = _now() + StageNoticeSeconds;
             Changed?.Invoke();
         }
@@ -717,6 +722,8 @@ public sealed partial class TdUiController
         _endCorner = false;
         _confirmRestart = false;
         _confirmWipe = false;
+        _mapConfirm = false;
+        _mapSel = 0;
         Mode = mode;
         UpdateModalPause();
         if (mode != TdUiMode.Inspector) _selectedTowerId = 0;
@@ -1124,7 +1131,15 @@ public sealed partial class TdUiController
     /// mostra só a região ao redor da última runa despertada (zoom fixo <see cref="HudWorld"/>) e a aba Runas da modal rola (arrasto/setas) e dá
     /// zoom (roda) sobre <see cref="ModalWorld"/> × zoom.
     /// </summary>
-    public const float HudWorld = 820f, ModalWorld = 1100f, MinWebZoom = 0.3f, MaxWebZoom = 2.2f;
+    public const float HudWorld = 820f, ModalWorld = 1400f, MinWebZoom = 0.4f, MaxWebZoom = 2.2f;
+
+    /// <summary>Níveis de detalhe da teia por zoom: 0 = completo (glifos, brilhos, arcos), 1 = nós simples sem glifo, 2 = pontos e fios finos (zoom afastado).</summary>
+    public const float LodFullZoom = 0.75f, LodMidZoom = 0.55f;
+
+    public static int RuneLod(float zoom) => zoom >= LodFullZoom ? 0 : zoom >= LodMidZoom ? 1 : 2;
+
+    /// <summary>Fator de tamanho dos nós: encolhe junto com o zoom afastado para não se sobreporem (vizinhos ficam ≥ 0,029 × <see cref="ModalWorld"/> × zoom).</summary>
+    public static float RuneNodeScale(float zoom) => Math.Clamp(zoom, 0.4f, 1f);
     private float _webZoom = 1f, _webPanX = 0.5f, _webPanY = 0.5f;
     private bool _webCentered;
 
@@ -1188,13 +1203,14 @@ public sealed partial class TdUiController
         long frag = m.Fragments;
         int total = 0;
         TdRuneTip? tip = null;
+        float ns = sz == ModalRune ? RuneNodeScale(world / ModalWorld) : 1f; // só a aba Runas dá zoom; o HUD usa tamanho fixo
         foreach (var n in m.RuneWeb)
         {
             bool on = m.IsAwakened(n.Id), av = !on && frontier.Contains(n.Id);
             int ti = Math.Max(0, Array.FindIndex(types, t => t.Id == n.Type));
             var st = on ? TdRuneState.Awake : av ? TdRuneState.Available : TdRuneState.Locked;
             if (on) total++;
-            float vis = on ? sz.On : av ? sz.Available : sz.Locked, hit = Math.Max(vis, sz.MinHit);
+            float vis = (on ? sz.On : av ? sz.Available : sz.Locked) * ns, hit = Math.Max(vis, sz.MinHit * ns);
             float cx = area.X + area.W / 2f + ((float)n.X - center.X) * world, cy = area.Y + area.H / 2f + ((float)n.Y - center.Y) * world;
             if (cx - hit / 2 < area.X || cy - hit / 2 < area.Y || cx + hit / 2 > area.X + area.W || cy + hit / 2 > area.Y + area.H) continue; // fora da região visível
             items.Add(new(new DipRect(cx - hit / 2, cy - hit / 2, hit, hit), TdUiKind.Button, $"{types[ti].Name}, {RuneStateWord(st)}", TdUiAction.SelectRune,
@@ -1353,46 +1369,8 @@ public sealed partial class TdUiController
                 break;
             }
             case TdUiMode.Menu:
-            {
-                float lx = 16, rx = 366, w = 336, rw = 338;
-                int ab = 0, opt = 0;
-                foreach (var it in src)
-                {
-                    switch (it.Action)
-                    {
-                        case TdUiAction.None when it.Kind == TdUiKind.Bar:
-                            var rank = _host.Rank;
-                            int crowns = Enumerable.Range(1, _host.StageCount).Count(_host.StageCrown);
-                            items.Add(Put(it, lx, 104, w, 156) with { SArg = "rank-card", Arg = (int)rank.Current,
-                                Text = TdRank.DisplayName(rank.Current), Tip = $"Brasão {TdRank.DisplayName(rank.Current)}", Sub = crowns.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                                Right = rank.Next is { } next ? $"{rank.Total} / {rank.NextThreshold} XP|faltam {Math.Max(0, rank.NextThreshold - rank.Total)} XP para {TdRank.DisplayName(next)}" : $"{rank.Total} XP|Patente máxima" });
-                            for (int i = 0; i < 6; i++)
-                                items.Add(new(new DipRect(lx + 120 + i * 32, 180, 28, 28), TdUiKind.Label, "", Arg: i,
-                                    SArg: "rank-step", Tip: $"Brasão {TdRank.DisplayName((TdRankLevel)i)} · NV {i + 1}"));
-                            break;
-                        case TdUiAction.ResumeAbility: items.Add(Put(it, lx + ab++ * 114, 284, 108, 42)); break;
-                        case TdUiAction.Preview: items.Add(Put(it, lx, 334, 165, 32) with { Icon = TdIcon.FastForward, SArg = "menu-action" }); break;
-                        case TdUiAction.TowersOpen: items.Add(Put(it, lx + 171, 334, 165, 32) with { Icon = TdIcon.Target, SArg = "menu-action" }); break;
-                        case TdUiAction.MapOpen: items.Add(Put(it, lx, 372, 165, 32) with { Icon = TdIcon.Portal, SArg = "menu-action" }); break;
-                        case TdUiAction.HowTo: items.Add(Put(it, lx + 171, 372, 165, 32) with { Icon = TdIcon.Question, SArg = "menu-action" }); break;
-                        case TdUiAction.RestartPrompt: items.Add(Put(it, lx, 410, w, 32) with { Icon = TdIcon.Restore, SArg = "menu-action" }); break;
-                        case TdUiAction.Restart: items.Add(Put(it, lx, 410, 165, 32)); break;
-                        case TdUiAction.None when it.Text == "Reiniciar?": items.Add(Put(it, lx, 396, w, 14) with { SArg = "sec", Tone = TdTone.Warn }); break;
-                        case TdUiAction.RestartCancel: items.Add(Put(it, lx + 171, 410, 165, 32)); break;
-                        case TdUiAction.GameOption: items.Add(Put(it, rx, 122 + opt++ * 31, rw, 31)); break;
-                        case TdUiAction.SetSpeed: items.Add(Put(it, rx + rw - 12 - 3 * 36 + (it.Arg - 1) * 36, 122 + 8 * 31 + 4, 32, 23)); break;
-                        case TdUiAction.Exit: items.Add(Put(it, rx, 408, 163, 34)); break;
-                        case TdUiAction.WipePrompt: items.Add(Put(it, rx + 175, 408, 163, 34)); break;
-                        case TdUiAction.WipeConfirm: items.Add(Put(it, rx, 410, 163, 32)); break;
-                        case TdUiAction.WipeCancel: items.Add(Put(it, rx + 175, 410, 163, 32)); break;
-                        case TdUiAction.None when it.Text == "Apagar todo o progresso?": items.Add(Put(it, rx, 396, rw, 14) with { SArg = "sec", Tone = TdTone.Warn }); break;
-                    }
-                }
-                items.Add(new(new DipRect(lx, 266, w, 14), TdUiKind.Label, "HABILIDADES", SArg: "sec"));
-                items.Add(new(new DipRect(rx, 104, rw, 14), TdUiKind.Label, "CONFIGURAÇÕES", SArg: "sec"));
-                items.Add(new(new DipRect(rx + 12, 122 + 8 * 31 + 8, 150, 16), TdUiKind.Label, "Velocidade", SArg: "optname"));
+                AddJogoTab(src, items);
                 break;
-            }
         }
         return runeTip;
     }
@@ -1430,16 +1408,16 @@ public sealed partial class TdUiController
         ScrollInfo(_match()) is { } i && ScrollBy(dir * (line ? 1 : i.Visible));
 
     /// <summary>Ordem das abas da modal: a primeira (Jogo: patente, XP e progresso) é também a aberta ao iniciar.</summary>
-    public static readonly TdUiMode[] ModalTabs = [TdUiMode.Menu, TdUiMode.Build, TdUiMode.Runes, TdUiMode.Towers, TdUiMode.Help];
+    public static readonly TdUiMode[] ModalTabs = [TdUiMode.Menu, TdUiMode.Build, TdUiMode.Runes, TdUiMode.Towers, TdUiMode.Map, TdUiMode.Help];
 
     private TdPopoverView? Modalize(TdPopoverView? view)
     {
         if (view is null) return null;
         var items = new List<TdUiItem>();
         var modes = ModalTabs;
-        string[] labels = ["Jogo", "Construir", "Runas", "Torres", "Como jogar"];
+        string[] labels = ["Jogo", "Construir", "Runas", "Torres", "Fases", "Como jogar"];
         for (int i = 0; i < modes.Length; i++)
-            items.Add(new(new DipRect(16 + i * 136, 52, 132, 36), TdUiKind.Button, labels[i],
+            items.Add(new(new DipRect(16 + i * 115, 52, 112, 36), TdUiKind.Button, labels[i],
                 TdUiAction.ModalTab, (int)modes[i], Selected: Mode == modes[i]));
         if (Mode == TdUiMode.End && view.Width == 720f && view.Height == 480f)
         {
@@ -1449,6 +1427,13 @@ public sealed partial class TdUiController
         }
         var currentRank = _host.Rank.Current;
         items.Add(new(new DipRect(16, 10, 150, 24), TdUiKind.Label, TdRank.DisplayName(currentRank), Arg: (int)currentRank, SArg: "rank-chip"));
+        if (Mode == TdUiMode.Map)
+        {
+            items.Add(new(new DipRect(674, 4, 36, 36), TdUiKind.Button, "X", TdUiAction.Close));
+            AddMapModal(items, _match());
+            AddModalTutorial(items);
+            return new TdPopoverView($"{view.Title}   ¢{_match().Credits}", [.. items], 720, 480, 0);
+        }
         float factor = Math.Min(1f, 402f / Math.Max(1, view.Height));
         int towerRow = 0, categoryColumn = 0;
         if (Mode is TdUiMode.Menu or TdUiMode.Towers or TdUiMode.Help or TdUiMode.Runes)
@@ -1702,7 +1687,6 @@ public sealed partial class TdUiController
         s.Add(TdUiKind.Button, "Como jogar", RowH, TdUiAction.HowTo, tone: TdTone.Accent);
         s.Add(TdUiKind.Button, "Vender torres", RowH, TdUiAction.TowersOpen);
         s.Add(TdUiKind.Button, "Próxima onda", RowH, TdUiAction.Preview);
-        s.Add(TdUiKind.Button, "Fases e selos", RowH, TdUiAction.MapOpen);
 
         var options = _host.GameOptions;
         s.Add(TdUiKind.Button, $"Faixa: {options.BandHeight} DIP", RowH, TdUiAction.GameOption, 0);
@@ -1728,6 +1712,90 @@ public sealed partial class TdUiController
             s.Add(TdUiKind.Button, "Recomeçar do zero", RowH, TdUiAction.WipePrompt, tone: TdTone.Bad);
         }
         return Finish("Jogo", s, 0);
+    }
+
+    /// <summary>Posições (DIP, relativas ao mapa) das 6 regiões da rota no artboard "Mapa de fases + Selos".</summary>
+    private static readonly (float X, float Y)[] MapPoints = [(136, 250), (92, 116), (214, 96), (340, 122), (196, 186), (334, 262)];
+
+    /// <summary>
+    /// Mapa de fases + Selos (artboard Fases.dc.html, 720×480): subabas e resumo no topo; Fases = mapa com a rota das regiões e painel de detalhe da fase
+    /// escolhida (jogar pede confirmação aqui mesmo); Selos = banner e árvore de melhorias em 3 ramos, compra em ordem. Cada elemento é um item
+    /// com SArg "map*" que o renderer desenha; os botões reais (subabas, regiões, jogar, comprar) trazem a ação.
+    /// </summary>
+    private void AddMapModal(List<TdUiItem> items, TdMatchState m)
+    {
+        const float x0 = 16f, w = 688f, mt = 138f, mh = 315f; // conteúdo embutido do artboard: 688×357 a partir de y=96
+        var stages = m.Content.Stages.Stages;
+        items.Add(new(new DipRect(x0 + 3, 99, 72, 28), TdUiKind.Button, "Fases", TdUiAction.MapTab, 0, Selected: !_mapSeals, SArg: "mapsubtab"));
+        items.Add(new(new DipRect(x0 + 78, 99, 72, 28), TdUiKind.Button, "Selos", TdUiAction.MapTab, 1, Selected: _mapSeals, SArg: "mapsubtab"));
+        int stars = 0, crowns = 0;
+        foreach (var st in stages) { stars += _host.StageStars(st.Id); if (_host.StageCrown(st.Id)) crowns++; }
+        items.Add(new(new DipRect(704 - 150, 104, 44, 18), TdUiKind.Label, stars.ToString(System.Globalization.CultureInfo.InvariantCulture), Arg: 0, Right: $"/{stages.Length * 3}", SArg: "mapsum"));
+        items.Add(new(new DipRect(704 - 100, 104, 44, 18), TdUiKind.Label, crowns.ToString(System.Globalization.CultureInfo.InvariantCulture), Arg: 1, Right: $"/{stages.Length}", SArg: "mapsum"));
+        items.Add(new(new DipRect(704 - 50, 104, 50, 18), TdUiKind.Label, _host.SealsAvailable.ToString(System.Globalization.CultureInfo.InvariantCulture), Arg: 2, SArg: "mapsum"));
+        if (!_mapSeals) { AddMapStages(items, m, x0, mt, mh); return; }
+
+        int total = 0, bought = 0;
+        foreach (var b in m.Content.Meta.Branches) foreach (var n in b.Nodes) { total++; if (_host.NodePurchased(n.Id)) bought++; }
+        items.Add(new(new DipRect(x0, mt, w, 46), TdUiKind.Label, "Melhorias compradas valem a partir da próxima partida.", Arg: _host.SealsAvailable,
+            Right: $"{bought}/{total} compradas", SArg: "mapbanner"));
+        float colW = (w - 2 * 12f) / 3f;
+        int col = 0;
+        foreach (var b in m.Content.Meta.Branches)
+        {
+            float cx = x0 + col * (colW + 12f);
+            int got = b.Nodes.Count(n => _host.NodePurchased(n.Id));
+            items.Add(new(new DipRect(cx, mt + 54, colW, 26), TdUiKind.Label, b.Name, Arg: col, Right: $"{got}/{b.Nodes.Length}", SArg: "mapbranch"));
+            float y = mt + 84f;
+            for (int i = 0; i < b.Nodes.Length; i++)
+            {
+                var n = b.Nodes[i];
+                bool have = _host.NodePurchased(n.Id), prevOk = i == 0 || _host.NodePurchased(b.Nodes[i - 1].Id);
+                bool avail = !have && prevOk, afford = avail && _host.SealsAvailable >= n.Cost;
+                items.Add(new(new DipRect(cx, y, colW, 48), TdUiKind.Button, n.Name, TdUiAction.BuyNode, col * 16 + i, SArg: n.Id,
+                    Right: have ? "COMPRADO" : $"{n.Cost} selo{(n.Cost > 1 ? "s" : "")}", Fill: have ? 1f : avail ? 0.5f : 0f, Enabled: afford, Sub: "mapnode"));
+                if (i < b.Nodes.Length - 1) items.Add(new(new DipRect(cx + colW / 2f - 1f, y + 48, 2, 8), TdUiKind.Label, "", Arg: col, Fill: have ? 1f : 0f, Highlight: false, SArg: "maplink"));
+                y += 56f;
+            }
+            col++;
+        }
+    }
+
+    private void AddMapStages(List<TdUiItem> items, TdMatchState m, float x0, float mt, float mh)
+    {
+        var stages = m.Content.Stages.Stages;
+        int sel = _mapSel;
+        if (sel == 0 || !stages.Any(s => s.Id == sel)) sel = _host.StageUnlocked(m.StageId) ? m.StageId : stages[0].Id;
+        _mapSel = sel;
+        items.Add(new(new DipRect(x0, mt, 404, mh), TdUiKind.Label, "ROTA DE REGIÕES", SArg: "mapbg"));
+        for (int i = 0; i < stages.Length && i < MapPoints.Length; i++)
+        {
+            var st = stages[i];
+            bool open = _host.StageUnlocked(st.Id), on = st.Id == sel;
+            float size = on ? 38f : 32f;
+            var (px, py) = MapPoints[i];
+            items.Add(new(new DipRect(x0 + px - size / 2f, mt + py - size / 2f, size, size), TdUiKind.Button, st.Title, TdUiAction.SelectStage, st.Id, SArg: "mapnode",
+                Fill: !open ? 0f : _host.StageStars(st.Id) > 0 ? 1f : 0.5f, Selected: on, Sub: _host.StageStars(st.Id).ToString(System.Globalization.CultureInfo.InvariantCulture), Right: (i + 1).ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        }
+        var cur = stages.First(s => s.Id == sel);
+        bool locked = !_host.StageUnlocked(cur.Id);
+        int cs = _host.StageStars(cur.Id), best = _host.StageBestScore(cur.Id);
+        string status = locked ? "BLOQUEADA" : cs == 3 ? "CONCLUÍDA" : cs > 0 ? "EM ANDAMENTO" : "DISPONÍVEL";
+        float dx = x0 + 404 + 12, dw = 704 - dx, cardH = mh - 40 - 8 - 14 - 8;
+        items.Add(new(new DipRect(dx, mt, dw, cardH), TdUiKind.Label, cur.Title, Arg: cs | (_host.StageCrown(cur.Id) ? 4 : 0) | (_host.StageMedals(cur.Id) << 3) | (cur.Id << 8),
+            Sub: status, Right: best > 0 ? best.ToString(System.Globalization.CultureInfo.InvariantCulture) : "—", Enabled: !locked, SArg: "mapdetail"));
+        float by = mt + cardH + 8;
+        if (_mapConfirm && !locked)
+        {
+            float half = (dw - 6) / 2f;
+            items.Add(new(new DipRect(dx, by, half, 40), TdUiKind.Button, "Sim, jogar", TdUiAction.MapPlayConfirm, cur.Id, SArg: "mapplay"));
+            items.Add(new(new DipRect(dx + half + 6, by, half, 40), TdUiKind.Button, "Cancelar", TdUiAction.MapPlayCancel, SArg: "mapcancel"));
+            items.Add(new(new DipRect(dx, by + 48, dw, 14), TdUiKind.Label, $"Reiniciar a partida atual e jogar a fase {cur.Id}?", SArg: "mapwarn"));
+            return;
+        }
+        items.Add(new(new DipRect(dx, by, dw, 40), TdUiKind.Button,
+            locked ? $"Bloqueada · vença a fase {Math.Max(1, cur.Id - 1)}" : cs > 0 ? "Jogar de novo" : "Jogar esta fase", TdUiAction.MapPlay, cur.Id, Enabled: !locked, SArg: "mapplay"));
+        items.Add(new(new DipRect(dx, by + 48, dw, 14), TdUiKind.Label, "Jogar uma fase reinicia a partida atual.", SArg: "mapwarn"));
     }
 
     private TdPopoverView BuildMap(TdMatchState m)
@@ -1788,7 +1856,7 @@ public sealed partial class TdUiController
             s.Add(TdUiKind.Label, earned.Length > 0 ? $"Medalhas: {earned}" : "Sem medalhas desta vez.", TwoLineH - 8, tone: TdTone.Dim);
             s.Add(TdUiKind.Label, $"Pontuacao: {r.Score}", RowH - 4, right: o.NewRecord ? "NOVO RECORDE" : $"Recorde {_host.StageBestScore(m.StageId)}",
                 tone: o.NewRecord ? TdTone.Accent : TdTone.Normal);
-            if (o.BonusSeals > 0) s.Add(TdUiKind.Label, $"Selos bonus: +{o.BonusSeals}", RowH - 4, tone: TdTone.Good);
+            if (o.BonusSeals > 0) s.Add(TdUiKind.Label, $"Selos bonus: +{o.BonusSeals} · veja a aba Fases", RowH - 4, tone: TdTone.Good);
             AddRankBar(s, _host.Rank);
             if (_winGuide)
             {

@@ -48,7 +48,7 @@ public sealed class TdUiGoldenTests
         public void ClearTip(string id) => _seen.Remove(id);
     }
 
-    public enum UiScene { HudMoney, HudPrep, HudWave, HudMin, HudTip, Chooser, ChooserPoint, Inspector, Preview, Map, Seals, Victory, Menu, HudPlacing, Towers, Runes, Help, BaseAttacked, QuickTowers, RuneWindow, RuneWindowTipAvailable, RuneWindowTipAwake, RuneWindowTipLocked, RunesTipAvailable, RunesTipAwake, RunesTipLocked, RunesBranch, RuneWindowBranch, RuneCard, RuneWindowFromCard }
+    public enum UiScene { HudMoney, HudPrep, HudWave, HudMin, HudTip, Chooser, ChooserPoint, Inspector, Preview, Map, Seals, Victory, Menu, HudPlacing, Towers, Runes, Help, BaseAttacked, QuickTowers, RuneWindow, RuneWindowTipAvailable, RuneWindowTipAwake, RuneWindowTipLocked, RunesTipAvailable, RunesTipAwake, RunesTipLocked, RunesBranch, RuneWindowBranch, RuneCard, RuneWindowFromCard, RunesZoomMin, RunesZoomMid }
 
     public static TheoryData<UiScene, int> Cases()
     {
@@ -89,6 +89,10 @@ public sealed class TdUiGoldenTests
             case UiScene.Preview: ui.Activate(item(TdUiAction.Preview, 0)); break;
             case UiScene.QuickTowers: ui.Activate(item(TdUiAction.QuickTowers, 0)); break;
             case UiScene.Runes: ui.Activate(item(TdUiAction.ModalTab, (int)TdUiMode.Runes)); break;
+            case UiScene.RunesZoomMin or UiScene.RunesZoomMid:
+                ui.Activate(item(TdUiAction.ModalTab, (int)TdUiMode.Runes));
+                ui.ZoomWeb(scene == UiScene.RunesZoomMin ? -100 : -3);
+                break;
             case UiScene.RuneWindow or UiScene.RuneWindowTipAvailable or UiScene.RuneWindowTipAwake or UiScene.RuneWindowTipLocked:
             case UiScene.RunesTipAvailable or UiScene.RunesTipAwake or UiScene.RunesTipLocked:
             {

@@ -196,6 +196,17 @@ public static class Palette
         public static readonly SKColor Muted = new(0x93, 0xa4, 0xbc);
         public static readonly SKColor Dim = new(0x7f, 0x91, 0xab);
         public static readonly SKColor Amber = new(0xf5, 0xb5, 0x44);
+        // Mapa de fases + Selos (Fases.dc.html)
+        public static readonly SKColor AmberLight = new(0xff, 0xe0, 0x8a);
+        public static readonly SKColor Faint = new(0x4a, 0x5e, 0x7a);
+        public static readonly SKColor Deep = new(0x0a, 0x14, 0x22);
+        public static readonly SKColor EdgeSoft = new(0x1f, 0x33, 0x50);
+        public static readonly SKColor NodeOpen = new(0x17, 0x2a, 0x44);
+        public static readonly SKColor MapDot = new(0x1a, 0x2c, 0x46);
+        public static readonly SKColor MapBorder = new(0x16, 0x26, 0x3c);
+        public static readonly SKColor StarOff = new(0x2f, 0x45, 0x66);
+        public static readonly SKColor TierOwned = new(0x12, 0x26, 0x3a);
+        public static readonly SKColor Pink = new(0xf5, 0x8a, 0x97);
         public static readonly SKColor RankIntern = new(0xc9, 0xa0, 0x6a);
         public static readonly SKColor RankJunior = new(0xc0, 0x7a, 0x3a);
         public static readonly SKColor RankPleno = new(0xa9, 0xb6, 0xc8);

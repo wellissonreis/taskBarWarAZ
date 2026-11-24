@@ -38,6 +38,8 @@ public enum TdUiAction : byte
     MutationWarnDismiss,
     /// <summary>Paginação do catálogo rápido (painel do cantinho).</summary>
     BuildCatalogPage,
+    /// <summary>Mapa de fases: jogar a fase selecionada pede confirmação (MapPlay) dentro da própria aba; confirmar inicia a fase, cancelar volta.</summary>
+    MapPlay, MapPlayConfirm, MapPlayCancel,
 }
 
 /// <summary>Ícone do HUD desenhado por código (TD.14); o renderer mapeia para caminhos vetoriais.</summary>
