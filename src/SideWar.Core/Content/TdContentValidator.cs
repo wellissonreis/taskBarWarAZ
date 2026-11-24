@@ -128,6 +128,7 @@ public static class TdContentValidator
             Req(e, s.Id == i + 1, $"td-stages: id da posição {i} deve ser {i + 1} (encontrado {s.Id})");
             Req(e, s.Waves >= 1, $"td-stages.{s.Id}.waves deve ser >= 1");
             Req(e, s.StartingCredits > 0, $"td-stages.{s.Id}.startingCredits deve ser > 0");
+            Req(e, s.MinRank is >= 0 and <= 5, $"td-stages.{s.Id}.minRank deve estar em [0, 5]");
             Req(e, Text(s.Title) && Text(s.Region) && Text(s.Concept), $"td-stages.{s.Id}: title, region e concept não podem ser vazios");
             Req(e, regions.Add(s.Region), $"td-stages.{s.Id}.region duplicada '{s.Region}'");
             Req(e, challenges.Contains(s.Challenge), $"td-stages.{s.Id}.challenge referencia desafio inexistente '{s.Challenge}'");
