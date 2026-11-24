@@ -89,11 +89,14 @@ public sealed class TdMutationGoldenTests
                 break;
             case "warn-summary":
                 ui.Activate(ui.BuildPopover()!.Items.First(i => i.Action == TdUiAction.MutationWarnDismiss));
+                Assert.True(match.Apply(new SideWar.Core.Td.BuildTower("bolt", 900)).IsOk);
                 for (int guard = 0; guard < 6 && !ui.MutationWarnOpen; guard++) { match.Apply(new StartWave()); now += 0.1; ui.Sync(); }
                 Assert.True(ui.MutationWarnOpen);
                 break;
             case "enemy-tip":
-                match.Apply(new StartWave());
+                Assert.True(match.Apply(new SideWar.Core.Td.BuildTower("bolt", 900)).IsOk);
+                Assert.True(match.Apply(new StartWave()).IsOk);
+                Assert.True(match.Apply(new SideWar.Core.Td.SellTower(match.Towers[^1].Id)).IsOk);
                 for (int i = 0; i < 3000 && ui.HoverEnemyId == 0; i++)
                 {
                     match.Step();
