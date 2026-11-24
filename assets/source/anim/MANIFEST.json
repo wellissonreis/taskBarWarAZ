@@ -1031,6 +1031,60 @@
    "sha256": "40a4162dd8fb99c7bf9dff0d37d999f2715a5841b4757b1734a01571e84a5c30"
   },
   {
+   "file": "vault-attack.png",
+   "design": "original",
+   "role": "attack",
+   "frames": 6,
+   "durationSeconds": 0.5,
+   "fps": 12.0,
+   "sheetPixels": [
+    768,
+    128
+   ],
+   "framePixels": [
+    128,
+    128
+   ],
+   "sha256": "e7afe97c3c279adc7459b12cee348f7b73acf0b2c6314fb08bf48e725610ca82",
+   "generator": "tools/sprites/gen_vault.py"
+  },
+  {
+   "file": "vault-fx.png",
+   "design": "original",
+   "role": "fx",
+   "frames": 4,
+   "durationSeconds": 0.4,
+   "fps": 10.0,
+   "sheetPixels": [
+    256,
+    64
+   ],
+   "framePixels": [
+    64,
+    64
+   ],
+   "sha256": "7beadf0c33699044f1fc74a8a797a0d9753b80197ee712f677fa79ba77e22546",
+   "generator": "tools/sprites/gen_vault.py"
+  },
+  {
+   "file": "vault-idle.png",
+   "design": "original",
+   "role": "idle",
+   "frames": 4,
+   "durationSeconds": 0.667,
+   "fps": 6.0,
+   "sheetPixels": [
+    512,
+    128
+   ],
+   "framePixels": [
+    128,
+    128
+   ],
+   "sha256": "3ff08e2a89ab10b739bcf1ebbf1b2114267ef601f26271c18ccbfaa7499d14cf",
+   "generator": "tools/sprites/gen_vault.py"
+  },
+  {
    "file": "waf-attack.png",
    "design": "waf",
    "blob": "4171a1a5d97636f63a8e0c0ea94b7a6b",
