@@ -5,6 +5,60 @@
  "note": "Spritesheets horizontais; cada quadro ja vem ampliado do pixel-art original. Tempos = duracao CSS do design com steps(N).",
  "entries": [
   {
+   "file": "aks-attack.png",
+   "design": "original",
+   "role": "attack",
+   "frames": 6,
+   "durationSeconds": 0.5,
+   "fps": 12.0,
+   "sheetPixels": [
+    768,
+    128
+   ],
+   "framePixels": [
+    128,
+    128
+   ],
+   "sha256": "644a206ac143fb0d8626703089705247d0219de5d89638faea785ef1f21a9bd4",
+   "generator": "tools/sprites/gen_aks.py"
+  },
+  {
+   "file": "aks-fx.png",
+   "design": "original",
+   "role": "fx",
+   "frames": 4,
+   "durationSeconds": 0.4,
+   "fps": 10.0,
+   "sheetPixels": [
+    256,
+    64
+   ],
+   "framePixels": [
+    64,
+    64
+   ],
+   "sha256": "318db764a9f1b55a80d42b2ee3762d5b21a341c40417a709899cc939d50c8449",
+   "generator": "tools/sprites/gen_aks.py"
+  },
+  {
+   "file": "aks-idle.png",
+   "design": "original",
+   "role": "idle",
+   "frames": 4,
+   "durationSeconds": 0.667,
+   "fps": 6.0,
+   "sheetPixels": [
+    512,
+    128
+   ],
+   "framePixels": [
+    128,
+    128
+   ],
+   "sha256": "75689a0ff6ffe674148d5dac42df26dc4d08340a3826f105fdb1e8ca36e24c78",
+   "generator": "tools/sprites/gen_aks.py"
+  },
+  {
    "file": "armored-walk.png",
    "design": "blindado",
    "blob": "b13a509bbad222d9192f25e7e1329339",

@@ -41,6 +41,7 @@ public static class TdArtMap
         new("backup", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "sprite animado original (assets/source/anim/backup-*, tools/sprites/gen_backup.py)"),
         new("vault", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "sprite animado original (assets/source/anim/vault-*, tools/sprites/gen_vault.py)"),
         new("queue", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "sprite animado original (assets/source/anim/queue-*, tools/sprites/gen_queue.py)"),
+        new("aks", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "sprite animado original (assets/source/anim/aks-*, tools/sprites/gen_aks.py)"),
         new("pipeline", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "sprite animado original (assets/source/anim/pipeline-*, tools/sprites/gen_pipeline.py)"),
         new("bolt", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "tower-bolt"),
         new("frost", SpriteId.TowerFrost, TowerHeightDip, default, 0, false, "tower-frost"),
