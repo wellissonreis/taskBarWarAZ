@@ -144,7 +144,9 @@ public static class TdStripScenes
             }
             case TdStripScene.Mutants:
             {
+                Build(m, "bolt", 150);
                 Do(m, new StartWave());
+                Do(m, new SellTower(m.Towers[0].Id));
                 Steps(m, 30 * 7);
                 // máscaras na ordem do catálogo (fast, durable, flying, slow, shielded, armored); o Core já testa a escolha, aqui só fixamos a arte
                 ushort[] masks = [0b000011, 0b001110, 0b010000, 0b101000, 0b000010, 0b000100, 0b000001];
@@ -160,7 +162,9 @@ public static class TdStripScenes
                 return (m, TdView.None, 100.0);
             }
             case TdStripScene.NewEnemies:
+                Build(m, "bolt", 150);
                 Do(m, new StartWave());
+                Do(m, new SellTower(m.Towers[0].Id));
                 Steps(m, 150);
                 return (m, TdView.None, 100.0);
             case TdStripScene.Wave:
