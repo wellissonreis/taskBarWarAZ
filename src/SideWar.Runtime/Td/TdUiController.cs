@@ -1415,7 +1415,7 @@ public sealed partial class TdUiController
         if (view is null) return null;
         var items = new List<TdUiItem>();
         var modes = ModalTabs;
-        string[] labels = ["Jogo", "Construir", "Runas", "Torres", "Fases", "Como jogar"];
+        string[] labels = ["Jogo", "Construir", "Runas", "Torres", "Fase / Selo", "Como jogar"];
         for (int i = 0; i < modes.Length; i++)
             items.Add(new(new DipRect(16 + i * 115, 52, 112, 36), TdUiKind.Button, labels[i],
                 TdUiAction.ModalTab, (int)modes[i], Selected: Mode == modes[i]));
@@ -1817,7 +1817,7 @@ public sealed partial class TdUiController
             s.Add(TdUiKind.Label, earned.Length > 0 ? $"Medalhas: {earned}" : "Sem medalhas desta vez.", TwoLineH - 8, tone: TdTone.Dim);
             s.Add(TdUiKind.Label, $"Pontuacao: {r.Score}", RowH - 4, right: o.NewRecord ? "NOVO RECORDE" : $"Recorde {_host.StageBestScore(m.StageId)}",
                 tone: o.NewRecord ? TdTone.Accent : TdTone.Normal);
-            if (o.BonusSeals > 0) s.Add(TdUiKind.Label, $"Selos bonus: +{o.BonusSeals} · veja a aba Fases", RowH - 4, tone: TdTone.Good);
+            if (o.BonusSeals > 0) s.Add(TdUiKind.Label, $"Selos bonus: +{o.BonusSeals} · veja a aba Fase / Selo", RowH - 4, tone: TdTone.Good);
             AddRankBar(s, _host.Rank);
             if (_winGuide)
             {
