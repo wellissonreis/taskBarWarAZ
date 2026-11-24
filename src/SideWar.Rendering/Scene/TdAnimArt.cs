@@ -29,7 +29,7 @@ public static class TdAnimArt
 
     /// <summary>Ids de conteúdo (td-towers) com arte animada: o nome do design entre parênteses no REPORT / MANIFEST.json.</summary>
     public static readonly string[] Towers =
-        ["bolt", "cannon", "frost", "balancer", "scaleset", "functions", "cdn", "cosmos", "policy", "frontdoor", "waf", "shield", "sentinel", "pipeline", "eventgrid", "bastion", "backup", "vault"];
+        ["bolt", "cannon", "frost", "balancer", "scaleset", "functions", "cdn", "cosmos", "policy", "frontdoor", "waf", "shield", "sentinel", "pipeline", "eventgrid", "bastion", "backup", "vault", "firewall"];
 
     /// <summary>Inimigos (td-enemies) com ciclo de caminhada de 4 quadros e o fps do design (frames / duração CSS).</summary>
     public static readonly (string Id, double Fps)[] Enemies =

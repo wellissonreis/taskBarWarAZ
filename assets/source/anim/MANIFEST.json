@@ -473,6 +473,60 @@
    "generator": "tools/sprites/gen_eventgrid.py"
   },
   {
+   "file": "firewall-attack.png",
+   "design": "original",
+   "role": "attack",
+   "frames": 6,
+   "durationSeconds": 0.5,
+   "fps": 12.0,
+   "sheetPixels": [
+    768,
+    128
+   ],
+   "framePixels": [
+    128,
+    128
+   ],
+   "sha256": "15bc704fc495a2fc00db898db3589344ff092dc67b82b4617855d6d9418f65b7",
+   "generator": "tools/sprites/gen_firewall.py"
+  },
+  {
+   "file": "firewall-fx.png",
+   "design": "original",
+   "role": "fx",
+   "frames": 4,
+   "durationSeconds": 0.4,
+   "fps": 10.0,
+   "sheetPixels": [
+    256,
+    64
+   ],
+   "framePixels": [
+    64,
+    64
+   ],
+   "sha256": "7beadf0c33699044f1fc74a8a797a0d9753b80197ee712f677fa79ba77e22546",
+   "generator": "tools/sprites/gen_firewall.py"
+  },
+  {
+   "file": "firewall-idle.png",
+   "design": "original",
+   "role": "idle",
+   "frames": 4,
+   "durationSeconds": 0.667,
+   "fps": 6.0,
+   "sheetPixels": [
+    512,
+    128
+   ],
+   "framePixels": [
+    128,
+    128
+   ],
+   "sha256": "b0dd9e983c2dba1864890f732c153cdab8ab2f36dc4c5cd8b0ae88f20ddd648b",
+   "generator": "tools/sprites/gen_firewall.py"
+  },
+  {
    "file": "flyer-walk.png",
    "design": "voador",
    "blob": "ff108bca166f3cfdaf72fbd506d81bf3",
