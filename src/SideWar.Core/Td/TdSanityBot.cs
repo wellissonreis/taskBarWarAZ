@@ -78,11 +78,11 @@ public static class TdSanityBot
     /// mantidos), jogada até derrota ou <paramref name="maxStages"/> fases concluídas (6 = a campanha; mais = ciclo infinito). A cada fase o bot
     /// carrega o roteiro da fase de conteúdo (só construir/runas: mira e venda do roteiro de fase única dependem de ids que a corrida já mudou).
     /// </summary>
-    public static TdRunBotResult RunContinuous(TdContent content, int startStage, TdBotProfile profile, ulong seed, int maxStages = 6, bool awaken = true)
+    public static TdRunBotResult RunContinuous(TdContent content, int startStage, TdBotProfile profile, ulong seed, int maxStages = 6, bool awaken = true, Action<TdMatchState>? observe = null, bool stopAtCollapse = true)
     {
         ArgumentNullException.ThrowIfNull(content);
         var state = TdMatchState.Create(content, startStage, Rng.Seed(seed, 54), null, TdMatchOptions.Default);
-        var bot = new Runner(state, RunPlan(startStage, profile), profile) { RunMaxStages = maxStages, Awaken = awaken };
+        var bot = new Runner(state, RunPlan(startStage, profile), profile) { RunMaxStages = maxStages, Awaken = awaken, Observe = observe, StopAtCollapse = stopAtCollapse };
         return bot.PlayRun(seed, startStage);
     }
 
@@ -94,6 +94,8 @@ public static class TdSanityBot
         private Step[] _plan;
         public int RunMaxStages { get; init; }
         public bool Awaken { get; init; } = true;
+        public Action<TdMatchState>? Observe { get; init; }
+        public bool StopAtCollapse { get; init; } = true;
         private readonly TdBotProfile _profile;
         private int _next;
         private int _rejected;
@@ -114,7 +116,7 @@ public static class TdSanityBot
             Send(new SetPresence(true));
             long maxFrames = 30L * 3600 * 2 * Math.Max(1, RunMaxStages);
             int cleared = 0;
-            while (_s.Frame < maxFrames && _s.Phase is MatchPhase.Preparo or MatchPhase.Onda && _s.StagesCleared < RunMaxStages && _s.ReputationLostTotal < CollapseXp)
+            while (_s.Frame < maxFrames && _s.Phase is MatchPhase.Preparo or MatchPhase.Onda && _s.StagesCleared < RunMaxStages && (!StopAtCollapse || _s.ReputationLostTotal < CollapseXp))
             {
                 if (_s.StagesCleared != cleared)
                 {
@@ -135,6 +137,7 @@ public static class TdSanityBot
                     if (Expert) TryCall();
                 }
                 _s.Step();
+                Observe?.Invoke(_s);
             }
             return new TdRunBotResult(_profile, seed, startStage, _s.StagesCleared, _s.StageNumber, _s.WaveNumber, _s.Phase, _s.ReputationLostTotal, _s.Credits,
                 _builtCount, _s.Towers.Count, _s.Frame, _s.Tick / (double)TdWorld.TicksPerSecond, _rejected, [.. _s.StageResults], _s.ComputeStateHash(),
