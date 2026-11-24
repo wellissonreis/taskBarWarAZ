@@ -133,7 +133,7 @@ internal static class TdMechanicsContent
     "callNext": { "bonusBase": 0.6, "bonusPerWave": 0.05, "bonusCapFactor": 2.0, "abilityCooldownReduction": 0.25 },
     "autoStart": { "defaultMode": "off", "defaultCountdownSeconds": 15, "minCountdownSeconds": 5, "maxCountdownSeconds": 60 },
     "stars": { "twoStarMaxLoss": 6, "threeStarMaxLoss": 2 },
-    "bonusQuestion": { "timerSeconds": 10, "creditsBase": 15, "creditsPerWave": 3, "cooldownReductionSeconds": 10 },
+    "bonusQuestion": { "timerSeconds": 30, "creditsBase": 15, "creditsPerWave": 3, "cooldownReductionSeconds": 10 },
     "fragments": { "perWave": 1, "perQuestion": 1, "perBoss": 2 },
     "challenges": [
       { "id": "frugal",   "name": "Frugal",   "description": "Concluir com no máximo 4 torres.", "maxTowers": 4, "noAbilities": false, "noCallNext": false, "startingCreditsFactor": 1.0 },
