@@ -11,6 +11,16 @@ namespace SideWar.App.SmokeTests;
 
 public sealed class TdBestiaryRecorderTests
 {
+    [Fact]
+    public void Reached_stage_does_not_bypass_rank_gate()
+    {
+        var content = TdContentLoader.LoadEmbedded();
+        var store = new TdProfileStore(RealFileSystem.Instance, Path.GetTempPath(), "0.1.0");
+        var recorder = new TdProfileRecorder(store, TdProfileData.Default with { RunStageNumber = 2, Reputation = 0 }, content.Meta, 6);
+        Assert.True(recorder.StageUnlocked(1));
+        Assert.False(recorder.StageUnlocked(2));
+    }
+
     [Theory]
     [InlineData(0, 1, false)]
     [InlineData(5000, 2, true)]

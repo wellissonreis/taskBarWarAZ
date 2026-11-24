@@ -1012,6 +1012,25 @@ public sealed class TdUiControllerTests
     }
 
     [Fact]
+    public void Map_can_select_and_confirm_an_earlier_stage_with_towers_in_play()
+    {
+        var r = new Rig { Match = Create(2) };
+        Assert.True(r.Match.Apply(new BuildTower("bolt", 500)).IsOk);
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.MapOpen));
+        var map = r.Ui.BuildPopover()!;
+        var node = map.Items.Single(i => i is { Action: TdUiAction.SelectStage, Arg: 1 });
+        Assert.Equal(node, map.Items[map.HitTest(node.Rect.X + node.Rect.W / 2, node.Rect.Y + node.Rect.H / 2)]);
+        r.Ui.Activate(node);
+        var play = Find(r.Ui.BuildPopover()!, TdUiAction.MapPlay);
+        Assert.True(play.Enabled);
+        r.Ui.Activate(play);
+        var confirm = Find(r.Ui.BuildPopover()!, TdUiAction.MapPlayConfirm);
+        Assert.Equal(1, confirm.Arg);
+        r.Ui.Activate(confirm);
+        Assert.Contains("stage1", r.Host.Calls);
+    }
+
+    [Fact]
     public void Map_play_asks_for_confirmation_before_starting_the_stage()
     {
         var r = new Rig();

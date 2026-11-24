@@ -88,6 +88,39 @@ public sealed class TdCompositionTests : IDisposable
     }
 
     [Fact]
+    public void Returning_to_a_reached_stage_preserves_towers_xp_and_reached_progress()
+    {
+        Directory.CreateDirectory(dir);
+        var store = new TdProfileStore(RealFileSystem.Instance, dir, "0.1.0");
+        Assert.True(store.Save(TdProfileData.Default with { Reputation = TdRank.Threshold(TdRankLevel.Junior), RunStageNumber = 2, BestStageNumber = 0 }));
+        var clock = new ManualClock();
+        var td = TdComposition.Create(dir, "0.1.0", VisibleApp(), clock, new AppSettings(), _ => { }, seed: 7);
+        td.Host.OnCommand(new LayoutChanged(TdSanityBot.TypicalLayout()));
+        td.Host.OnCommand(new BuildTower(td.Host.Match.Content.Towers.First(t => t.MinRank <= 0).Id, 150));
+        td.Host.OnWake(clock);
+        var towers = td.Host.Match.ExportTowers();
+        Assert.Single(towers);
+        Assert.True(td.Recorder.StageUnlocked(2));
+        var xp = td.Recorder.Profile.Reputation;
+        var rank = td.Recorder.Rank.Current;
+
+        td.StartStage(1);
+        Assert.Equal(1, td.Host.Match.StageNumber);
+        Assert.Equal(towers, td.Host.Match.ExportTowers());
+        Assert.Equal(xp, td.Recorder.Profile.Reputation);
+        Assert.Equal(rank, td.Recorder.Rank.Current);
+        Assert.True(td.Recorder.StageUnlocked(2));
+        Assert.Equal(0, td.Recorder.StageStars(2));
+
+        var reopened = TdComposition.Create(dir, "0.1.0", VisibleApp(), clock, new AppSettings(), _ => { }, seed: 8);
+        Assert.True(reopened.Recorder.StageUnlocked(2));
+        reopened.StartStage(2);
+        Assert.Equal(2, reopened.Host.Match.StageNumber);
+        Assert.Equal(towers, reopened.Host.Match.ExportTowers());
+        Assert.Equal(xp, reopened.Recorder.Profile.Reputation);
+    }
+
+    [Fact]
     public void ResetProfile_wipes_progress_persists_it_and_starts_a_fresh_stage_1_match()
     {
         Directory.CreateDirectory(dir);

@@ -82,7 +82,8 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
 
     public bool StageUnlocked(int id) => id >= 1 && id <= GateStages.Length
         && TdStageGate.Allowed(GateStages[id - 1], Rank.Current)
-        && (id == 1 || Profile.Stages.Any(s => s.StageId == id && s.Unlocked));
+        && (id == 1 || id <= Math.Max(Profile.RunStageNumber, Profile.BestStageNumber)
+            || Profile.Stages.Any(s => s.StageId == id && s.Unlocked));
 
     public int EncounterCount(string id) => Profile.Encounters.FirstOrDefault(e => e.Id == id)?.Count ?? 0;
 
@@ -194,7 +195,22 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
     /// <summary>Corrida nova começando na fase absoluta <paramref name="stageNumber"/> (mapa, reiniciar): grava para a próxima abertura retomar daí.</summary>
     public void SetRunStage(int stageNumber)
     {
-        var next = TdProfileRules.SetRunStage(Profile, stageNumber);
+        var profile = Profile;
+        // A corrida em sombra também avança, mas não registra estrelas nem recordes.
+        // Antes de voltar, preserva as regiões alcançadas sem conceder recompensas.
+        int reached = Math.Min(_stageCount, Math.Max(profile.RunStageNumber, profile.BestStageNumber));
+        if (stageNumber < profile.RunStageNumber && reached > 1)
+        {
+            var stages = profile.Stages.ToList();
+            for (int id = 1; id <= reached; id++)
+            {
+                int index = stages.FindIndex(s => s.StageId == id);
+                if (index < 0) stages.Add(new TdStageProgressData { StageId = id, Unlocked = true });
+                else if (!stages[index].Unlocked) stages[index] = stages[index] with { Unlocked = true };
+            }
+            profile = profile with { Stages = stages.OrderBy(s => s.StageId).ToArray() };
+        }
+        var next = TdProfileRules.SetRunStage(profile, stageNumber);
         if (ReferenceEquals(next, Profile)) return;
         Profile = next;
         Save();
