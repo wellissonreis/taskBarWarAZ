@@ -121,7 +121,8 @@ public sealed class TdStripGoldenTests
         Assert.True(SideWar.Rendering.Scene.TdArtMap.TryTower("scaleset", out var sc) && sc.Provisional);
         // sem dois inimigos idênticos (sprite + tinta + altura): cada um é distinguível
         var vector = new[] { "fork", "trojan", "phishing", "synflood", "scanner", "slowloris", "fragment", "dnstunnel", "encrypted" };
-        var all = SideWar.Rendering.Scene.TdArtMap.Enemies.Where(e => !vector.Contains(e.Id)).Select(e => (e.Sprite, e.Tint, e.HeightDip)).ToArray();
+        // Sprites animados têm arte própria, independentemente do fallback compartilhado do atlas.
+        var all = SideWar.Rendering.Scene.TdArtMap.Enemies.Where(e => !vector.Contains(e.Id) && !SideWar.Rendering.Scene.TdAnimArt.TryEnemyFps(e.Id, out _)).Select(e => (e.Sprite, e.Tint, e.HeightDip)).ToArray();
         Assert.Equal(all.Length, all.Distinct().Count());
     }
 
