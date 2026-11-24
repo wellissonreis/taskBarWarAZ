@@ -4,7 +4,7 @@ using SideWar.Runtime.Geometry;
 namespace SideWar.Runtime.Td;
 
 /// <summary>Modo do popover/UI da partida TD (TD.8, SDD-28 RF-28.14/28.20). Estado de UI: nunca vai ao log nem ao hash.</summary>
-public enum TdUiMode : byte { None, Build, Inspector, Preview, Menu, Map, End, Help, Towers, Runes }
+public enum TdUiMode : byte { None, Build, Inspector, Preview, Menu, Map, End, Help, Towers, Runes, Bestiary }
 
 /// <summary>Tipo de item de UI: rótulo, botão, cabeçalho de seção ou separador.</summary>
 /// <remarks><c>Money</c> (TD.33d): contador de créditos do HUD, não clicável.</remarks>
@@ -40,6 +40,7 @@ public enum TdUiAction : byte
     BuildCatalogPage,
     /// <summary>Mapa de fases: jogar a fase selecionada pede confirmação (MapPlay) dentro da própria aba; confirmar inicia a fase, cancelar volta.</summary>
     MapPlay, MapPlayConfirm, MapPlayCancel,
+    BestiarySelect,
 }
 
 /// <summary>Ícone do HUD desenhado por código (TD.14); o renderer mapeia para caminhos vetoriais.</summary>
@@ -248,6 +249,7 @@ public interface ITdUiHost
 
     int StageCount { get; }
     bool StageUnlocked(int stageId);
+    int EncounterCount(string id) => 0;
     int StageStars(int stageId);
     /// <summary>Coroa da fase (vencida sem perder integridade, RF-28.21).</summary>
     bool StageCrown(int stageId);

@@ -462,7 +462,7 @@ public sealed class TdUiControllerTests
         r.Ui.OpenStartupModal();
         var pop = r.Ui.BuildPopover()!;
         var names = pop.Items.Where(i => i.Action == TdUiAction.ModalTab).Select(i => i.Text).ToArray();
-        Assert.Equal(["Jogo", "Construir", "Runas", "Torres", "Fase / Selo", "Como jogar"], names);
+        Assert.Equal(["Jogo", "Construir", "Runas", "Torres", "Inimigos", "Fase / Selo", "Como jogar"], names);
         Assert.DoesNotContain(pop.Items, i => i.Action == TdUiAction.MapOpen);
         Assert.Equal(4, pop.Items.Count(i => i.SArg == "jg-stat"));
         r.Ui.Activate(pop.Items.Single(i => i.Action == TdUiAction.ModalTab && i.Text == "Fase / Selo"));

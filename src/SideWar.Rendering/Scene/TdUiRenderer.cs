@@ -376,6 +376,7 @@ public sealed partial class TdUiRenderer(Typography typography, int dpi, SpriteA
     {
         var r = it.Rect;
         if (it.SArg == "rank-step") return;
+        if (DrawBestiaryItem(c, it, hover)) return;
         if (DrawMapItem(c, it, hover)) return;
         if (DrawJogoItem(c, it, hover)) return;
         if (it.SArg == "rank-chip")
@@ -1289,6 +1290,7 @@ public sealed partial class TdUiRenderer(Typography typography, int dpi, SpriteA
 
     public void Dispose()
     {
+        foreach (var image in _bestiaryImages.Values) image.Dispose();
         foreach (var i in _icons.Values) i.Dispose();
         foreach (var image in _rankCrowns.Values) image.Dispose();
         foreach (var image in _rankEmblems.Values) image.Dispose();

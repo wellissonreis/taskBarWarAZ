@@ -386,7 +386,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
             if (category.Action == TdUiAction.TowerCategory) controller.Activate(category);
             return;
         }
-        if (key is >= 49 and <= 54)
+        if (key is >= 49 and <= 55)
         {
             controller.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.ModalTab, (int)TdUiController.ModalTabs[key - 49]));
             return;
@@ -399,7 +399,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
                 keyboardItem = (keyboardItem + 1) % pop.Items.Length;
                 if (pop.Items[keyboardItem].Clickable || pop.Items[keyboardItem].SArg == "rank-step") break;
             }
-            popHover = keyboardItem; Refresh(true);
+            popHover = keyboardItem; controller.Hover(keyboardItem >= 0 ? pop.Items[keyboardItem] : null); Refresh(true);
         }
         if (key == 13 && keyboardItem >= 0 && keyboardItem < pop.Items.Length) Click(pop.Items, keyboardItem);
     }
@@ -664,6 +664,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     public void StartStage(int stageId) { td.StartStage(stageId); driver.MarkDirty(); }
     public int StageCount => td.StageCount;
     public bool StageUnlocked(int stageId) => td.Recorder.StageUnlocked(stageId);
+    public int EncounterCount(string id) => td.Recorder.EncounterCount(id);
     public int StageStars(int stageId) => td.Recorder.StageStars(stageId);
     public bool StageCrown(int stageId) => td.Recorder.StageCrown(stageId);
     public int StageMedals(int stageId) => td.Recorder.StageMedals(stageId);

@@ -81,6 +81,8 @@ public sealed partial class TdUiController
     private int _ghostX = -1;
     private bool _ghostValid;
     private int _hoverDef = -1;
+    private string? _hoverEnemy;
+    private int _selectedEnemy;
     private int _selectedTowerId;
     private string? _notice;
     private string? _placementType;
@@ -245,6 +247,8 @@ public sealed partial class TdUiController
 
     public void Hover(TdUiItem? item)
     {
+        string? enemy = item is { Action: TdUiAction.BestiarySelect, SArg: { } eid } ? eid : null;
+        if (enemy != _hoverEnemy) { _hoverEnemy = enemy; Changed?.Invoke(); }
         string? rune = item is { Action: TdUiAction.SelectRune, SArg: { } rid } ? rid : null;
         if (rune != _hoverRune) { _hoverRune = rune; Changed?.Invoke(); }
         string? branch = item is { Action: TdUiAction.RuneBranch, SArg: { } bid } ? bid : null;
@@ -335,6 +339,7 @@ public sealed partial class TdUiController
                 else SetMode(_match().Phase is MatchPhase.Vitoria ? TdUiMode.End : TdUiMode.Build);
                 break;
             case TdUiAction.ModalTab: SetMode((TdUiMode)item.Arg); break;
+            case TdUiAction.BestiarySelect: _selectedEnemy = item.Arg; Changed?.Invoke(); break;
             case TdUiAction.Targeting when Enum.TryParse<TdTargeting>(item.SArg, out var mode):
                 _send(new SetTargeting(item.Arg, mode));
                 Changed?.Invoke();
@@ -1035,6 +1040,7 @@ public sealed partial class TdUiController
             TdUiMode.End => BuildEnd(m),
             TdUiMode.Help => BuildHelp(m),
             TdUiMode.Runes => Finish("Teia de runas", Placeholder(), 0),
+            TdUiMode.Bestiary => Finish("Inimigos · bestiário", Placeholder(), 0),
             _ => null,
         };
         return view is null ? Step == TdTutorialStep.HudOpen ? null : DecoratePopover(m, null)
@@ -1424,16 +1430,16 @@ public sealed partial class TdUiController
         ScrollInfo(_match()) is { } i && ScrollBy(dir * (line ? 1 : i.Visible));
 
     /// <summary>Ordem das abas da modal: a primeira (Jogo: patente, XP e progresso) é também a aberta ao iniciar.</summary>
-    public static readonly TdUiMode[] ModalTabs = [TdUiMode.Menu, TdUiMode.Build, TdUiMode.Runes, TdUiMode.Towers, TdUiMode.Map, TdUiMode.Help];
+    public static readonly TdUiMode[] ModalTabs = [TdUiMode.Menu, TdUiMode.Build, TdUiMode.Runes, TdUiMode.Towers, TdUiMode.Bestiary, TdUiMode.Map, TdUiMode.Help];
 
     private TdPopoverView? Modalize(TdPopoverView? view)
     {
         if (view is null) return null;
         var items = new List<TdUiItem>();
         var modes = ModalTabs;
-        string[] labels = ["Jogo", "Construir", "Runas", "Torres", "Fase / Selo", "Como jogar"];
+        string[] labels = ["Jogo", "Construir", "Runas", "Torres", "Inimigos", "Fase / Selo", "Como jogar"];
         for (int i = 0; i < modes.Length; i++)
-            items.Add(new(new DipRect(16 + i * 115, 52, 112, 36), TdUiKind.Button, labels[i],
+            items.Add(new(new DipRect(16 + i * 98, 52, 96, 36), TdUiKind.Button, labels[i],
                 TdUiAction.ModalTab, (int)modes[i], Selected: Mode == modes[i]));
         if (Mode == TdUiMode.End && view.Width == 720f && view.Height == 480f)
         {
@@ -1443,6 +1449,12 @@ public sealed partial class TdUiController
         }
         var currentRank = _host.Rank.Current;
         items.Add(new(new DipRect(16, 10, 150, 24), TdUiKind.Label, TdRank.DisplayName(currentRank), Arg: (int)currentRank, SArg: "rank-chip"));
+        if (Mode == TdUiMode.Bestiary)
+        {
+            items.Add(new(new DipRect(674, 4, 36, 36), TdUiKind.Button, "X", TdUiAction.Close));
+            AddBestiary(items);
+            return new TdPopoverView($"{view.Title}   ¢{_match().Credits}", [.. items], 720, 480, 0);
+        }
         if (Mode == TdUiMode.Map)
         {
             items.Add(new(new DipRect(674, 4, 36, 36), TdUiKind.Button, "X", TdUiAction.Close));

@@ -1,0 +1,346 @@
+{
+  "source": "Inimigos.dc.html",
+  "note": "APNGs do design convertidos a folhas horizontais com nearest para 32 px por quadro",
+  "entries": [
+    {
+      "file": "enxame.png",
+      "blob": "83bcc13381f6f191acf8d5c3bf621abe",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "b4b361bd579f40c4a5e8c6ec3d4701df649f4a34e2e6b9238b474e2e60913498"
+    },
+    {
+      "file": "enxame_elite.png",
+      "blob": "24bb9161dd985cba3d04b54cdffba764",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "53a51494b892107858099415890f2fab61f8965648b645e0a6090055910bb561"
+    },
+    {
+      "file": "rapido.png",
+      "blob": "4b6ccee80de3f322d79fb289f07f55c0",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "ea14de6f5f36bba9e89d92ce12fb68b70826ce3d7bf09ba8e850a718bd64a48d"
+    },
+    {
+      "file": "rapido_elite.png",
+      "blob": "97277b9254c2b2e70f1ff244c9012dd9",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "8e53592f40a025903078037062815e1a6d30f525a645a1cedebbb2070c1a604d"
+    },
+    {
+      "file": "blindado.png",
+      "blob": "6b9cf621e5dac5683b0aac8e7cf4a877",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "04b3415406e736b0827546fa391a658f0cc7a998d561b439fe8f7ef4d400f97a"
+    },
+    {
+      "file": "blindado_elite.png",
+      "blob": "7ef1c12aa5253ea33f3ffd873dd73e88",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "6a40fc41e4ae7317a19becf4a5ad6aa8faefeeca37861f587e93b67979b1e2ad"
+    },
+    {
+      "file": "voador.png",
+      "blob": "f7d2e64528b2478d6381a955f2570ca3",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "bdb41f2a4cb2e08ad7d4ebf7fad01412a5ea0d58221b7bb47599899906bb058c"
+    },
+    {
+      "file": "voador_elite.png",
+      "blob": "68f53b7ed79702f1abffa322e96f46b7",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "cf22db74b422b07aefce01cb1379032e8c4737a86209aac5f622b0d500d34946"
+    },
+    {
+      "file": "dreno.png",
+      "blob": "338e4239d3913c8e29755e38a50419e3",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "a18c3c1fa21715296c3f67a6c82c16d6e15712b2ecab2b7d6e7360f7825fc6c6"
+    },
+    {
+      "file": "dreno_elite.png",
+      "blob": "3dc7e18838d7b2ed7b37d3538cc08b96",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "a4c5aa2a628f45b4f8e47e74ff7eb084f965be7e238140797448f61b1acb61ba"
+    },
+    {
+      "file": "duravel.png",
+      "blob": "efdb748e913ed34563335d93775ae5f9",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "0b6124632d178d638dc85ede34f95acc8634dcf1aaf0ddbc281ecbc055f6f28d"
+    },
+    {
+      "file": "duravel_elite.png",
+      "blob": "bec52d2433070278d1054be2a358e0a3",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "9fc20761595c1a1da24a2e3d382c77fc36cfed43c5f8b2d92675e50c1384bd4a"
+    },
+    {
+      "file": "ransomware.png",
+      "blob": "7db535931e5beb8d016a274c390685ab",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "3f1616824a301735dd0a0ec237f849a0d19888b1bd8678c47157980d679f8b23"
+    },
+    {
+      "file": "ransomware_enf.png",
+      "blob": "628fe79afa5ccd588bb6dda99faa9308",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "ffefe41fe28f4ea777925bcb52498d667f262adbe6c7c686bffe4f0eb2d0af57"
+    },
+    {
+      "file": "titan.png",
+      "blob": "622bbe171357eecb9d2d9a589c6ab966",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "1e4059896abcb8b4256bcf408086fea6c6f5bc1c7f5bdd1c4f213c718542de0c"
+    },
+    {
+      "file": "titan_enf.png",
+      "blob": "19ae6e247e453a68ddf9efe35b8c4de0",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "4864956e12ad897f8820e6893c41f4f44ab451d0fed3648bd00bc7f2b63df876"
+    },
+    {
+      "file": "botnet.png",
+      "blob": "46a1440de14adbf555d576682614e374",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "2125c2095186c8f0aa9042c4ace4615c00fc3186ea3c3abbc20ce0504c88a9bd"
+    },
+    {
+      "file": "botnet_enf.png",
+      "blob": "b895fdd6f17f827fbc5d1dc8fb6a0234",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "5774689373c65c5042ba7375e6608e661a2b2efd9c7e54a260c88bbf1a384ef6"
+    },
+    {
+      "file": "aliado_bot.png",
+      "blob": "21bd0319e4f851ff7d35df83578ae189",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "3c61e6e04b8bb222bdf082f4547258dee85ac4cdc58ed9fd12331c2c0e201696"
+    },
+    {
+      "file": "kraken.png",
+      "blob": "89e5117a3a21c66021d326a0abaac781",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "d235d462ab4a7dabb4802ac41c00a56373a619ea4021912c3decfde5fc3d0205"
+    },
+    {
+      "file": "kraken_enf.png",
+      "blob": "c80d81de7fb5d5a5c03bdeb8388e94b2",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "3db1ee628c3921e61504f2c396ccd990210d869c826af56df637770169a41f7b"
+    },
+    {
+      "file": "aliado_isca.png",
+      "blob": "bfce8bde282ed932cd0236fdc3e1d7e9",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "551700e9c18316f8341796627b934137bf60151be2b6a83996de17868bfce1d0"
+    },
+    {
+      "file": "golem.png",
+      "blob": "53c77829cb5f4f684cd23cbaf559a3ad",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "d86124913d2165f78e664efa5c157def584d66cb09005a4fcc0bf52cf94f2ee1"
+    },
+    {
+      "file": "golem_enf.png",
+      "blob": "70097c697540af18bd772953cbbd70ca",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "e101adfdef7e7c5478286fc8e64c758b1028f61be6b3128afacedaf89254b153"
+    },
+    {
+      "file": "aliado_raiz.png",
+      "blob": "fa0f70fb66c12ce2094d3faebabf9083",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "5a9188f4ca0c9601caf6ac170f5980444b50faf83dc72c79ef582f9bc550e724"
+    },
+    {
+      "file": "ronin.png",
+      "blob": "f1fe7cedb5efc7d76f4c6ef2bf1e1e66",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "d54dd6cef3d01ee0303135dd4a884fb0bc0990942aa3650c373f1a751b8e7465"
+    },
+    {
+      "file": "ronin_enf.png",
+      "blob": "3066ed2553b55b6eaa3142cb6f1f5c12",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "aac311ca076553bd226cda3702a3911fe0551f9a858681ad170b9477e7c41eae"
+    },
+    {
+      "file": "aliado_shuriken.png",
+      "blob": "93045b92b913165a4116db9b1e34285c",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "5ac0c98dabcb6e1dbf17d8b2383f26cdfbb1828f09768329abda647c9cfd4f6c"
+    },
+    {
+      "file": "trojan.png",
+      "blob": "b4149c9799f86e95481592efa925b1b3",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "633845a732ec01ef87446901d4979c3b057b5532fdb463cb46c4af6c3ec64110"
+    },
+    {
+      "file": "trojan_enf.png",
+      "blob": "57186f2edf853e471a3c6acca88d27ac",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "9fb23c21f5a99b5d468b6eb4a27c08a46aec55fd3888e4139bf571e78230e09b"
+    },
+    {
+      "file": "aliado_soldado.png",
+      "blob": "3ee847583741a63b189b648ee6d8a749",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "86b9bbd7b9b83b27925d0370610c88ae7ed2c0c3545ccf30d50efa28125248b9"
+    },
+    {
+      "file": "hydra.png",
+      "blob": "0819c4f13d6ee9f33b7ffaef2a01284a",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "aedf3939f96cc6986978efb2c5db61e2d213f56fd3196197a9fbc625af13793e"
+    },
+    {
+      "file": "hydra_enf.png",
+      "blob": "0d6df21289312e0111d3886080a8dfe0",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "1bdb049b8a024fa470d954eeebc669bc0382a74d0fc9fb123acd17b7b573f83e"
+    },
+    {
+      "file": "aliado_pacote.png",
+      "blob": "d7078dd17b4cab18e9758fef928ef039",
+      "frames": 4,
+      "framePixels": [
+        32,
+        32
+      ],
+      "sha256": "bc47481c1dddc73baac12c2e44132434a0cc4012b116c2ef938926bcfa71de51"
+    }
+  ]
+}
