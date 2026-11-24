@@ -221,5 +221,5 @@ public sealed class TdPlacementTests
         Assert.Equal(Golden, first.StateHash); // TD.20: preço crescente + torre sem Level/Invested/Branch no hash
     }
 
-    private const ulong Golden = 3917735274089522521UL;
+    private const ulong Golden = 17310590798933735908UL;
 }

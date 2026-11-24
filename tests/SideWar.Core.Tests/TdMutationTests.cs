@@ -295,7 +295,7 @@ public sealed class TdMutationTests
         Assert.Equal(["basic", "flying"], s.EnemyTraitUnion(f));
 
         // Raio explosivo (base bolt, atinge voador) + módulo canhão: o voador mutado leva dano da base.
-        var h = New(c);
+        var h = New(c, o: TdMatchOptions.Default with { InitialReputation = TdRank.Threshold(TdRankLevel.Arquiteto) }); // fusão exige patente (281f9cf)
         Assert.True(h.Apply(new BuildTower("bolt", 850)).IsOk);
         Assert.True(h.Apply(new FuseTower(h.Towers[0].Id, "cannon")).IsOk);
         Assert.True(h.Apply(new StartWave()).IsOk);
