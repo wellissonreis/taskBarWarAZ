@@ -311,6 +311,60 @@
    "sha256": "f03bfb7a1da0ed74c30cebb759e2466d842531693eb2a30e34feafbe09486eec"
   },
   {
+   "file": "eventgrid-attack.png",
+   "design": "original",
+   "role": "attack",
+   "frames": 6,
+   "durationSeconds": 0.5,
+   "fps": 12.0,
+   "sheetPixels": [
+    768,
+    128
+   ],
+   "framePixels": [
+    128,
+    128
+   ],
+   "sha256": "80a8e3cc6d4f8f7618180a9153d268cca35414f46ba4cd4338fb3cdd628bac11",
+   "generator": "tools/sprites/gen_eventgrid.py"
+  },
+  {
+   "file": "eventgrid-fx.png",
+   "design": "original",
+   "role": "fx",
+   "frames": 4,
+   "durationSeconds": 0.4,
+   "fps": 10.0,
+   "sheetPixels": [
+    256,
+    64
+   ],
+   "framePixels": [
+    64,
+    64
+   ],
+   "sha256": "49f141db566cf9ef445d8daa56f94704ac52b0aca915269cb3c6b81b0c5696f0",
+   "generator": "tools/sprites/gen_eventgrid.py"
+  },
+  {
+   "file": "eventgrid-idle.png",
+   "design": "original",
+   "role": "idle",
+   "frames": 4,
+   "durationSeconds": 0.667,
+   "fps": 6.0,
+   "sheetPixels": [
+    512,
+    128
+   ],
+   "framePixels": [
+    128,
+    128
+   ],
+   "sha256": "7dbbf2411aad6cd987fdc3d7cecb12ebf0d80524a09b798265a46f7dcf54d9c1",
+   "generator": "tools/sprites/gen_eventgrid.py"
+  },
+  {
    "file": "flyer-walk.png",
    "design": "voador",
    "blob": "ff108bca166f3cfdaf72fbd506d81bf3",

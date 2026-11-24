@@ -35,7 +35,7 @@ public static class TdArtMap
         new("frontdoor", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "vetor próprio"),
         new("shield", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "vetor próprio"),
         new("waf", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "vetor próprio"),
-        new("eventgrid", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "vetor próprio"),
+        new("eventgrid", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "sprite animado original (assets/source/anim/eventgrid-*, tools/sprites/gen_eventgrid.py)"),
         new("bastion", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "vetor próprio"),
         new("firewall", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "vetor próprio"),
         new("pipeline", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "sprite animado original (assets/source/anim/pipeline-*, tools/sprites/gen_pipeline.py)"),
