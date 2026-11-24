@@ -22,9 +22,9 @@ public sealed partial class TdUiController
         }
     }
 
-    /// <summary>Sequência de ondas sem vazar ao lado do XP no HUD, discreta: vazio até 3 ondas limpas; depois " x1.3", " x2", … (multiplicador do XP, zera ao vazar).</summary>
+    /// <summary>Sequência de ondas sem vazar ao lado do XP no HUD: " x3" após três ondas limpas, zerada ao vazar.</summary>
     internal static string StreakSuffix(TdMatchState m) =>
-        m.Streak < 3 ? "" : " x" + m.StreakMultiplier.ToString("0.#", System.Globalization.CultureInfo.InvariantCulture);
+        m.Streak < 2 ? "" : " x" + m.Streak.ToString(System.Globalization.CultureInfo.InvariantCulture);
 
     /// <summary>Rótulo da fase no HUD: "Fase 3" na primeira volta; "Ciclo 2 · Fase 3" a partir do ciclo 2 (<paramref name="stageNumber"/> absoluto).</summary>
     internal static string StageLabel(int stageNumber, int stageCount)

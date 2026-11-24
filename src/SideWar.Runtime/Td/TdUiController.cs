@@ -823,13 +823,13 @@ public sealed partial class TdUiController
         var m = _match();
         var items = new List<TdUiItem>(14);
         var repRank = _host.Rank;
-        string repText = XpText(repRank.Total);
+        string repText = XpText(repRank.Total) + StreakSuffix(m);
         int shown = m.Phase == MatchPhase.Onda || m.NextWaveNumber == 0 ? m.WaveNumber : m.NextWaveNumber;
         shown = Math.Clamp(shown, 1, Math.Max(1, m.TotalWaves));
         bool run = m.Options.PersistentRun;
-        string stageText = run ? $"Fase {m.StageNumber}{(m.Cycle > 0 ? $"·C{m.Cycle + 1}" : "")}  " : "";
+        string stageText = run ? StageLabel(m.StageNumber, m.Content.Stages.Stages.Length) + "  " : "";
         string coreTip = $"Reputação {repRank.Total} XP ({TdRank.DisplayName(repRank.Current)}): vencer ondas dá XP; inimigo que chega à base tira XP e pode rebaixar sua patente. Não há derrota."
-            + (run ? " Fase N conta a corrida inteira; depois da última fase o ciclo recomeça mais forte (C2, C3…)." : "")
+            + (run ? " O jogo é infinito: depois da fase 6 entra o Ciclo 2 (e 3, 4…), as mesmas regiões mais fortes." : "")
             + $" Esconder tudo: {_host.BossHotkey}.";
 
         bool needed = _onb is not null && (HudNeeded(m) || ComputeStep(m) == TdTutorialStep.HudOpen);

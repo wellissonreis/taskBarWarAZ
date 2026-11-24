@@ -227,6 +227,10 @@ public interface ITdUiHost
     /// <summary>TD.28b: fase em que a corrida atual começou (Reiniciar começa uma corrida nova daqui; o Mapa muda).</summary>
     int RunStartStage => 1;
 
+    /// <summary>Corrida infinita: recorde do perfil. Fase absoluta mais alta (ciclo = (n-1)/fases + 1; 0 = nunca jogou) e a onda mais alta nela.</summary>
+    int BestStageNumber => 0;
+    int BestStageWave => 0;
+
     bool Paused { get; }
     void TogglePause();
     void OpenSettings();

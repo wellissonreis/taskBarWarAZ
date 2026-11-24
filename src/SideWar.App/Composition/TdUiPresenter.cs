@@ -641,6 +641,8 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         ? Math.Max(0, (layout.Scene.Top + TdBand.HeadroomRealDip(bandHeight) * Scale - layout.Monitor.WorkArea.Top) / UiScale - TdHudView.DefaultHeight - 4)
         : float.PositiveInfinity;
     int ITdUiHost.RunStartStage => td.RunStartStage;
+    int ITdUiHost.BestStageNumber => td.Recorder.Profile.BestStageNumber;
+    int ITdUiHost.BestStageWave => td.Recorder.Profile.BestStageWave;
 
     public bool Paused => (runtime.App.PauseReasons & Runtime.Timing.PauseReason.User) != 0;
     public void TogglePause() => runtime.TogglePause();
