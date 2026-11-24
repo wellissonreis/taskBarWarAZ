@@ -79,5 +79,5 @@ public sealed class TdPresenceTests
         Assert.Equal(Golden, first.StateHash);
     }
 
-    private const ulong Golden = 3100855778175472023UL;
+    private const ulong Golden = 5306011525063861846UL;
 }

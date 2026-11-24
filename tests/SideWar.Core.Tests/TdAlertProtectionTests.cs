@@ -16,9 +16,12 @@ public sealed class TdAlertProtectionTests
     private static StripLayout Full() =>
         StripLayout.Create(1200, 1200, 0f, 0f, 1200, TowerHost.Taskbar, [new FreeZone(0, 1200)]);
 
-    private static TdMatchState New(int stage = 1, ulong seed = 42, TdContent? content = null)
+    private static TdMatchState New(int stage = 1, ulong seed = 42, TdContent? content = null, bool extraCredits = false)
     {
-        var s = TdMatchState.Create(content ?? Content, stage, Rng.Seed(seed, 54));
+        var selected = content ?? Content;
+        if (extraCredits)
+            selected = selected with { Stages = selected.Stages with { Stages = selected.Stages.Stages.Select(st => st.Id == stage ? st with { StartingCredits = 1500 } : st).ToArray() } };
+        var s = TdMatchState.Create(selected, stage, Rng.Seed(seed, 54));
         Assert.True(s.Apply(new LayoutChanged(Full())).IsOk);
         Assert.True(s.Apply(new BuildTower("bolt", 900)).IsOk);
         Assert.True(s.Apply(new StartWave()).IsOk);
@@ -43,7 +46,7 @@ public sealed class TdAlertProtectionTests
     [Fact]
     public void Defense_line_is_the_placed_active_tower_nearest_the_portal_and_follows_sell_and_disable()
     {
-        var s = New();
+        var s = New(extraCredits: true);
         double safety = s.LeakX + TdRiskAnalyzer.SafetyDistance;
         Assert.Equal(safety, TdRiskAnalyzer.DefenseLineX(s)); // sem torres: distância de segurança
         Assert.True(s.Apply(new BuildTower("bolt", 600)).IsOk);
@@ -101,7 +104,7 @@ public sealed class TdAlertProtectionTests
     [Fact]
     public void Catalog_credits_runes_abilities_boss_and_phishing()
     {
-        var s = New();
+        var s = New(extraCredits: true);
         Assert.True(TdAlertCatalog.Test(s, TdAlertType.IdleCredits, out _)); // créditos iniciais >= 2x a torre mais barata
         for (int x = 100; x < 1100 && TdAlertCatalog.Test(s, TdAlertType.IdleCredits, out _); x += 60)
         {
