@@ -58,6 +58,7 @@ public sealed partial class TdMatchState
         _content = content;
         _options = options;
         GateReputation = Math.Clamp(options.InitialReputation ?? 0, 0, 100_000_000);
+        _shadow = options.InitialShadow;
         _stageNumber = stageNumber;
         _stage = stage;
         _waves = waves;
@@ -277,7 +278,8 @@ public sealed partial class TdMatchState
 
     private void RestartCountdown()
     {
-        if (AutoStart == AutoStartMode.Countdown && Phase == MatchPhase.Preparo)
+        ApplyShadowRequest(); // nova fronteira entre ondas
+        if ((AutoStart == AutoStartMode.Countdown || _shadow) && Phase == MatchPhase.Preparo)
         {
             _countdownActive = true;
             _countdownTicks = (int)Math.Round(AutoStartSeconds * TdWorld.TicksPerSecond, MidpointRounding.ToEven);
@@ -316,6 +318,7 @@ public sealed partial class TdMatchState
             SetTargeting g => DoSetTargeting(g),
             UseAbility u => DoUseAbility(u),
             SetPresence sp => DoSetPresence(sp),
+            SetShadow sh => DoSetShadow(sh),
             AnswerBonus ab => DoAnswerBonus(ab),
             _ => Reject(CommandReason.UnknownCommand),
         };
@@ -469,6 +472,7 @@ public sealed partial class TdMatchState
 
     private void BeginWave(int w)
     {
+        ApplyShadowRequest(); // fronteira entre ondas
         var def = EffectiveWave(w);
         var spawns = new List<(long Due, int Seq, int Index, bool Boss, ushort Mut)>();
         double jitter = _content.Stages.Rules.SpawnJitter;

@@ -76,3 +76,9 @@ public sealed record FuseTower(int BaseId, string ComponentTypeId) : IGameComman
 /// Sem custo em créditos (a torre absorvida já foi paga e seu preço vira o preço do módulo). Só em Preparo ou Onda; ambas simples e posicionadas.
 /// </summary>
 public sealed record FuseTowers(int TargetId, int SourceId) : IGameCommand;
+
+/// <summary>
+/// Liga/desliga o modo sombra (farmar sem risco): XP de reputação congelado e recompensas permanentes reduzidas (<see cref="TdShadow.RewardPercent"/>%).
+/// Em Preparo vale na hora; em Onda fica pendente até a fronteira entre ondas (nunca no meio de uma onda ruim).
+/// </summary>
+public sealed record SetShadow(bool On) : IGameCommand;

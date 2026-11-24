@@ -185,6 +185,8 @@ public enum TdEventType : byte
     BaseAttacked,
     // A = índice de conteúdo; B = 0 normal, 1 elite, 2 enfurecido.
     EnemyEncountered,
+    // Modo sombra ligado (A = 1) ou desligado (A = 0) na fronteira entre ondas.
+    ShadowChanged,
 }
 
 /// <summary>Evento observável (não entra no hash). <c>A</c>/<c>B</c>: valores do evento (onda, créditos, id etc.).</summary>
@@ -221,7 +223,7 @@ public readonly record struct TdRecordOutcome(bool NewRecord, bool NewCrown, TdM
 /// <param name="InitialAwakened">Teia de runas permanente do perfil: bitset dos nós já despertados (slot = anel*16+setor), carregado em toda partida/corrida nova (modo não clássico).</param>
 /// <param name="InitialFragments">Fragmentos permanentes do perfil, carregados na partida nova.</param>
 /// <param name="StageClearHeal">Obsoleto (REPUTACAO): a vida do núcleo não existe mais; ignorado.</param>
-public sealed record TdMatchOptions(bool ContinuousWaves = true, bool PersistentRun = true, int StageClearHeal = 5, int? HighestCompletedStage = null, UInt128 InitialAwakened = default, long InitialFragments = 0, int? InitialReputation = null)
+public sealed record TdMatchOptions(bool ContinuousWaves = true, bool PersistentRun = true, int StageClearHeal = 5, int? HighestCompletedStage = null, UInt128 InitialAwakened = default, long InitialFragments = 0, int? InitialReputation = null, bool InitialShadow = false)
 {
     public static TdMatchOptions Default { get; } = new();
     public static TdMatchOptions Classic { get; } = new(false, false, 0);

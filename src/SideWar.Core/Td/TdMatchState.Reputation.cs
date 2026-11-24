@@ -61,6 +61,7 @@ public sealed partial class TdMatchState
 
     private void LoseReputation(int coreDamage)
     {
+        if (_shadow) return; // sombra: XP congelado (sem perda nem rebaixamento)
         _streak = 0;
         int xp = TdReputation.XpLost(coreDamage, XpShieldPercent);
         if (xp <= 0) return;
@@ -72,7 +73,7 @@ public sealed partial class TdMatchState
 
     private void GainReputation(int xp, int wave)
     {
-        if (xp <= 0) return;
+        if (xp <= 0 || _shadow) return; // sombra: sem ganho de XP
         ReputationGainedTotal += xp;
         GateReputation = (int)Math.Min(100_000_000L, (long)GateReputation + xp);
         Emit(TdEventType.ReputationGained, xp, wave);
@@ -80,6 +81,7 @@ public sealed partial class TdMatchState
 
     private void WinWaveReputation(int wave, bool leaked)
     {
+        if (_shadow) { ShadowWaves++; return; } // sombra: sem XP nem multiplicador de sequência
         _streak = leaked ? 0 : _streak + 1;
         GainReputation(TdReputation.WaveXp(_stageNumber, wave, leaked, _streak), wave);
     }
@@ -88,7 +90,7 @@ public sealed partial class TdMatchState
     private int RecoverReputation(int coreDamageUnits)
     {
         int xp = Math.Min(_repLostStage, Math.Max(0, coreDamageUnits) * TdReputation.XpPerCoreDamage);
-        if (xp <= 0) return 0;
+        if (xp <= 0 || _shadow) return 0;
         _repLostStage -= xp;
         GainReputation(xp, 0);
         return xp;

@@ -141,7 +141,17 @@ public sealed partial class TdMatchState
 
     private void GainFragments(int amount)
     {
-        if (amount > 0) Fragments = Sat.Add(Fragments, amount);
+        if (amount <= 0) return;
+        if (_shadow)
+        {
+            // Sombra: só TdShadow.RewardPercent% dos fragmentos; o resto fracionário acumula (determinístico).
+            _shadowRemainder += (long)amount * TdShadow.RewardPercent;
+            amount = (int)(_shadowRemainder / 100);
+            _shadowRemainder %= 100;
+            if (amount <= 0) return;
+            ShadowFragments += amount;
+        }
+        Fragments = Sat.Add(Fragments, amount);
     }
 
     private int Rune(string effect) => _runeEffects.GetValueOrDefault(effect);
