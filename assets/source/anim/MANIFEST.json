@@ -77,6 +77,60 @@
    "sha256": "6aaf46fff7b9a9ae4b68f261ef31293a4ddd7632833a486a208cc26a353bf8d4"
   },
   {
+   "file": "bastion-attack.png",
+   "design": "original",
+   "role": "attack",
+   "frames": 6,
+   "durationSeconds": 0.5,
+   "fps": 12.0,
+   "sheetPixels": [
+    768,
+    128
+   ],
+   "framePixels": [
+    128,
+    128
+   ],
+   "sha256": "f4c9c4048b03d1d2120d5c853e143b057955cd89a623be6589ad098bb404c5e5",
+   "generator": "tools/sprites/gen_bastion.py"
+  },
+  {
+   "file": "bastion-fx.png",
+   "design": "original",
+   "role": "fx",
+   "frames": 4,
+   "durationSeconds": 0.4,
+   "fps": 10.0,
+   "sheetPixels": [
+    256,
+    64
+   ],
+   "framePixels": [
+    64,
+    64
+   ],
+   "sha256": "86b5bb9f146f7a96b294e935d833c4eb8b014ebc1faa4522d318ada01c395d7b",
+   "generator": "tools/sprites/gen_bastion.py"
+  },
+  {
+   "file": "bastion-idle.png",
+   "design": "original",
+   "role": "idle",
+   "frames": 4,
+   "durationSeconds": 0.667,
+   "fps": 6.0,
+   "sheetPixels": [
+    512,
+    128
+   ],
+   "framePixels": [
+    128,
+    128
+   ],
+   "sha256": "9b8c90d3fc93fa9fa43b8c188ac70ede6ca3abbb1760ec0c5c2522f87fb124d8",
+   "generator": "tools/sprites/gen_bastion.py"
+  },
+  {
    "file": "bolt-attack.png",
    "design": "raio",
    "blob": "01ac87275d378b67aca5acb49cfa8503",
