@@ -850,7 +850,9 @@ public sealed partial class TdUiController
         bool live = m.Phase is MatchPhase.Preparo or MatchPhase.Onda;
         bool showStart = live && (!m.Options.ContinuousWaves || m.Phase == MatchPhase.Preparo);
         UpdateMoney(m);
-        float y0 = _money.Floats.Count > 0 ? TdHudView.FloatPad : 0f;
+        // Keep the expanded window's size fixed while income floats appear and disappear.
+        // The minimized HUD does not draw floats, so it must never inherit their top padding.
+        float y0 = _host.HudMinimized ? 0f : TdHudView.FloatPad;
         const float startWidth = 88f;
         float offset = showStart ? startWidth + 4f : 0f;
         if (showStart)
@@ -867,8 +869,10 @@ public sealed partial class TdUiController
             => items.Add(new TdUiItem(new DipRect(offset + x, y0 + y, w, h), kind, text, action, arg, SArg: tag,
                 Enabled: enabled, Selected: selected, Icon: icon, Tip: tip, Highlight: highlight, Fill: fill, Sub: sub));
         // Reserve space for large numbers before laying out later groups.
-        float coreExtra = Math.Max(0, repText.Length - 5) * 8f;
-        float waveExtra = Math.Max(0, $"{shown}/{m.TotalWaves}".Length - 4) * 8f;
+        // JetBrains Mono at the largest HUD font (20 DIP) advances 12 DIP per glyph.
+        // Reserve the common large values so streak changes do not resize the window.
+        float coreExtra = Math.Max(0, 20f + Math.Max(repText.Length, 10) * 12f - 73f);
+        float waveExtra = Math.Max(0, Math.Max($"{shown}/{m.TotalWaves}".Length, 5) * 12f + 8f - 52f);
         if (_host.HudMinimized)
         {
             // O chip permanece no canto e nunca abre automaticamente ao haver uma ação pendente.

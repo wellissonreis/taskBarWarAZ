@@ -31,7 +31,7 @@ public sealed class TdUiGoldenTests
         public bool StageCrown(int stageId) => stageId == 1;
         public int StageMedals(int stageId) => stageId == 1 ? 5 : stageId == 2 ? 2 : 0;
         public int StageBestScore(int stageId) => stageId == 1 ? 4123 : stageId == 2 ? 2987 : 0;
-        public TdRankProgress Rank => TdRank.Progress(7110);
+        public TdRankProgress Rank { get; set; } = TdRank.Progress(7110);
         public TdRecordOutcome LastOutcome => new(true, true, TdMedals.SemVender | TdMedals.Pressa, 4);
         public int SealsAvailable => 2;
         public bool NodePurchased(string nodeId) => nodeId == "infrastructure.credits";
@@ -48,7 +48,7 @@ public sealed class TdUiGoldenTests
         public void ClearTip(string id) => _seen.Remove(id);
     }
 
-    public enum UiScene { HudMoney, HudPrep, HudWave, HudMin, HudTip, Chooser, ChooserPoint, Inspector, Preview, Map, MapLocked, Seals, Victory, Menu, HudPlacing, Towers, Runes, Help, BaseAttacked, QuickTowers, RuneWindow, RuneWindowTipAvailable, RuneWindowTipAwake, RuneWindowTipLocked, RunesTipAvailable, RunesTipAwake, RunesTipLocked, RunesBranch, RuneWindowBranch, RuneCard, RuneWindowFromCard, RunesZoomMin, RunesZoomMid }
+    public enum UiScene { HudMoney, HudPrep, HudWave, HudMin, HudLarge, HudLargeMin, HudTip, Chooser, ChooserPoint, Inspector, Preview, Map, MapLocked, Seals, Victory, Menu, HudPlacing, Towers, Runes, Help, BaseAttacked, QuickTowers, RuneWindow, RuneWindowTipAvailable, RuneWindowTipAwake, RuneWindowTipLocked, RunesTipAvailable, RunesTipAwake, RunesTipLocked, RunesBranch, RuneWindowBranch, RuneCard, RuneWindowFromCard, RunesZoomMin, RunesZoomMid }
 
     public static TheoryData<UiScene, int> Cases()
     {
@@ -56,6 +56,24 @@ public sealed class TdUiGoldenTests
         foreach (var s in Enum.GetValues<UiScene>())
             foreach (int dpi in new[] { 96, 144 }) d.Add(s, dpi);
         return d;
+    }
+
+    [Theory]
+    [InlineData(UiScene.HudLarge, 96)]
+    [InlineData(UiScene.HudLargeMin, 96)]
+    [InlineData(UiScene.HudLarge, 144)]
+    [InlineData(UiScene.HudLargeMin, 144)]
+    public void Large_hud_text_fits_real_font(UiScene scene, int dpi)
+    {
+        var (ui, _) = Setup(scene);
+        var hud = ui.BuildHud();
+        using var typo = new Typography();
+        float size = Math.Max(13, 11 / hud.LayoutScale);
+        var font = typo.GetFont(FontRole.JetBrainsMonoRegular, size, dpi);
+        var core = hud.Items.Single(i => i.SArg == "core");
+        var wave = hud.Items.Single(i => i.SArg == "wave");
+        Assert.True(font.MeasureText(core.Text) * hud.LayoutScale <= (core.Rect.W - 20 * hud.LayoutScale) * dpi / 96f);
+        Assert.True(font.MeasureText(wave.Text) * hud.LayoutScale <= (wave.Rect.W - 115 * hud.LayoutScale) * dpi / 96f);
     }
 
     private static (TdUiController Ui, TdMatchState Match) Setup(UiScene scene)
@@ -70,6 +88,17 @@ public sealed class TdUiGoldenTests
         var item = (TdUiAction a, int arg) => new TdUiItem(default, TdUiKind.Button, "", a, arg);
         switch (scene)
         {
+            case UiScene.HudLarge or UiScene.HudLargeMin:
+                host.Rank = TdRank.Progress(999999);
+                typeof(TdMatchState).GetField("_streak", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(match, 10);
+                var wavesField = typeof(TdMatchState).GetField("_waves", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;
+                var original = (Array)wavesField.GetValue(match)!;
+                var waves = Array.CreateInstance(original.GetType().GetElementType()!, 60);
+                for (int i = 0; i < waves.Length; i++) waves.SetValue(original.GetValue(0), i);
+                wavesField.SetValue(match, waves);
+                typeof(TdMatchState).GetProperty("WaveNumber")!.SetValue(match, 60);
+                if (scene == UiScene.HudLargeMin) ui.Activate(item(TdUiAction.HudMinimize, 0));
+                break;
             case UiScene.HudMin: ui.Activate(item(TdUiAction.HudMinimize, 0)); break;
             case UiScene.HudMoney:
                 // TD.33d: contador grande no meio da contagem animada, "+N" subindo e renda ligada.
@@ -168,7 +197,7 @@ public sealed class TdUiGoldenTests
             GoldenImage.Blit(tc, tl, 0, 0);
             return tb;
         }
-        bool hud = scene is UiScene.HudMoney or UiScene.HudPrep or UiScene.HudWave or UiScene.HudMin or UiScene.HudPlacing;
+        bool hud = scene is UiScene.HudMoney or UiScene.HudPrep or UiScene.HudWave or UiScene.HudMin or UiScene.HudLarge or UiScene.HudLargeMin or UiScene.HudPlacing;
         if (hud)
         {
             var v = ui.BuildHud();
@@ -176,6 +205,13 @@ public sealed class TdUiGoldenTests
             var bmp = new SKBitmap(new SKImageInfo(w, h, SKColorType.Bgra8888, SKAlphaType.Premul));
             using var c = new SKCanvas(bmp);
             c.Clear(Backdrop);
+            if (scene is UiScene.HudLarge or UiScene.HudLargeMin)
+            {
+                // A large boss frame behind the HUD must not bleed through its opaque body.
+                string root = Path.GetFullPath(Path.Combine(GoldenImage.GoldenDirectory(), "../../.."));
+                using var boss = SKBitmap.Decode(Path.Combine(root, "assets/source/anim/chefe_botnet-walk.png"));
+                c.DrawBitmap(boss, new SKRect(0, 0, 192, 192), new SKRect(w - 150, 0, w + 42, 192), new SKSamplingOptions(SKFilterMode.Nearest));
+            }
             using var layer = new SKBitmap(new SKImageInfo(w, h, SKColorType.Bgra8888, SKAlphaType.Premul));
             using (var lc = new SKCanvas(layer)) r.DrawHud(lc, v, 3);
             GoldenImage.Blit(c, layer, 0, 0);

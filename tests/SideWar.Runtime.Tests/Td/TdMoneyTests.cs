@@ -320,12 +320,12 @@ public sealed class TdMoneyTests
     }
 
     [Fact] // T-33.19
-    public void Floating_numbers_get_a_transparent_top_strip_only_while_visible_and_never_take_clicks()
+    public void Floating_numbers_keep_a_stable_transparent_top_strip_and_never_take_clicks()
     {
         var r = new Rig();
         var rest = r.Ui.BuildHud();
-        Assert.Equal(0f, rest.TopPad);
-        Assert.Equal(28f, rest.Height);
+        Assert.Equal(TdHudView.FloatPad * 0.7f, rest.TopPad);
+        Assert.Equal((40f + TdHudView.FloatPad) * 0.7f, rest.Height);
         r.Match.Apply(new SideWar.Core.Td.BuildTower("bolt", 300));
         r.Match.Apply(new StartWave());
         for (int i = 0; i < 4000 && r.Ui.Money.Floats.Count == 0; i++) { r.Match.Step(); r.Now += Dt; r.Ui.BuildHud(); }
@@ -337,6 +337,19 @@ public sealed class TdMoneyTests
         Assert.False(hud.OverButton(5f, 4f));                       // a faixa do topo é transparente ao mouse
         var money = hud.Items.Single(i => i.Kind == TdUiKind.Money);
         Assert.False(hud.OverButton(money.Rect.X + 4, money.Rect.Y + 4));
+        r.Host.HudMinimized = true;
+        var mini = r.Ui.BuildHud();
+        Assert.Equal(0f, mini.TopPad);
+        Assert.All(mini.Items, it => Assert.True(it.Rect.Y + it.Rect.H <= mini.Height));
+        var rects = mini.Items.Select(it => it.Rect).ToArray();
+        for (int i = 0; i < 120; i++)
+        {
+            r.Match.Step(); r.Now += Dt;
+            var frame = r.Ui.BuildHud();
+            Assert.Equal(mini.Width, frame.Width);
+            Assert.Equal(mini.Height, frame.Height);
+            Assert.Equal(rects, frame.Items.Select(it => it.Rect).ToArray());
+        }
     }
 
     [Fact] // T-33.22
