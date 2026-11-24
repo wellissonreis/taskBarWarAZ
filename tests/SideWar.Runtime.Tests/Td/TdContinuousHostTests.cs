@@ -339,7 +339,8 @@ public sealed class TdContinuousHostTests
         var r = new Rig();
         Assert.Contains("Ctrl+Alt+H", r.Ui.BuildHud().Items.Single(i => i.Action == TdUiAction.HudRestore).Tip);
         r.Ui.OpenHowTo();
-        Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Text.Contains("Ctrl+Alt+H"));
+        while (!r.Ui.BuildPopover()!.Items.Any(i => i.Text.Contains("Ctrl+Alt+H", StringComparison.Ordinal)))
+            Assert.True(r.Ui.ScrollBy(1), "Atalho não encontrado na ajuda rolável");
     }
 
     [Fact]

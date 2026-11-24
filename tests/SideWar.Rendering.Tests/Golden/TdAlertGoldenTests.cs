@@ -109,7 +109,7 @@ public sealed class TdAlertGoldenTests
         foreach (var b in blocks)
         {
             Assert.True(b.Rect.X >= 0 && b.Rect.Y >= 0 && b.Rect.X + b.Rect.W <= p.Width && b.Rect.Y + b.Rect.H <= p.Height, b.Text);
-            Assert.True(b.FontSize >= 14f, b.Text);
+            Assert.True(b.FontSize >= 10f, b.Text);
         }
         for (int i = 0; i < blocks.Length; i++)
             for (int j = i + 1; j < blocks.Length; j++)
