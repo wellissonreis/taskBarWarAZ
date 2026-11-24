@@ -1,3 +1,4 @@
+using SideWar.Core.Simulation;
 using SideWar.Core.Td;
 using SideWar.Runtime.Geometry;
 
@@ -121,6 +122,7 @@ public sealed partial class TdUiController
     private void MoveTutorial(bool forward)
     {
         if (_tutorial is not { Active: true }) return;
+        if (forward && _tutorial.Index == 0 && !_match().HasPlacedTower) return;
         if (forward) _tutorial.Next(); else _tutorial.Previous();
         if (_tutorial.Active)
         {
@@ -143,7 +145,17 @@ public sealed partial class TdUiController
     /// <summary>X (DIP do espaço de desenho da faixa) do alvo a destacar na faixa, ou -1.</summary>
     private float HintX()
     {
-        if (Mode != TdUiMode.None || _onb is null) return -1f;
+        if (_onb is null) return -1f;
+        if (_tutorial is { Active: true, Index: 0 } && !_match().HasPlacedTower)
+        {
+            var match = _match();
+            int width = TdBand.WidthDip(match);
+            for (int x = 0; x < width; x += 4)
+                if (match.ValidatePlacement(TdPlacement.ToLogical(x, width), 0, out int snapped) == CommandReason.None)
+                    return TdPlacement.ToDip(snapped, width);
+            return -1f;
+        }
+        if (Mode != TdUiMode.None) return -1f;
         var m = _match();
         int w = TdBand.WidthDip(m);
         switch (ComputeStep(m))
@@ -200,6 +212,7 @@ public sealed partial class TdUiController
     private void SyncOnboarding(TdMatchState m)
     {
         if (_onb is null) return;
+        if (_tutorial is { Active: true, Index: 0 } && m.HasPlacedTower) MoveTutorial(true);
         ScanTips(m);
         UpdateTip(m);
         SyncHurt(m);
@@ -335,7 +348,7 @@ public sealed partial class TdUiController
         {
             int target = items.FindIndex(it => it.Action == _tutorial.Current.HudTarget);
             if (target < 0) target = items.FindIndex(it => it.Action == TdUiAction.HudExpand);
-            if (target >= 0) items[target] = items[target] with { Highlight = true };
+            if (target >= 0) items[target] = items[target] with { Highlight = _tutorial.Index != 0 || PulseOn };
         }
         else if (HudStep(step) && Mode == TdUiMode.None)
         {
@@ -460,9 +473,10 @@ public sealed partial class TdUiController
         var page = _tutorial!.Current;
         var s = new Stack(440f);
         s.Add(TdUiKind.Label, page.Text, 18f, tone: TdTone.Accent, icon: page.Icon);
-        s.Add(TdUiKind.Label, TourDetail(page), 18f, tone: TdTone.Dim);
+        string detail = BuildActive && _tutorial.Index == 0 ? _notice ?? "Clique em um ponto livre da faixa." : TourDetail(page);
+        if (detail.Length > 0) s.Add(TdUiKind.Label, detail, 18f, tone: TdTone.Dim);
         s.Items.Add(new(new DipRect(Pad, s.Y, 68, 20), TdUiKind.Button, "Anterior", TdUiAction.TutorialPrevious, Enabled: _tutorial.Index > 0));
-        s.Items.Add(new(new DipRect(82, s.Y, 90, 20), TdUiKind.Button, "Próximo", TdUiAction.TutorialNext));
+        s.Items.Add(new(new DipRect(82, s.Y, 90, 20), TdUiKind.Button, "Próximo", TdUiAction.TutorialNext, Enabled: _tutorial.Index != 0 || _match().HasPlacedTower));
         s.Items.Add(new(new DipRect(180, s.Y, 72, 20), TdUiKind.Button, "Pular", TdUiAction.TutorialSkip));
         return new TdPopoverView($"Tutorial {_tutorial.Index + 1}/{TdTutorial.Pages.Count}", [.. s.Items], s.Width, s.Y + 26, 0);
     }
@@ -486,7 +500,7 @@ public sealed partial class TdUiController
         items.Add(new(new DipRect(20, 406, 465, 18), TdUiKind.Label, $"{_tutorial.Index + 1}/{TdTutorial.Pages.Count}  {page.Text}", Icon: page.Icon, SArg: "tut"));
         items.Add(new(new DipRect(42, 425, 600, 16), TdUiKind.Label, TourDetail(page), SArg: "tour-detail"));
         items.Add(new(new DipRect(390, 445, 96, 24), TdUiKind.Button, "Anterior", TdUiAction.TutorialPrevious, Enabled: _tutorial.Index > 0));
-        items.Add(new(new DipRect(492, 445, 104, 24), TdUiKind.Button, _tutorial.Index == TdTutorial.Pages.Count - 1 ? "Concluir" : "Próximo", TdUiAction.TutorialNext));
+        items.Add(new(new DipRect(492, 445, 104, 24), TdUiKind.Button, _tutorial.Index == TdTutorial.Pages.Count - 1 ? "Concluir" : "Próximo", TdUiAction.TutorialNext, Enabled: _tutorial.Index != 0 || _match().HasPlacedTower));
         items.Add(new(new DipRect(602, 445, 100, 24), TdUiKind.Button, "Pular", TdUiAction.TutorialSkip, SArg: "tutskip"));
     }
 
@@ -500,8 +514,9 @@ public sealed partial class TdUiController
         Section("OBJETIVO E ONDAS");
         Card(TdIcon.Medal, "Defenda a base: vazar tira XP e pode rebaixar.");
         Card(TdIcon.Medal, "Não há game over; continue defendendo.");
-        Card(TdIcon.Build, "Coloque uma torre antes de iniciar a onda.");
-        Card(TdIcon.Play, m.Options.ContinuousWaves ? "Inicie a 1ª onda; o resto flui." : "Inicie a onda quando estiver pronto.");
+        Card(TdIcon.Build, "Abra Torres, escolha uma torre e clique na faixa livre.");
+        Card(TdIcon.Play, "Inicie no HUD; auto-início Imediato é o padrão.");
+        Card(TdIcon.Play, "Altere o auto-início em Configurações.");
         Card(TdIcon.FastForward, "Chame a próxima onda para ganhar bônus.");
         Card(TdIcon.Alert, "Chefões especiais enfurecem com 50% de vida.");
         Card(TdIcon.Target, "Leia o tipo; torre forte/fraca.");
@@ -509,7 +524,8 @@ public sealed partial class TdUiController
         Section("TORRES E ECONOMIA");
         Card(TdIcon.Build, "Construir mostra tipos, funções e fraquezas.");
         Card(TdIcon.Build, "Arraste ao vazio para mover sem custo.");
-        Card(TdIcon.Star, "Torre sobre torre: solte e funde.");
+        Card(TdIcon.Star, "Torre sobre torre: fusão a partir de Júnior.");
+        Card(TdIcon.Medal, "Torres liberam conforme a patente.");
         Card(TdIcon.Star, "Fusões ficam mais fortes e ganham nomes.");
         Card(TdIcon.Target, "Inspecione a torre para ajustar sua mira.");
         Card(TdIcon.Coin, $"Venda na aba Torres: devolve {Math.Round(m.Content.Stages.Rules.SellRefund * 100):0}%.");

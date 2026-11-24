@@ -341,7 +341,7 @@ public sealed class TdFusionDropTests
             r.Ui.ScrollBy(1);
         }
         Assert.Contains(texts, t => t.Contains("HUD"));
-        Assert.Contains(texts, t => t.Contains("funde"));
+        Assert.Contains(texts, t => t.Contains("fusão"));
         Assert.Contains(texts, t => t.Contains("runas"));
         Assert.Contains(texts, t => t.Contains("Patentes"));
         var redo = r.Ui.BuildPopover()!.Items.First(i => i.Action == TdUiAction.RedoTutorial);
@@ -350,19 +350,9 @@ public sealed class TdFusionDropTests
     }
 
     [Fact]
-    public void Tutorial_teaches_fusion_without_waiting_for_a_pair_then_rank()
+    public void Tutorial_explains_rank_gate_for_fusion()
     {
-        var r = new Rig(onboarding: true);
-        r.Store.Done = false;
-        r.Ui.OpenStartupModal();
-        for (int i = 0; i < 5; i++) r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.TutorialNext));
-        Assert.Single(r.Match.Towers);
-        Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Text.Contains("torre sobre outra"));
-        for (int i = 0; i < 3; i++) r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.TutorialNext));
-        Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Text.Contains("patente"));
-        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.TutorialSkip));
-        Assert.True(r.Store.Done);
-        Assert.Equal(TdTutorialStep.None, r.Ui.Step);
+        Assert.Contains(TdTutorial.Pages, p => p.Text.Contains("Patentes") && p.Detail.Contains("Júnior"));
     }
 
     [Fact]

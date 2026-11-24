@@ -45,7 +45,7 @@ public sealed partial class TdUiController
     public TdQuestion? QuizQuestion => _quizQ;
 
     /// <summary>Chip do HUD pulsando: o jogador precisa do HUD e ele está recolhido (reforço do tutorial e dicas de 2–3 palavras).</summary>
-    public bool Pulsing => _host.HudMinimized && _onb is not null && (HudNeeded(_match()) || ComputeStep(_match()) == TdTutorialStep.HudOpen);
+    public bool Pulsing => (_tutorial is { Active: true, Index: 0 } && !_match().HasPlacedTower) || (_host.HudMinimized && _onb is not null && (HudNeeded(_match()) || ComputeStep(_match()) == TdTutorialStep.HudOpen));
 
     private static int QuizNumber(string id)
     {

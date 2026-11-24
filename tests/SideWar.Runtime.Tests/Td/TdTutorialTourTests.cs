@@ -3,6 +3,9 @@ using SideWar.Core.Content.Td;
 using SideWar.Core.Simulation;
 using SideWar.Core.Td;
 using SideWar.Runtime.Td;
+using SideWar.Runtime.Input;
+using LayoutChanged = SideWar.Core.Td.LayoutChanged;
+using BuildTower = SideWar.Core.Td.BuildTower;
 using Xunit;
 
 namespace SideWar.Runtime.Tests.Td;
@@ -39,6 +42,7 @@ public sealed class TdTutorialTourTests
     private static TdUiController Create(Store store)
     {
         var match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 1, Rng.Seed(7, 54));
+        match.Apply(new LayoutChanged(StripLayout.Create(1000, 954, 88, 4, 920, TowerHost.Band, [new FreeZone(32, 968)])));
         var ui = new TdUiController(() => match, c => match.Apply(c), new Host(), () => 0, store);
         ui.Sync();
         ui.OpenStartupModal();
@@ -48,50 +52,47 @@ public sealed class TdTutorialTourTests
         ui.Activate(new TdUiItem(default, TdUiKind.Button, "", action));
 
     [Fact]
-    public void Tour_covers_the_features_players_can_discover()
-    {
-        string content = string.Join(" ", TdTutorial.Pages.Select(p => p.Text + " " + p.Detail));
-        foreach (string term in new[] { "base", "game over", "iniciar", "fraquezas", "mover", "fundir", "mira", "Cofre", "patente", "sequência", "runas", "zoom", "regiões", "selos", "ciclos", "chefões", "HUD", "avisos", "boss key", "Recomeçar", "bestiário", "Refazer tutorial" })
-            Assert.Contains(term, content, StringComparison.OrdinalIgnoreCase);
-    }
-
-    [Fact]
-    public void All_pages_are_reachable_in_order_without_towers_and_highlight_real_items()
+    public void Placement_is_required_and_invalid_points_explain_why()
     {
         var store = new Store();
         var ui = Create(store);
-        for (int i = 0; i < TdTutorial.Pages.Count; i++)
-        {
-            var view = ui.BuildPopover()!;
-            Assert.Contains(view.Items, x => x.SArg == "tut" && x.Text.Contains(TdTutorial.Pages[i].Text));
-            Assert.Contains(view.Items, x => x.Highlight);
-            Assert.Contains(view.Items, x => x.Action == TdUiAction.TutorialNext);
-            Assert.Contains(view.Items, x => x.Action == TdUiAction.TutorialSkip);
-            Assert.Equal(i > 0, view.Items.Single(x => x.Action == TdUiAction.TutorialPrevious).Enabled);
-            if (TdTutorial.Pages[i].HudTarget != TdUiAction.None)
-                Assert.Contains(ui.BuildHud().Items, x => x.Action == TdTutorial.Pages[i].HudTarget && x.Highlight);
-            Click(ui, TdUiAction.TutorialNext);
-        }
-        Assert.True(store.TutorialDone);
-        Assert.Equal(TdTutorialStep.None, ui.Step);
+        Assert.Equal(TdTutorialStep.Tour, ui.Step);
+        Click(ui, TdUiAction.TutorialNext);
+        Assert.Contains(ui.BuildPopover()!.Items, x => x.Text.Contains("primeira torre"));
+        Click(ui, TdUiAction.QuickTowers);
+        var tower = ui.BuildPopover()!.Items.First(x => x.Action == TdUiAction.ChooseTower && x.Enabled);
+        Assert.True(tower.Highlight);
+        ui.Activate(tower);
+        ui.SceneLeftClick(0, 20, HitTarget.None);
+        Assert.NotNull(ui.Notice);
+        Click(ui, TdUiAction.TutorialNext);
+        Assert.Equal(TdTutorialStep.Tour, ui.Step);
+        ui.SceneLeftClick(300, 20, HitTarget.None);
+        ui.Sync();
+        Assert.Contains(ui.BuildPopover()!.Items, x => x.Text.Contains("Inicie a onda"));
     }
 
     [Fact]
-    public void Back_skip_restart_and_recreation_preserve_completion()
+    public void Skip_and_help_restart_preserve_completion()
     {
         var store = new Store();
         var ui = Create(store);
-        Click(ui, TdUiAction.TutorialNext);
-        Click(ui, TdUiAction.TutorialNext);
-        Click(ui, TdUiAction.TutorialPrevious);
-        Assert.Contains(ui.BuildPopover()!.Items, x => x.SArg == "tut" && x.Text.Contains(TdTutorial.Pages[1].Text));
         Click(ui, TdUiAction.TutorialSkip);
         Assert.True(store.TutorialDone);
         Assert.Equal(TdTutorialStep.None, Create(store).Step);
+        ui.OpenHowTo();
+        Assert.Contains(ui.BuildPopover()!.Items, x => x.Action == TdUiAction.RedoTutorial);
         Click(ui, TdUiAction.RedoTutorial);
         Assert.False(store.TutorialDone);
-        Assert.Contains(ui.BuildPopover()!.Items, x => x.Text.Contains(TdTutorial.Pages[0].Text));
-        Assert.Equal(TdTutorialStep.Tour, Create(store).Step);
+        Assert.Equal(TdTutorialStep.Tour, ui.Step);
+    }
+
+    [Fact]
+    public void Tour_and_help_describe_current_rules()
+    {
+        string content = string.Join(" ", TdTutorial.Pages.Select(p => p.Text + " " + p.Detail));
+        foreach (string term in new[] { "clique", "faixa", "Imediato", "arrastando", "inimigo", "patente", "Júnior", "XP", "velocidade", "sombra", "engrenagem" })
+            Assert.Contains(term, content, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

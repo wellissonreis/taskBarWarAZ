@@ -795,7 +795,7 @@ public sealed partial class TdUiController
     /// TD.29b: ao abrir o app a modal central abre na aba Jogo com o jogo PAUSADO (decisão do usuário); fechar a modal retoma (Resume).
     /// Chamado uma vez pelo App depois de criar o controlador.
     /// </summary>
-    public void OpenStartupModal() => SetMode(TdUiMode.Menu);
+    public void OpenStartupModal() { if (_tutorial is { Active: true }) Close(); else SetMode(TdUiMode.Menu); }
 
     private void Toggle(TdUiMode mode) => SetMode(Mode == mode ? TdUiMode.None : mode);
 
@@ -1087,7 +1087,7 @@ public sealed partial class TdUiController
         if (!BuildActive && RuneCardOpen && (Mode == TdUiMode.None || QuickTowersOpen)) return BuildRuneCard();
         if (QuickTowersOpen) return BuildQuickTowers(m);
         if (RuneWindowOpen && Mode == TdUiMode.None) return BuildRuneWindow(m);
-        if (BuildActive) return null;
+        if (BuildActive) return _tutorial is { Active: true, Index: 0 } ? BuildTourCallout() : null;
         var view = Mode switch
         {
             TdUiMode.Build => BuildChooser(m),
@@ -1143,7 +1143,7 @@ public sealed partial class TdUiController
         var items = new List<TdUiItem>();
         EnsureTowerCategory(m);
         float w = QuickWidth;
-        bool tut = _onb is not null && ComputeStep(m) == TdTutorialStep.Tower;
+        bool tut = _tutorial is { Active: true, Index: 0 } && !m.HasPlacedTower;
         bool marked = false;
         int tabs = 0;
         foreach (var (id, name) in TowerCategories)
@@ -1163,7 +1163,7 @@ public sealed partial class TdUiController
             long price = m.NextTowerCost(i);
             bool locked = m.CurrentRankId < d.MinRank;
             bool enabled = !locked && m.Credits >= price;
-            bool hl = tut && !marked && enabled;
+            bool hl = tut && !marked && enabled && PulseOn;
             if (hl) marked = true;
             items.Add(new TdUiItem(new DipRect(8 + row++ * 48, QuickHeader + 26, 44, QuickCardH), TdUiKind.Button, d.Name,
                 TdUiAction.ChooseTower, Arg: Array.FindIndex(TowerCategories, c => c.Id == d.Category), SArg: d.Id, Right: $"{price}", Tip: $"{d.Name}: {TowerBlurb(d)} Forte: {string.Join(", ", d.Strong)}. Fraqueza: {d.WeaknessText}", Enabled: enabled,
@@ -1171,7 +1171,7 @@ public sealed partial class TdUiController
         }
         float statusY = QuickHeader + 26 + QuickCardH + 4;
         items.Add(new TdUiItem(new DipRect(8, statusY, 22, 20), TdUiKind.Button, "<", TdUiAction.BuildCatalogPage, -1, Enabled: _buildPage > 0));
-        items.Add(new TdUiItem(new DipRect(30, statusY, w - 60, 20), TdUiKind.Label, NextTowerHint(m), Tone: TdTone.Dim));
+        items.Add(new TdUiItem(new DipRect(30, statusY, w - 60, 20), TdUiKind.Label, (tut && BuildActive ? _notice ?? "Clique em um ponto livre da faixa" : NextTowerHint(m)), Tone: TdTone.Dim));
         items.Add(new TdUiItem(new DipRect(w - 30, statusY, 22, 20), TdUiKind.Button, ">", TdUiAction.BuildCatalogPage, 1, Enabled: (_buildPage + 1) * pageSize < count));
         float h = statusY + 24;
         return new TdPopoverView(BuildActive && _dropTowerId > 0 ? (_dropCheck.IsOk ? $"FUNDIR: {_dropCheck.Name}  ${_dropCheck.Cost}" : "FUSÃO: " + DropReasonText(m, _dropCheck)) : BuildActive ? "TORRES   Toque na faixa" : "TORRES   Escolha uma torre", [.. items], w, h, 0, Quick: true);

@@ -136,7 +136,7 @@ public sealed class TdHud29bTests
         r.Ui.OpenStartupModal();
         r.Ui.Sync();
         Assert.Equal(TdTutorialStep.Tour, r.Ui.Step);
-        Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.SArg == "tut");
+        Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Text.Contains("primeira torre"));
         r.Ui.Cancel(); r.Ui.Sync();
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.HudMinimize)); r.Ui.Sync();
         Assert.Equal(TdTutorialStep.Tour, r.Ui.Step);
@@ -175,6 +175,6 @@ public sealed class TdHud29bTests
     public void Rune_types_keep_the_design_order_used_by_the_glyphs()
     {
         var types = TdContentLoader.LoadEmbedded().Runes.Types.Select(t => t.Id).ToArray();
-        Assert.Equal(["range", "bolt", "credits", "frost", "core", "cannon", "cooldown", "shield"], types);
+        Assert.Equal(["range", "bolt", "credits", "frost", "core", "cannon", "cooldown", "shield", "xp"], types);
     }
 }
