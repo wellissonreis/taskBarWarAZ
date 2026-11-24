@@ -43,6 +43,8 @@ public sealed partial class TdMatchState
         _shadow = on;
         _streak = 0; // entrar ou sair: a sequência recomeça do zero
         _shadowRemainder = 0;
+        // A contagem automática só existia por causa da sombra (auto-início Desligado): ao sair não pode ficar uma contagem congelada na tela.
+        if (!on && AutoStart == AutoStartMode.Off && Phase == MatchPhase.Preparo) { _countdownActive = false; _countdownTicks = 0; }
         Emit(TdEventType.ShadowChanged, on ? 1 : 0, 0);
     }
 }
