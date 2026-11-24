@@ -19,7 +19,7 @@ internal static class TdSettingsMap
         BonusQuestions = s.Td.BonusQuestions, ShowIncome = s.Td.ShowIncome, DiscreetMode = s.Td.DiscreetMode,
         AlertsEnabled = s.Td.AlertsEnabled, AlertsAutoPause = s.Td.AlertsAutoPause, AlertsSound = s.Td.AlertsSound, AlertsMutedMask = s.Td.AlertsMutedMask,
         ContinuousWaves = s.Td.ContinuousWaves, TowerPanelPinned = s.Td.TowerPanelPinned,
-        AutoStart = s.Td.AutoStartEnabled, AutoRestart = s.Td.AutoRestart, AutoStartSeconds = s.Td.AutoStartSeconds,
+        AutoStart = s.Td.AutoStartEnabled, AutoStartMode = s.Td.AutoStartMode, AutoRestart = s.Td.AutoRestart, AutoStartSeconds = s.Td.AutoStartSeconds,
         BandHeight = s.Td.BandHeightDip, CornerUiScale = s.Td.CornerUiScalePercent, GameSpeed = s.Td.GameSpeed, ExtraSpeeds = s.Td.ExtraSpeeds, ShadowOnAbsent = s.Td.ShadowOnAbsent, ShowTypeInfo = s.Td.ShowTypeInfo, SpeedMask = s.Td.ExtraSpeedMask, NoticeSize = s.Td.NoticeSize,
         Sound = s.Audio.Enabled, Volume = (int)Math.Round(s.Audio.Volume * 100),
         PeekOnHover = s.Behavior.PeekOnHover, PeekOpacity = s.Opacity.Peek, FadeWhenAbsent = s.Opacity.FadeWhenAbsent, AbsentOpacity = s.Opacity.Absent,
@@ -45,7 +45,7 @@ internal static class TdSettingsMap
         Taskbar = s.Taskbar with { UseUia = d.UseUia },
         Td = s.Td with
         {
-            AutoStartEnabled = d.AutoStart, AutoRestart = d.AutoRestart, AutoStartSeconds = Math.Clamp(d.AutoStartSeconds, TdSettings.MinAutoStartSeconds, TdSettings.MaxAutoStartSeconds),
+            AutoStartMode = d.AutoStartMode, AutoRestart = d.AutoRestart, AutoStartSeconds = Math.Clamp(d.AutoStartSeconds, TdSettings.MinAutoStartSeconds, TdSettings.MaxAutoStartSeconds),
             BandHeightDip = Math.Clamp(d.BandHeight, TdSettings.MinBandHeightDip, TdSettings.MaxBandHeightDip),
             CornerUiScalePercent = Math.Clamp(d.CornerUiScale, TdSettings.MinCornerUiScalePercent, TdSettings.MaxCornerUiScalePercent),
             FadeWhenUnfocused = d.FadeWhenUnfocused, FadeOpacityPercent = Math.Clamp(d.FadePercent, TdSettings.MinFadePercent, TdSettings.MaxFadePercent),

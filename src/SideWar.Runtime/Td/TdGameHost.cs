@@ -112,7 +112,7 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
 
     /// <summary>Precisa de Step: Onda, ou Preparo com a contagem de auto-início ligada (senão 0 fps).</summary>
     private bool NeedsSteps => Match.Phase == MatchPhase.Onda
-        || (Match.Phase == MatchPhase.Preparo && (Match.AutoStart == AutoStartMode.Countdown || Match.Shadow));
+        || (Match.Phase == MatchPhase.Preparo && (Match.AutoStart != AutoStartMode.Off || Match.Shadow));
 
     private bool Running => !IsShutdown && _app.SimulationRunning && !Match.Paused && (Match.Shadow || !_guard.Holding) && NeedsSteps;
 
@@ -149,7 +149,10 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
     /// <summary>"Iniciar onda" da hotkey/bandeja.</summary>
     public void RequestWave() => OnCommand(new TdWaveRequest());
 
-    /// <summary>Aplica as opções de auto-início (padrão desligado; segundos 5 a 60) como comando <see cref="SetAutoStart"/>.</summary>
+    /// <summary>Aplica as opções de auto-início (contagem de 5 a 60 segundos) como comando <see cref="SetAutoStart"/>.</summary>
+    public void ApplyAutoStart(AutoStartMode mode, int seconds) =>
+        OnCommand(new SetAutoStart(mode, Math.Clamp(seconds, 5, 60)));
+
     public void ApplyAutoStart(bool enabled, int seconds) =>
         OnCommand(new SetAutoStart(enabled ? AutoStartMode.Countdown : AutoStartMode.Off, Math.Clamp(seconds, 5, 60)));
 

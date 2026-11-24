@@ -105,7 +105,7 @@ public sealed record TaskbarSettings
     public bool TowersInBar { get; init; }
 }
 
-/// <summary>Opções da partida TD (SDD-28 RF-28.3). Auto-início desligado por padrão; contagem de 5 a 60 s.</summary>
+/// <summary>Opções da partida TD (SDD-28 RF-28.3). Auto-início imediato por padrão; contagem de 5 a 60 s.</summary>
 public sealed record TdSettings
 {
     /// <summary>Exibe alertas preditivos; independente da proteção automática.</summary>
@@ -122,7 +122,9 @@ public sealed record TdSettings
     public const int AutoRestartSeconds = 8;
     public bool AutoRestart { get; init; }
 
-    public bool AutoStartEnabled { get; init; }
+    private SideWar.Core.Td.AutoStartMode _autoStartMode = SideWar.Core.Td.AutoStartMode.Immediate;
+    public SideWar.Core.Td.AutoStartMode AutoStartMode { get => _autoStartMode; init => _autoStartMode = value; }
+    public bool AutoStartEnabled { get => _autoStartMode != SideWar.Core.Td.AutoStartMode.Off; init => _autoStartMode = value ? SideWar.Core.Td.AutoStartMode.Countdown : SideWar.Core.Td.AutoStartMode.Off; }
     public int AutoStartSeconds { get; init; } = 15;
 
     public const int MinBandHeightDip = 32;

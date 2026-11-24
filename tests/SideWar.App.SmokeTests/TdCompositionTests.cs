@@ -52,7 +52,7 @@ public sealed class TdCompositionTests : IDisposable
         Assert.True(File.Exists(Path.Combine(dir, TdProfileStore.FileName)));
         Assert.False(File.Exists(Path.Combine(dir, ProfileStore.FileName))); // o perfil idle nunca é criado/alterado
         Assert.Equal(1, td.Host.Match.StageId);
-        Assert.Equal(AutoStartMode.Off, td.Host.Match.AutoStart);
+        Assert.Equal(AutoStartMode.Immediate, td.Host.Match.AutoStart);
     }
 
     [Fact]
@@ -149,7 +149,10 @@ public sealed class TdCompositionTests : IDisposable
         Assert.Equal(20, td.Host.Match.AutoStartSeconds);
         td.ApplySettings(new AppSettings());
         td.Host.OnWake(clock);
-        Assert.Equal(AutoStartMode.Off, td.Host.Match.AutoStart);
+        Assert.Equal(AutoStartMode.Immediate, td.Host.Match.AutoStart);
+        td.StartStage(1);
+        td.Host.OnWake(clock);
+        Assert.Equal(AutoStartMode.Immediate, td.Host.Match.AutoStart);
     }
 
     [Fact]

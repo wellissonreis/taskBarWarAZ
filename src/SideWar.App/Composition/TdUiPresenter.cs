@@ -49,6 +49,8 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     /// <summary>Aplica na hora a edição feita no menu Configurações (a gravação segue na T-UI, como as opções rápidas).</summary>
     public void ApplySettings(TdSettingsData data)
     {
+        if (data.AutoStartMode != settingsData.AutoStartMode || data.AutoStartSeconds != settingsData.AutoStartSeconds)
+            td.Host.ApplyAutoStart(data.AutoStartMode, data.AutoStartSeconds);
         settingsData = data;
         gameOptions = new(data.BandHeight, data.AutoStart, data.Sound, data.Volume, data.BonusQuestions, data.FadeWhenUnfocused, data.ContinuousWaves, data.TowerPanelPinned,
             data.GameSpeed, data.ShowIncome, data.DiscreetMode, data.AutoRestart, data.NoticeSize, data.ExtraSpeeds, data.SpeedMask);

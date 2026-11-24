@@ -16,7 +16,7 @@ public static class TdContentValidator
     private static readonly string[] TowerKinds = ["attack", "blocker", "support", "control", "economy", "summoner"];
     private static readonly string[] TowerTargets = ["ground", "both", "none"];
     private static readonly string[] Targetings = ["first", "last", "strong", "weak", "close"];
-    private static readonly string[] AutoStartModes = ["off", "countdown"];
+    private static readonly string[] AutoStartModes = ["off", "countdown", "immediate"];
     private static readonly string[] EffectKinds =
         ["startingCredits", "sellRefund", "maxTowers", "damagePercent", "rangePercent", "xpShield", "abilityCooldownPercent", "unlockAbility", "autoStartBonusPercent"];
 

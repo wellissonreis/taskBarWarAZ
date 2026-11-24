@@ -103,6 +103,25 @@ public sealed class TdMatchTests
         Assert.Equal(CommandReason.InvalidPhase, New().Apply(new CallNextWave()).Reason);
     }
 
+    [Fact]
+    public void AutoStart_Immediate_requires_tower_and_starts_next_wave_on_completion_tick()
+    {
+        var s = New(content: Variant([1, 1]));
+        s.Apply(new SetAutoStart(AutoStartMode.Immediate, 15));
+        Steps(s, 5);
+        Assert.Equal(MatchPhase.Preparo, s.Phase);
+        Assert.True(s.Apply(new BuildTower("bolt", 150)).IsOk);
+        s.Step();
+        Assert.Equal(1, s.WaveNumber);
+        Assert.Equal(MatchPhase.Onda, s.Phase);
+        Assert.DoesNotContain(s.Events, e => e.Type == TdEventType.CallNextBonus);
+        while (s.WaveNumber == 1 && s.Frame < 20000) s.Step();
+        Assert.Equal(2, s.WaveNumber);
+        Assert.Equal(MatchPhase.Onda, s.Phase);
+        Assert.True(s.HasPlacedTower);
+        Assert.Equal(s.Events.Last(e => e.Type == TdEventType.WaveCompleted).Tick, s.Events.Last(e => e.Type == TdEventType.WaveStarted).Tick);
+    }
+
     [Fact(DisplayName = "RF-28.2 Spawn timing jitter stays within ±10% of the interval and is seed dependent")]
     public void Spawn_JitterWithinTenPercent()
     {

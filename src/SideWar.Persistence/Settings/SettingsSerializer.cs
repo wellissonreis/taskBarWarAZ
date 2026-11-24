@@ -8,6 +8,17 @@ public static class SettingsSerializer
     public static readonly int[] AllowedPresentFps = [20, 30, 60];
     public static readonly int[] AllowedAbsentFps = [4, 8];
 
+    private static SideWar.Core.Td.AutoStartMode ReadAutoStartMode(JsonElement? section)
+    {
+        if (section is not { } td) return SideWar.Core.Td.AutoStartMode.Immediate;
+        if (td.TryGetProperty("autoStartMode", out var mode))
+            return mode.ValueKind == JsonValueKind.Number && mode.TryGetInt32(out int n) && n is >= 0 and <= 2
+                ? (SideWar.Core.Td.AutoStartMode)n : SideWar.Core.Td.AutoStartMode.Immediate;
+        if (td.TryGetProperty("autoStartEnabled", out var legacy) && legacy.ValueKind is JsonValueKind.True or JsonValueKind.False)
+            return legacy.GetBoolean() ? SideWar.Core.Td.AutoStartMode.Countdown : SideWar.Core.Td.AutoStartMode.Off;
+        return SideWar.Core.Td.AutoStartMode.Immediate;
+    }
+
     public static void Write(Utf8JsonWriter w, AppSettings s)
     {
         w.WriteStartObject();
@@ -69,6 +80,7 @@ public static class SettingsSerializer
         w.WriteBoolean("alertsSound", s.Td.AlertsSound);
         w.WriteNumber("alertsMutedMask", s.Td.AlertsMutedMask);
         w.WriteBoolean("autoStartEnabled", s.Td.AutoStartEnabled);
+        w.WriteNumber("autoStartMode", (int)s.Td.AutoStartMode);
         w.WriteBoolean("autoRestart", s.Td.AutoRestart);
         w.WriteNumber("autoStartSeconds", s.Td.AutoStartSeconds);
         w.WriteNumber("bandHeightDip", s.Td.BandHeightDip);
@@ -165,7 +177,7 @@ public static class SettingsSerializer
                 AlertsAutoPause = Bool(td, "alertsAutoPause", d.Td.AlertsAutoPause),
                 AlertsSound = Bool(td, "alertsSound", d.Td.AlertsSound),
                 AlertsMutedMask = IntRange(td, "alertsMutedMask", 0, 0x1FFF, d.Td.AlertsMutedMask),
-                AutoStartEnabled = Bool(td, "autoStartEnabled", d.Td.AutoStartEnabled),
+                AutoStartMode = ReadAutoStartMode(td),
                 AutoRestart = Bool(td, "autoRestart", d.Td.AutoRestart),
                 AutoStartSeconds = IntRange(td, "autoStartSeconds", TdSettings.MinAutoStartSeconds, TdSettings.MaxAutoStartSeconds, d.Td.AutoStartSeconds),
                 BandHeightDip = IntRange(td, "bandHeightDip", TdSettings.MinBandHeightDip, TdSettings.MaxBandHeightDip, d.Td.BandHeightDip),

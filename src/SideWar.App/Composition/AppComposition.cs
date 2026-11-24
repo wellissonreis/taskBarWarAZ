@@ -211,7 +211,7 @@ internal sealed class AppComposition : IDisposable
                 if (gameSide.TdOptions is { } o)
                     SaveSettings(settings with
                     {
-                        Td = settings.Td with { BandHeightDip = o.BandHeight, AutoStartEnabled = o.AutoStart, AutoRestart = o.AutoRestart, BonusQuestions = o.Questions, FadeWhenUnfocused = o.Fade, ContinuousWaves = o.Continuous, TowerPanelPinned = o.PanelPinned, GameSpeed = o.GameSpeed, ExtraSpeeds = o.ExtraSpeeds, ExtraSpeedMask = o.SpeedMask, ShowIncome = o.ShowIncome, DiscreetMode = o.Discreet, NoticeSize = o.NoticeSize, AlertsMutedMask = gameSide.TdAlertsMutedMask ?? settings.Td.AlertsMutedMask },
+                        Td = settings.Td with { BandHeightDip = o.BandHeight, AutoStartMode = o.AutoStart == settings.Td.AutoStartEnabled ? settings.Td.AutoStartMode : (o.AutoStart ? SideWar.Core.Td.AutoStartMode.Countdown : SideWar.Core.Td.AutoStartMode.Off), AutoRestart = o.AutoRestart, BonusQuestions = o.Questions, FadeWhenUnfocused = o.Fade, ContinuousWaves = o.Continuous, TowerPanelPinned = o.PanelPinned, GameSpeed = o.GameSpeed, ExtraSpeeds = o.ExtraSpeeds, ExtraSpeedMask = o.SpeedMask, ShowIncome = o.ShowIncome, DiscreetMode = o.Discreet, NoticeSize = o.NoticeSize, AlertsMutedMask = gameSide.TdAlertsMutedMask ?? settings.Td.AlertsMutedMask },
                         Audio = settings.Audio with { Enabled = o.Sound, Volume = o.Volume / 100.0 },
                     });
                 break;

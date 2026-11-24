@@ -3,8 +3,8 @@ namespace SideWar.Core.Td;
 /// <summary>Fase da partida (SDD-28 RF-28.1): Preparo (relógio do mundo parado), Onda, Vitória (terminal; não há derrota: a base atacada só tira XP de reputação).</summary>
 public enum MatchPhase : byte { Preparo = 0, Onda, Vitoria }
 
-/// <summary>Auto-início (RF-28.3, <c>match.autoStart</c>): desligado por padrão.</summary>
-public enum AutoStartMode : byte { Off = 0, Countdown }
+/// <summary>Modos de auto-início (RF-28.3, <c>match.autoStart</c>).</summary>
+public enum AutoStartMode : byte { Off = 0, Countdown, Immediate }
 
 /// <summary>Constantes do mundo TD. TD.4 troca o mundo fixo por mundo lógico + pads (hook).</summary>
 public static class TdWorld

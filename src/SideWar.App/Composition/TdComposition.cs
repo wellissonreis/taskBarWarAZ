@@ -28,6 +28,9 @@ internal sealed class TdComposition
         Recorder = recorder;
     }
 
+    private AutoStartMode _autoStartMode = AutoStartMode.Immediate;
+    private int _autoStartSeconds = 15;
+
     public TdGameHost Host { get; }
     public TdProfileRecorder Recorder { get; }
 
@@ -79,6 +82,7 @@ internal sealed class TdComposition
         // Trocar de fase, reiniciar a corrida e voltar por trava NUNCA apagam as torres: elas viajam com todo o estado (só "Recomeçar do zero" as limpa).
         bool carried = keepTowers && next.ImportTowers(Host.Match.ExportTowers()) > 0;
         Host.Restart(next, carried);
+        Host.ApplyAutoStart(_autoStartMode, _autoStartSeconds);
         Recorder.SaveTowers(next);
     }
 
@@ -89,7 +93,7 @@ internal sealed class TdComposition
         StartStage(1, keepTowers: false);
     }
 
-    /// <summary>Auto-início (padrão desligado; 5 a 60 s) e ondas contínuas (valem a partir da próxima corrida).</summary>
+    /// <summary>Auto-início (imediato por padrão; contagem de 5 a 60 s) e ondas contínuas (valem a partir da próxima corrida).</summary>
     public void ApplySettings(AppSettings settings)
     {
         _options = settings.Td.ContinuousWaves ? TdMatchOptions.Default : TdMatchOptions.Classic;
@@ -100,6 +104,8 @@ internal sealed class TdComposition
         Host.Alerts.Settings.AutoPause = settings.Td.AlertsAutoPause;
         Host.Alerts.Settings.Sound = settings.Td.AlertsSound;
         Host.Alerts.Settings.MutedMask = settings.Td.AlertsMutedMask;
-        Host.ApplyAutoStart(settings.Td.AutoStartEnabled, settings.Td.AutoStartSeconds);
+        _autoStartMode = settings.Td.AutoStartMode;
+        _autoStartSeconds = settings.Td.AutoStartSeconds;
+        Host.ApplyAutoStart(_autoStartMode, _autoStartSeconds);
     }
 }

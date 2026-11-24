@@ -238,7 +238,8 @@ public sealed record TdSettingsData
     public int AlertsMutedMask { get; init; }
     public bool ContinuousWaves { get; init; } = true;
     public bool TowerPanelPinned { get; init; }
-    public bool AutoStart { get; init; }
+    public bool AutoStart { get; init; } = true;
+    public AutoStartMode AutoStartMode { get; init; } = AutoStartMode.Immediate;
     public bool AutoRestart { get; init; }
     public int AutoStartSeconds { get; init; } = 15;
     public int BandHeight { get; init; } = 64;

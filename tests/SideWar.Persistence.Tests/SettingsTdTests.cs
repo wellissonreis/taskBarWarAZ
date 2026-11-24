@@ -50,11 +50,26 @@ public class SettingsTdTests
 
     private static void AssertFirstRun(TdSettings td)
     {
-        Assert.False(td.AutoStartEnabled);
+        Assert.Equal(SideWar.Core.Td.AutoStartMode.Immediate, td.AutoStartMode);
         Assert.False(td.AutoRestart);
         Assert.False(td.TutorialDone);
         Assert.True(td.HudMinimized);
         Assert.Equal("", td.TipsSeen);
+    }
+
+    [Fact]
+    public void AutoStart_modes_migrate_and_roundtrip()
+    {
+        Assert.Equal(SideWar.Core.Td.AutoStartMode.Off, ReadPayload("{\"td\":{\"autoStartEnabled\":false}}").Td.AutoStartMode);
+        Assert.Equal(SideWar.Core.Td.AutoStartMode.Countdown, ReadPayload("{\"td\":{\"autoStartEnabled\":true}}").Td.AutoStartMode);
+        Assert.Equal(SideWar.Core.Td.AutoStartMode.Immediate, ReadPayload("{\"td\":{\"autoStartMode\":99}}").Td.AutoStartMode);
+        foreach (var mode in Enum.GetValues<SideWar.Core.Td.AutoStartMode>())
+        {
+            var fs = new FakeFileSystem();
+            var store = new SettingsStore(fs, "/data", utcNow: () => Now);
+            Assert.True(store.Save(new AppSettings { Td = new TdSettings { AutoStartMode = mode } }));
+            Assert.Equal(mode, store.Load().Settings.Td.AutoStartMode);
+        }
     }
 
     [Fact]
@@ -93,7 +108,7 @@ public class SettingsTdTests
     {
         var s = AppSettings.Default;
         Assert.Equal(GameMode.Td, s.GameMode);
-        Assert.False(s.Td.AutoStartEnabled);
+        Assert.Equal(SideWar.Core.Td.AutoStartMode.Immediate, s.Td.AutoStartMode);
         Assert.InRange(s.Td.AutoStartSeconds, TdSettings.MinAutoStartSeconds, TdSettings.MaxAutoStartSeconds);
         Assert.Equal("Ctrl+Alt+Space", s.Hotkeys.StartWave);
         Assert.Equal(GameMode.Td, ReadPayload("{}").GameMode);

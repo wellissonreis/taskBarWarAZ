@@ -80,7 +80,7 @@ public sealed partial class TdMatchState
                         if (effect.Kind == "startingCredits") Credits += (long)effect.Value;
                         else if (effect.Kind == "xpShield") _metaShield += (int)effect.Value;
                     }
-        AutoStart = content.Stages.Rules.AutoStart.DefaultMode == "countdown" ? AutoStartMode.Countdown : AutoStartMode.Off;
+        AutoStart = content.Stages.Rules.AutoStart.DefaultMode switch { "countdown" => AutoStartMode.Countdown, "immediate" => AutoStartMode.Immediate, _ => AutoStartMode.Off };
         AutoStartSeconds = content.Stages.Rules.AutoStart.DefaultCountdownSeconds;
         RestartCountdown();
     }
@@ -279,7 +279,7 @@ public sealed partial class TdMatchState
     private void RestartCountdown()
     {
         ApplyShadowRequest(); // nova fronteira entre ondas
-        if ((AutoStart == AutoStartMode.Countdown || _shadow) && Phase == MatchPhase.Preparo)
+        if ((AutoStart == AutoStartMode.Countdown || (_shadow && AutoStart != AutoStartMode.Immediate)) && Phase == MatchPhase.Preparo)
         {
             _countdownActive = true;
             _countdownTicks = (int)Math.Round(AutoStartSeconds * TdWorld.TicksPerSecond, MidpointRounding.ToEven);
@@ -349,7 +349,7 @@ public sealed partial class TdMatchState
         var rules = _content.Stages.Rules.AutoStart;
         double s = double.IsNaN(cmd.CountdownSeconds) ? rules.DefaultCountdownSeconds : cmd.CountdownSeconds;
         AutoStartSeconds = Math.Clamp(s, rules.MinCountdownSeconds, rules.MaxCountdownSeconds);
-        AutoStart = cmd.Mode == AutoStartMode.Countdown ? AutoStartMode.Countdown : AutoStartMode.Off;
+        AutoStart = Enum.IsDefined(cmd.Mode) ? cmd.Mode : AutoStartMode.Off;
         RestartCountdown();
         return CommandResult.Ok;
     }
@@ -528,6 +528,7 @@ public sealed partial class TdMatchState
             Phase = MatchPhase.Preparo;
             _bonusAnswered = false;
             RestartCountdown();
+            StartImmediateIfReady();
         }
     }
 
@@ -568,7 +569,14 @@ public sealed partial class TdMatchState
         {
             Phase = MatchPhase.Preparo;
             RestartCountdown();
+            StartImmediateIfReady();
         }
+    }
+
+    private void StartImmediateIfReady()
+    {
+        if (AutoStart == AutoStartMode.Immediate && Phase == MatchPhase.Preparo && NextWaveNumber != 0 && HasPlacedTower)
+            BeginWave(NextWaveNumber);
     }
 }
 

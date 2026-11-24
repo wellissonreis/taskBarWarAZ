@@ -107,6 +107,18 @@ public sealed class TdUiControllerTests
     }
 
     [Fact]
+    public void Settings_AutoStart_modes_apply_and_enable_countdown_only_for_countdown()
+    {
+        var r = OpenSettings();
+        foreach (var mode in new[] { AutoStartMode.Off, AutoStartMode.Countdown, AutoStartMode.Immediate })
+        {
+            r.Ui.Activate(Reveal(r, TdUiAction.SettingChoice, "autostart", (int)mode));
+            Assert.Equal(mode, r.Host.Settings.AutoStartMode);
+            Assert.Equal(mode == AutoStartMode.Countdown, Reveal(r, TdUiAction.SettingSlider, "autoseconds").Enabled);
+        }
+    }
+
+    [Fact]
     public void Settings_sections_cover_every_old_window_option()
     {
         string[] keys0 = ["mode", "hide", "uia", "autoscale", "questions", "income", "discreet", "continuous", "pinned", "autostart", "autoseconds", "autorestart", "band", "bandfine", "corner", "cornerfine", "speed", "alerts", "autopause", "alertsound"];
