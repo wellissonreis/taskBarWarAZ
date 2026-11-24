@@ -112,7 +112,7 @@ public sealed class TdQuizTests
         Assert.True(r.Ui.QuizQuestion!.Text.Length <= TdQuestionBank.MaxTextLength);
         Assert.Contains(pop.Items, i => i.Action == TdUiAction.QuizTrue && i.Rect.H >= 30f);
         Assert.Contains(pop.Items, i => i.Action == TdUiAction.QuizFalse && i.Rect.H >= 30f);
-        Assert.Contains(pop.Items, i => i.Kind == TdUiKind.Bar && i.Right == "10 s");
+        Assert.Contains(pop.Items, i => i.Kind == TdUiKind.Bar && i.Right == "30 s");
         var start = r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.StartWave);
         Assert.True(start.Enabled); // cartão no cantinho não pausa nem bloqueia Iniciar
     }
@@ -178,7 +178,7 @@ public sealed class TdQuizTests
         var r = new Rig();
         r.OfferQuestion();
         long credits = r.Match.Credits;
-        r.Run(10.1); // expira pelo timer existente
+        r.Run(30.1); // expira pelo timer existente
         Assert.Equal(credits, r.Match.Credits);
         Assert.Equal(1, r.Match.BonusWrongCount);
         r.Run(TdUiController.QuizWrongSeconds + 1);
@@ -269,7 +269,7 @@ public sealed class TdQuizTests
     {
         var r = new Rig();
         r.OfferQuestion();
-        r.Now += 10.1; r.Ui.Sync();
+        r.Now += 30.1; r.Ui.Sync();
         Assert.Single(r.Sent.OfType<AnswerBonus>());
         Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Icon == TdIcon.Clock && i.Text.StartsWith("Tempo!", StringComparison.Ordinal));
         r.Now += TdUiController.QuizWrongSeconds + 0.1; r.Ui.Sync();

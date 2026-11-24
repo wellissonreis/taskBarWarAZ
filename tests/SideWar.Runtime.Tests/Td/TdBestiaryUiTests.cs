@@ -66,7 +66,7 @@ public sealed class TdBestiaryUiTests
     [Fact]
     public void Construir_offers_economy_and_scrolls_the_full_catalog()
     {
-        var match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 6, Rng.Seed(7, 54));
+        var match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 6, Rng.Seed(7, 54), null, TdMatchOptions.Default with { InitialReputation = TdRank.Threshold(TdRankLevel.Arquiteto) });
         var ui = new TdUiController(() => match, c => match.Apply(c), new Host());
         ui.Activate(new(default, TdUiKind.Button, "", TdUiAction.ModalTab, (int)TdUiMode.Build));
         var view = ui.BuildPopover()!;
