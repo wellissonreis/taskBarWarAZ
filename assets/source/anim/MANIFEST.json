@@ -833,6 +833,60 @@
    "sha256": "0f80883c2c75cb335387d8c4db11b599ed3b95615e0bf54551e4407abd786d72"
   },
   {
+   "file": "queue-attack.png",
+   "design": "original",
+   "role": "attack",
+   "frames": 6,
+   "durationSeconds": 0.5,
+   "fps": 12.0,
+   "sheetPixels": [
+    768,
+    128
+   ],
+   "framePixels": [
+    128,
+    128
+   ],
+   "sha256": "6b733fba0d99b52bf81b01544e29f4d3644488ed8ce224d8cf6504a52265a702",
+   "generator": "tools/sprites/gen_queue.py"
+  },
+  {
+   "file": "queue-fx.png",
+   "design": "original",
+   "role": "fx",
+   "frames": 4,
+   "durationSeconds": 0.4,
+   "fps": 10.0,
+   "sheetPixels": [
+    256,
+    64
+   ],
+   "framePixels": [
+    64,
+    64
+   ],
+   "sha256": "7beadf0c33699044f1fc74a8a797a0d9753b80197ee712f677fa79ba77e22546",
+   "generator": "tools/sprites/gen_queue.py"
+  },
+  {
+   "file": "queue-idle.png",
+   "design": "original",
+   "role": "idle",
+   "frames": 4,
+   "durationSeconds": 0.667,
+   "fps": 6.0,
+   "sheetPixels": [
+    512,
+    128
+   ],
+   "framePixels": [
+    128,
+    128
+   ],
+   "sha256": "e225b04d69aa1b51227c0f731d822b76cceecb7f3d1cff2c6730f111b5f2cc5a",
+   "generator": "tools/sprites/gen_queue.py"
+  },
+  {
    "file": "ransomware-walk.png",
    "design": "ransomware",
    "blob": "65cce0d07e7efb91d3c073ef1af18295",
