@@ -19,12 +19,12 @@ public readonly record struct TdRankProgress(TdRankLevel Current, TdRankLevel? N
 }
 
 /// <summary>
-/// Limiares do INFINITO, medidos para jogo SEM tomar dano (sequência de ondas limpas, fases de ~30 min): Júnior ~30 min, Pleno ~1h30, Sênior ~4 h,
+/// Limiares do INFINITO, estimados com XP de ondas perfeitas no ritmo do bot otimizado: Júnior ~30 min, Pleno ~1h30, Sênior ~4 h,
 /// Especialista ~8 h, Arquiteto ~15 h. Quem vaza demora bem mais ou cai (ver REPORT INFINITO). O XP vem de <see cref="TdReputation"/>.
 /// </summary>
 public static class TdRank
 {
-    private static readonly int[] Thresholds = [0, 4_500, 24_000, 68_000, 145_000, 300_000];
+    private static readonly int[] Thresholds = [0, 5_300, 27_600, 79_200, 167_400, 300_000];
 
     public static int Threshold(TdRankLevel level) => Thresholds[(int)level];
 

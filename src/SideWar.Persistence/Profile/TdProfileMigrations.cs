@@ -15,7 +15,18 @@ public static class TdProfileMigrations
         .Register(TdProfileData.Schema, 4, V4ToV5)
         .Register(TdProfileData.Schema, 5, V5ToV6)
         .Register(TdProfileData.Schema, 6, V6ToV7)
-        .Register(TdProfileData.Schema, 7, V7ToV8);
+        .Register(TdProfileData.Schema, 7, V7ToV8)
+        .Register(TdProfileData.Schema, 8, V8ToV9);
+
+    private static JsonNode V8ToV9(JsonNode root)
+    {
+        if (root["reputation"] is not JsonValue value || !value.TryGetValue<int>(out var xp)) return root;
+        int[] oldThresholds = [0, 4_500, 24_000, 68_000, 145_000, 300_000];
+        int rank = 0;
+        for (int i = 1; i < oldThresholds.Length; i++) if (xp >= oldThresholds[i]) rank = i;
+        root["reputation"] = TdRank.Threshold((TdRankLevel)rank);
+        return root;
+    }
 
     private static JsonNode V7ToV8(JsonNode root)
     {

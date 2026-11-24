@@ -11,6 +11,22 @@ namespace SideWar.Persistence.Tests;
 
 public sealed class TdBestiaryPersistenceTests
 {
+    [Theory]
+    [InlineData(4499, TdRankLevel.Estagiario, 0)]
+    [InlineData(4500, TdRankLevel.Junior, 5300)]
+    [InlineData(23999, TdRankLevel.Junior, 5300)]
+    [InlineData(24000, TdRankLevel.Pleno, 27600)]
+    [InlineData(68000, TdRankLevel.Senior, 79200)]
+    [InlineData(145000, TdRankLevel.Especialista, 167400)]
+    [InlineData(300000, TdRankLevel.Arquiteto, 300000)]
+    public void V8_migration_preserves_rank_and_resets_xp_to_its_floor(int oldXp, TdRankLevel rank, int newXp)
+    {
+        var old = new JsonObject { ["reputation"] = oldXp };
+        Assert.True(TdProfileMigrations.Default.TryMigrate(TdProfileData.Schema, 8, 9, old, out var migrated, out _));
+        Assert.Equal(newXp, migrated["reputation"]!.GetValue<int>());
+        Assert.Equal(rank, TdRank.For(newXp));
+    }
+
     [Fact]
     public void Core_encounters_record_base_and_elite_across_store_reload()
     {
@@ -34,7 +50,7 @@ public sealed class TdBestiaryPersistenceTests
     {
         var old = JsonNode.Parse("{\"reputation\":42,\"runStageNumber\":7}")!;
         Assert.True(TdProfileMigrations.Default.TryMigrate(TdProfileData.Schema, 7, TdProfileData.SchemaVersion, old, out var migrated, out _));
-        Assert.Equal(42, migrated["reputation"]!.GetValue<int>());
+        Assert.Equal(0, migrated["reputation"]!.GetValue<int>());
         Assert.Empty(migrated["encounters"]!.AsArray());
         var p = TdProfileData.Default with { Encounters = [new() { Id = "swarm", Count = 12 }, new() { Id = "swarm:elite", Count = 2 }] };
         using var stream = new MemoryStream();

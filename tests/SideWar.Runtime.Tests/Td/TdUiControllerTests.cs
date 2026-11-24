@@ -228,9 +228,9 @@ public sealed class TdUiControllerTests
     }
 
     [Theory]
-    [InlineData(0, "Brasão Estagiário", "0 / 4500 XP|faltam 4500 XP para Júnior")]
-    [InlineData(4499, "Brasão Estagiário", "4499 / 4500 XP|faltam 1 XP para Júnior")]
-    [InlineData(4500, "Brasão Júnior", "4500 / 24000 XP|faltam 19500 XP para Pleno")]
+    [InlineData(0, "Brasão Estagiário", "0 / 5300 XP|faltam 5300 XP para Júnior")]
+    [InlineData(5299, "Brasão Estagiário", "5299 / 5300 XP|faltam 1 XP para Júnior")]
+    [InlineData(5300, "Brasão Júnior", "5300 / 27600 XP|faltam 22300 XP para Pleno")]
     [InlineData(300000, "Brasão Arquiteto", "300000 XP|Patente máxima")]
     public void Menu_rank_card_swaps_badge_name_and_bar_at_the_limits(int score, string tip, string bar)
     {
@@ -245,8 +245,8 @@ public sealed class TdUiControllerTests
 
     [Theory]
     [InlineData(0, 0, "Estagiário")]
-    [InlineData(4499, 0, "Estagiário")]
-    [InlineData(4500, 1, "Júnior")]
+    [InlineData(5299, 0, "Estagiário")]
+    [InlineData(5300, 1, "Júnior")]
     [InlineData(300000, 5, "Arquiteto")]
     public void Menu_rank_and_header_follow_current_score(int score, int level, string name)
     {

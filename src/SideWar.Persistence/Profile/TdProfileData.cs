@@ -8,7 +8,7 @@ namespace SideWar.Persistence.Profile;
 public sealed record TdProfileData
 {
     public const string Schema = "sidewar.td-profile";
-    public const int SchemaVersion = 8;
+    public const int SchemaVersion = 9;
 
     /// <summary>Total de selos já ganhos (1 por estrela nova, 1 por desafio, mais os iniciais da migração do idle).</summary>
     public int SealsEarned { get; init; }

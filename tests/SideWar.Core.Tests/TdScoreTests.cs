@@ -185,11 +185,11 @@ public sealed class TdScoreTests
     public void Rank_Levels()
     {
         Assert.Equal(TdRankLevel.Estagiario, TdRank.For(0));
-        Assert.Equal(TdRankLevel.Estagiario, TdRank.For(4_499));
-        Assert.Equal(TdRankLevel.Junior, TdRank.For(4_500));
-        Assert.Equal(TdRankLevel.Pleno, TdRank.For(24_000));
-        Assert.Equal(TdRankLevel.Senior, TdRank.For(68_000));
-        Assert.Equal(TdRankLevel.Especialista, TdRank.For(145_000));
+        Assert.Equal(TdRankLevel.Estagiario, TdRank.For(5_299));
+        Assert.Equal(TdRankLevel.Junior, TdRank.For(5_300));
+        Assert.Equal(TdRankLevel.Pleno, TdRank.For(27_600));
+        Assert.Equal(TdRankLevel.Senior, TdRank.For(79_200));
+        Assert.Equal(TdRankLevel.Especialista, TdRank.For(167_400));
         Assert.Equal(TdRankLevel.Arquiteto, TdRank.For(300_000));
         Assert.Equal(TdRankLevel.Arquiteto, TdRank.For(int.MaxValue));
         for (var l = TdRankLevel.Junior; l <= TdRankLevel.Arquiteto; l++) Assert.True(TdRank.Threshold(l) > TdRank.Threshold(l - 1));
@@ -198,7 +198,7 @@ public sealed class TdScoreTests
     [Fact(DisplayName = "RF-28.21 Rank progress: fraction to the next level; MVP is full")]
     public void Rank_Progress()
     {
-        var p = TdRank.Progress(14_250);
+        var p = TdRank.Progress(16_450);
         Assert.Equal(TdRankLevel.Junior, p.Current);
         Assert.Equal(TdRankLevel.Pleno, p.Next);
         Assert.Equal(0.5, p.Fraction, 3);
@@ -209,9 +209,9 @@ public sealed class TdScoreTests
     }
 
     [Theory]
-    [InlineData(0, TdRankLevel.Estagiario, TdRankLevel.Junior, 4500, 0.0)]
-    [InlineData(4499, TdRankLevel.Estagiario, TdRankLevel.Junior, 4500, 0.99978)]
-    [InlineData(4500, TdRankLevel.Junior, TdRankLevel.Pleno, 24000, 0.0)]
+    [InlineData(0, TdRankLevel.Estagiario, TdRankLevel.Junior, 5300, 0.0)]
+    [InlineData(5299, TdRankLevel.Estagiario, TdRankLevel.Junior, 5300, 0.99981)]
+    [InlineData(5300, TdRankLevel.Junior, TdRankLevel.Pleno, 27600, 0.0)]
     [InlineData(300000, TdRankLevel.Arquiteto, null, 300000, 1.0)]
     public void Rank_Boundaries(int points, TdRankLevel current, TdRankLevel? next, int target, double fraction)
     {
@@ -226,11 +226,11 @@ public sealed class TdScoreTests
 
     [Theory]
     [InlineData(0, "brasao_estagiario.png")]
-    [InlineData(4499, "brasao_estagiario.png")]
-    [InlineData(4500, "brasao_junior.png")]
-    [InlineData(24000, "brasao_pleno.png")]
-    [InlineData(68000, "brasao_senior.png")]
-    [InlineData(145000, "brasao_especialista.png")]
+    [InlineData(5299, "brasao_estagiario.png")]
+    [InlineData(5300, "brasao_junior.png")]
+    [InlineData(27600, "brasao_pleno.png")]
+    [InlineData(79200, "brasao_senior.png")]
+    [InlineData(167400, "brasao_especialista.png")]
     [InlineData(300000, "brasao_arquiteto.png")]
     public void Rank_brasao_matches_threshold(int points, string filename) =>
         Assert.Equal(filename, TdRank.Brasao(TdRank.Progress(points).Current));

@@ -75,7 +75,7 @@ public class TdProfileStoreTests
         foreach (var key in new[] { "legacyTotal", "bestRunWaves", "legacyLastRun", "runsPlayed", "reputation" }) payload.Remove(key);
         fs.Files[F] = Envelope(payload.ToJsonString(), TdProfileData.Schema, 3);
         var p = store.Load().Profile;
-        Assert.Equal(J(TdProfileSerializer.Sanitize(Full() with { Reputation = Full().Stages.Sum(x => x.BestScore) })), J(p)); // v5: reputação inicial = soma dos recordes
+        Assert.Equal(J(TdProfileSerializer.Sanitize(Full() with { Reputation = TdRank.Threshold(TdRankLevel.Junior) })), J(p)); // v5 soma recordes; v9 mantém patente e coloca XP no piso
         Assert.Equal(0, p.LegacyTotal);
         Assert.Equal(0, p.BestRunWaves);
         Assert.Equal("", p.LegacyLastRun);
@@ -532,7 +532,7 @@ public class TdProfileStoreTests
         };
         Assert.Equal(12_100, TdProfileRules.TotalScore(p));
         Assert.Equal(TdRankLevel.Estagiario, TdProfileRules.Rank(p).Current); // a patente vem da reputação, não dos recordes
-        Assert.Equal(TdRankLevel.Pleno, TdProfileRules.Rank(p with { Reputation = 24_000 }).Current);
+        Assert.Equal(TdRankLevel.Pleno, TdProfileRules.Rank(p with { Reputation = 27_600 }).Current);
         Assert.Equal(TdRankLevel.Estagiario, TdProfileRules.Rank(TdProfileData.Default).Current);
     }
 
