@@ -93,6 +93,7 @@ internal sealed class TdComposition
     public void ApplySettings(AppSettings settings)
     {
         _options = settings.Td.ContinuousWaves ? TdMatchOptions.Default : TdMatchOptions.Classic;
+        Host.ExtraSpeeds = settings.Td.ExtraSpeeds;
         Host.GameSpeed = settings.Td.GameSpeed;
         Host.Alerts.Settings.Enabled = settings.Td.AlertsEnabled;
         Host.Alerts.Settings.AutoPause = settings.Td.AlertsAutoPause;

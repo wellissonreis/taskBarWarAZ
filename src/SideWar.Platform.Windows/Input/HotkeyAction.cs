@@ -12,6 +12,8 @@ public enum HotkeyAction
     StartWave,
     /// <summary>ESC temporário durante o modo construção/popover TD (RegisterHotKey só enquanto ativo, RF-28.20).</summary>
     CancelBuild,
+    /// <summary>Cicla as velocidades habilitadas (modo TD); só registrada quando o host informa o atalho.</summary>
+    CycleSpeed,
 }
 
 /// <summary>Posted to the game command sink when a registered hotkey fires. The effect belongs to the host.</summary>

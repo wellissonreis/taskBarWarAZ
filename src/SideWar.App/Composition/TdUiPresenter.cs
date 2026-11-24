@@ -51,8 +51,9 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     {
         settingsData = data;
         gameOptions = new(data.BandHeight, data.AutoStart, data.Sound, data.Volume, data.BonusQuestions, data.FadeWhenUnfocused, data.ContinuousWaves, data.TowerPanelPinned,
-            data.GameSpeed, data.ShowIncome, data.DiscreetMode, data.AutoRestart, data.NoticeSize);
+            data.GameSpeed, data.ShowIncome, data.DiscreetMode, data.AutoRestart, data.NoticeSize, data.ExtraSpeeds, data.SpeedMask);
         td.Host.GameSpeed = data.GameSpeed;
+        td.Host.ExtraSpeeds = data.ExtraSpeeds;
         ui(UiRequest.SaveSettingsData);
         Kick();
     }
@@ -72,13 +73,14 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     public void SetGameOptions(TdGameOptions options)
     {
         gameOptions = options;
+        td.Host.ExtraSpeeds = options.ExtraSpeeds;
         td.Host.GameSpeed = options.GameSpeed; // TD.28c: vale já no próximo tick (o salvamento é assíncrono)
         ui(UiRequest.SaveTdOptions);
     }
     public void LoadGameOptions(SideWar.Persistence.Settings.AppSettings settings)
     {
         gameOptions = new(settings.Td.BandHeightDip, settings.Td.AutoStartEnabled, settings.Audio.Enabled, (int)Math.Round(settings.Audio.Volume * 100), settings.Td.BonusQuestions, settings.Td.FadeWhenUnfocused,
-            settings.Td.ContinuousWaves, settings.Td.TowerPanelPinned, settings.Td.GameSpeed, settings.Td.ShowIncome, settings.Td.DiscreetMode, settings.Td.AutoRestart, settings.Td.NoticeSize);
+            settings.Td.ContinuousWaves, settings.Td.TowerPanelPinned, settings.Td.GameSpeed, settings.Td.ShowIncome, settings.Td.DiscreetMode, settings.Td.AutoRestart, settings.Td.NoticeSize, settings.Td.ExtraSpeeds, settings.Td.ExtraSpeedMask);
         lastSettings = settings;
         settingsData = TdSettingsMap.From(settings, startupState);
         SetCornerUiScale(settings.Td.CornerUiScalePercent);
@@ -683,6 +685,10 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     // ---------------------------------------------------------------- ITdUiHost
 
     string ITdUiHost.BossHotkey => bossHotkey;
+    double ITdUiHost.EffectiveSpeed => td.Host.EffectiveSpeed;
+
+    /// <summary>Atalho global: cicla só as velocidades habilitadas.</summary>
+    public void CycleSpeed() { controller.CycleSpeed(); Kick(); }
     int ITdUiHost.LegacyTotal => td.Recorder.LegacyTotal;
     int ITdUiHost.PreviousLegacyTotal => td.Recorder.PreviousLegacyTotal;
     int ITdUiHost.PreviousBestRunWaves => td.Recorder.PreviousBestRunWaves;

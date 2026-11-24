@@ -20,6 +20,8 @@ internal enum AppCommandKind
     CancelBuild,
     /// <summary>Abre o menu na vista Configurações (bandeja, widget).</summary>
     OpenSettings,
+    /// <summary>Atalho de velocidade (modo TD).</summary>
+    CycleSpeed,
 }
 
 /// <summary>Comando do App (bandeja, instância única) postado à T-Game; interceptado antes da simulação.</summary>
