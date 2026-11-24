@@ -525,8 +525,8 @@ public sealed partial class TdUiController
         Section("FASE / SELO");
         Card(TdIcon.Crown, "O mapa mostra regiões, estrelas e coroas.");
         Card(TdIcon.Star, "Gaste selos na árvore, em ordem por ramo.");
-        Card(TdIcon.Medal, "Avance para desbloquear regiões.");
-        Card(TdIcon.Medal, "Ciclos repetem a rota de regiões.");
+        Card(TdIcon.Medal, "Cada região exige uma patente; sem ela, repita a região.");
+        Card(TdIcon.Medal, "Nos ciclos, a trava por patente continua valendo.");
         Section("HUD E CONFIGURAÇÕES");
         Card(TdIcon.Expand, "Chip do HUD: toque para abrir/recolher.");
         Card(TdIcon.Expand, "Arraste o cabeçalho para mover o menu.");

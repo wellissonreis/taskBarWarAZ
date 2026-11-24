@@ -48,7 +48,7 @@ public sealed class TdUiGoldenTests
         public void ClearTip(string id) => _seen.Remove(id);
     }
 
-    public enum UiScene { HudMoney, HudPrep, HudWave, HudMin, HudTip, Chooser, ChooserPoint, Inspector, Preview, Map, Seals, Victory, Menu, HudPlacing, Towers, Runes, Help, BaseAttacked, QuickTowers, RuneWindow, RuneWindowTipAvailable, RuneWindowTipAwake, RuneWindowTipLocked, RunesTipAvailable, RunesTipAwake, RunesTipLocked, RunesBranch, RuneWindowBranch, RuneCard, RuneWindowFromCard, RunesZoomMin, RunesZoomMid }
+    public enum UiScene { HudMoney, HudPrep, HudWave, HudMin, HudTip, Chooser, ChooserPoint, Inspector, Preview, Map, MapLocked, Seals, Victory, Menu, HudPlacing, Towers, Runes, Help, BaseAttacked, QuickTowers, RuneWindow, RuneWindowTipAvailable, RuneWindowTipAwake, RuneWindowTipLocked, RunesTipAvailable, RunesTipAwake, RunesTipLocked, RunesBranch, RuneWindowBranch, RuneCard, RuneWindowFromCard, RunesZoomMin, RunesZoomMid }
 
     public static TheoryData<UiScene, int> Cases()
     {
@@ -61,6 +61,7 @@ public sealed class TdUiGoldenTests
     private static (TdUiController Ui, TdMatchState Match) Setup(UiScene scene)
     {
         var (match, _, _) = TdStripScenes.Build(TdStripScene.PrepRange);
+        if (scene == UiScene.MapLocked) match = TdMatchState.Create(SideWar.Core.Content.Td.TdContentLoader.LoadEmbedded(), 1, SideWar.Core.Simulation.Rng.Seed(7, 54));
         typeof(TdMatchState).GetProperty("Credits")!.SetValue(match, 240L);
         var host = new Host();
         double now = 0;
@@ -138,6 +139,7 @@ public sealed class TdUiGoldenTests
             case UiScene.Towers: ui.Activate(item(TdUiAction.TowersOpen, 0)); break;
             case UiScene.HudPlacing: ui.Activate(item(TdUiAction.BuildToggle, 0)); break;
             case UiScene.Map: ui.Activate(item(TdUiAction.MapOpen, 0)); break;
+            case UiScene.MapLocked: ui.Activate(item(TdUiAction.MapOpen, 0)); ui.Activate(item(TdUiAction.SelectStage, 3)); break;
             case UiScene.Seals: ui.Activate(item(TdUiAction.MapOpen, 0)); ui.Activate(item(TdUiAction.MapTab, 1)); break;
             case UiScene.Victory:
                 match.Apply(new StartWave());

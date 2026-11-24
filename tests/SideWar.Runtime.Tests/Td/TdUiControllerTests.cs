@@ -16,6 +16,54 @@ namespace SideWar.Runtime.Tests.Td;
 public sealed class TdUiControllerTests
 {
     [Fact]
+    public void Rank_gate_map_shows_required_rank_and_disables_play()
+    {
+        var r = new Rig();
+        r.Host.Score = 0;
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.MapOpen));
+        var map = r.Ui.BuildPopover()!;
+        var east = map.Items.Single(i => i is { Action: TdUiAction.SelectStage, Arg: 2 });
+        Assert.Equal(0f, east.Fill);
+        Assert.Equal("Júnior", east.Tip);
+        r.Ui.Activate(east);
+        var selected = r.Ui.BuildPopover()!;
+        var play = selected.Items.Single(i => i.Action == TdUiAction.MapPlay);
+        Assert.False(play.Enabled);
+        Assert.Equal("Requer Júnior", play.Text);
+        Assert.Equal("rank", selected.Items.Single(i => i.SArg == "mapdetail").Tip);
+    }
+
+    [Theory]
+    [InlineData(1, true)]
+    [InlineData(0, false)]
+    public void Rank_gate_repetition_notifies_respecting_notice_setting(int size, bool visible)
+    {
+        var r = new Rig();
+        r.Host.Score = 0;
+        r.Host.SetGameOptions(r.Host.GameOptions with { NoticeSize = size });
+        r.Match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 1, Rng.Seed(7, 54), null,
+            TdMatchOptions.Default with { InitialReputation = 0, ContinuousWaves = false });
+        r.Ui.Sync();
+        typeof(TdMatchState).GetMethod("ClearStageAndAdvance", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.Invoke(r.Match, null);
+        r.Ui.Sync();
+        Assert.Equal(visible, r.Ui.NoticeOpen);
+        if (visible) Assert.Equal("Preso ao Brazil South por ser Estagiário", r.Ui.NoticeText);
+    }
+
+    [Fact]
+    public void Promotion_announces_the_newly_unlocked_region()
+    {
+        var r = new Rig();
+        r.Host.Score = 0;
+        r.Match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 1, Rng.Seed(7, 54), null,
+            TdMatchOptions.Default with { InitialReputation = 0 });
+        r.Ui.Sync();
+        r.Host.Score = TdRank.Threshold(TdRankLevel.Junior);
+        r.Ui.Sync();
+        Assert.Equal("East US liberada", r.Ui.NoticeText);
+    }
+
+    [Fact]
     public void Start_requires_a_placed_tower_without_onboarding()
     {
         var r = new Rig();
@@ -759,13 +807,13 @@ public sealed class TdUiControllerTests
         var map = r.Ui.BuildPopover()!;
         Assert.DoesNotContain(map.Items, i => i.Kind == TdUiKind.Bar); // patente só no chip do cabeçalho
         var d1 = map.Items.Single(i => i.SArg == "mapdetail"); // a fase atual (1) já vem selecionada
-        Assert.Equal(1, d1.Arg >> 8);
+        Assert.Equal(1, (d1.Arg >> 8) & 255);
         Assert.True((d1.Arg & 4) != 0); // coroa
         Assert.Equal(5, (d1.Arg >> 3) & 15); // medalhas
         Assert.Equal("4123", d1.Right);
         r.Ui.Activate(map.Items.First(i => i is { Action: TdUiAction.SelectStage, Arg: 2 }));
         var d2 = r.Ui.BuildPopover()!.Items.Single(i => i.SArg == "mapdetail");
-        Assert.Equal(2, d2.Arg >> 8);
+        Assert.Equal(2, (d2.Arg >> 8) & 255);
         Assert.Equal(0, d2.Arg & 4);
         Assert.Equal("—", d2.Right);
     }

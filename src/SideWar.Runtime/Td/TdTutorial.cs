@@ -23,7 +23,7 @@ public sealed class TdTutorial(ITdOnboardingStore store)
         new(TdUiMode.Runes, "Fragmentos despertam runas permanentes.", "Na teia, arraste para mover e use a roda para zoom.", TdIcon.Star, "rfrag"),
         new(TdUiMode.Map, "Fase / Selo mostra o mapa de regiões.", "Cada fase registra estrelas e coroas.", TdIcon.Crown, "mapbg"),
         new(TdUiMode.Map, "Use selos na árvore de melhorias.", "Compre os nós de cada ramo em ordem.", TdIcon.Star, TargetAction: TdUiAction.MapTab, TargetArg: 1, Seals: true),
-        new(TdUiMode.Map, "Avance para desbloquear regiões.", "Depois da rota, ciclos repetem as regiões.", TdIcon.Medal, "mapbg"),
+        new(TdUiMode.Map, "Cada região exige uma patente.", "Sem patente, repita a região; a regra vale nos ciclos.", TdIcon.Medal, "mapbg"),
         new(TdUiMode.Map, "Fases especiais trazem chefões.", "Eles enfurecem ao chegar a 50% de vida.", TdIcon.Alert, "mapbg"),
         new(TdUiMode.Menu, "O chip abre e recolhe o HUD.", "Arraste o cabeçalho para mover este menu.", TdIcon.Expand, "rank-chip", HudTarget: TdUiAction.HudRestore),
         new(TdUiMode.Menu, "Em Jogo, ajuste tamanho e avisos.", "Você também pode pausar e mudar a velocidade.", TdIcon.Pause, TargetAction: TdUiAction.GameOption, TargetArg: 0),

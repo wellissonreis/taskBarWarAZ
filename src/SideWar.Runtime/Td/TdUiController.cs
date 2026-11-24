@@ -674,6 +674,8 @@ public sealed partial class TdUiController
             _noticeRank = null;
             _noticeText = $"Fase {r.StageNumber}" + (r.Crown ? " +coroa" : "") + (o.NewRecord ? " +recorde" : "");
             if (o.BonusSeals > 0) _noticeText += $" · +{o.BonusSeals} selo{(o.BonusSeals > 1 ? "s" : "")}"; // o cartão de fim aponta a aba
+            if (m.Options.InitialReputation is not null && m.StageNumber != r.StageNumber + 1)
+                _noticeText = $"Preso {TdStageGate.RegionWithArticle(m.Content.Stages.Stages[(m.StageNumber - 1) % m.Content.Stages.Stages.Length].Region)} por ser {TdRank.DisplayName(TdRank.For(m.GateReputation))}";
             _noticeUntil = _now() + StageNoticeSeconds;
             Changed?.Invoke();
         }
@@ -681,6 +683,11 @@ public sealed partial class TdUiController
         {
             _noticeTitle = "Promoção";
             _noticeText = $"Promovido a {TdRank.DisplayName(rank)}!";
+            if (m.Options.InitialReputation is not null)
+            {
+                var unlocked = m.Content.Stages.Stages.FirstOrDefault(s => s.MinRank == (int)rank);
+                if (unlocked is not null) _noticeText = $"{unlocked.Title} liberada";
+            }
             _noticeRank = rank;
             _noticeStarted = _now();
             _noticeUntil = _now() + PromoNoticeSeconds;
@@ -1830,19 +1837,20 @@ public sealed partial class TdUiController
         for (int i = 0; i < stages.Length && i < MapPoints.Length; i++)
         {
             var st = stages[i];
-            bool open = _host.StageUnlocked(st.Id), on = st.Id == sel;
+            bool open = _host.StageUnlocked(st.Id) && TdStageGate.Allowed(st, _host.Rank.Current), on = st.Id == sel;
             float size = on ? 38f : 32f;
             var (px, py) = MapPoints[i];
             items.Add(new(new DipRect(x0 + px - size / 2f, mt + py - size / 2f, size, size), TdUiKind.Button, st.Title, TdUiAction.SelectStage, st.Id, SArg: "mapnode",
-                Fill: !open ? 0f : _host.StageStars(st.Id) > 0 ? 1f : 0.5f, Selected: on, Sub: _host.StageStars(st.Id).ToString(System.Globalization.CultureInfo.InvariantCulture), Right: (i + 1).ToString(System.Globalization.CultureInfo.InvariantCulture)));
+                Fill: !open ? 0f : _host.StageStars(st.Id) > 0 ? 1f : 0.5f, Selected: on, Sub: _host.StageStars(st.Id).ToString(System.Globalization.CultureInfo.InvariantCulture), Right: (i + 1).ToString(System.Globalization.CultureInfo.InvariantCulture), Tip: !TdStageGate.Allowed(st, _host.Rank.Current) ? TdRank.DisplayName((TdRankLevel)st.MinRank) : null));
         }
         var cur = stages.First(s => s.Id == sel);
-        bool locked = !_host.StageUnlocked(cur.Id);
+        bool rankLocked = !TdStageGate.Allowed(cur, _host.Rank.Current);
+        bool locked = !_host.StageUnlocked(cur.Id) || rankLocked;
         int cs = _host.StageStars(cur.Id), best = _host.StageBestScore(cur.Id);
         string status = locked ? "BLOQUEADA" : cs == 3 ? "CONCLUÍDA" : cs > 0 ? "EM ANDAMENTO" : "DISPONÍVEL";
         float dx = x0 + 404 + 12, dw = 704 - dx, cardH = mh - 40 - 8 - 14 - 8;
-        items.Add(new(new DipRect(dx, mt, dw, cardH), TdUiKind.Label, cur.Title, Arg: cs | (_host.StageCrown(cur.Id) ? 4 : 0) | (_host.StageMedals(cur.Id) << 3) | (cur.Id << 8),
-            Sub: status, Right: best > 0 ? best.ToString(System.Globalization.CultureInfo.InvariantCulture) : "—", Enabled: !locked, SArg: "mapdetail"));
+        items.Add(new(new DipRect(dx, mt, dw, cardH), TdUiKind.Label, cur.Title, Arg: cs | (_host.StageCrown(cur.Id) ? 4 : 0) | (_host.StageMedals(cur.Id) << 3) | (cur.Id << 8) | (cur.MinRank << 16),
+            Sub: status, Right: best > 0 ? best.ToString(System.Globalization.CultureInfo.InvariantCulture) : "—", Enabled: !locked, SArg: "mapdetail", Tip: rankLocked ? "rank" : null));
         float by = mt + cardH + 8;
         if (_mapConfirm && !locked)
         {
@@ -1853,7 +1861,7 @@ public sealed partial class TdUiController
             return;
         }
         items.Add(new(new DipRect(dx, by, dw, 40), TdUiKind.Button,
-            locked ? $"Bloqueada · vença a fase {Math.Max(1, cur.Id - 1)}" : cs > 0 ? "Jogar de novo" : "Jogar esta fase", TdUiAction.MapPlay, cur.Id, Enabled: !locked, SArg: "mapplay"));
+            rankLocked ? $"Requer {TdRank.DisplayName((TdRankLevel)cur.MinRank)}" : locked ? $"Bloqueada · vença a fase {Math.Max(1, cur.Id - 1)}" : cs > 0 ? "Jogar de novo" : "Jogar esta fase", TdUiAction.MapPlay, cur.Id, Enabled: !locked, SArg: "mapplay"));
         items.Add(new(new DipRect(dx, by + 48, dw, 14), TdUiKind.Label, "Jogar uma fase reinicia a partida atual.", SArg: "mapwarn"));
     }
 

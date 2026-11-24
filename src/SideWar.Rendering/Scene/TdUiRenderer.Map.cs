@@ -188,10 +188,11 @@ public sealed partial class TdUiRenderer
             c.DrawCircle(_p.Px(cx), _p.Px(cy), _p.Px(r.W / 2f) - _p.Px(1), l);
         }
         else MapDashedCircle(c, cx, cy, r.W - 2, hover ? Palette.Td.AmberLight : Palette.Td.Amber, 2f, 4f, 3f);
-        if (!locked) _p.Text(c, it.Right ?? "", PanelFont.JetBrainsMono, 13, new DipRect(r.X, cy - 8, r.W, 16), cleared ? Palette.Td.Background : Palette.Td.Amber, TextAlign.Center);
+        if (locked) MapShape(c, MapLockPath, cx - 7, cy - 7, 14, Palette.Td.Faint, null);
+        else _p.Text(c, it.Right ?? "", PanelFont.JetBrainsMono, 13, new DipRect(r.X, cy - 8, r.W, 16), cleared ? Palette.Td.Background : Palette.Td.Amber, TextAlign.Center);
         float ny = r.Y + r.H + 3f;
         _p.Text(c, it.Text, PanelFont.JetBrainsMono, 11, new DipRect(cx - 60, ny, 120, 14), locked ? Palette.Td.Faint : it.Selected ? Palette.Td.BrightText : hover ? Palette.Td.BrightText : Palette.Td.Text, TextAlign.Center);
-        if (locked) _p.Text(c, "bloqueada", PanelFont.JetBrainsMono, 10, new DipRect(cx - 60, ny + 15, 120, 13), Palette.Td.Faint, TextAlign.Center);
+        if (locked) _p.Text(c, it.Tip ?? "bloqueada", PanelFont.JetBrainsMono, 10, new DipRect(cx - 60, ny + 15, 120, 13), Palette.Td.Faint, TextAlign.Center);
         else
         {
             int stars = int.TryParse(it.Sub, out var s) ? s : 0;
@@ -203,12 +204,18 @@ public sealed partial class TdUiRenderer
     {
         var r = it.Rect;
         bool locked = !it.Enabled;
-        int stars = it.Arg & 3, medals = (it.Arg >> 3) & 15, num = it.Arg >> 8;
+        int stars = it.Arg & 3, medals = (it.Arg >> 3) & 15, num = (it.Arg >> 8) & 255, requiredRank = (it.Arg >> 16) & 7;
         bool crown = (it.Arg & 4) != 0;
         RoundBox(c, r, locked ? Palette.Td.EdgeSoft : Palette.Td.Amber.WithAlpha(115), Palette.Td.Card, 10);
         float x = r.X + 14, w = r.W - 28, y = r.Y + 14;
         _p.Text(c, $"FASE {num} · {it.Sub}", PanelFont.JetBrainsMono, 10, new DipRect(x, y, w, 14), Palette.Td.Muted);
         _p.Text(c, it.Text, PanelFont.JetBrainsMono, 18, new DipRect(x, y + 14, w, 24), Palette.Td.BrightText);
+        if (locked && it.Tip == "rank")
+        {
+            DrawBrasao(c, requiredRank, new DipRect(x, y + 52, 48, 48));
+            _p.Text(c, $"Requer {SideWar.Core.Td.TdRank.DisplayName((SideWar.Core.Td.TdRankLevel)requiredRank)}", PanelFont.JetBrainsMono, 12, new DipRect(x + 56, y + 65, w - 56, 32), Palette.Td.Text);
+            return;
+        }
         y += 48;
         for (int i = 0; i < 3; i++)
             MapShape(c, MapStarPath, x + i * 30, y, 26, i < stars ? Palette.Td.Amber : null, i < stars ? Palette.Td.AmberLight : Palette.Td.StarOff);
