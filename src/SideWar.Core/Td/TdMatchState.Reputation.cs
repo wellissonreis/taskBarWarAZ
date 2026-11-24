@@ -44,6 +44,8 @@ public static class TdReputation
 
 public sealed partial class TdMatchState
 {
+    /// <summary>Reputação da corrida, iniciada com o valor do perfil para decidir a próxima região.</summary>
+    public int GateReputation { get; private set; }
     /// <summary>XP de reputação ganho nesta partida (ondas, fases, recuperações).</summary>
     public long ReputationGainedTotal { get; private set; }
     /// <summary>XP de reputação perdido nesta partida (inimigos que chegaram à base).</summary>
@@ -64,6 +66,7 @@ public sealed partial class TdMatchState
         if (xp <= 0) return;
         _repLostStage += xp;
         ReputationLostTotal += xp;
+        GateReputation = (int)Math.Max(0L, (long)GateReputation - xp);
         Emit(TdEventType.BaseAttacked, xp, coreDamage);
     }
 
@@ -71,6 +74,7 @@ public sealed partial class TdMatchState
     {
         if (xp <= 0) return;
         ReputationGainedTotal += xp;
+        GateReputation = (int)Math.Min(100_000_000L, (long)GateReputation + xp);
         Emit(TdEventType.ReputationGained, xp, wave);
     }
 

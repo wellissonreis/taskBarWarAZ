@@ -57,6 +57,7 @@ public sealed partial class TdMatchState
     {
         _content = content;
         _options = options;
+        GateReputation = Math.Clamp(options.InitialReputation ?? 0, 0, 100_000_000);
         _stageNumber = stageNumber;
         _stage = stage;
         _waves = waves;
@@ -546,7 +547,7 @@ public sealed partial class TdMatchState
         _repLostStage = 0;
         _stageIntegrityLoss = 0;
         _backupHealsThisStage = 0;
-        _stageNumber++;
+        _stageNumber = _options.InitialReputation is null ? _stageNumber + 1 : TdStageGate.Next(_content.Stages.Stages, _stageNumber, TdRank.For(GateReputation));
         var defs = _content.Stages.Stages;
         _stage = defs[(_stageNumber - 1) % defs.Length];
         _waves = _content.Waves.Stages.Single(s => s.Stage == _stage.Id).Waves;

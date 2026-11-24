@@ -18,6 +18,7 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
     private readonly TdProfileStore _store;
     private readonly TdMetaDef _meta;
     private readonly int _stageCount;
+    private static readonly TdStageDef[] GateStages = TdContentLoader.LoadEmbedded().Stages.Stages;
     private readonly Action<string> _log;
 
     public TdProfileRecorder(TdProfileStore store, TdProfileData profile, TdMetaDef meta, int stageCount, Action<string>? log = null)
@@ -39,7 +40,7 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
 
     /// <summary>Opções da próxima partida com a teia permanente do perfil (só fora do modo clássico).</summary>
     public TdMatchOptions WithRunes(TdMatchOptions options) =>
-        options.PersistentRun ? options with { InitialAwakened = RuneBits, InitialFragments = RuneFragments } : options with { InitialAwakened = default, InitialFragments = 0 };
+        options.PersistentRun ? options with { InitialAwakened = RuneBits, InitialFragments = RuneFragments, InitialReputation = Profile.Reputation } : options with { InitialAwakened = default, InitialFragments = 0, InitialReputation = Profile.Reputation };
 
     private bool _runesDirty;
 
@@ -75,7 +76,9 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
         return Math.Clamp(next?.StageId ?? 1, 1, _stageCount);
     }
 
-    public bool StageUnlocked(int id) => id == 1 || Profile.Stages.Any(s => s.StageId == id && s.Unlocked);
+    public bool StageUnlocked(int id) => id >= 1 && id <= GateStages.Length
+        && TdStageGate.Allowed(GateStages[id - 1], Rank.Current)
+        && (id == 1 || Profile.Stages.Any(s => s.StageId == id && s.Unlocked));
 
     public int EncounterCount(string id) => Profile.Encounters.FirstOrDefault(e => e.Id == id)?.Count ?? 0;
 
@@ -119,7 +122,8 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
         // Fase absoluta de cada onda do lote: o estado já avançou para a fase seguinte quando a última onda da fase foi concluída no mesmo passo.
         int clearsInBatch = 0;
         for (int i = 0; i < events.Count; i++) if (events[i].Type == TdEventType.StageCleared) clearsInBatch++;
-        int stageAt = match.StageNumber - clearsInBatch;
+        int stageAt = match.StageNumber;
+        for (int i = 0; i < events.Count; i++) if (events[i].Type == TdEventType.StageCleared) { stageAt = (int)events[i].A; break; }
         for (int i = 0; i < events.Count; i++)
         {
             if (events[i].Type == TdEventType.WaveCompleted)
@@ -145,10 +149,14 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
             var result = new TdMatchResult(MatchPhase.Vitoria, sr.Stars, sr.IntegrityLost, sr.Crown, sr.Medals, sr.Score);
             Profile = TdProfileRules.RecordMatch(Profile, _meta, sr.StageId, result, _stageCount, out var outcome);
             Profile = TdProfileRules.RecordCycleStage(Profile, sr.Cycle); // ciclo 2+: a recompensa em selos continua
-            Profile = TdProfileRules.SetRunStage(Profile, sr.StageNumber + 1); // a corrida infinita segue na fase seguinte (retoma daqui)
-            Profile = TdProfileRules.RecordBest(Profile, sr.StageNumber + 1, 0);
-            stageAt = sr.StageNumber + 1;
+            stageAt = match.StageNumber;
             LastOutcome = outcome;
+            Save();
+        }
+        if (clearsInBatch > 0)
+        {
+            Profile = TdProfileRules.SetRunStage(Profile, match.StageNumber);
+            Profile = TdProfileRules.RecordBest(Profile, match.StageNumber, 0);
             Save();
         }
     }

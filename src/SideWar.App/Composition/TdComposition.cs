@@ -66,6 +66,9 @@ internal sealed class TdComposition
     public void StartStage(int stageId)
     {
         stageId = Math.Clamp(stageId, 1, TdProfileSerializer.MaxWave); // número absoluto: > StageCount = ciclos do infinito
+        int index = (stageId - 1) % StageCount;
+        if (!TdStageGate.Allowed(_content.Stages.Stages[index], Recorder.Rank.Current))
+            stageId = (stageId - 1) / StageCount * StageCount + TdStageGate.LastAllowed(_content.Stages.Stages, Recorder.Rank.Current);
         Recorder.SetRunStage(stageId);
         _runSeed = (ulong)DateTime.UtcNow.Ticks;
         RunStartStage = stageId;
