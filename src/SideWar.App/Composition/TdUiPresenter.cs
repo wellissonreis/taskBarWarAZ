@@ -517,7 +517,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
 
     private PixelRect HudBounds(DockLayoutResult c, TdHudView model)
     {
-        int w = (int)MathF.Round(model.Width * UiScale), h = (int)MathF.Round(model.Height * UiScale);
+        int w = Math.Min((int)MathF.Round(model.Width * UiScale), c.Monitor.WorkArea.Right - c.Monitor.WorkArea.Left), h = (int)MathF.Round(model.Height * UiScale);
         // TD.16: HUD (ou chip recolhido) flutua logo ACIMA da faixa, alinhado à direita, sem cobri-la.
         // TD.28b: a borda esquerda é fixa (largura cheia do HUD); sem o botão Iniciar onda a janela só encolhe pela direita e o chip não pula.
         // TD.28c: a janela da cena tem folga acima da faixa (portal/núcleo); o HUD fica logo acima da FAIXA, não da folga.

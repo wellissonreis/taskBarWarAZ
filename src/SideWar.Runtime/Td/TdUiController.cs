@@ -936,17 +936,21 @@ public sealed partial class TdUiController
         int speed = TdSpeed.Resolve(_host.GameOptions.GameSpeed, allowed);
         double effective = _host.EffectiveSpeed;
         bool slow = speed > 3 && (speed >= TdSpeed.Max || effective < speed - 0.5);
-        float speedExtra = (allowed.Length - 3) * 32f + (_host.GameOptions.ExtraSpeeds ? 48f : 0f);
-        Add(492 + grow, 6, 4 + allowed.Length * 32, 28, TdUiKind.Label, "", tag: "speeds", tip: "Velocidade do jogo");
+        const float speedExtra = 0f; // extras não alargam a HUD: um botão que cicla ocupa o espaço dos 3 botões
+        Add(492 + grow, 6, 4 + 3 * 32, 28, TdUiKind.Label, "", tag: "speeds", tip: "Velocidade do jogo");
+        if (_host.GameOptions.ExtraSpeeds)
+        {
+            string effTxt = slow ? $"≈{effective.ToString("0", System.Globalization.CultureInfo.InvariantCulture)}x" : TdSpeed.Label(speed);
+            string cyc = $"Velocidade {TdSpeed.Label(speed)}: clique para a próxima" + (slow ? $" (efetiva ≈{effective.ToString("0", System.Globalization.CultureInfo.InvariantCulture)}x)" : "");
+            Add(495 + grow, 9, 58, 22, TdUiKind.Button, TdSpeed.Label(speed), TdUiAction.SetSpeed, TdSpeed.Next(speed, allowed), enabled: !ModalOpen, selected: true, tip: cyc);
+            Add(555 + grow, 9, 40, 22, TdUiKind.Label, slow ? effTxt : "", tag: "speedeff", tip: "Velocidade efetiva real (abaixo da pedida: o PC não acompanha)");
+        }
+        else
         for (int i = 0; i < allowed.Length; i++)
         {
             int v = allowed[i];
-            string tip = v == TdSpeed.Max ? "Velocidade Máx: o mais rápido que o PC aguentar" : $"Velocidade {v}x";
-            if (v == speed && slow) tip += $" (efetiva ≈{effective.ToString("0", System.Globalization.CultureInfo.InvariantCulture)}x)";
-            Add(495 + grow + i * 32, 9, 30, 22, TdUiKind.Button, TdSpeed.Label(v), TdUiAction.SetSpeed, v, enabled: !ModalOpen, selected: speed == v, tip: tip);
+            Add(495 + grow + i * 32, 9, 30, 22, TdUiKind.Button, TdSpeed.Label(v), TdUiAction.SetSpeed, v, enabled: !ModalOpen, selected: speed == v, tip: $"Velocidade {v}x");
         }
-        if (_host.GameOptions.ExtraSpeeds)
-            Add(496 + grow + allowed.Length * 32, 9, 44, 22, TdUiKind.Label, slow ? $"≈{effective.ToString("0", System.Globalization.CultureInfo.InvariantCulture)}x" : "", tag: "speedeff", tip: "Velocidade efetiva real (abaixo da pedida: o PC não acompanha)");
         // O TD não tem caixa coletável desde TD.30a; a ação permanece desabilitada.
         bool shadowOn = m.Shadow, shadowPending = m.ShadowPending is not null;
         Add(604 + grow + speedExtra, 6, 135, 28, TdUiKind.Button, shadowPending ? (shadowOn ? "Saindo…" : "Entrando…") : shadowOn ? "Sombra ligada" : "Modo sombra", TdUiAction.ShadowToggle,

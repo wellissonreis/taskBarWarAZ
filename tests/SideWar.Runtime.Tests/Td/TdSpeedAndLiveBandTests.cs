@@ -154,8 +154,10 @@ public sealed class TdSpeedAndLiveBandTests
         float plain = ui.BuildHud().Width;
         host.SetGameOptions(host.GameOptions with { ExtraSpeeds = true });
         var hud = ui.BuildHud();
-        Assert.Equal(["1x", "2x", "3x", "5x", "10x", "Máx"], hud.Items.Where(i => i.Action == TdUiAction.SetSpeed).Select(i => i.Text));
-        Assert.True(hud.Width > plain);
+        var cycle = Assert.Single(hud.Items, i => i.Action == TdUiAction.SetSpeed);
+        Assert.Equal("1x", cycle.Text);
+        Assert.Equal(2, cycle.Arg); // o botão único avança para a próxima velocidade
+        Assert.Equal(plain, hud.Width); // extras nunca alargam a HUD
         ui.CycleSpeed(); Assert.Equal(2, host.GameOptions.GameSpeed);
         for (int i = 0; i < 4; i++) ui.CycleSpeed();
         Assert.Equal(TdSpeed.Max, host.GameOptions.GameSpeed);
@@ -168,6 +170,23 @@ public sealed class TdSpeedAndLiveBandTests
         Assert.Equal("", ui.BuildHud().Items.Single(i => i.SArg == "speedeff").Text);
         ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
         Assert.Equal(6, ui.BuildPopover()!.Items.Count(i => i.Action == TdUiAction.SetSpeed));
+    }
+
+    [Theory]
+    [InlineData(40)]
+    [InlineData(64)]
+    [InlineData(88)]
+    public void Extra_speeds_hud_keeps_the_width_of_the_plain_hud_at_every_band_height(int band)
+    {
+        var host = new SpeedHost { HudMinimized = false };
+        host.SetGameOptions(host.GameOptions with { BandHeight = band });
+        var match = TdMatchState.Create(Content, 1, Rng.Seed(1, 54));
+        var ui = new TdUiController(() => match, _ => { }, host, () => 0.0, null);
+        float plain = ui.BuildHud().Width;
+        host.SetGameOptions(host.GameOptions with { ExtraSpeeds = true, SpeedMask = 0xFF });
+        var hud = ui.BuildHud();
+        Assert.Equal(plain, hud.Width);
+        Assert.All(hud.Items, i => Assert.True(i.Rect.X + i.Rect.W <= hud.Width + 0.01f));
     }
 
     [Fact]
