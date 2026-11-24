@@ -13,6 +13,9 @@ public static class TdReputation
     /// <summary>Cada ponto de nó de selos "xpShield" vale tantos % de XP perdida a menos.</summary>
     public const int MetaShieldPercentPerPoint = 3;
 
+    /// <summary>Teto do bônus de XP ganho das runas, em pontos-base (+50%).</summary>
+    public const int MaxXpGainBp = 5000;
+
     /// <summary>Multiplicador da sequência (streak) de ondas sem vazamento: +10% por onda, até x4 (30 ondas limpas). Zera ao vazar.</summary>
     public const double StreakStep = 0.10, StreakCap = 4.0;
 
@@ -71,9 +74,13 @@ public sealed partial class TdMatchState
         Emit(TdEventType.BaseAttacked, xp, coreDamage);
     }
 
-    private void GainReputation(int xp, int wave)
+    /// <summary>Bônus de XP ganho das runas "xpGainBp" (pontos-base). Vale só para ganho (onda/fase), nunca para a perda (xpShield) nem para recuperação.</summary>
+    public int XpGainBp => Math.Clamp(Rune("xpGainBp"), 0, TdReputation.MaxXpGainBp);
+
+    private void GainReputation(int xp, int wave, bool boost = true)
     {
         if (xp <= 0 || _shadow) return; // sombra: sem ganho de XP
+        if (boost && XpGainBp > 0) xp = (int)Math.Min(100_000L, (long)xp * (10_000 + XpGainBp) / 10_000);
         ReputationGainedTotal += xp;
         GateReputation = (int)Math.Min(100_000_000L, (long)GateReputation + xp);
         Emit(TdEventType.ReputationGained, xp, wave);
@@ -92,7 +99,7 @@ public sealed partial class TdMatchState
         int xp = Math.Min(_repLostStage, Math.Max(0, coreDamageUnits) * TdReputation.XpPerCoreDamage);
         if (xp <= 0 || _shadow) return 0;
         _repLostStage -= xp;
-        GainReputation(xp, 0);
+        GainReputation(xp, 0, boost: false); // devolver o perdido não é ganho novo
         return xp;
     }
 }

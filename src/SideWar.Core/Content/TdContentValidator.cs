@@ -450,7 +450,7 @@ public static class TdContentValidator
 
     /// <summary>Efeitos que o Core sabe aplicar; cada tipo de runa do JSON aponta para um deles.</summary>
     internal static readonly string[] RuneEffects =
-        ["rangeBp", "boltDamageBp", "waveCredits", "frostSlowTenths", "xpShield", "cannonDamageBp", "abilityCooldownBp", "firewallTenths"];
+        ["rangeBp", "boltDamageBp", "waveCredits", "frostSlowTenths", "xpShield", "cannonDamageBp", "abilityCooldownBp", "firewallTenths", "xpGainBp"];
     internal const int WebRings = 8;
     internal const int WebSectors = 16;
 

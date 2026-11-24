@@ -597,11 +597,11 @@ public sealed partial class TdUiRenderer(Typography typography, int dpi, SpriteA
         _p.Text(c, it.Text, PanelFont.JetBrainsMono, it.FontSize > 0 ? it.FontSize : 12, r, col);
     }
 
-    // ---- Teia de runas (Main.dc.html): glifos por tipo na ordem do conteúdo (Alcance, Raio, Créditos, Gelo, Núcleo, Canhão, Recarga, Escudo).
+    // ---- Teia de runas (Main.dc.html): glifos por tipo na ordem do conteúdo (Alcance, Raio, Créditos, Gelo, Núcleo, Canhão, Recarga, Escudo, Reputação).
     private static readonly string[] RuneGlyphs =
     [
         "M12 19V5M7 10l5-5 5 5", "M13 3L6 13h5l-1 8 7-10h-5z", "M12 5a7 7 0 1 0 .01 0M12 9v6", "M12 4v16M5 8l14 8M19 8L5 16",
-        "M12 4l6 8-6 8-6-8z", "M12 3v18M3 12h18M12 8a4 4 0 1 0 .01 0", "M18 12a6 6 0 1 1-1.8-4.3M18 5v4h-4", "M15 4a8 8 0 1 0 5 13A7 7 0 0 1 15 4z",
+        "M12 4l6 8-6 8-6-8z", "M12 3v18M3 12h18M12 8a4 4 0 1 0 .01 0", "M18 12a6 6 0 1 1-1.8-4.3M18 5v4h-4", "M15 4a8 8 0 1 0 5 13A7 7 0 0 1 15 4z", "M4 17l5-5 4 4 7-8M15 8h5v5",
     ];
 
     private static readonly SKPath[] RunePaths = [.. RuneGlyphs.Select(g => SKPath.ParseSvgPathData(g)!)];

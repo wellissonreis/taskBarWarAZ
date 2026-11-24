@@ -44,11 +44,11 @@ public sealed class TdRuneTests
     }
 
     [Fact]
-    public void Content_is_a_fixed_web_of_128_nodes_and_8_effect_types()
+    public void Content_is_a_fixed_web_of_128_nodes_and_9_effect_types()
     {
         var r = Base.Runes;
         Assert.Equal(128, r.Nodes.Length);
-        Assert.Equal(8, r.Types.Length);
+        Assert.Equal(9, r.Types.Length);
         Assert.Equal(8, r.RingCosts.Length);
         Assert.Equal(r.RingCosts.Order(), r.RingCosts); // custo cresce (ou fica igual) para fora
         Assert.Equal(16, r.Nodes.Count(n => n.Ring == 7 && n.Power == 4)); // nós-chave: o último anel inteiro, o maior valor da teia
@@ -59,8 +59,8 @@ public sealed class TdRuneTests
         Assert.All(r.Nodes, n => Assert.Contains(r.Types, t => t.Id == n.Type));
         Assert.Equal(r.Types.Select(t => t.Id).Order(), r.Nodes.Select(n => n.Type).Distinct().Order()); // todos os tipos aparecem
         Assert.All(r.Nodes, n => Assert.True(n.X is >= 0 and <= 1 && n.Y is >= 0 and <= 1));
-        Assert.Equal(["range", "bolt", "credits", "frost", "core", "cannon", "cooldown", "shield"], r.Types.Select(t => t.Id));
-        Assert.Equal([100, 75, 1, 1, 1, 75, -85, 1], r.Types.Select(t => t.Value));
+        Assert.Equal(["range", "bolt", "credits", "frost", "core", "cannon", "cooldown", "shield", "xp"], r.Types.Select(t => t.Id));
+        Assert.Equal([100, 75, 1, 1, 1, 75, -85, 1, 100], r.Types.Select(t => t.Value));
         Assert.Equal([1, 2, 5, 12, 24, 48, 80, 125], r.RingCosts);
         Assert.Equal((1, 1, 2), (Base.Stages.Rules.Fragments.PerWave, Base.Stages.Rules.Fragments.PerQuestion, Base.Stages.Rules.Fragments.PerBoss));
     }
@@ -70,7 +70,7 @@ public sealed class TdRuneTests
     {
         var r = Base.Runes;
         // totais máximos da teia antiga (32 nós): alcance 2000, Raio 1500, créditos 9, Gelo 18, Núcleo 21, Canhão 1500, recarga -1600, Escudo 5
-        var oldTotals = new Dictionary<string, int> { ["range"] = 2000, ["bolt"] = 1500, ["credits"] = 9, ["frost"] = 18, ["core"] = 21, ["cannon"] = 1500, ["cooldown"] = -1600, ["shield"] = 5 };
+        var oldTotals = new Dictionary<string, int> { ["range"] = 2000, ["bolt"] = 1500, ["credits"] = 9, ["frost"] = 18, ["core"] = 21, ["cannon"] = 1500, ["cooldown"] = -1600, ["shield"] = 5, ["xp"] = 1400 };
         foreach (var ty in r.Types)
         {
             int total = r.Nodes.Where(n => n.Type == ty.Id).Sum(n => ty.Value * n.Power);
@@ -205,6 +205,33 @@ public sealed class TdRuneTests
         Assert.All(s.RuneWeb, n => Assert.True(s.IsAwakened(n.Id)));
         for (int i = 0; i < 100_000 && s.Fragments == 0; i++) s.Step();
         if (s.Fragments > 0) Assert.Equal(CommandReason.WebComplete, s.Apply(new AwakenRune("0-0")).Reason);
+    }
+
+    [Fact]
+    public void Xp_rune_boosts_only_gained_xp_and_never_the_shield_or_shadow_mode()
+    {
+        UInt128 bits = UInt128.One << (1 * 16 + 0); // 1-0: runa de Reputação, anel 1 (poder 1 => +1%)
+        TdMatchState Run(bool shadow, UInt128 awakened)
+        {
+            var s = TdMatchState.Create(Tiny(2), 1, Rng.Seed(42, 54), null, TdMatchOptions.Default with { InitialAwakened = awakened, InitialShadow = shadow });
+            Assert.True(s.Apply(new LayoutChanged(TdSanityBot.TypicalLayout())).IsOk);
+            Assert.True(s.Apply(new SetPresence(false)).IsOk);
+            Assert.True(s.Apply(new BuildTower("bolt", 900)).IsOk);
+            Assert.True(s.Apply(new StartWave()).IsOk);
+            for (int i = 0; i < 400_000 && s.ReputationGainedTotal == 0 && !shadow; i++) s.Step();
+            for (int i = 0; i < 20_000 && shadow; i++) s.Step();
+            return s;
+        }
+        Assert.Equal("xpGainBp", Base.Runes.Types.Single(t => t.Id == "xp").Effect);
+        var plain = Run(false, UInt128.Zero);
+        var boosted = Run(false, bits);
+        Assert.Equal(0, plain.XpGainBp);
+        Assert.Equal(100, boosted.XpGainBp);
+        Assert.Equal(plain.XpShieldPercent, boosted.XpShieldPercent); // perda por dano no núcleo segue só o xpShield
+        Assert.True(plain.ReputationGainedTotal > 0);
+        Assert.Equal(plain.ReputationGainedTotal * 10_100 / 10_000, boosted.ReputationGainedTotal);
+        var shadow = Run(true, bits);
+        Assert.Equal(0, shadow.ReputationGainedTotal); // sombra: XP congelado
     }
 
     [Fact]
