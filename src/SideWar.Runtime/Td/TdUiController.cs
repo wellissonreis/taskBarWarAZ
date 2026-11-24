@@ -241,6 +241,7 @@ public sealed partial class TdUiController
     /// <summary>ESC / clique direito / ocultação da cena / 30 s: cancela sem tocar no jogo (RF-28.20 passo 5).</summary>
     public void Cancel()
     {
+        if (_captureKey is not null) { _captureKey = null; _hotkeyError = null; Changed?.Invoke(); return; }
         if (_dragTowerId > 0) { CancelTowerDrag(); return; }
         if (!PopoverOpen && _selectedTowerId == 0) return;
         Close();
@@ -274,6 +275,7 @@ public sealed partial class TdUiController
         if (_restartArmed && item.Action != TdUiAction.Restart && (EndCardOpen || item.Action is TdUiAction.Menu or TdUiAction.Settings)) _restartArmed = false;
         Touch();
         NoteAction(item.Action);
+        if (item.Action >= TdUiAction.SettingsOpen && ActivateSetting(item)) return;
         switch (item.Action)
         {
             case TdUiAction.TutorialSkip: SkipTutorial(); break;
@@ -415,7 +417,7 @@ public sealed partial class TdUiController
             case TdUiAction.MapPlayConfirm: _mapConfirm = false; Close(); _host.StartStage(item.Arg); break;
             case TdUiAction.BuyNode when item.SArg is not null: _host.PurchaseNode(item.SArg); Changed?.Invoke(); break;
             case TdUiAction.Pause: _host.TogglePause(); Close(); break;
-            case TdUiAction.Settings: _host.OpenSettings(); break;
+            case TdUiAction.Settings: OpenSettingsView(); break;
             case TdUiAction.Exit: _host.RequestExit(); break;
             case TdUiAction.RestartPrompt: _confirmRestart = true; Changed?.Invoke(); break;
             case TdUiAction.RestartCancel: _confirmRestart = false; Changed?.Invoke(); break;
@@ -746,6 +748,7 @@ public sealed partial class TdUiController
         _confirmWipe = false;
         _mapConfirm = false;
         _mapSel = 0;
+        _captureKey = null; _hotkeyError = null;
         Mode = mode;
         UpdateModalPause();
         if (mode != TdUiMode.Inspector) _selectedTowerId = 0;
@@ -1056,6 +1059,7 @@ public sealed partial class TdUiController
             TdUiMode.Help => BuildHelp(m),
             TdUiMode.Runes => Finish("Teia de runas", Placeholder(), 0),
             TdUiMode.Bestiary => Finish("Inimigos · bestiário", Placeholder(), 0),
+            TdUiMode.Settings => Finish("Configurações", Placeholder(), 0),
             _ => null,
         };
         return view is null ? Step == TdTutorialStep.HudOpen ? null : DecoratePopover(m, null)
@@ -1447,6 +1451,7 @@ public sealed partial class TdUiController
             int rows = HelpRows(BuildHelp(m).Items);
             return rows > HelpVisibleRows ? new(rows, HelpVisibleRows, Math.Clamp(_helpScroll, 0, rows - HelpVisibleRows), 108f, HelpVisibleRows * 36f - 6f) : null;
         }
+        if (Mode == TdUiMode.Settings) return SettingsScrollInfo();
         if (Mode == TdUiMode.Towers)
             return m.Towers.Count > ModalTowerRows ? new(m.Towers.Count, ModalTowerRows, _towerScroll, 132f, ModalTowerRows * 52f - 6f) : null;
         if (Mode == TdUiMode.Build && !BuildActive)
@@ -1478,7 +1483,8 @@ public sealed partial class TdUiController
         int next = Math.Clamp(info.Offset + rows, 0, max);
         if (next != info.Offset)
         {
-            if (Mode == TdUiMode.Towers) _towerScroll = next;
+            if (Mode == TdUiMode.Settings) _settingsScroll = next;
+            else if (Mode == TdUiMode.Towers) _towerScroll = next;
             else if (Mode == TdUiMode.Help) _helpScroll = next;
             else _buildScroll = next;
             Changed?.Invoke();
@@ -1510,6 +1516,13 @@ public sealed partial class TdUiController
         }
         var currentRank = _host.Rank.Current;
         items.Add(new(new DipRect(16, 10, 150, 24), TdUiKind.Label, TdRank.DisplayName(currentRank), Arg: (int)currentRank, SArg: "rank-chip"));
+        items.Add(new(new DipRect(634, 4, 36, 36), TdUiKind.Button, "Configurações", TdUiAction.SettingsOpen, Icon: TdIcon.Gear, Selected: Mode == TdUiMode.Settings, Tip: "Configurações", SArg: "cfg-gear"));
+        if (Mode == TdUiMode.Settings)
+        {
+            items.Add(new(new DipRect(674, 4, 36, 36), TdUiKind.Button, "X", TdUiAction.Close));
+            AddSettings(items);
+            return new TdPopoverView("Configurações", [.. items], 720, 480, 0, Scroll: SettingsScrollInfo());
+        }
         if (Mode == TdUiMode.Bestiary)
         {
             items.Add(new(new DipRect(674, 4, 36, 36), TdUiKind.Button, "X", TdUiAction.Close));

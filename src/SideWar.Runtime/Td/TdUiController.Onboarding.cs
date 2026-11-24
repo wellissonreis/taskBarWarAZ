@@ -530,7 +530,7 @@ public sealed partial class TdUiController
         Section("HUD E CONFIGURAÇÕES");
         Card(TdIcon.Expand, "Chip do HUD: toque para abrir/recolher.");
         Card(TdIcon.Expand, "Arraste o cabeçalho para mover o menu.");
-        Card(TdIcon.Pause, "Em Jogo, ajuste avisos, tamanho e velocidade.");
+        Card(TdIcon.Pause, "A engrenagem do menu abre as configurações.");
         Card(TdIcon.Minus, $"Esconder tudo: {_host.BossHotkey}.", TdTone.Accent);
         Card(TdIcon.Alert, "Recomeçar do zero apaga o progresso.");
         if (_onb is not null) s.Add(TdUiKind.Button, "Refazer tutorial", RowH + 2, TdUiAction.RedoTutorial, tone: TdTone.Good, icon: TdIcon.Play);

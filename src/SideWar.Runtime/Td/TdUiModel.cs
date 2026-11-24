@@ -4,7 +4,7 @@ using SideWar.Runtime.Geometry;
 namespace SideWar.Runtime.Td;
 
 /// <summary>Modo do popover/UI da partida TD (TD.8, SDD-28 RF-28.14/28.20). Estado de UI: nunca vai ao log nem ao hash.</summary>
-public enum TdUiMode : byte { None, Build, Inspector, Preview, Menu, Map, End, Help, Towers, Runes, Bestiary }
+public enum TdUiMode : byte { None, Build, Inspector, Preview, Menu, Map, End, Help, Towers, Runes, Bestiary, Settings }
 
 /// <summary>Tipo de item de UI: rótulo, botão, cabeçalho de seção ou separador.</summary>
 /// <remarks><c>Money</c> (TD.33d): contador de créditos do HUD, não clicável.</remarks>
@@ -41,6 +41,8 @@ public enum TdUiAction : byte
     /// <summary>Mapa de fases: jogar a fase selecionada pede confirmação (MapPlay) dentro da própria aba; confirmar inicia a fase, cancelar volta.</summary>
     MapPlay, MapPlayConfirm, MapPlayCancel,
     BestiarySelect, TutorialPrevious, RecenterRunes,
+    /// <summary>Configurações dentro do menu: abrir pela engrenagem, trocar de seção, ligar/desligar, escolher opção, ajustar slider, capturar atalho e restaurar atalhos (SArg = chave).</summary>
+    SettingsOpen, SettingsSection, SettingToggle, SettingChoice, SettingSlider, SettingHotkey, SettingsRestoreHotkeys,
 }
 
 /// <summary>Ícone do HUD desenhado por código (TD.14); o renderer mapeia para caminhos vetoriais.</summary>
@@ -51,6 +53,8 @@ public enum TdIcon : byte
     Alert, Question, Check, Cross, Target, Clock, Portal, Crown, Medal, Expand, Collapse, Bolt, Frost,
     /// <summary>TD.29b: castelo (botão Torres do HUD) e pausa.</summary>
     Castle, Pause,
+    /// <summary>Engrenagem do cabeçalho do menu (abre as Configurações).</summary>
+    Gear,
     /// <summary>TD.30c: estrela/runa (botão Runas do HUD).</summary>
     Star,
     Functions, Cosmos, Sentinel, Vault, Backup, Cdn, Queue, Policy, Aks, Pipeline,
@@ -206,8 +210,64 @@ public sealed record TdTooltipView(string Text, float AnchorX, float AnchorTop)
 public sealed record TdGameOptions(int BandHeight = 64, bool AutoStart = false, bool Sound = false, int Volume = 60, bool Questions = true, bool Fade = true,
     bool Continuous = true, bool PanelPinned = false, int GameSpeed = 1, bool ShowIncome = false, bool Discreet = false, bool AutoRestart = false, int NoticeSize = 1);
 
+/// <summary>
+/// Todas as opções editáveis do menu Configurações (vista pura do <c>AppSettings</c>; o Runtime não conhece a Persistência). Enums viram índices
+/// (<c>HideOnFullscreen</c>: 0 mesmo monitor, 1 qualquer, 2 nunca; <c>LogLevel</c>: 0 debug a 3 erro; <c>GameMode</c>: 0 clássico, 1 TD).
+/// </summary>
+public sealed record TdSettingsData
+{
+    public int GameMode { get; init; } = 1;
+    public bool StartWithWindows { get; init; }
+    public bool StartupVisible { get; init; }
+    public bool StartupAvailable { get; init; }
+    public string? StartupMessage { get; init; }
+    public int HideOnFullscreen { get; init; }
+    public bool UseUia { get; init; }
+    public bool AutoScale { get; init; }
+    public bool BonusQuestions { get; init; } = true;
+    public bool ShowIncome { get; init; }
+    public bool DiscreetMode { get; init; }
+    public bool AlertsEnabled { get; init; } = true;
+    public bool AlertsAutoPause { get; init; } = true;
+    public bool AlertsSound { get; init; }
+    public int AlertsMutedMask { get; init; }
+    public bool ContinuousWaves { get; init; } = true;
+    public bool TowerPanelPinned { get; init; }
+    public bool AutoStart { get; init; }
+    public bool AutoRestart { get; init; }
+    public int AutoStartSeconds { get; init; } = 15;
+    public int BandHeight { get; init; } = 64;
+    public int CornerUiScale { get; init; } = 125;
+    public int GameSpeed { get; init; } = 1;
+    public int NoticeSize { get; init; } = 1;
+    public bool Sound { get; init; }
+    public int Volume { get; init; } = 60;
+    public bool PeekOnHover { get; init; }
+    public int PeekOpacity { get; init; } = 128;
+    public bool FadeWhenAbsent { get; init; }
+    public int AbsentOpacity { get; init; } = 128;
+    public bool FadeWhenUnfocused { get; init; } = true;
+    public int FadePercent { get; init; } = 50;
+    public int PresentFps { get; init; } = 30;
+    public int AbsentFps { get; init; } = 4;
+    public bool SaverOnBattery { get; init; } = true;
+    public bool ForceSaver { get; init; }
+    public bool ReducedMotion { get; init; }
+    public bool RecordCommands { get; init; }
+    public int LogLevel { get; init; } = 1;
+    public string ToggleInteractive { get; init; } = "Ctrl+Alt+G";
+    public string ToggleVisibility { get; init; } = "Ctrl+Alt+H";
+    public string TogglePause { get; init; } = "Ctrl+Alt+P";
+    public string StartWave { get; init; } = "Ctrl+Alt+Space";
+}
+
 public interface ITdUiHost
 {
+    /// <summary>Opções completas do menu Configurações; <see cref="ApplySettings"/> grava e aplica na hora (sem Salvar/Cancelar).</summary>
+    TdSettingsData Settings => new();
+    void ApplySettings(TdSettingsData data) { }
+    /// <summary>Consulta (assíncrona) o estado de "Iniciar com o Windows" ao abrir a vista Configurações.</summary>
+    void RefreshStartup() { }
     TdGameOptions GameOptions => new();
     int LegacyTotal => 0;
     int PreviousLegacyTotal => 0;
@@ -234,7 +294,6 @@ public interface ITdUiHost
 
     bool Paused { get; }
     void TogglePause();
-    void OpenSettings();
     void RequestExit();
 
     /// <summary>"Recomeçar do zero" (confirmado no menu): apaga o perfil TD, reinicia o onboarding e começa uma partida nova na fase 1. Configurações ficam.</summary>

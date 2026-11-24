@@ -57,6 +57,7 @@ public sealed partial class TdUiController
         items.Add(new(new DipRect(lx, 352, 60, 14), TdUiKind.Label, "AÇÕES", SArg: "sec"));
 
         items.Add(new(new DipRect(rx, 308 + 3 * 35, 121, 33), TdUiKind.Label, "Velocidade", SArg: "jg-tile-speed"));
+        items.Add(new(new DipRect(rx + 127, 308 + 3 * 35, 248, 33), TdUiKind.Button, "Todas as configurações", TdUiAction.SettingsOpen, Icon: TdIcon.Gear, SArg: "cfg-link"));
         int ab = 0;
         foreach (var it in src)
         {
