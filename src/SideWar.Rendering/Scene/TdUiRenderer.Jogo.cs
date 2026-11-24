@@ -26,7 +26,7 @@ public sealed partial class TdUiRenderer
             case "jg-tile": DrawJogoTile(c, it, hover); return true;
             case "jg-tile-speed":
                 RoundBox(c, r, Palette.Td.EdgeSoft, Palette.Td.Card, 6);
-                _p.Text(c, it.Text, PanelFont.SpaceGrotesk, 10, new DipRect(r.X + 8, r.Y + 4, r.W - 16, 13), Palette.Td.Muted);
+                _p.Text(c, it.Text, PanelFont.SpaceGrotesk, 10, new DipRect(r.X + 8, r.Y + 2, r.W - 16, 12), Palette.Td.Muted);
                 return true;
         }
         if (it.Action == TdUiAction.ResumeAbility)
@@ -121,19 +121,19 @@ public sealed partial class TdUiRenderer
         int colon = it.Text.IndexOf(':');
         string name = colon > 0 ? it.Text[..colon] : it.Text, val = colon > 0 ? it.Text[(colon + 1)..].Trim() : "";
         _p.Text(c, name, PanelFont.SpaceGrotesk, 10, new DipRect(r.X + 8, r.Y + 5, r.W - 16, 13), Palette.Td.Muted);
-        if (it.Arg == 0) { _p.Text(c, val, PanelFont.JetBrainsMono, 12, new DipRect(r.X + 8, r.Y + 21, r.W - 16, 16), Palette.Td.BrightText); return; }
+        if (it.Arg is 0 or 8) { _p.Text(c, val, PanelFont.JetBrainsMono, 12, new DipRect(r.X + 8, r.Y + 17, r.W - 16, 16), Palette.Td.BrightText); return; }
         if (it.Arg == 3)
         {
             _p.Text(c, val, PanelFont.JetBrainsMono, 10, new DipRect(r.X + 8, r.Y + 5, r.W - 16, 13), Palette.Td.BrightText, TextAlign.Right);
-            float left = r.X + 8, trackW = r.W - 16, ty = r.Y + 27;
+            float left = r.X + 8, trackW = r.W - 16, ty = r.Y + 25;
             RoundBox(c, new DipRect(left, ty, trackW, 4), Palette.Td.BorderStrong, Palette.Td.BorderStrong, 2);
             if (it.Fill > 0) _p.Fill(c, new DipRect(left, ty, trackW * Math.Clamp(it.Fill, 0f, 1f), 4), Palette.Td.Amber);
             RoundBox(c, new DipRect(left + trackW * Math.Clamp(it.Fill, 0f, 1f) - 4, ty - 2, 8, 8), Palette.Td.Amber, Palette.Td.Amber, 4);
             return;
         }
         bool on = val.StartsWith("lig", StringComparison.Ordinal);
-        RoundBox(c, new DipRect(r.X + 8, r.Y + 21, 26, 14), on ? Palette.Td.Amber : Palette.Td.WavePending, on ? Palette.Td.Amber : Palette.Td.WavePending, 7);
-        RoundBox(c, new DipRect(r.X + (on ? 22 : 10), r.Y + 23, 10, 10), on ? Palette.Td.Background : Palette.Td.Muted, on ? Palette.Td.Background : Palette.Td.Muted, 5);
-        _p.Text(c, on ? "Ligado" : "Desligado", PanelFont.SpaceGrotesk, 10, new DipRect(r.X + 40, r.Y + 21, r.W - 44, 14), on ? Palette.Td.Amber : Palette.Td.Dim);
+        RoundBox(c, new DipRect(r.X + 8, r.Y + 17, 26, 14), on ? Palette.Td.Amber : Palette.Td.WavePending, on ? Palette.Td.Amber : Palette.Td.WavePending, 7);
+        RoundBox(c, new DipRect(r.X + (on ? 22 : 10), r.Y + 19, 10, 10), on ? Palette.Td.Background : Palette.Td.Muted, on ? Palette.Td.Background : Palette.Td.Muted, 5);
+        _p.Text(c, on ? "Ligado" : "Desligado", PanelFont.SpaceGrotesk, 10, new DipRect(r.X + 40, r.Y + 17, r.W - 44, 14), on ? Palette.Td.Amber : Palette.Td.Dim);
     }
 }

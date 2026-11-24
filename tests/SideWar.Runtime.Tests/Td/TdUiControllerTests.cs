@@ -16,6 +16,18 @@ namespace SideWar.Runtime.Tests.Td;
 public sealed class TdUiControllerTests
 {
     [Fact]
+    public void Game_settings_include_notice_size_in_the_grid()
+    {
+        var r = new Rig();
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
+        var items = r.Ui.BuildPopover()!.Items;
+        var notice = items.Single(i => i.Action == TdUiAction.GameOption && i.Arg == 8);
+        Assert.Equal("jg-tile", notice.SArg);
+        Assert.Equal(121f, notice.Rect.W);
+        Assert.All(items.Where(i => i.Action == TdUiAction.GameOption), i => Assert.True(i.Rect.X >= 328));
+        Assert.Contains(items, i => i.SArg == "jg-stat" && i.Arg == 0 && i.Tip == "Coroas: fases vencidas sem vazamentos");
+    }
+    [Fact]
     public void Rank_gate_map_shows_required_rank_and_disables_play()
     {
         var r = new Rig();
@@ -696,7 +708,7 @@ public sealed class TdUiControllerTests
         var chip = r.Ui.BuildHud();
         Assert.True(chip.Minimized);
         Assert.Equal(22f, chip.Height);
-        Assert.InRange(chip.Width, 190f, 195f);
+        Assert.InRange(chip.Width, 238f, 239f);
         Assert.Contains(chip.Items, i => i.SArg == "rank-crown" && i.Tip == "Patente: Júnior");
         Assert.DoesNotContain(chip.Items, i => i.Kind == TdUiKind.Money || i.Action == TdUiAction.StartWave);
         var expand = chip.Items.Single(i => i.Action == TdUiAction.HudExpand);
@@ -706,7 +718,7 @@ public sealed class TdUiControllerTests
         Assert.False(r.Host.HudMinimized);
         var full = r.Ui.BuildHud();
         Assert.False(full.Minimized);
-        Assert.Equal(28f, full.Height);
+        Assert.Equal((40f + TdHudView.FloatPad) * 0.7f, full.Height);
         Assert.Contains(full.Items, i => i.Kind == TdUiKind.Money);
         var collapse = full.Items.Single(i => i.Action == TdUiAction.HudMinimize);
         Assert.Equal(collapse, full.Items[full.HitTest(collapse.Rect.X + 1, collapse.Rect.Y + 1)]);

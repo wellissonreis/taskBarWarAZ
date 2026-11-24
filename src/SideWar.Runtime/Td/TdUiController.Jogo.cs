@@ -9,7 +9,7 @@ public sealed partial class TdUiController
     /// <summary>Linha de dicas das estatísticas do jogador (índice = <c>Arg</c> do item "jg-stat").</summary>
     private static readonly string[] JogoStatTips =
     [
-        "Coroas: fases vencidas sem perder integridade",
+        "Coroas: fases vencidas sem vazamentos",
         "Estrelas: até 3 por fase",
         "Fases vencidas",
         "Melhor recorde de pontuação em uma fase",
@@ -56,7 +56,7 @@ public sealed partial class TdUiController
         items.Add(new(new DipRect(rx, 288, 376, 14), TdUiKind.Label, "CONFIGURAÇÕES", SArg: "sec"));
         items.Add(new(new DipRect(lx, 352, 60, 14), TdUiKind.Label, "AÇÕES", SArg: "sec"));
 
-        items.Add(new(new DipRect(rx + 2 * 127, 308 + 2 * 46, 121, 40), TdUiKind.Label, "Velocidade", SArg: "jg-tile-speed"));
+        items.Add(new(new DipRect(rx, 308 + 3 * 35, 121, 33), TdUiKind.Label, "Velocidade", SArg: "jg-tile-speed"));
         int ab = 0;
         foreach (var it in src)
         {
@@ -74,17 +74,14 @@ public sealed partial class TdUiController
                 case TdUiAction.WipeConfirm: items.Add(Put(it, 196, 350, 58, 18) with { FontSize = 10f }); break;
                 case TdUiAction.WipeCancel: items.Add(Put(it, 258, 350, 58, 18) with { FontSize = 10f }); break;
                 case TdUiAction.None when it.Text == "Apagar todo o progresso?": items.Add(Put(it, lx + 50, 352, 144, 14) with { SArg = "jg-warn", Tone = TdTone.Warn }); break;
-                case TdUiAction.GameOption when it.Arg == 8:
-                    items.Add(Put(it, lx, 448, 300, 24) with { SArg = "menu-action" });
-                    break;
                 case TdUiAction.GameOption:
                 {
-                    int slot = it.Arg switch { 0 => 0, 1 => 1, 2 => 2, 4 => 3, 5 => 4, 6 => 5, 7 => 6, _ => 7 };
-                    items.Add(Put(it, rx + slot % 3 * 127, 308 + slot / 3 * 46, 121, 40) with { SArg = "jg-tile", Tip = it.Right });
+                    int slot = it.Arg switch { 0 => 0, 1 => 1, 2 => 2, 4 => 3, 5 => 4, 6 => 5, 7 => 6, 3 => 7, _ => 8 };
+                    items.Add(Put(it, rx + slot % 3 * 127, 308 + slot / 3 * 35, 121, 33) with { SArg = "jg-tile", Tip = it.Right });
                     break;
                 }
                 case TdUiAction.SetSpeed:
-                    items.Add(Put(it, rx + 2 * 127 + 8 + (it.Arg - 1) * 33, 308 + 2 * 46 + 20, 30, 18));
+                    items.Add(Put(it, rx + 8 + (it.Arg - 1) * 33, 308 + 3 * 35 + 15, 30, 17));
                     break;
             }
         }

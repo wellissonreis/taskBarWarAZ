@@ -14,7 +14,7 @@ public static class TdBestiary
         new("flyer", "voador", "Drone", "Voa por cima das torres terrestres.", 2, false, 2, 3, 1, "Raio, Cosmos", "Canhão, Front Door, AKS", [new("voador_elite", "flyer:elite", "Drone elite")]),
         new("leech", "dreno", "Dreno", "Verme sugador que desativa torres de suporte.", 5, false, 2, 2, 1, "Raio", "Escudo, Scale Set", [new("dreno_elite", "leech:elite", "Dreno elite")]),
         new("tank", "duravel", "Bruto", "Golem pesado com muita vida.", 3, false, 5, 1, 3, "Sentinel", "Canhão, Cosmos", [new("duravel_elite", "tank:elite", "Bruto elite")]),
-        new("ransomware", "ransomware", "Ransomware", "Mecha bípede com cadeado no peito; sequestra créditos se chegar ao núcleo.", 3, true, 5, 2, 4, "Sentinel, Canhão", "Gelo", [new("ransomware_enf", "ransomware:enraged", "Enfurecido")]),
+        new("ransomware", "ransomware", "Ransomware", "Mecha bípede com cadeado no peito; sequestra créditos se chegar à base.", 3, true, 5, 2, 4, "Sentinel, Canhão", "Gelo", [new("ransomware_enf", "ransomware:enraged", "Enfurecido")]),
         new("botnet", "titan", "Titã DDoS", "Mecha de 6 patas com baterias de mísseis.", 5, true, 5, 1, 5, "Sentinel", "Functions, Raio", [new("titan_enf", "botnet:enraged", "Enfurecido")]),
         new("chefe_botnet", "botnet", "Rei Botnet", "Caranguejo-mecha com antenas de botnet.", 1, true, 5, 2, 3, "CDN", "Raio", [new("botnet_enf", "chefe_botnet:enraged", "Enfurecido"), new("aliado_bot", "aliado_botnet", "Bot zumbi")]),
         new("chefe_kraken", "kraken", "Kraken Phishing", "Lula-mecha flutuante com tentáculos de anzol.", 2, true, 5, 2, 2, "Policy", "Canhão", [new("kraken_enf", "chefe_kraken:enraged", "Enfurecido"), new("aliado_isca", "aliado_kraken", "Isca")]),

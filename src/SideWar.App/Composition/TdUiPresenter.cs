@@ -519,7 +519,6 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
             hudSig = hs;
             Draw(hudWindow, hudCanvas, cv => renderer.DrawHud(cv, hud, hudHover));
         }
-        RefreshTooltip(c, hudBounds);
         pop = controller.BuildPopover();
         focus.SetModalOpen(controller.ModalOpen);
         if (pop is null)
@@ -569,6 +568,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
                 Draw(popWindow, popCanvas, cv => { if (quick) renderer.DrawPopover(cv, pop, popHover); else { cv.Save(); cv.Scale(ModalScale / Scale); modalRenderer!.DrawPopover(cv, pop, popHover); cv.Restore(); } });
             }
         }
+        RefreshTooltip(c, hudBounds);
         if (controller.ModalOpen) { Present(); game.Mode.SetTdFade(255); driver.Absent = false; }
         var view = controller.View;
         if (view != driver.View)
@@ -585,14 +585,21 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         if (esc != escApplied) { escApplied = esc; hotkeys()?.SetEscapeActive(esc); }
     }
 
-    /// <summary>Dica do item do HUD sob o mouse (texto completo): janela acima do HUD, longe do cursor.</summary>
+    /// <summary>Dica de hover ancorada ao elemento da janela que a originou.</summary>
     private void RefreshTooltip(DockLayoutResult c, PixelRect hudBounds)
     {
         var tip = hud is null || tipWindow is null ? null : TdUiController.TooltipFor(hud, tipIndex);
+        PixelRect anchor = hudBounds;
+        if (tip is not null && hud is not null)
+        {
+            var r = hud.Items[tipIndex].Rect;
+            anchor = ItemBounds(hudBounds, r, UiScale, 0);
+        }
         if (tip is null && pop is not null && popHover >= 0 && popHover < pop.Items.Length && pop.Items[popHover].Tip is { } popTip)
         {
             var rect = pop.Items[popHover].Rect;
-            tip = new TdTooltipView(popTip, (popBounds.Left - hudBounds.Left + (rect.X + rect.W / 2) * PopScale) / UiScale, 0);
+            tip = new TdTooltipView(popTip, 0, 0);
+            anchor = ItemBounds(popBounds, rect, PopScale, pop.RuneWindow && pop.ArrowTop ? TdPopoverView.ArrowH : 0);
         }
         // Dica de 1ª vez (TD.15): ocupa a janela do tooltip quando não há dica de hover.
         bool firstTime = tip is null && controller.CurrentTip is not null;
@@ -607,9 +614,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         int rankTip = pop is not null && popHover >= 0 && popHover < pop.Items.Length && pop.Items[popHover].SArg == "rank-step" ? pop.Items[popHover].Arg : -1;
         int w = (int)MathF.Round(TdUiRenderer.TooltipWidthDip * s), h = (int)MathF.Round((rankTip >= 0 ? 58f : renderer!.TooltipHeightDip(tip.Text)) * s);
         var work = c.Monitor.WorkArea;
-        int left = Math.Clamp(hudBounds.Left + (int)MathF.Round(tip.AnchorX * s) - w / 2, work.Left, Math.Max(work.Left, work.Right - w));
-        int bottom = hudBounds.Top - (int)MathF.Round(2 * Scale);
-        var bounds = new PixelRect(left, Math.Max(work.Top, bottom - h), left + w, Math.Max(work.Top, bottom - h) + h);
+        var bounds = TooltipPlacement.Beside(work, anchor, w, h, (int)MathF.Round(12 * Scale));
         var window = tipWindow!;
         bool changed = tipText != tip.Text || bounds != window.Bounds || !window.WantsVisible || tipFirstTime != firstTime;
         if (!changed) return;
@@ -619,6 +624,12 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         tipText = tip.Text;
         tipFirstTime = firstTime;
         Draw(window, tipCanvas, cv => { if (rankTip >= 0) renderer!.DrawRankTooltip(cv, rankTip); else renderer!.DrawTooltip(cv, tip.Text, firstTime); });
+    }
+
+    private static PixelRect ItemBounds(PixelRect window, SideWar.Runtime.Geometry.DipRect r, float scale, float yOffset)
+    {
+        int x = window.Left + (int)MathF.Round(r.X * scale), y = window.Top + (int)MathF.Round((r.Y + yOffset) * scale);
+        return new PixelRect(x, y, x + (int)MathF.Round(r.W * scale), y + (int)MathF.Round(r.H * scale));
     }
 
     private static void Draw(TdUiWindow window, SkiaFrameCanvas canvas, Action<SkiaSharp.SKCanvas> draw)

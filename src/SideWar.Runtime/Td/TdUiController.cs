@@ -1898,9 +1898,9 @@ public sealed partial class TdUiController
         var s = new Stack(260f);
         bool won = m.Phase == MatchPhase.Vitoria;
         var r = m.Result;
-        string title = won ? $"VITORIA  {new string('*', m.Stars)}{new string('-', 3 - m.Stars)}" : "DERROTA";
-        s.Add(TdUiKind.Label, won ? $"Fase {m.StageId} concluida. Integridade perdida: {m.IntegrityLost}"
-            : m.Options.PersistentRun ? $"Corrida encerrada na fase {m.StageNumber}, onda {m.WaveNumber}/{m.TotalWaves}." : $"O nucleo caiu na onda {m.WaveNumber}/{m.TotalWaves}.", TwoLineH - 8, tone: won ? TdTone.Good : TdTone.Bad);
+        string title = won ? $"VITORIA  {new string('*', m.Stars)}{new string('-', 3 - m.Stars)}" : "CORRIDA ENCERRADA";
+        s.Add(TdUiKind.Label, won ? $"Fase {m.StageId} concluida. Impacto dos vazamentos: {m.IntegrityLost}"
+            : $"Corrida encerrada na fase {m.StageNumber}, onda {m.WaveNumber}/{m.TotalWaves}.", TwoLineH - 8, tone: won ? TdTone.Good : TdTone.Bad);
         if (won)
         {
             var o = _host.LastOutcome;

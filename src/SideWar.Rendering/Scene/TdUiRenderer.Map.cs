@@ -224,7 +224,7 @@ public sealed partial class TdUiRenderer
         RoundBox(c, box, crown ? Palette.Td.Amber.WithAlpha(153) : Palette.Td.EdgeSoft, crown ? Palette.Td.Amber.WithAlpha(31) : Palette.Td.Surface, 8);
         DrawCrown(c, x + 10, y + 11, 24f, 17f, crown);
         _p.Text(c, crown ? "Coroa conquistada" : "Coroa pendente", PanelFont.JetBrainsMono, 12, new DipRect(x + 44, y + 6, w - 48, 16), crown ? Palette.Td.AmberLight : Palette.Td.Muted);
-        _p.Text(c, "Vença sem perder núcleo.", PanelFont.JetBrainsMono, 10, new DipRect(x + 44, y + 23, w - 48, 14), Palette.Td.Muted);
+        _p.Text(c, "Vença sem vazamentos.", PanelFont.JetBrainsMono, 10, new DipRect(x + 44, y + 23, w - 48, 14), Palette.Td.Muted);
         y += 52;
         _p.Text(c, "SELOS DA FASE", PanelFont.JetBrainsMono, 10, new DipRect(x, y, w, 14), Palette.Td.Muted);
         y += 20;
