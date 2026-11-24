@@ -360,6 +360,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         // TD.29b: ao abrir o app a modal central abre na aba Jogo com o jogo PAUSADO; fechar a modal retoma (Resume).
         controller.OpenStartupModal();
         Relayout();
+        hudWindow.HandCursor = true; // só os botões e indicadores clicáveis recebem o ponteiro (o resto é transparente)
         hudWindow.ClickableAt = (x, y) => hud?.OverButton(x / UiScale, y / UiScale) ?? false; // só os botões recebem clique
         hudWindow.Show();
         ApplyFade();

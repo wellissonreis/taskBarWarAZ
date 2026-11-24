@@ -120,7 +120,9 @@ public sealed class TdUiWindow : OverlayChildWindow
         }
     }
     private protected override void OnRightButtonUp(int x, int y) { if (IsVisible) RightUp?.Invoke(x, y); }
-    private protected override bool UsesHandCursor => false;
+    /// <summary>Mão sobre as áreas clicáveis (HUD): sinaliza que indicadores e botões respondem ao clique.</summary>
+    public bool HandCursor { get; set; }
+    private protected override bool UsesHandCursor => HandCursor;
 }
 
 

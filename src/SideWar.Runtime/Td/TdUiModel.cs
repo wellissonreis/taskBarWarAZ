@@ -73,7 +73,10 @@ public readonly record struct TdUiItem(
     string? Right = null, string? Sub = null, bool Enabled = true, bool Selected = false, TdTone Tone = TdTone.Normal, float Fill = 0f,
     TdIcon Icon = TdIcon.None, string? Tip = null, bool RightCoin = false, bool Highlight = false, TdIcon RightIcon = TdIcon.None, float FontSize = 0f)
 {
-    public bool Clickable => Kind == TdUiKind.Button && Enabled && Action != TdUiAction.None;
+    public bool Clickable => Enabled && Action != TdUiAction.None && (Kind == TdUiKind.Button || IsHudMenuLink);
+
+    /// <summary>Indicador da HUD (coroa, onda, créditos) que abre o menu ao clique, para o iniciante achar o menu.</summary>
+    public bool IsHudMenuLink => Kind is TdUiKind.Label or TdUiKind.Money && Action is TdUiAction.Menu or TdUiAction.TowersOpen;
 }
 
 /// <summary>Rolagem de uma lista da modal (em linhas): total, visíveis e primeira linha visível. Nulo = lista cabe inteira (sem barra).</summary>
@@ -181,7 +184,7 @@ public sealed record TdHudView(TdUiItem[] Items, float Width, float Height, bool
         foreach (var it in Items)
         {
             var r = it.Rect;
-            if (it.Kind == TdUiKind.Button && x >= r.X && x < r.X + r.W && y >= r.Y && y < r.Y + r.H) return true;
+            if ((it.Kind == TdUiKind.Button || it.IsHudMenuLink) && x >= r.X && x < r.X + r.W && y >= r.Y && y < r.Y + r.H) return true;
         }
         return false;
     }

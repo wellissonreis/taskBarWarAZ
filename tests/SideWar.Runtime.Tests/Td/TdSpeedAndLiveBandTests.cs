@@ -190,6 +190,29 @@ public sealed class TdSpeedAndLiveBandTests
     }
 
     [Fact]
+    public void Clicking_hud_indicators_opens_the_menu_and_towers_while_buttons_keep_their_actions()
+    {
+        var host = new SpeedHost { HudMinimized = false };
+        var match = TdMatchState.Create(Content, 1, Rng.Seed(1, 54));
+        var ui = new TdUiController(() => match, _ => { }, host, () => 0.0, null);
+        var hud = ui.BuildHud();
+        foreach (var tag in new[] { "rank-crown", "wave" })
+        {
+            var it = hud.Items.Single(i => i.SArg == tag);
+            Assert.True(it.Clickable);
+            Assert.True(hud.OverButton(it.Rect.X + 1, it.Rect.Y + 1));
+            int hit = hud.HitTest(it.Rect.X + it.Rect.W / 2, it.Rect.Y + it.Rect.H / 2);
+            ui.Activate(hud.Items[hit]);
+            Assert.Equal(TdUiMode.Menu, ui.Mode);
+            ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu)); // fecha
+            Assert.Equal(TdUiMode.None, ui.Mode);
+        }
+        var money = hud.Items.Single(i => i.Kind == TdUiKind.Money);
+        ui.Activate(hud.Items[hud.HitTest(money.Rect.X + 4, money.Rect.Y + 4)]);
+        Assert.Equal(TdUiMode.Towers, ui.Mode);
+    }
+
+    [Fact]
     public void Speed_selector_in_the_hud_sets_1_2_3_and_marks_the_current_one()
     {
         var host = new SpeedHost();

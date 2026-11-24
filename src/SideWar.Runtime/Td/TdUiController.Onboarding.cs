@@ -546,6 +546,7 @@ public sealed partial class TdUiController
         Card(TdIcon.Medal, "Nos ciclos, a trava por patente continua valendo.");
         Section("HUD E CONFIGURAÇÕES");
         Card(TdIcon.Expand, "Chip do HUD: toque para abrir/recolher.");
+        Card(TdIcon.Expand, "Clicar na coroa, nas ondas ou nos créditos abre o menu.");
         Card(TdIcon.Expand, "Arraste o cabeçalho para mover o menu.");
         Card(TdIcon.Pause, "Engrenagem: opções e velocidades.");
         Card(TdIcon.Minus, $"Esconder tudo: {_host.BossHotkey}.", TdTone.Accent);

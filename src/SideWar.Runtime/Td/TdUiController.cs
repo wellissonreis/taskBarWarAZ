@@ -914,7 +914,7 @@ public sealed partial class TdUiController
             Add(12, 6, 73 + coreExtra, 28, TdUiKind.Button, repText, TdUiAction.HudRestore,
                 tag: "core", icon: TdIcon.Medal, fill: (float)repRank.Fraction, tip: coreTip + $" {stageText.Trim()} Onda {shown}/{m.TotalWaves}. Clique para expandir o HUD.", highlight: needed && PulseOn, sub: _host.GameOptions.NoticeSize == 0 && _now() < _criticalNoticeUntil ? "critical-notice" : null);
             Add(96 + coreExtra, 11, 1, 18, TdUiKind.Separator, "");
-            Add(109 + coreExtra, 6, 167 + waveExtra, 28, TdUiKind.Label, $"{shown}/{m.TotalWaves}", tag: "wave", tip: $"{stageText}Onda {shown}/{m.TotalWaves}");
+            Add(109 + coreExtra, 6, 167 + waveExtra, 28, TdUiKind.Label, $"{shown}/{m.TotalWaves}", tag: "wave", action: TdUiAction.Menu, tip: $"{stageText}Onda {shown}/{m.TotalWaves}. Clique para abrir o menu.");
             Add(282 + coreExtra + waveExtra, 6, 28, 28, TdUiKind.Button, "", TdUiAction.HudExpand,
                 icon: TdIcon.Expand, tip: actionReady ? "Expandir HUD: há uma ação disponível" : "Expandir HUD", fill: actionReady ? 1f : 0f);
             return CompactHud(AddRankToHud(new TdHudView(HighlightHud(items), 316 + coreExtra + waveExtra, 40, Minimized: true, Wave: shown, TotalWaves: m.TotalWaves)), 0.55f);
@@ -923,9 +923,9 @@ public sealed partial class TdUiController
         float grow = coreExtra + waveExtra + moneyExtra;
         Add(12, 6, 73 + coreExtra, 28, TdUiKind.Button, repText, TdUiAction.HudRestore, tag: "core", icon: TdIcon.Medal, fill: (float)repRank.Fraction, tip: coreTip + $" {stageText.Trim()} Onda {shown}/{m.TotalWaves}. Créditos ¢{m.Credits}. Clique para abrir o menu.", highlight: needed && PulseOn, sub: _host.GameOptions.NoticeSize == 0 && _now() < _criticalNoticeUntil ? "critical-notice" : null);
         Add(96 + coreExtra, 11, 1, 18, TdUiKind.Separator, "");
-        Add(109 + coreExtra, 6, 167 + waveExtra, 28, TdUiKind.Label, $"{shown}/{m.TotalWaves}", tag: "wave", tip: $"{stageText}Onda {shown}/{m.TotalWaves}");
+        Add(109 + coreExtra, 6, 167 + waveExtra, 28, TdUiKind.Label, $"{shown}/{m.TotalWaves}", tag: "wave", action: TdUiAction.Menu, tip: $"{stageText}Onda {shown}/{m.TotalWaves}. Clique para abrir o menu.");
         Add(288 + coreExtra + waveExtra, 11, 1, 18, TdUiKind.Separator, "");
-        Add(301 + coreExtra + waveExtra, 6, 52 + moneyExtra, 28, TdUiKind.Money, _money.Display.ToString(System.Globalization.CultureInfo.InvariantCulture), tip: $"Créditos ¢{m.Credits}: ganhos de abates, bônus e perguntas; servem para comprar torres." + (_money.IncomeText is { } inc ? $" Renda recente {inc}." : ""), fill: _money.MilestoneGlow, sub: _money.IncomeText);
+        Add(301 + coreExtra + waveExtra, 6, 52 + moneyExtra, 28, TdUiKind.Money, _money.Display.ToString(System.Globalization.CultureInfo.InvariantCulture), TdUiAction.TowersOpen, tip: $"Créditos ¢{m.Credits}: ganhos de abates, bônus e perguntas; servem para comprar torres. Clique para abrir as torres." + (_money.IncomeText is { } inc ? $" Renda recente {inc}." : ""), fill: _money.MilestoneGlow, sub: _money.IncomeText);
         bool runeReady = m.CanAwakenAny;
         Add(359 + grow, 6, 28, 28, TdUiKind.Button, "", TdUiAction.RuneWindow, enabled: !ModalOpen, selected: RuneWindowOpen, icon: TdIcon.Star, tip: $"Runas {m.AwakenedCount}/{m.RuneWeb.Count}" + (runeReady ? $": {m.Fragments} fragmento(s), há runa para despertar. " : $": {m.Fragments} fragmento(s). ") + "Clique para abrir ou fechar a janela de runas.", fill: runeReady ? 1f : 0f);
         Add(399 + grow, 6, 28, 28, TdUiKind.Button, "", TdUiAction.QuickTowers, enabled: !ModalOpen, selected: QuickTowersOpen, icon: TdIcon.Castle, tip: PanelPinned ? "Torres (painel fixo: Jogo ou Configurações)" : "Torres: escolha e posicione sem pausar", fill: _money.BuyGlow);
@@ -973,7 +973,7 @@ public sealed partial class TdUiController
         const float space = 34f;
         var rank = _host.Rank.Current;
         var crown = new TdUiItem(new DipRect(4, view.TopPad + 4, 32, 32), TdUiKind.Label, "", Arg: (int)rank,
-            SArg: "rank-crown", Tip: $"Patente: {TdRank.DisplayName(rank)}");
+            Action: TdUiAction.Menu, SArg: "rank-crown", Tip: $"Patente: {TdRank.DisplayName(rank)}. Clique para abrir o menu.");
         return view with { Width = view.Width + space, Items = [crown, .. view.Items.Select(i => i with
             { Rect = new DipRect(i.Rect.X + space, i.Rect.Y, i.Rect.W, i.Rect.H) })] };
     }
