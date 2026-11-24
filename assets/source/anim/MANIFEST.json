@@ -6,7 +6,7 @@
  "entries": [
   {
    "file": "aks-attack.png",
-   "design": "original",
+   "design": "Torres — todas as 18 (animadas)",
    "role": "attack",
    "frames": 6,
    "durationSeconds": 0.5,
@@ -19,8 +19,9 @@
     128,
     128
    ],
-   "sha256": "644a206ac143fb0d8626703089705247d0219de5d89638faea785ef1f21a9bd4",
-   "generator": "tools/sprites/gen_aks.py"
+   "sha256": "2157b86feae93d072b2fbbf07110e4e095c8a8c3489e7c143ee04559802a5f26",
+   "generator": "tools/sprites/import_design6_towers.py",
+   "blob": "12f030feca55adf43b15e83e7b9bd97d"
   },
   {
    "file": "aks-fx.png",
@@ -42,7 +43,7 @@
   },
   {
    "file": "aks-idle.png",
-   "design": "original",
+   "design": "Torres — todas as 18 (animadas)",
    "role": "idle",
    "frames": 4,
    "durationSeconds": 0.667,
@@ -55,8 +56,9 @@
     128,
     128
    ],
-   "sha256": "75689a0ff6ffe674148d5dac42df26dc4d08340a3826f105fdb1e8ca36e24c78",
-   "generator": "tools/sprites/gen_aks.py"
+   "sha256": "c949131bdaa77b8af6bf640319b40b49ba61131c2d4e0db562e365e8b56bd496",
+   "generator": "tools/sprites/import_design6_towers.py",
+   "blob": "12f030feca55adf43b15e83e7b9bd97d"
   },
   {
    "file": "armored-walk.png",
@@ -78,7 +80,7 @@
   },
   {
    "file": "backup-attack.png",
-   "design": "original",
+   "design": "Torres — todas as 18 (animadas)",
    "role": "attack",
    "frames": 6,
    "durationSeconds": 0.5,
@@ -91,8 +93,9 @@
     128,
     128
    ],
-   "sha256": "10898586226f693bcee07220ab81d301a19f23d1b19be8b0ac02f711661b306d",
-   "generator": "tools/sprites/gen_backup.py"
+   "sha256": "71714318159581ea23ec0cde6a440fc868440d4feda2937d3a866b5284d5edd3",
+   "generator": "tools/sprites/import_design6_towers.py",
+   "blob": "9235a2af94535bc6bf30d8dbc3c6f7a5"
   },
   {
    "file": "backup-fx.png",
@@ -114,7 +117,7 @@
   },
   {
    "file": "backup-idle.png",
-   "design": "original",
+   "design": "Torres — todas as 18 (animadas)",
    "role": "idle",
    "frames": 4,
    "durationSeconds": 0.667,
@@ -127,8 +130,9 @@
     128,
     128
    ],
-   "sha256": "efa22ced43286127cac54e1ddf3ee16678fee1b2011a191e4eb429d256cd58b0",
-   "generator": "tools/sprites/gen_backup.py"
+   "sha256": "d89ef15e0d70611cd6c4a51e6f059226fa366979169b13b1d465dd9a2c014736",
+   "generator": "tools/sprites/import_design6_towers.py",
+   "blob": "9235a2af94535bc6bf30d8dbc3c6f7a5"
   },
   {
    "file": "balancer-attack.png",
@@ -186,7 +190,7 @@
   },
   {
    "file": "bastion-attack.png",
-   "design": "original",
+   "design": "Torres — todas as 18 (animadas)",
    "role": "attack",
    "frames": 6,
    "durationSeconds": 0.5,
@@ -199,8 +203,9 @@
     128,
     128
    ],
-   "sha256": "f4c9c4048b03d1d2120d5c853e143b057955cd89a623be6589ad098bb404c5e5",
-   "generator": "tools/sprites/gen_bastion.py"
+   "sha256": "ec3afe56bc5d2cea100300e64378d6286a8f6eaa7e84eba19be1d6e41d9603cb",
+   "generator": "tools/sprites/import_design6_towers.py",
+   "blob": "3b037f26f57d033b7ff7371012283614"
   },
   {
    "file": "bastion-fx.png",
@@ -222,7 +227,7 @@
   },
   {
    "file": "bastion-idle.png",
-   "design": "original",
+   "design": "Torres — todas as 18 (animadas)",
    "role": "idle",
    "frames": 4,
    "durationSeconds": 0.667,
@@ -235,8 +240,9 @@
     128,
     128
    ],
-   "sha256": "9b8c90d3fc93fa9fa43b8c188ac70ede6ca3abbb1760ec0c5c2522f87fb124d8",
-   "generator": "tools/sprites/gen_bastion.py"
+   "sha256": "00c829142e41a834659cec11546f7eba2b5a32d3dfc223a33136715d12437dcb",
+   "generator": "tools/sprites/import_design6_towers.py",
+   "blob": "3b037f26f57d033b7ff7371012283614"
   },
   {
    "file": "bolt-attack.png",
@@ -888,7 +894,7 @@
   },
   {
    "file": "queue-attack.png",
-   "design": "original",
+   "design": "Torres — todas as 18 (animadas)",
    "role": "attack",
    "frames": 6,
    "durationSeconds": 0.5,
@@ -901,8 +907,9 @@
     128,
     128
    ],
-   "sha256": "6b733fba0d99b52bf81b01544e29f4d3644488ed8ce224d8cf6504a52265a702",
-   "generator": "tools/sprites/gen_queue.py"
+   "sha256": "8e089df60609ac71049e5c5f8e89ae8bc771ad597c4acd35e36b0bfab3692c6c",
+   "generator": "tools/sprites/import_design6_towers.py",
+   "blob": "1940746e20e0624b93af1e3f83c08f15"
   },
   {
    "file": "queue-fx.png",
@@ -924,7 +931,7 @@
   },
   {
    "file": "queue-idle.png",
-   "design": "original",
+   "design": "Torres — todas as 18 (animadas)",
    "role": "idle",
    "frames": 4,
    "durationSeconds": 0.667,
@@ -937,8 +944,9 @@
     128,
     128
    ],
-   "sha256": "e225b04d69aa1b51227c0f731d822b76cceecb7f3d1cff2c6730f111b5f2cc5a",
-   "generator": "tools/sprites/gen_queue.py"
+   "sha256": "4877fda537d1540b674df2300a7f01e6e87131882ab67f447f8121f5d7621f9a",
+   "generator": "tools/sprites/import_design6_towers.py",
+   "blob": "1940746e20e0624b93af1e3f83c08f15"
   },
   {
    "file": "ransomware-walk.png",
@@ -1194,7 +1202,7 @@
   },
   {
    "file": "vault-attack.png",
-   "design": "original",
+   "design": "Torres — todas as 18 (animadas)",
    "role": "attack",
    "frames": 6,
    "durationSeconds": 0.5,
@@ -1207,8 +1215,9 @@
     128,
     128
    ],
-   "sha256": "e7afe97c3c279adc7459b12cee348f7b73acf0b2c6314fb08bf48e725610ca82",
-   "generator": "tools/sprites/gen_vault.py"
+   "sha256": "38c0d3508fd2323ae9254902aa9847470f8b4f9c2b7f3c624a977c845584b7d5",
+   "generator": "tools/sprites/import_design6_towers.py",
+   "blob": "af0d554eab41836601649c0a64347dde"
   },
   {
    "file": "vault-fx.png",
@@ -1230,7 +1239,7 @@
   },
   {
    "file": "vault-idle.png",
-   "design": "original",
+   "design": "Torres — todas as 18 (animadas)",
    "role": "idle",
    "frames": 4,
    "durationSeconds": 0.667,
@@ -1243,8 +1252,9 @@
     128,
     128
    ],
-   "sha256": "3ff08e2a89ab10b739bcf1ebbf1b2114267ef601f26271c18ccbfaa7499d14cf",
-   "generator": "tools/sprites/gen_vault.py"
+   "sha256": "0def994b11b314d0146415c91e943d65750348f0a48d73c545c409f505cf601f",
+   "generator": "tools/sprites/import_design6_towers.py",
+   "blob": "af0d554eab41836601649c0a64347dde"
   },
   {
    "file": "waf-attack.png",
