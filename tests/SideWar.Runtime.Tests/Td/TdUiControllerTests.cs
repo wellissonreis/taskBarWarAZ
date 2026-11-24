@@ -408,7 +408,7 @@ public sealed class TdUiControllerTests
     {
         var r = new Rig();
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
-        Assert.Equal(8, r.Ui.BuildPopover()!.Items.Count(i => i.Action == TdUiAction.GameOption));
+        Assert.Equal(9, r.Ui.BuildPopover()!.Items.Count(i => i.Action == TdUiAction.GameOption));
         for (int i = 0; i < 8; i++)
             r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.GameOption, i));
         Assert.Equal(new TdGameOptions(88, true, true, 80, false, false, false, true, 1), r.Host.GameOptions);
@@ -621,7 +621,7 @@ public sealed class TdUiControllerTests
         r.Ui.Activate(hud.Items.First(i => i.Action == TdUiAction.HudRestore));
         Assert.True(r.Ui.ModalOpen);
         var tabs = r.Ui.BuildPopover()!.Items.Where(i => i.Action == TdUiAction.ModalTab).ToArray();
-        Assert.Equal(6, tabs.Length);
+        Assert.Equal(7, tabs.Length);
         Assert.Equal((int)TdUiMode.Menu, tabs[0].Arg); // Jogo (patente/XP) é a primeira aba
         Assert.Equal("Jogo", tabs[0].Text);
     }
