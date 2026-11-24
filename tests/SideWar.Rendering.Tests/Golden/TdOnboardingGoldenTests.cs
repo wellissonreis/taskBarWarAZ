@@ -62,8 +62,9 @@ public sealed class TdOnboardingGoldenTests
     public static TheoryData<Scene, int> Cases()
     {
         var d = new TheoryData<Scene, int>();
-        foreach (var s in Enum.GetValues<Scene>())
-            foreach (int dpi in new[] { 96, 144 }) d.Add(s, dpi);
+        // Os passos antigos foram substituídos por TdTutorialTourGoldenTests; as demais cenas continuam cobertas aqui.
+        foreach (var varScene in new[] { Scene.QuizRight, Scene.QuizWrong, Scene.QuizTime, Scene.ChipPulse, Scene.Help, Scene.Tip })
+            foreach (int dpi in new[] { 96, 144 }) d.Add(varScene, dpi);
         return d;
     }
 
@@ -224,20 +225,9 @@ public sealed class TdOnboardingGoldenTests
     }
 
     [Fact]
-    public void Band_hint_changes_the_band_and_hud_highlight_changes_the_hud()
+    public void Tutorial_target_highlight_changes_the_hud()
     {
-        var (ui, match) = Setup(Scene.Point);
         using var typo = new Typography();
-        using var br = new TdBandRenderer(typo);
-        br.SetDpi(96);
-        var (bw, bh) = br.PhysicalSize(BandWidth);
-        using var with = new SKBitmap(new SKImageInfo(bw, bh, SKColorType.Bgra8888, SKAlphaType.Premul));
-        using var without = new SKBitmap(new SKImageInfo(bw, bh, SKColorType.Bgra8888, SKAlphaType.Premul));
-        using (var c = new SKCanvas(with)) br.Draw(c, match, 100.0, ui.View);
-        using (var c = new SKCanvas(without)) br.Draw(c, match, 100.0, TdView.None);
-        Assert.True(ui.View.BandHint);
-        Assert.False(with.Bytes.AsSpan().SequenceEqual(without.Bytes));
-
         var (ui2, _) = Setup(Scene.HudOpen);
         using var r = new TdUiRenderer(typo, 96) { TextEnabled = false };
         var hud = ui2.BuildHud();
