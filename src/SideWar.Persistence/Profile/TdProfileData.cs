@@ -8,7 +8,7 @@ namespace SideWar.Persistence.Profile;
 public sealed record TdProfileData
 {
     public const string Schema = "sidewar.td-profile";
-    public const int SchemaVersion = 7;
+    public const int SchemaVersion = 8;
 
     /// <summary>Total de selos já ganhos (1 por estrela nova, 1 por desafio, mais os iniciais da migração do idle).</summary>
     public int SealsEarned { get; init; }
@@ -47,6 +47,9 @@ public sealed record TdProfileData
     /// <summary>Recorde da corrida infinita (v7): fase absoluta mais alta alcançada (ciclo = (n-1)/6 + 1) e a onda mais alta dentro dela. 0 = nunca jogou.</summary>
     public int BestStageNumber { get; init; }
     public int BestStageWave { get; init; }
+
+    /// <summary>Contadores persistentes por id de inimigo ou variação.</summary>
+    public IReadOnlyList<TdEncounterData> Encounters { get; init; } = [];
 
     public static TdProfileData Default { get; } = new();
 
@@ -88,4 +91,11 @@ public sealed record TdInfiniteRunData
 {
     public ulong Seed { get; init; }
     public int MaxWave { get; init; }
+}
+
+/// <summary>Quantidade encontrada de um inimigo ou de uma variação.</summary>
+public sealed record TdEncounterData
+{
+    public string Id { get; init; } = "";
+    public int Count { get; init; }
 }

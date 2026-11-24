@@ -64,7 +64,7 @@ public sealed class TdCompositionTests : IDisposable
         Assert.True(seeded.Save(TdProfileData.Default with
         {
             RuneWeb = TdRuneWeb.ToText(0b11), RuneFragments = 9, Reputation = 500, SealsEarned = 4, BestRunWaves = 30,
-            PurchasedNodes = ["defense.damage1"],
+            PurchasedNodes = ["defense.damage1"], Encounters = [new TdEncounterData { Id = "swarm", Count = 3 }],
             Stages = [new TdStageProgressData { StageId = 1, Unlocked = true, Stars = 3, BestScore = 99 }, new TdStageProgressData { StageId = 2, Unlocked = true }],
         }));
         var td = TdComposition.Create(dir, "0.1.0", VisibleApp(), clock, new AppSettings(), _ => { }, seed: 7);
@@ -74,9 +74,10 @@ public sealed class TdCompositionTests : IDisposable
         Assert.Equal(0, td.Host.Match.AwakenedCount);
         Assert.Equal(0, td.Host.Match.Fragments);
         var reloaded = new TdProfileStore(SideWar.Persistence.IO.RealFileSystem.Instance, dir, "0.1.0").Load().Profile;
-        Assert.Equal(TdProfileData.Default with { IdleImportDone = true }, reloaded with { Stages = TdProfileData.Default.Stages, PurchasedNodes = [], UnlockedTowers = [], InfiniteRuns = [] });
+        Assert.Equal(TdProfileData.Default with { IdleImportDone = true }, reloaded with { Stages = TdProfileData.Default.Stages, PurchasedNodes = [], UnlockedTowers = [], InfiniteRuns = [], Encounters = TdProfileData.Default.Encounters });
         Assert.Equal(0, reloaded.Reputation);
         Assert.Empty(reloaded.PurchasedNodes);
+        Assert.Empty(reloaded.Encounters);
         Assert.Single(reloaded.Stages);
         Assert.True(reloaded.IdleImportDone);
     }

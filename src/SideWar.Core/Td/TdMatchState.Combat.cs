@@ -392,8 +392,11 @@ public sealed partial class TdMatchState
         double absorbed = Math.Min(e.ShieldHp, dmg);
         e.ShieldHp -= absorbed;
         e.Hp -= dmg - absorbed;
-        if (e.IsBoss && _enemyStats[e.DefIndex].Id.StartsWith("chefe_", StringComparison.Ordinal) && e.Hp <= e.MaxHp * 0.5)
+        if (e.IsBoss && !e.Enraged && _enemyStats[e.DefIndex].Id.StartsWith("chefe_", StringComparison.Ordinal) && e.Hp <= e.MaxHp * 0.5)
+        {
             e.Enraged = true;
+            Emit(TdEventType.EnemyEncountered, e.DefIndex, 2);
+        }
         e.LastHitTowerId = _damageSource;
         e.SinceDamageTicks = 0;
         _enemies[idx] = e;
@@ -717,6 +720,8 @@ public sealed partial class TdMatchState
     private TdEnemy MakeEnemy(int defIndex, int wave, double x, ushort mutations = 0)
     {
         var st = _enemyStats[defIndex];
+        Emit(TdEventType.EnemyEncountered, defIndex, 0);
+        if (mutations != 0 && !st.IsBoss) Emit(TdEventType.EnemyEncountered, defIndex, 1);
         double hp = st.IsBoss ? st.Hp : ScaledHp(st.Hp, wave);
         var e = new TdEnemy
         {

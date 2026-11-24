@@ -14,7 +14,14 @@ public static class TdProfileMigrations
         .Register(TdProfileData.Schema, 3, V3ToV4)
         .Register(TdProfileData.Schema, 4, V4ToV5)
         .Register(TdProfileData.Schema, 5, V5ToV6)
-        .Register(TdProfileData.Schema, 6, V6ToV7);
+        .Register(TdProfileData.Schema, 6, V6ToV7)
+        .Register(TdProfileData.Schema, 7, V7ToV8);
+
+    private static JsonNode V7ToV8(JsonNode root)
+    {
+        root["encounters"] ??= new JsonArray();
+        return root;
+    }
 
     /// <summary>
     /// v6 → v7: corrida infinita. Sem corrida salva (<c>runStageNumber</c> = 0: abre na fase sugerida, como antes). O recorde nasce das fases já

@@ -6,6 +6,25 @@ namespace SideWar.Persistence.Profile;
 /// <summary>Regras de selos do perfil v3 (RF-28.13), derivadas do conteúdo <c>td-meta.json</c>.</summary>
 public static class TdProfileRules
 {
+    /// <summary>Aplica cada encontro emitido pelo Core, incluindo variações independentes.</summary>
+    public static TdProfileData RecordEncounters(TdProfileData profile, TdMatchState match, IReadOnlyList<TdEvent> events)
+    {
+        var encounters = profile.Encounters.ToDictionary(e => e.Id, e => e.Count, StringComparer.Ordinal);
+        bool changed = false;
+        foreach (var e in events)
+        {
+            if (e.Type != TdEventType.EnemyEncountered) continue;
+            var id = match.EnemyDefId((int)e.A) + (e.B == 1 ? ":elite" : e.B == 2 ? ":enraged" : "");
+            encounters.TryGetValue(id, out var count);
+            encounters[id] = (int)Math.Min(TdProfileSerializer.MaxScore, (long)count + 1);
+            changed = true;
+        }
+        return !changed ? profile : profile with
+        {
+            Encounters = encounters.Select(e => new TdEncounterData { Id = e.Key, Count = e.Value }).ToArray(),
+        };
+    }
+
     public static TdProfileData RecordLegacy(TdProfileData profile, string runId, int waves)
     {
         ArgumentException.ThrowIfNullOrEmpty(runId);

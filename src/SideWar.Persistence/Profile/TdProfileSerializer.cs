@@ -70,6 +70,9 @@ public static class TdProfileSerializer
             Stages = stages,
             PurchasedNodes = SanitizeNodes(p.PurchasedNodes),
             UnlockedTowers = Distinct(p.UnlockedTowers),
+            Encounters = (p.Encounters ?? []).Where(e => e is not null && !string.IsNullOrWhiteSpace(e.Id) && e.Count > 0)
+                .GroupBy(e => e.Id, StringComparer.Ordinal).Select(g => new TdEncounterData { Id = g.Key, Count = Math.Clamp(g.Max(e => e.Count), 1, MaxScore) })
+                .Take(MaxListEntries).ToArray(),
             InfiniteRuns = (p.InfiniteRuns ?? [])
                 .Where(r => r is not null)
                 .GroupBy(r => r.Seed)

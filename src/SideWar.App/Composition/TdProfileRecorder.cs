@@ -77,6 +77,8 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
 
     public bool StageUnlocked(int id) => id == 1 || Profile.Stages.Any(s => s.StageId == id && s.Unlocked);
 
+    public int EncounterCount(string id) => Profile.Encounters.FirstOrDefault(e => e.Id == id)?.Count ?? 0;
+
     public int StageStars(int id) => Profile.Stages.FirstOrDefault(s => s.StageId == id)?.Stars ?? 0;
 
     public bool StageCrown(int id) => Profile.Stages.FirstOrDefault(s => s.StageId == id)?.Crown ?? false;
@@ -112,6 +114,8 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
     public void OnEvents(TdMatchState match, IReadOnlyList<TdEvent> events)
     {
         SyncRunes(match);
+        var encounters = TdProfileRules.RecordEncounters(Profile, match, events);
+        if (!ReferenceEquals(encounters, Profile)) { Profile = encounters; Save(); }
         // Fase absoluta de cada onda do lote: o estado já avançou para a fase seguinte quando a última onda da fase foi concluída no mesmo passo.
         int clearsInBatch = 0;
         for (int i = 0; i < events.Count; i++) if (events[i].Type == TdEventType.StageCleared) clearsInBatch++;

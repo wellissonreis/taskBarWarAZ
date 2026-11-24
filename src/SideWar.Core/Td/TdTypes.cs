@@ -183,6 +183,8 @@ public enum TdEventType : byte
     ReputationGained,
     // REPUTACAO: inimigo chegou à base. A = XP de reputação perdido (já com o escudo); B = dano que ele daria ao núcleo.
     BaseAttacked,
+    // A = índice de conteúdo; B = 0 normal, 1 elite, 2 enfurecido.
+    EnemyEncountered,
 }
 
 /// <summary>Evento observável (não entra no hash). <c>A</c>/<c>B</c>: valores do evento (onda, créditos, id etc.).</summary>
