@@ -16,7 +16,7 @@ public readonly record struct TdFusionCheck(CommandReason Reason, long Cost, lon
 public sealed partial class TdMatchState
 {
     /// <summary>Fusão liberada nesta corrida (fase absoluta mínima do conteúdo; não volta a bloquear).</summary>
-    public bool FusionUnlocked => _stageNumber >= _content.Fusion.MinStage;
+    public bool FusionUnlocked => CurrentRankId >= _content.Fusion.MinRank;
 
     /// <summary>Papel da torre na fusão: attack | control | support | economy.</summary>
     public string FusionRole(int defIndex)
@@ -79,7 +79,7 @@ public sealed partial class TdMatchState
         if (t.HasModule) return R(CommandReason.AlreadyFused);
         if (!FusionUnlocked) return R(CommandReason.FusionLocked);
         var def = _content.Towers[mi];
-        if (UnlockedTowerStage < def.UnlockStage) return R(CommandReason.TowerLocked);
+        if (CurrentRankId < def.MinRank || CurrentRankId < _content.Towers[t.DefIndex].MinRank) return R(CommandReason.TowerLocked);
         if (def.Stats.TryGetValue("maxPerPlayer", out var limit) && TowerCount(mi) >= limit) return R(CommandReason.TowerTypeLimit);
         if (Credits < cost) return R(CommandReason.InsufficientCredits, cost - Credits);
         return R(CommandReason.None);
@@ -96,6 +96,8 @@ public sealed partial class TdMatchState
         if (!t.Placed || !s.Placed) return (-1, -1, CommandReason.NotPlaced);
         if (t.HasModule || s.HasModule) return (-1, -1, CommandReason.AlreadyFused);
         if (!FusionUnlocked) return (-1, -1, CommandReason.FusionLocked);
+        if (CurrentRankId < _content.Towers[t.DefIndex].MinRank || CurrentRankId < _content.Towers[s.DefIndex].MinRank)
+            return (-1, -1, CommandReason.TowerLocked);
         bool sourceStronger = _content.Towers[s.DefIndex].Cost > _content.Towers[t.DefIndex].Cost;
         return sourceStronger ? (sourceId, targetId, CommandReason.None) : (targetId, sourceId, CommandReason.None);
     }

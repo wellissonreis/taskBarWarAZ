@@ -1,5 +1,5 @@
 {
-  "minStage": 2,
+  "minRank": 1,
   "resolveOrder": ["base", "module", "aura"],
   "roles": {
     "attack": ["bolt", "cannon", "functions", "cdn", "cosmos", "pipeline", "dns", "eventgrid", "firewall"],

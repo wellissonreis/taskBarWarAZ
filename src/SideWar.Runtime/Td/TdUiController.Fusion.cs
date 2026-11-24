@@ -41,11 +41,11 @@ public sealed partial class TdUiController
     public static string? FusionReasonText(TdMatchState m, in TdFusionCheck c) => c.Reason switch
     {
         CommandReason.None => null,
-        CommandReason.FusionLocked => $"Fusão libera na fase {m.Content.Fusion.MinStage}.",
+        CommandReason.FusionLocked => $"Fusão libera na patente {TdRank.DisplayName((TdRankLevel)m.Content.Fusion.MinRank)}.",
         CommandReason.InvalidPhase => "Só dá para fundir em Preparo ou durante a Onda.",
         CommandReason.NotPlaced => "Torre sem posição: reposicione antes de fundir.",
         CommandReason.AlreadyFused => "Esta torre já tem módulo (máximo de 2 componentes).",
-        CommandReason.TowerLocked => "Esse módulo ainda não está desbloqueado.",
+        CommandReason.TowerLocked => "Esse módulo exige uma patente maior.",
         CommandReason.TowerTypeLimit => "Limite desse tipo atingido (conta também os módulos).",
         CommandReason.InsufficientCredits => $"Faltam ${c.Missing} créditos.",
         CommandReason.TowerNotFound => "A torre não existe mais.",
@@ -84,9 +84,9 @@ public sealed partial class TdUiController
     /// <summary>Motivo curto (cabe no título do painel) de a fusão por soltar estar bloqueada.</summary>
     public static string DropReasonText(TdMatchState m, in TdFusionCheck c) => c.Reason switch
     {
-        CommandReason.FusionLocked => $"só na fase {m.Content.Fusion.MinStage}",
+        CommandReason.FusionLocked => $"só na patente {TdRank.DisplayName((TdRankLevel)m.Content.Fusion.MinRank)}",
         CommandReason.AlreadyFused => "torre já fundida",
-        CommandReason.TowerLocked => "módulo bloqueado",
+        CommandReason.TowerLocked => "patente insuficiente para o módulo",
         CommandReason.TowerTypeLimit => "limite do tipo",
         CommandReason.InsufficientCredits => $"faltam ${c.Missing}",
         CommandReason.InvalidPhase => "fora de Preparo/Onda",
@@ -359,7 +359,7 @@ public sealed partial class TdUiController
             float half = (s.Width - 2 * Pad - 4f) / 2f;
             int col = 0;
             float rowY = s.Y;
-            foreach (var d in m.Content.Towers.Where(t => t.UnlockStage <= m.UnlockedTowerStage))
+            foreach (var d in m.Content.Towers.Where(t => t.MinRank <= m.CurrentRankId))
             {
                 s.Items.Add(new TdUiItem(new DipRect(Pad + col * (half + 4f), rowY, half, FuseButtonH), TdUiKind.Button,
                     d.Name, TdUiAction.FusionSelectModule, SArg: d.Id, FontSize: FuseFont));
@@ -389,7 +389,7 @@ public sealed partial class TdUiController
             for (int i = 0; i < towers.Length; i++)
             {
                 var d = towers[i];
-                if (d.UnlockStage > m.UnlockedTowerStage) continue;
+                if (d.MinRank > m.CurrentRankId) continue;
                 var c = m.CheckFusion(_fuseBase, d.Id);
                 bool poor = c.Reason is CommandReason.InsufficientCredits;
                 s.Items.Add(new TdUiItem(new DipRect(Pad + col * (half + 4f), rowY, half, FuseButtonH), TdUiKind.Button, $"{d.Name} ${c.Cost}", TdUiAction.FusePick, SArg: d.Id,

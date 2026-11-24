@@ -81,8 +81,8 @@ public static class TdStripScenes
             Stages = new TdStagesDef(rules, [stage]),
             Waves = new TdWavesDef([new TdStageWavesDef(1, [wave])]),
             Enemies = enemies,
-            Towers = [.. Embedded.Towers.Select(t => t with { Cost = 10, UnlockStage = 1 })],
-            Fusion = fusion ? Embedded.Fusion with { MinStage = 1 } : Embedded.Fusion,
+            Towers = [.. Embedded.Towers.Select(t => t with { Cost = 10, MinRank = 0 })],
+            Fusion = fusion ? Embedded.Fusion with { MinRank = 0 } : Embedded.Fusion,
         };
     }
 

@@ -12,7 +12,7 @@ namespace SideWar.Core.Tests;
 /// <summary>Parte D: toda combinação base+módulo tem nome próprio (não genérico) e único; os nomes vivem só em td-fusion.json.</summary>
 public sealed class TdFusionNamesTests
 {
-    private static TdMatchState Create() => TdMatchState.Create(TdContentLoader.LoadEmbedded(), 6, Rng.Seed(7, 54));
+    private static TdMatchState Create() => TdMatchState.Create(TdContentLoader.LoadEmbedded(), 6, Rng.Seed(7, 54), null, TdMatchOptions.Classic with { InitialReputation = TdRank.Threshold(TdRankLevel.Arquiteto) });
 
     [Fact]
     public void Every_ordered_base_module_combination_has_a_unique_non_generic_name()
@@ -58,7 +58,7 @@ public sealed class TdFusionDragTests
 {
     private static TdMatchState Arena()
     {
-        var m = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 6, Rng.Seed(7, 54));
+        var m = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 6, Rng.Seed(7, 54), null, TdMatchOptions.Classic with { InitialReputation = TdRank.Threshold(TdRankLevel.Arquiteto) });
         m.Apply(new LayoutChanged(StripLayout.Create(1000, 954, 88, 4, 920, TowerHost.Band, [new FreeZone(32, 968)])));
         typeof(TdMatchState).GetProperty("Credits")!.SetValue(m, 100000L);
         return m;
@@ -103,7 +103,7 @@ public sealed class TdFusionDragTests
     public void Result_base_always_costs_at_least_as_much_as_both_originals_for_every_pair()
     {
         var content = TdContentLoader.LoadEmbedded();
-        var ids = content.Towers.Where(t => t.UnlockStage <= 6).Select(t => t.Id).ToArray();
+        var ids = content.Towers.Where(t => t.MinRank <= 5).Select(t => t.Id).ToArray();
         foreach (var a in ids)
             foreach (var b in ids)
             {

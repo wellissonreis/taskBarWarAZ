@@ -300,9 +300,9 @@ public sealed class TdMoneyTests
     public void Towers_button_glows_only_on_upward_crossings_of_the_cheapest_tower_cost()
     {
         var r = new Rig();
-        long Cost() => Enumerable.Range(0, r.Match.Content.Towers.Length).Where(i => r.Match.StageId >= r.Match.Content.Towers[i].UnlockStage).Min(i => r.Match.NextTowerCost(i));
+        long Cost() => Enumerable.Range(0, r.Match.Content.Towers.Length).Where(i => r.Match.CurrentRankId >= r.Match.Content.Towers[i].MinRank).Min(i => r.Match.NextTowerCost(i));
         Assert.Equal(0f, r.Ui.BuildHud().Items.Single(i => i.Action == TdUiAction.QuickTowers).Fill); // já podia comprar ao abrir: sem brilho
-        string Cheapest() => r.Match.Content.Towers.Where((t, i) => r.Match.StageId >= t.UnlockStage).MinBy(t => r.Match.NextTowerCost(Array.IndexOf(r.Match.Content.Towers, t)))!.Id;
+        string Cheapest() => r.Match.Content.Towers.Where((t, i) => r.Match.CurrentRankId >= t.MinRank).MinBy(t => r.Match.NextTowerCost(Array.IndexOf(r.Match.Content.Towers, t)))!.Id;
         for (int x = 100; r.Match.Credits >= Cost() && x < 900; x += 90) r.Match.Apply(new SideWar.Core.Td.BuildTower(Cheapest(), x));
         Assert.True(r.Match.Credits < Cost(), $"credits {r.Match.Credits} custo {Cost()} torres {r.Match.Towers.Count}");
         r.Now += Dt; r.Ui.BuildHud();

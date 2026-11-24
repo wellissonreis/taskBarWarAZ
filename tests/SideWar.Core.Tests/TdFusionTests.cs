@@ -40,7 +40,7 @@ public sealed class TdFusionTests
     }
 
     private static TdMatchState Arena(string enemy = "grunt", int count = 1, double armor = 0, int stage = 6, ulong seed = 1) =>
-        TdMatchState.Create(Rig(enemy, count, armor), stage, Rng.Seed(seed, 54));
+        TdMatchState.Create(Rig(enemy, count, armor), stage, Rng.Seed(seed, 54), null, TdMatchOptions.Classic with { InitialReputation = stage == 1 ? 0 : TdRank.Threshold(TdRankLevel.Arquiteto) });
 
     private static int Build(TdMatchState s, string id, int x)
     {
@@ -389,7 +389,7 @@ public sealed class TdFusionTests
             new(200, new FuseTower(1, "cannon"), 0), // rejeitada (já é híbrida) quando fuse; aceita quando não
             new(300, new SellTower(1), 0),
         ];
-        TdReplayResult Run(bool fuse) => TdReplayRunner.Run(content, new TdReplayScript(6, 9, 54, Log(fuse), 600, TdMatchOptions.Default));
+        TdReplayResult Run(bool fuse) => TdReplayRunner.Run(content, new TdReplayScript(6, 9, 54, Log(fuse), 600, TdMatchOptions.Default with { InitialReputation = TdRank.Threshold(TdRankLevel.Arquiteto) }));
         var a = Run(true); var b = Run(true); var c = Run(false);
         Assert.Equal(a, b);
         Assert.NotEqual(a.StateHash, c.StateHash);
@@ -433,6 +433,6 @@ public sealed class TdFusionTests
         Bad(With("\"effect\": \"hitSlow\"", "\"effect\": \"laser\""), "effect desconhecido 'laser'");
         Bad(With("\"module\": \"cannon\", \"name\": \"Raio explosivo\"", "\"module\": \"policy\", \"name\": \"Raio explosivo\""), "hitSplash exige");
         Bad(With("\"base\": \"balancer\"", "\"base\": \"nada\""), "torre inexistente");
-        Bad(With("\"minStage\": 2", "\"minStage\": 99"), "minStage");
+        Bad(With("\"minRank\": 1", "\"minRank\": 99"), "minRank");
     }
 }

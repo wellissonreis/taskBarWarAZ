@@ -38,7 +38,7 @@ public sealed class TdCombatTests
         c with { Enemies = c.Enemies with { Enemies = c.Enemies.Enemies.Select(e => e.Id == id ? e with { Hp = hp } : e).ToArray() } };
 
     private static TdMatchState New(TdContent c, ulong seed = 1, IEnumerable<string>? meta = null) =>
-        TdMatchState.Create(c, 6, Rng.Seed(seed, 54), meta);
+        TdMatchState.Create(c, 6, Rng.Seed(seed, 54), meta, TdMatchOptions.Classic with { InitialReputation = TdRank.Threshold(TdRankLevel.Arquiteto) });
 
     private static int Build(TdMatchState s, string id, int x)
     {
@@ -309,8 +309,8 @@ public sealed class TdCombatTests
         Assert.Equal(0, s.AbilityStatuses.Single(a => a.Id == "scale").ActiveTicks);
     }
 
-    [Fact(DisplayName = "RF-28.9 abilities locked by stage: firewall needs stage 3")]
-    public void Ability_LockedByStage()
+    [Fact(DisplayName = "RF-28.9 abilities locked by rank: firewall needs Pleno")]
+    public void Ability_LockedByRank()
     {
         var s = TdMatchState.Create(Content, 1, Rng.Seed(1, 1));
         Go(s);

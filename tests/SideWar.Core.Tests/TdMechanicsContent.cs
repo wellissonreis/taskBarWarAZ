@@ -37,7 +37,7 @@ internal static class TdMechanicsContent
     // Fusão reduzida às 5 torres do conteúdo congelado (a validação exige papel para toda torre); os testes de fusão usam o conteúdo embarcado.
     private const string Fusion = """
 {
-  "minStage": 3, "resolveOrder": ["base", "module", "aura"],
+  "minRank": 1, "resolveOrder": ["base", "module", "aura"],
   "roles": {"attack": ["bolt", "cannon"], "control": ["frost", "balancer"], "support": ["scaleset"], "economy": []},
   "generic": {"attack": {"intervalSeconds": 3, "damagePct": 0.35}, "control": {"intervalSeconds": 3, "slowFactor": 0.85, "slowSeconds": 2}, "support": {"damageAuraBp": 500}, "economy": {"incomePct": 0.5}},
   "pairs": [{"base": "frost", "module": "bolt", "name": "Gelo elétrico", "effect": "hitDamage", "params": {"damagePct": 0.35}}]
@@ -46,9 +46,9 @@ internal static class TdMechanicsContent
 
     private const string Abilities = """
 [
-  { "id": "scale",    "name": "Escalar",            "effect": "+50% de cadência em todas as torres por 8 s.", "cooldownSeconds": 60, "durationSeconds": 8, "unlockStage": 1, "unlockMetaNode": null, "usesPerStage": null, "stats": { "cadenceBonus": 0.5 } },
-  { "id": "firewall", "name": "Firewall global",    "effect": "Lentidão de 50% (20% em chefes) em todos os inimigos por 6 s.", "cooldownSeconds": 75, "durationSeconds": 6, "unlockStage": 3, "unlockMetaNode": null, "usesPerStage": null, "stats": { "slow": 0.5, "bossSlow": 0.2 } },
-  { "id": "snapshot", "name": "Restaurar snapshot", "effect": "Recupera até 75 de XP perdido nesta fase; 1 uso por fase.", "cooldownSeconds": 0, "durationSeconds": 0, "unlockStage": null, "unlockMetaNode": "operation.snapshot", "usesPerStage": 1, "stats": { "integrity": 3 } }
+  { "id": "scale",    "name": "Escalar",            "effect": "+50% de cadência em todas as torres por 8 s.", "cooldownSeconds": 60, "durationSeconds": 8, "minRank": 0, "unlockMetaNode": null, "usesPerStage": null, "stats": { "cadenceBonus": 0.5 } },
+  { "id": "firewall", "name": "Firewall global",    "effect": "Lentidão de 50% (20% em chefes) em todos os inimigos por 6 s.", "cooldownSeconds": 75, "durationSeconds": 6, "minRank": 2, "unlockMetaNode": null, "usesPerStage": null, "stats": { "slow": 0.5, "bossSlow": 0.2 } },
+  { "id": "snapshot", "name": "Restaurar snapshot", "effect": "Recupera até 75 de XP perdido nesta fase; 1 uso por fase.", "cooldownSeconds": 0, "durationSeconds": 0, "minRank": null, "unlockMetaNode": "operation.snapshot", "usesPerStage": 1, "stats": { "integrity": 3 } }
 ]
 """;
 
@@ -154,11 +154,11 @@ internal static class TdMechanicsContent
 
     private const string Towers = """
 [
-  {"id": "bolt", "name": "Raio", "flavor": "Como uma Azure VM: capacidade bruta sob demanda.", "role": "Alvo único, longo alcance, polivalente", "kind": "attack", "targets": "both", "defaultTargeting": "first", "cost": 70, "range": 150, "damage": 14, "interval": 0.6, "unlockStage": 1, "stats": {}, "strong": ["flying", "drain", "durable"], "weak": ["swarm"], "weaknessText": "Dano por tiro baixo contra enxames e blindados."},
-  {"id": "frost", "name": "Gelo", "flavor": "Como um WAF: filtra e retarda o que chega.", "role": "Controle: lentidão e marca", "kind": "attack", "targets": "both", "defaultTargeting": "first", "cost": 90, "range": 100, "damage": 5, "interval": 0.9, "unlockStage": 1, "stats": {"slowFactor": 0.7}, "strong": ["fast", "flying"], "weak": ["regen", "armored", "boss"], "weaknessText": "Dano quase nulo: não mata sozinha; chefes resistem ao controle."},
-  {"id": "cannon", "name": "Canhão", "flavor": "Como a proteção contra DDoS: absorve o grosso do ataque.", "role": "Área e dano pesado, só solo", "kind": "attack", "targets": "ground", "defaultTargeting": "strong", "cost": 120, "range": 110, "damage": 45, "interval": 1.9, "unlockStage": 1, "stats": {"splashRadius": 40, "splashFactor": 0.5}, "strong": ["swarm", "armored", "basic"], "weak": ["flying", "fast", "durable"], "weaknessText": "Sem voadores nem rápidos; fraco contra duráveis."},
-  {"id": "balancer", "name": "Balanceador", "flavor": "Como um Load Balancer: segura e distribui a carga.", "role": "Retém inimigos de solo com nós bloqueadores", "kind": "blocker", "targets": "ground", "defaultTargeting": null, "cost": 100, "range": 90, "damage": 0, "interval": 0, "unlockStage": 2, "stats": {"nodeDamagePerSecond": 4, "nodeCooldownSeconds": 6, "nodes": 1, "nodeHolds": 1}, "strong": ["fast", "swarm", "basic"], "weak": ["flying"], "weaknessText": "Não segura voadores nem chefes por muito tempo."},
-  {"id": "scaleset", "name": "Scale Set", "flavor": "Como VM Scale Sets: mais instâncias quando a demanda sobe.", "role": "Suporte: bônus às torres vizinhas (não ataca)", "kind": "support", "targets": "none", "defaultTargeting": null, "cost": 150, "range": 120, "damage": 0, "interval": 0, "unlockStage": 4, "stats": {}, "strong": ["durable"], "weak": ["drain"], "weaknessText": "Não ataca e perde o efeito quando desativado por drenagem."}
+  {"id": "bolt", "name": "Raio", "flavor": "Como uma Azure VM: capacidade bruta sob demanda.", "role": "Alvo único, longo alcance, polivalente", "kind": "attack", "targets": "both", "defaultTargeting": "first", "cost": 70, "range": 150, "damage": 14, "interval": 0.6, "minRank": 0, "stats": {}, "strong": ["flying", "drain", "durable"], "weak": ["swarm"], "weaknessText": "Dano por tiro baixo contra enxames e blindados."},
+  {"id": "frost", "name": "Gelo", "flavor": "Como um WAF: filtra e retarda o que chega.", "role": "Controle: lentidão e marca", "kind": "attack", "targets": "both", "defaultTargeting": "first", "cost": 90, "range": 100, "damage": 5, "interval": 0.9, "minRank": 0, "stats": {"slowFactor": 0.7}, "strong": ["fast", "flying"], "weak": ["regen", "armored", "boss"], "weaknessText": "Dano quase nulo: não mata sozinha; chefes resistem ao controle."},
+  {"id": "cannon", "name": "Canhão", "flavor": "Como a proteção contra DDoS: absorve o grosso do ataque.", "role": "Área e dano pesado, só solo", "kind": "attack", "targets": "ground", "defaultTargeting": "strong", "cost": 120, "range": 110, "damage": 45, "interval": 1.9, "minRank": 0, "stats": {"splashRadius": 40, "splashFactor": 0.5}, "strong": ["swarm", "armored", "basic"], "weak": ["flying", "fast", "durable"], "weaknessText": "Sem voadores nem rápidos; fraco contra duráveis."},
+  {"id": "balancer", "name": "Balanceador", "flavor": "Como um Load Balancer: segura e distribui a carga.", "role": "Retém inimigos de solo com nós bloqueadores", "kind": "blocker", "targets": "ground", "defaultTargeting": null, "cost": 100, "range": 90, "damage": 0, "interval": 0, "minRank": 1, "stats": {"nodeDamagePerSecond": 4, "nodeCooldownSeconds": 6, "nodes": 1, "nodeHolds": 1}, "strong": ["fast", "swarm", "basic"], "weak": ["flying"], "weaknessText": "Não segura voadores nem chefes por muito tempo."},
+  {"id": "scaleset", "name": "Scale Set", "flavor": "Como VM Scale Sets: mais instâncias quando a demanda sobe.", "role": "Suporte: bônus às torres vizinhas (não ataca)", "kind": "support", "targets": "none", "defaultTargeting": null, "cost": 150, "range": 120, "damage": 0, "interval": 0, "minRank": 3, "stats": {}, "strong": ["durable"], "weak": ["drain"], "weaknessText": "Não ataca e perde o efeito quando desativado por drenagem."}
 ]
 """;
 

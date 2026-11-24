@@ -216,7 +216,7 @@ public static class TdContentValidator
             Req(e, TowerTargets.Contains(t.Targets), $"{o}.targets inválido '{t.Targets}'");
             Req(e, t.Cost > 0, $"{o}.cost deve ser > 0");
             Req(e, t.Range > 0, $"{o}.range (unidades) deve ser > 0");
-            Req(e, t.UnlockStage >= 1 && t.UnlockStage <= stageCount, $"{o}.unlockStage referencia fase inexistente");
+            Req(e, t.MinRank is >= 0 and <= 5, $"{o}.minRank referencia patente inexistente");
             if (t.Kind == "attack")
             {
                 Req(e, t.Damage > 0 && t.Interval is >= 0.1 and <= 5, $"{o}: torre de ataque exige damage > 0 e interval em [0,1; 5] s");
@@ -402,8 +402,8 @@ public static class TdContentValidator
             Req(e, Text(a.Name) && Text(a.Effect), $"{o}: name e effect não podem ser vazios");
             Req(e, a.CooldownSeconds >= 0 && a.DurationSeconds >= 0, $"{o}: cooldownSeconds e durationSeconds devem ser >= 0");
             Req(e, a.UsesPerStage is null or >= 1, $"{o}.usesPerStage deve ser >= 1");
-            Req(e, (a.UnlockStage is null) != (a.UnlockMetaNode is null), $"{o}: exatamente um entre unlockStage e unlockMetaNode");
-            Req(e, a.UnlockStage is null || (a.UnlockStage >= 1 && a.UnlockStage <= stageCount), $"{o}.unlockStage referencia fase inexistente");
+            Req(e, (a.MinRank is null) != (a.UnlockMetaNode is null), $"{o}: exatamente um entre minRank e unlockMetaNode");
+            Req(e, a.MinRank is null || (a.MinRank >= 0 && a.MinRank <= 5), $"{o}.minRank referencia patente inexistente");
             Req(e, a.UnlockMetaNode is null || nodes.Contains(a.UnlockMetaNode), $"{o}.unlockMetaNode referencia nó inexistente '{a.UnlockMetaNode}'");
             Req(e, a.UsesPerStage is not null || a.CooldownSeconds > 0, $"{o}: sem usesPerStage exige cooldownSeconds > 0");
         }
@@ -499,7 +499,7 @@ public static class TdContentValidator
     {
         var f = c.Fusion;
         var towers = c.Towers.ToDictionary(t => t.Id, StringComparer.Ordinal);
-        Req(e, f.MinStage >= 1 && f.MinStage <= c.Stages.Stages.Length, "td-fusion.minStage referencia fase inexistente");
+        Req(e, f.MinRank is >= 0 and <= 5, "td-fusion.minRank referencia patente inexistente");
         Req(e, f.ResolveOrder is ["base", "module", "aura"], "td-fusion.resolveOrder deve ser [base, module, aura]");
 
         var roleOf = new Dictionary<string, string>(StringComparer.Ordinal);

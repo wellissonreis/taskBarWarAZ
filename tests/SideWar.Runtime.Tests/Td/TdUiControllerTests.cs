@@ -398,7 +398,7 @@ public sealed class TdUiControllerTests
 
     private static TdMatchState Create(int stage)
     {
-        var m = TdMatchState.Create(TdContentLoader.LoadEmbedded(), stage, Rng.Seed(7, 54));
+        var m = TdMatchState.Create(TdContentLoader.LoadEmbedded(), stage, Rng.Seed(7, 54), null, TdMatchOptions.Classic with { InitialReputation = stage == 1 ? null : TdRank.Threshold((TdRankLevel)(stage - 1)) });
         m.Apply(new LayoutChanged(StripLayout.Create(Width, Width - 46, 88, 4, Width - 80, TowerHost.Band, [new FreeZone(32, Width - 32)])));
         return m;
     }
@@ -586,7 +586,7 @@ public sealed class TdUiControllerTests
         foreach (var category in new[] { "attack", "control", "support", "economy" })
         {
             r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.TowerCategory, SArg: category));
-            var expected = r.Match.Content.Towers.Where(t => t.Category == category && t.UnlockStage <= r.Match.UnlockedTowerStage).Select(t => t.Id).ToArray();
+            var expected = r.Match.Content.Towers.Where(t => t.Category == category && t.MinRank <= r.Match.CurrentRankId).Select(t => t.Id).ToArray();
             var actual = new List<string>();
             for (int page = 0; page < 20; page++)
             {
@@ -621,7 +621,7 @@ public sealed class TdUiControllerTests
         var view = r.Ui.BuildPopover()!;
         Assert.Contains(view.Items, i => i.Text.StartsWith("Próxima:", StringComparison.Ordinal));
         Assert.All(view.Items.Where(i => i.Action == TdUiAction.ChooseTower), item =>
-            Assert.True(r.Match.Content.Towers.Single(t => t.Id == item.SArg).UnlockStage <= r.Match.UnlockedTowerStage));
+            Assert.True(r.Match.Content.Towers.Single(t => t.Id == item.SArg).MinRank <= r.Match.CurrentRankId));
     }
 
     [Fact]

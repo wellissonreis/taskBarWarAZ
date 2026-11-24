@@ -80,7 +80,7 @@ public static class TdAlertCatalog
         var towers = m.Content.Towers;
         for (int i = 0; i < towers.Length; i++)
         {
-            if (m.UnlockedTowerStage < towers[i].UnlockStage) continue;
+            if (m.CurrentRankId < towers[i].MinRank) continue;
             if (towers[i].Stats.TryGetValue("maxPerPlayer", out var limit) && m.TowerCount(i) >= limit) continue;
             cheapest = Math.Min(cheapest, m.NextTowerCost(i));
         }

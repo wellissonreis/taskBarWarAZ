@@ -43,10 +43,10 @@ public sealed class TdScrollGoldenTests
 
     private static TdPopoverView Build(string scene)
     {
-        var match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 6, Rng.Seed(7, 54));
+        var match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 6, Rng.Seed(7, 54), null, TdMatchOptions.Classic with { InitialReputation = TdRank.Threshold(TdRankLevel.Arquiteto) });
         match.Apply(new LayoutChanged(StripLayout.Create(1000, 954, 88, 4, 920, TowerHost.Band, [new FreeZone(32, 968)])));
         typeof(TdMatchState).GetProperty("Credits")!.SetValue(match, 5000L);
-        string[] ids = [.. match.Content.Towers.Where(t => t.UnlockStage <= match.UnlockedTowerStage).Select(t => t.Id)];
+        string[] ids = [.. match.Content.Towers.Where(t => t.MinRank <= match.CurrentRankId).Select(t => t.Id)];
         for (int x = 100, k = 0; match.Towers.Count < 9 && x < 960; x += 80, k++) match.Apply(new BuildTower(ids[k % ids.Length], x));
         var ui = new TdUiController(() => match, c => match.Apply(c), new Host(), () => 0.0);
         ui.Sync();

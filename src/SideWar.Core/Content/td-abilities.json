@@ -1,5 +1,5 @@
 [
-  { "id": "scale",    "name": "Escalar",            "effect": "+50% de cadência em todas as torres por 8 s.", "cooldownSeconds": 60, "durationSeconds": 8, "unlockStage": 1, "unlockMetaNode": null, "usesPerStage": null, "stats": { "cadenceBonus": 0.5 } },
-  { "id": "firewall", "name": "Firewall global",    "effect": "Lentidão de 50% (20% em chefes) em todos os inimigos por 6 s.", "cooldownSeconds": 75, "durationSeconds": 6, "unlockStage": 3, "unlockMetaNode": null, "usesPerStage": null, "stats": { "slow": 0.5, "bossSlow": 0.2 } },
-  { "id": "snapshot", "name": "Restaurar snapshot", "effect": "Recupera até 75 de XP perdido nesta fase; 1 uso por fase.", "cooldownSeconds": 0, "durationSeconds": 0, "unlockStage": null, "unlockMetaNode": "operation.snapshot", "usesPerStage": 1, "stats": { "integrity": 3 } }
+  { "id": "scale",    "name": "Escalar",            "effect": "+50% de cadência em todas as torres por 8 s.", "cooldownSeconds": 60, "durationSeconds": 8, "minRank": 0, "unlockMetaNode": null, "usesPerStage": null, "stats": { "cadenceBonus": 0.5 } },
+  { "id": "firewall", "name": "Firewall global",    "effect": "Lentidão de 50% (20% em chefes) em todos os inimigos por 6 s.", "cooldownSeconds": 75, "durationSeconds": 6, "minRank": 2, "unlockMetaNode": null, "usesPerStage": null, "stats": { "slow": 0.5, "bossSlow": 0.2 } },
+  { "id": "snapshot", "name": "Restaurar snapshot", "effect": "Recupera até 75 de XP perdido nesta fase; 1 uso por fase.", "cooldownSeconds": 0, "durationSeconds": 0, "minRank": null, "unlockMetaNode": "operation.snapshot", "usesPerStage": 1, "stats": { "integrity": 3 } }
 ]

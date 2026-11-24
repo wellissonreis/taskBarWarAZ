@@ -44,7 +44,7 @@ public sealed partial class TdMatchState
     private double FirewallBossSlow() => AbilityStat("firewall", "bossSlow");
 
     private bool IsAbilityUnlocked(TdAbilityDef d) =>
-        (d.UnlockStage is int s && _stageNumber >= s) || (d.UnlockMetaNode is string n && _metaNodes.Contains(n));
+        (d.MinRank is int s && CurrentRankId >= s) || (d.UnlockMetaNode is string n && _metaNodes.Contains(n));
 
     private void TickAbilities()
     {

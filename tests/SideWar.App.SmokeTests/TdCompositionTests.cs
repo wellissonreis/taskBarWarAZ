@@ -62,7 +62,7 @@ public sealed class TdCompositionTests : IDisposable
         var clock = new ManualClock();
         var td = TdComposition.Create(dir, "0.1.0", VisibleApp(), clock, new AppSettings(), _ => { }, seed: 7);
         td.Host.OnCommand(new SideWar.Core.Td.LayoutChanged(TdSanityBot.TypicalLayout()));
-        string id = td.Host.Match.Content.Towers.First(t => t.UnlockStage <= 1).Id;
+        string id = td.Host.Match.Content.Towers.First(t => t.MinRank <= 0).Id;
         td.Host.OnCommand(new SideWar.Core.Td.BuildTower(id, 150));
         td.Host.OnCommand(new SideWar.Core.Td.BuildTower(id, 250));
         td.Host.OnWake(clock);

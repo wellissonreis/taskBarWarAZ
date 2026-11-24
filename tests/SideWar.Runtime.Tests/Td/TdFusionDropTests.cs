@@ -56,7 +56,7 @@ public sealed class TdFusionDropTests
 
         public Rig(int stage = 6, long credits = 5000, bool onboarding = false)
         {
-            Match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), stage, Rng.Seed(7, 54));
+            Match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), stage, Rng.Seed(7, 54), null, TdMatchOptions.Classic with { InitialReputation = TdRank.Threshold((TdRankLevel)(stage - 1)) });
             Match.Apply(new LayoutChanged(StripLayout.Create(1000, 954, 88, 4, 920, TowerHost.Band, [new FreeZone(32, 968)])));
             typeof(TdMatchState).GetProperty("Credits")!.SetValue(Match, credits);
             Ui = new TdUiController(() => Match, c => { Sent.Add(c); Match.Apply(c); }, Host, () => 0.0, onboarding ? Store : null);
@@ -104,7 +104,7 @@ public sealed class TdFusionDropTests
     [Fact]
     public void Dropping_on_an_invalid_pair_shows_a_short_reason_and_does_nothing()
     {
-        var r = new Rig(stage: 1); // fusão só na fase 2
+        var r = new Rig(stage: 1); // fusão só a partir de Júnior
         long before = r.Match.Credits;
         int sent = r.Sent.Count;
         r.Pick("bolt");
@@ -112,7 +112,7 @@ public sealed class TdFusionDropTests
         Assert.Equal(r.Tower, r.Ui.View.FuseTargetId);
         Assert.False(r.Ui.View.FuseTargetOk);
         Assert.False(r.Ui.View.GhostValid);
-        Assert.Contains("fase 2", r.Ui.BuildPopover()!.Title);
+        Assert.Contains("Júnior", r.Ui.BuildPopover()!.Title);
         Assert.True(r.Ui.SceneLeftClick(r.TowerX(), 20f, HitTarget.None));
         Assert.Equal(sent, r.Sent.Count);
         Assert.Equal(before, r.Match.Credits);
@@ -273,7 +273,7 @@ public sealed class TdFusionDropTests
     private static Rig WithTowers(int n)
     {
         var r = new Rig();
-        string[] ids = [.. r.Match.Content.Towers.Where(t => t.UnlockStage <= r.Match.UnlockedTowerStage).Select(t => t.Id)];
+        string[] ids = [.. r.Match.Content.Towers.Where(t => t.MinRank <= r.Match.CurrentRankId).Select(t => t.Id)];
         for (int x = 100, k = 0; r.Match.Towers.Count < n && x < 960; x += 80, k++)
             r.Match.Apply(new BuildTower(ids[k % ids.Length], x));
         Assert.Equal(n, r.Match.Towers.Count);

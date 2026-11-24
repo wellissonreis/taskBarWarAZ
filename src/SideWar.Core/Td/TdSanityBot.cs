@@ -244,7 +244,7 @@ public static class TdSanityBot
         private string ChooseTower()
         {
             var towers = _s.Content.Towers;
-            var pool = towers.Where(t => t.Kind == "attack" && t.Damage > 0 && t.UnlockStage <= _s.UnlockedTowerStage).ToArray();
+            var pool = towers.Where(t => t.Kind == "attack" && t.Damage > 0 && t.MinRank <= _s.CurrentRankId).ToArray();
             if (pool.Length == 0) return "bolt";
             if (_profile == TdBotProfile.Aleatorio) return pool[NextPick(pool.Length)].Id;
             int wave = Math.Clamp(_s.Phase == MatchPhase.Onda ? _s.WaveNumber : _s.NextWaveNumber, 1, _s.TotalWaves);

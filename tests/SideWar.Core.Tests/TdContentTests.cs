@@ -36,8 +36,8 @@ public sealed class TdContentTests
         Assert.Equal([60, 65, 80, 85, 70, 62], c.Waves.Stages.Select(s => s.Waves.Length));
         Assert.Equal(20, c.Stages.Rules.CoreIntegrity);
         Assert.Equal(0.7, c.Stages.Rules.SellRefund);
-        Assert.Equal(3, c.Towers.Single(t => t.Id == "scaleset").UnlockStage);
-        Assert.Equal(2, c.Towers.Single(t => t.Id == "balancer").UnlockStage);
+        Assert.Equal(2, c.Towers.Single(t => t.Id == "scaleset").MinRank);
+        Assert.Equal(1, c.Towers.Single(t => t.Id == "balancer").MinRank);
     }
 
     [Fact(DisplayName = "TD.20 / CA-29.1 Towers have no levels, branches or capstones, and every tower declares a weakness")]
@@ -90,16 +90,16 @@ public sealed class TdContentTests
     public void ApprovedExistingCurve()
     {
         var c = TdContentLoader.LoadEmbedded();
-        Assert.Equal(2, c.Fusion.MinStage);
+        Assert.Equal(1, c.Fusion.MinRank);
         foreach (var (id, stage) in new[] { ("functions", 1), ("policy", 2), ("scaleset", 3) })
-            Assert.Equal(stage, c.Towers.Single(t => t.Id == id).UnlockStage);
+            Assert.Equal(stage - 1, c.Towers.Single(t => t.Id == id).MinRank);
         foreach (var (id, stage) in new[] { ("swarm", 1), ("flyer", 2), ("trojan", 3), ("regen", 4), ("synflood", 1), ("scanner", 2), ("slowloris", 3), ("fragment", 4), ("dnstunnel", 5), ("encrypted", 6) })
         {
             var enemy = c.Enemies.Enemies.Single(e => e.Id == id);
             Assert.Equal(stage, enemy.IntroStage);
             var first = c.Waves.Stages.First(s => s.Waves.Any(w => w.Groups.Any(g => g.Enemy == id)));
             Assert.Equal(stage, first.Stage);
-            Assert.Contains(enemy.Counters, counter => c.Towers.Any(t => t.Id == counter && t.UnlockStage <= stage));
+            Assert.Contains(enemy.Counters, counter => c.Towers.Any(t => t.Id == counter && t.MinRank < stage));
         }
     }
 

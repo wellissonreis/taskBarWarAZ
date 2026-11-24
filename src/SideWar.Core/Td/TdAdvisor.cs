@@ -6,7 +6,7 @@ public sealed record TdAdvice(string Trait, string TowerId);
 
 public static class TdAdvisor
 {
-    public static TdAdvice? Suggest(TdContent content, IReadOnlyList<TdLeakStat> leaks, int unlockedStage)
+    public static TdAdvice? Suggest(TdContent content, IReadOnlyList<TdLeakStat> leaks, int rankId)
     {
         var damage = new Dictionary<string, long>(StringComparer.Ordinal);
         foreach (var leak in leaks)
@@ -19,7 +19,7 @@ public static class TdAdvisor
         var traitWinner = TdContentValidator.Traits.Where(t => damage.GetValueOrDefault(t) > 0)
             .OrderByDescending(t => damage[t]).FirstOrDefault();
         if (traitWinner is null) return null;
-        var tower = content.Towers.Where(t => t.UnlockStage <= unlockedStage && t.Strong.Contains(traitWinner))
+        var tower = content.Towers.Where(t => t.MinRank <= rankId && t.Strong.Contains(traitWinner))
             .OrderBy(t => t.Cost).ThenBy(t => t.Id, StringComparer.Ordinal).FirstOrDefault();
         if (tower is null)
         {
@@ -27,7 +27,7 @@ public static class TdAdvisor
             var counters = top.IsBoss ? content.Enemies.Bosses.FirstOrDefault(e => e.Id == top.EnemyId)?.Counters
                 : content.Enemies.Enemies.FirstOrDefault(e => e.Id == top.EnemyId)?.Counters;
             var ids = (counters ?? []).Select(c => c.Split('.')[0]).ToHashSet(StringComparer.Ordinal);
-            tower = content.Towers.Take(5).Where(t => t.UnlockStage <= unlockedStage && ids.Contains(t.Id))
+            tower = content.Towers.Take(5).Where(t => t.MinRank <= rankId && ids.Contains(t.Id))
                 .OrderBy(t => t.Cost).ThenBy(t => t.Id, StringComparer.Ordinal).FirstOrDefault();
         }
         return tower is null ? null : new TdAdvice(traitWinner, tower.Id);

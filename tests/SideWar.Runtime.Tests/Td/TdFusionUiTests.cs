@@ -54,7 +54,7 @@ public sealed class TdFusionUiTests
 
         public Rig(int stage = 6, bool onboarding = false, long credits = 5000)
         {
-            Match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), stage, Rng.Seed(7, 54));
+            Match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), stage, Rng.Seed(7, 54), null, TdMatchOptions.Classic with { InitialReputation = TdRank.Threshold((TdRankLevel)(stage - 1)) });
             Match.Apply(new LayoutChanged(StripLayout.Create(1000, 954, 88, 4, 920, TowerHost.Band, [new FreeZone(32, 968)])));
             typeof(TdMatchState).GetProperty("Credits")!.SetValue(Match, credits);
             Ui = new TdUiController(() => Match, c => { Sent.Add(c); Match.Apply(c); }, new Host(), () => Now, onboarding ? Store : null);
@@ -78,9 +78,9 @@ public sealed class TdFusionUiTests
         early.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "T", TdUiAction.OpenTower, early.Tower));
         var locked = early.Find(TdUiAction.FuseOpen);
         Assert.False(locked.Enabled);
-        Assert.Contains("fase 2", locked.Text);
+        Assert.Contains("Júnior", locked.Text);
         var check = early.Match.CheckFusion(early.Tower, "bolt");
-        Assert.Contains("fase 2", TdUiController.FusionReasonText(early.Match, check));
+        Assert.Contains("Júnior", TdUiController.FusionReasonText(early.Match, check));
     }
 
     [Fact]

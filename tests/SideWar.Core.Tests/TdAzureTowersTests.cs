@@ -126,11 +126,11 @@ public sealed class TdAzureTowersTests
     public void TowerUnlockUsesProfileRatherThanStartingStage(int completed, int expected)
     {
         var content = TdContentLoader.LoadEmbedded();
-        var options = TdMatchOptions.Classic with { HighestCompletedStage = completed };
+        var options = TdMatchOptions.Classic with { InitialReputation = TdRank.Threshold((TdRankLevel)completed) };
         var early = TdMatchState.Create(content, 1, Rng.Seed(1, 54), null, options);
         var late = TdMatchState.Create(content, 6, Rng.Seed(1, 54), null, options);
-        Assert.Equal(expected, content.Towers.Count(t => t.UnlockStage <= early.UnlockedTowerStage));
-        Assert.Equal(early.UnlockedTowerStage, late.UnlockedTowerStage);
+        Assert.Equal(expected, content.Towers.Count(t => t.MinRank <= early.CurrentRankId));
+        Assert.Equal(early.CurrentRankId, late.CurrentRankId);
         if (completed < 5)
             Assert.Equal(SideWar.Core.Simulation.CommandReason.TowerLocked, late.Apply(new BuildTower("vault", 1100)).Reason);
     }
@@ -221,7 +221,7 @@ public sealed class TdAzureTowersTests
             Stages = c.Stages with { Stages = c.Stages.Stages.Select(s => s.Id == 6 ? s with { StartingCredits = 1000000, Waves = 1 } : s).ToArray() },
             Waves = new TdWavesDef([.. c.Waves.Stages.Take(5), new TdStageWavesDef(6, [new TdWaveDef(1, false, 1, [new TdWaveGroupDef(enemy, count, 0, 0.01)])])])
         };
-        return TdMatchState.Create(c, 6, Rng.Seed(1, 54));
+        return TdMatchState.Create(c, 6, Rng.Seed(1, 54), null, TdMatchOptions.Classic with { InitialReputation = TdRank.Threshold(TdRankLevel.Arquiteto) });
     }
 
     private static void Build(TdMatchState s, string id, int x) => Assert.True(s.Apply(new BuildTower(id, x)).IsOk);

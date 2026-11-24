@@ -17,7 +17,7 @@ public sealed class TdTowersNeverLostTests
         var m = TdMatchState.Create(Content, stage, Rng.Seed(7, 54), null, options ?? TdMatchOptions.Default with { InitialReputation = 0 });
         m.Apply(new LayoutChanged(TdSanityBot.TypicalLayout()));
         typeof(TdMatchState).GetProperty("Credits")!.SetValue(m, 5000L);
-        string id = Content.Towers.First(t => t.UnlockStage <= 1).Id;
+        string id = Content.Towers.First(t => t.MinRank <= 0).Id;
         for (int x = 120; x < 480 && m.Towers.Count < 4; x += 50) m.Apply(new BuildTower(id, x));
         return m;
     }

@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace SideWar.Core.Content.Td;
 
 // Conteúdo TD v2 (SDD-28 RF-28.4 a RF-28.13), lado a lado com o conteúdo idle (SDD-12/27): namespace e arquivos
@@ -6,7 +8,7 @@ namespace SideWar.Core.Content.Td;
 /// <summary>Torre (td-towers.json). <c>Kind</c>: attack | blocker | support. <c>Targets</c>: ground | both | none.</summary>
 public sealed record TdTowerDef(
     string Id, string Name, string Flavor, string Role, string Kind, string Targets, string? DefaultTargeting,
-    long Cost, double Range, double Damage, double Interval, int UnlockStage, Dictionary<string, double> Stats,
+    long Cost, double Range, double Damage, double Interval, [property: JsonRequired] int MinRank, Dictionary<string, double> Stats,
     string[] Strong, string[] Weak, string WeaknessText, string Category = "attack");
 
 /// <summary>Inimigo comum (RF-28.7). <c>Counters</c>: torres ("bolt") ou ramos ("bolt.A") que o contra-atacam.</summary>
@@ -58,9 +60,9 @@ public sealed record TdStageDef(
 
 public sealed record TdStagesDef(TdMatchRulesDef Rules, TdStageDef[] Stages);
 
-/// <summary>Habilidade ativa (RF-28.9). Desbloqueio por fase (<c>UnlockStage</c>) ou por nó da árvore (<c>UnlockMetaNode</c>).</summary>
+/// <summary>Habilidade ativa (RF-28.9). Desbloqueio por patente (<c>MinRank</c>) ou por nó da árvore (<c>UnlockMetaNode</c>).</summary>
 public sealed record TdAbilityDef(
-    string Id, string Name, string Effect, double CooldownSeconds, double DurationSeconds, int? UnlockStage,
+    string Id, string Name, string Effect, double CooldownSeconds, double DurationSeconds, [property: JsonRequired] int? MinRank,
     string? UnlockMetaNode, int? UsesPerStage, Dictionary<string, double> Stats);
 
 /// <summary>Efeito de nó. <c>Kind</c>: startingCredits | sellRefund | maxTowers | damagePercent | rangePercent | xpShield | abilityCooldownPercent | unlockAbility | autoStartBonusPercent.</summary>
@@ -105,7 +107,7 @@ public sealed record TdFusionPairDef(string Base, string Module, string Name, st
 /// módulo genérico por papel (RF-37.5) e pares nomeados.
 /// </summary>
 public sealed record TdFusionDef(
-    int MinStage, string[] ResolveOrder, Dictionary<string, string[]> Roles,
+    [property: JsonRequired] int MinRank, string[] ResolveOrder, Dictionary<string, string[]> Roles,
     Dictionary<string, Dictionary<string, double>> Generic, TdFusionPairDef[] Pairs, TdFusionNamesDef? Names = null);
 
 /// <summary>Nome próprio de um par base+módulo que NÃO tem efeito nomeado (continua no efeito genérico por papel): só troca o rótulo.</summary>

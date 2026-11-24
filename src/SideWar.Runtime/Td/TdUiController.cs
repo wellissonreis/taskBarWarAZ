@@ -1021,7 +1021,7 @@ public sealed partial class TdUiController
         long min = 0;
         for (int i = 0; i < towers.Length; i++)
         {
-            if (m.UnlockedTowerStage < towers[i].UnlockStage) continue;
+            if (m.CurrentRankId < towers[i].MinRank) continue;
             long cost = m.NextTowerCost(i);
             if (min == 0 || cost < min) min = cost;
         }
@@ -1126,15 +1126,15 @@ public sealed partial class TdUiController
 
     private static string NextTowerHint(TdMatchState m)
     {
-        var next = m.Content.Towers.Where(t => t.UnlockStage > m.UnlockedTowerStage).OrderBy(t => t.UnlockStage).FirstOrDefault();
-        return next is null ? "Todas as torres liberadas" : $"Próxima: {next.Name} · fase {next.UnlockStage}";
+        var next = m.Content.Towers.Where(t => t.MinRank > m.CurrentRankId).OrderBy(t => t.MinRank).FirstOrDefault();
+        return next is null ? "Todas as torres liberadas" : $"Próxima: {next.Name} · patente {TdRank.DisplayName((TdRankLevel)next.MinRank)}";
     }
     private static readonly (string Id, string Name)[] TowerCategories = [("attack", "Ataque"), ("control", "Controle"), ("support", "Suporte"), ("economy", "Economia")];
 
     private void EnsureTowerCategory(TdMatchState m)
     {
-        if (m.Content.Towers.Any(t => t.Category == _towerCategory && t.UnlockStage <= m.UnlockedTowerStage)) return;
-        _towerCategory = TowerCategories.FirstOrDefault(c => m.Content.Towers.Any(t => t.Category == c.Id && t.UnlockStage <= m.UnlockedTowerStage)).Id ?? "attack";
+        if (m.Content.Towers.Any(t => t.Category == _towerCategory && t.MinRank <= m.CurrentRankId)) return;
+        _towerCategory = TowerCategories.FirstOrDefault(c => m.Content.Towers.Any(t => t.Category == c.Id && t.MinRank <= m.CurrentRankId)).Id ?? "attack";
     }
 
     /// <summary>Painel rápido (Partida.dc.html): cartão por torre com sprite, nome, descrição curta e preço âmbar; clicar escolhe sem pausar.</summary>
@@ -1148,20 +1148,20 @@ public sealed partial class TdUiController
         int tabs = 0;
         foreach (var (id, name) in TowerCategories)
         {
-            if (!m.Content.Towers.Any(t => t.Category == id && t.UnlockStage <= m.UnlockedTowerStage)) continue;
+            if (!m.Content.Towers.Any(t => t.Category == id && t.MinRank <= m.CurrentRankId)) continue;
             items.Add(new TdUiItem(new DipRect(8 + tabs++ * 72, QuickHeader, 68, 22), TdUiKind.Button, name, TdUiAction.TowerCategory, SArg: id, Selected: _towerCategory == id));
         }
-        int count = m.Content.Towers.Count(t => t.Category == _towerCategory && t.UnlockStage <= m.UnlockedTowerStage);
+        int count = m.Content.Towers.Count(t => t.Category == _towerCategory && t.MinRank <= m.CurrentRankId);
         const int pageSize = 6;
         _buildPage = Math.Clamp(_buildPage, 0, Math.Max(0, (count - 1) / pageSize));
         int row = 0, seen = 0;
         for (int i = 0; i < m.Content.Towers.Length; i++)
         {
             var d = m.Content.Towers[i];
-            if (d.Category != _towerCategory || m.UnlockedTowerStage < d.UnlockStage) continue;
+            if (d.Category != _towerCategory || m.CurrentRankId < d.MinRank) continue;
             if (seen++ < _buildPage * pageSize || row >= pageSize) continue;
             long price = m.NextTowerCost(i);
-            bool locked = m.UnlockedTowerStage < d.UnlockStage;
+            bool locked = m.CurrentRankId < d.MinRank;
             bool enabled = !locked && m.Credits >= price;
             bool hl = tut && !marked && enabled;
             if (hl) marked = true;
@@ -1455,7 +1455,7 @@ public sealed partial class TdUiController
             case TdUiMode.Towers:
             {
                 var m = _match();
-                string fusion = m.FusionUnlocked ? "Fusão disponível" : $"Fusão: fase {m.Content.Fusion.MinStage}";
+                string fusion = m.FusionUnlocked ? "Fusão disponível" : $"Fusão: patente {TdRank.DisplayName((TdRankLevel)m.Content.Fusion.MinRank)}";
                 items.Add(new(new DipRect(16, 104, 470, 18), TdUiKind.Label, $"Torres em campo: {m.Towers.Count}  |  {fusion}", Tone: TdTone.Dim, SArg: "hdr"));
                 items.Add(new(new DipRect(500, 104, 204, 18), TdUiKind.Label, $"Venda devolve {Math.Round(m.Content.Stages.Rules.SellRefund * 100):0}%", Tone: TdTone.Dim, SArg: "hdrR"));
                 if (m.Towers.Count == 0)
@@ -1497,7 +1497,7 @@ public sealed partial class TdUiController
             return m.Towers.Count > ModalTowerRows ? new(m.Towers.Count, ModalTowerRows, _towerScroll, 132f, ModalTowerRows * 52f - 6f) : null;
         if (Mode == TdUiMode.Build && !BuildActive)
         {
-            int count = m.Content.Towers.Count(t => t.Category == _towerCategory && t.UnlockStage <= m.UnlockedTowerStage);
+            int count = m.Content.Towers.Count(t => t.Category == _towerCategory && t.MinRank <= m.CurrentRankId);
             return count > ModalBuildRows ? new(count, ModalBuildRows, _buildScroll, 158f, ModalBuildRows * 51f - 3f) : null;
         }
         return null;
@@ -1696,23 +1696,23 @@ public sealed partial class TdUiController
         }
         s.Add(TdUiKind.Label, "Escolha uma torre e toque na faixa para posicionar.", RowH - 4, tone: TdTone.Dim);
         foreach (var (id, name) in TowerCategories)
-            if (m.Content.Towers.Any(t => t.Category == id && t.UnlockStage <= m.UnlockedTowerStage))
+            if (m.Content.Towers.Any(t => t.Category == id && t.MinRank <= m.CurrentRankId))
                 s.Add(TdUiKind.Button, name, 24, TdUiAction.TowerCategory, sarg: id, selected: _towerCategory == id);
         var towers = m.Content.Towers;
-        int count = towers.Count(t => t.Category == _towerCategory && t.UnlockStage <= m.UnlockedTowerStage);
+        int count = towers.Count(t => t.Category == _towerCategory && t.MinRank <= m.CurrentRankId);
         _buildScroll = Math.Clamp(_buildScroll, 0, Math.Max(0, count - ModalBuildRows));
         int seen = 0;
         for (int i = 0; i < towers.Length; i++)
         {
             var d = towers[i];
-            if (d.Category != _towerCategory || d.UnlockStage > m.UnlockedTowerStage) continue;
+            if (d.Category != _towerCategory || d.MinRank > m.CurrentRankId) continue;
             if (seen++ < _buildScroll || seen > _buildScroll + ModalBuildRows) continue;
-            bool locked = m.UnlockedTowerStage < d.UnlockStage;
+            bool locked = m.CurrentRankId < d.MinRank;
             int owned = m.TowerCount(i);
             long price = m.NextTowerCost(i); // custo crescente por tipo (SDD-29 §5.1)
             bool poor = m.Credits < price;
-            string right = locked ? $"fase {d.UnlockStage}" : $"${price}";
-            string sub = locked ? $"Desbloqueia na fase {d.UnlockStage}" : $"alc {d.Range:0}  |  Fraqueza: {d.WeaknessText}";
+            string right = locked ? $"patente {TdRank.DisplayName((TdRankLevel)d.MinRank)}" : $"${price}";
+            string sub = locked ? $"Desbloqueia na patente {TdRank.DisplayName((TdRankLevel)d.MinRank)}" : $"alc {d.Range:0}  |  Fraqueza: {d.WeaknessText}";
             s.Add(TdUiKind.Button, owned > 0 ? $"{d.Name}  x{owned}" : d.Name, 44f, TdUiAction.ChooseTower, sarg: d.Id, right: right, sub: sub, enabled: !locked && !poor,
                 tone: locked ? TdTone.Dim : poor ? TdTone.Bad : TdTone.Normal);
         }
@@ -1750,7 +1750,7 @@ public sealed partial class TdUiController
         if (t.Placed && !t.HasModule)
         {
             bool unlocked = m.FusionUnlocked;
-            s.Add(TdUiKind.Button, unlocked ? "Fundir com outra torre" : $"Fundir (fase {m.Content.Fusion.MinStage})", RowH, TdUiAction.FuseOpen, arg: t.Id, enabled: unlocked, tone: unlocked ? TdTone.Accent : TdTone.Dim);
+            s.Add(TdUiKind.Button, unlocked ? "Fundir com outra torre" : $"Fundir (patente {TdRank.DisplayName((TdRankLevel)m.Content.Fusion.MinRank)})", RowH, TdUiAction.FuseOpen, arg: t.Id, enabled: unlocked, tone: unlocked ? TdTone.Accent : TdTone.Dim);
         }
         long refund = m.SellValue(t.Id); // fungivel: taxa x custo(tipo, n-1) (SDD-29 §5.2)
         s.Add(TdUiKind.Button, $"Vender ({Math.Round(m.Content.Stages.Rules.SellRefund * 100):0}%)", RowH, TdUiAction.Sell, arg: t.Id, right: $"+${refund}", tone: TdTone.Bad);
@@ -1791,7 +1791,7 @@ public sealed partial class TdUiController
     {
         var s = new Stack(PopoverWidth);
         s.Add(TdUiKind.Label, $"Torres {m.Towers.Count}", RowH - 4, tone: TdTone.Dim);
-        s.Add(TdUiKind.Label, m.FusionUnlocked ? "Fusão disponível" : $"Fusão: fase {m.Content.Fusion.MinStage}", RowH, tone: TdTone.Dim);
+        s.Add(TdUiKind.Label, m.FusionUnlocked ? "Fusão disponível" : $"Fusão: patente {TdRank.DisplayName((TdRankLevel)m.Content.Fusion.MinRank)}", RowH, tone: TdTone.Dim);
         if (m.Towers.Count == 0) s.Add(TdUiKind.Label, "Nenhuma torre. Use Construir.", RowH, tone: TdTone.Dim);
         float sellW = 98f;
         _towerScroll = Math.Clamp(_towerScroll, 0, Math.Max(0, m.Towers.Count - ModalTowerRows));
@@ -1818,8 +1818,10 @@ public sealed partial class TdUiController
         foreach (var ability in m.AbilityStatuses)
         {
             bool ready = m.Phase == MatchPhase.Onda && ability.Unlocked && ability.CooldownTicks == 0 && ability.UsesLeft != 0;
+            var def = m.Content.Abilities.First(a => a.Id == ability.Id);
+            string reason = !ability.Unlocked && def.MinRank is int rank ? $"Requer patente {TdRank.DisplayName((TdRankLevel)rank)}" : "Pausado";
             s.Add(TdUiKind.Button, AbilityShort(ability.Id), RowH, TdUiAction.ResumeAbility, sarg: ability.Id,
-                enabled: ready, right: ready ? "Usar e fechar" : "Pausado");
+                enabled: ready, right: ready ? "Usar e fechar" : reason);
         }
         if (_confirmRestart)
         {
