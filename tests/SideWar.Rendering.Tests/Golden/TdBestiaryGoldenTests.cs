@@ -91,7 +91,7 @@ public sealed class TdBestiaryGoldenTests
     public void Construir_modal_economia(int dpi)
     {
         Assert.SkipUnless(OperatingSystem.IsLinux(), "golden Linux");
-        var match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 6, Rng.Seed(7, 54));
+        var match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 6, Rng.Seed(7, 54), null, TdMatchOptions.Default with { InitialReputation = TdRank.Threshold(TdRankLevel.Arquiteto) });
         var ui = new TdUiController(() => match, c => match.Apply(c), new Host());
         ui.Activate(new(default, TdUiKind.Button, "", TdUiAction.ModalTab, (int)TdUiMode.Build));
         var category = ui.BuildPopover()!.Items.First(i => i.Action == TdUiAction.TowerCategory && i.SArg == "economy");

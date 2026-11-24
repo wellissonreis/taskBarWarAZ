@@ -115,7 +115,7 @@ public sealed class TdOnboardingGoldenTests
             case Scene.Quiz: Intro(); Acks(3); Bolt(330); Acks(1); ToPrep2(); break;
             case Scene.QuizRight: Bolt(330); ToPrep2(); ui.Activate(item(TdUiAction.QuizTrue, null)); break; // q01 é verdadeira
             case Scene.QuizWrong: Bolt(330); ToPrep2(); ui.Activate(item(TdUiAction.QuizFalse, null)); break;
-            case Scene.QuizTime: Bolt(330); ToPrep2(); now += 10.5; ui.Sync(); break;
+            case Scene.QuizTime: Bolt(330); ToPrep2(); now += 30.5; ui.Sync(); break;
             case Scene.ChipPulse: ui.Sync(); break;
             case Scene.Help: ui.OpenHowTo(); break;
             case Scene.Tip: m.Apply(new BuildTower("bolt", 330)); store.Done = true; ui.Sync(); break;

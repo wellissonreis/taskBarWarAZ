@@ -51,7 +51,7 @@ public sealed class TdFusionGoldenTests
 
     private static TdPopoverView Build(string kind)
     {
-        var match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 6, Rng.Seed(7, 54));
+        var match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 6, Rng.Seed(7, 54), null, TdMatchOptions.Default with { InitialReputation = TdRank.Threshold(TdRankLevel.Arquiteto) });
         match.Apply(new LayoutChanged(StripLayout.Create(1000, 954, 88, 4, 920, TowerHost.Band, [new FreeZone(32, 968)])));
         typeof(TdMatchState).GetProperty("Credits")!.SetValue(match, 5000L);
         match.Apply(new BuildTower("frost", 500));
