@@ -1,4 +1,6 @@
 using SideWar.Platform.Windows.Threading;
+using Windows.Win32;
+using Windows.Win32.Foundation;
 
 namespace SideWar.Platform.Windows.Windows;
 
@@ -41,6 +43,32 @@ public sealed class TdUiWindow : OverlayChildWindow
     public Func<int, int, bool>? ClickableAt { get; set; }
     private protected override bool HitTransparentAt(int clientX, int clientY) => ClickableAt is { } f && !f(clientX, clientY);
 
+    /// <summary>
+    /// Arrasto da janela pelo cabeçalho (modal): quando <see cref="DragHandleAt"/> aceita o ponto do botão esquerdo, a janela captura o mouse
+    /// (SetCapture, sem foco) e reporta o deslocamento do cursor em pixels de tela desde o início (<see cref="DragMoved"/>). Roda na T-Game.
+    /// </summary>
+    public Func<int, int, bool>? DragHandleAt { get; set; }
+    public event Action<int, int>? DragMoved;
+    public event Action? DragEnded;
+    private bool dragging;
+    private int dragStartX, dragStartY;
+    /// <summary>True se o último botão esquerdo virou arrasto de janela (o presenter ignora o clique ao soltar).</summary>
+    public bool Dragging => dragging;
+    private protected override void OnLeftButtonDown(int x, int y)
+    {
+        if (!IsVisible || DragHandleAt is not { } test || !test(x, y) || !PInvoke.GetCursorPos(out var p)) return;
+        dragging = true; dragStartX = p.X; dragStartY = p.Y;
+        PInvoke.SetCapture(new HWND(Handle));
+    }
+    private void EndDrag()
+    {
+        if (!dragging) return;
+        dragging = false;
+        if (PInvoke.GetCapture() == new HWND(Handle)) PInvoke.ReleaseCapture();
+        DragEnded?.Invoke();
+    }
+    private protected override void OnCaptureLost() => EndDrag();
+
     public event Action<int, int>? Moved;
     public event Action? Left;
     public event Action<int, int>? LeftUp;
@@ -50,9 +78,22 @@ public sealed class TdUiWindow : OverlayChildWindow
 
     /// <summary>Botão esquerdo pressionado no último movimento do mouse (arrastar a teia de runas).</summary>
     public bool LeftHeld => MouseLeftHeld;
-    private protected override void OnMouseMove(int x, int y) => Moved?.Invoke(x, y);
+    private protected override void OnMouseMove(int x, int y)
+    {
+        if (dragging)
+        {
+            if (!MouseLeftHeld) { EndDrag(); return; }
+            if (PInvoke.GetCursorPos(out var p)) DragMoved?.Invoke(p.X - dragStartX, p.Y - dragStartY);
+            return;
+        }
+        Moved?.Invoke(x, y);
+    }
     private protected override void OnMouseLeave() => Left?.Invoke();
-    private protected override void OnLeftButtonUp(int x, int y) { if (IsVisible) LeftUp?.Invoke(x, y); }
+    private protected override void OnLeftButtonUp(int x, int y)
+    {
+        if (dragging) { EndDrag(); return; }
+        if (IsVisible) LeftUp?.Invoke(x, y);
+    }
     private protected override void OnRightButtonUp(int x, int y) { if (IsVisible) RightUp?.Invoke(x, y); }
     private protected override bool UsesHandCursor => false;
 }

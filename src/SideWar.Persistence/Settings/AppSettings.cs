@@ -164,6 +164,10 @@ public sealed record TdSettings
     /// <summary>TD.28b: painel rápido de torres (botão ≡ do chip) fica aberto o tempo todo junto ao chip; fecha ao desligar ou ao minimizar pelo atalho.</summary>
     public bool TowerPanelPinned { get; init; }
 
+    /// <summary>Deslocamento (pixels) da modal central em relação ao centro da área de trabalho; arrastar o cabeçalho altera. 0,0 = centralizada; sempre preso à tela ao aplicar.</summary>
+    public int ModalOffsetX { get; init; }
+    public int ModalOffsetY { get; init; }
+
     public const int MinGameSpeed = 1;
     public const int MaxGameSpeed = 3;
 

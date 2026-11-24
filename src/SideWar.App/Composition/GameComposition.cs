@@ -136,6 +136,9 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
     /// <summary>TD.40c: máscara de alertas silenciados (lida pela T-UI ao gravar as configurações).</summary>
     public int? TdAlertsMutedMask => tdUi?.AlertsMutedMask;
 
+    /// <summary>Posição da modal central movida pelo usuário (lida pela T-UI ao gravar as configurações).</summary>
+    public (int X, int Y)? TdModalOffset => tdUi?.ModalOffset;
+
     public bool TutorialDone => tdUi?.TutorialDone ?? settings.Td.TutorialDone;
     public string TipsSeen => tdUi?.TipsSeen ?? settings.Td.TipsSeen;
     public string QuestionsSeen => tdUi?.QuestionsSeen ?? settings.Td.QuestionsSeen;

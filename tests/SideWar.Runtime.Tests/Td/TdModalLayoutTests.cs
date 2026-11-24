@@ -29,6 +29,38 @@ public sealed class TdModalLayoutTests
     }
 
     [Fact]
+    public void Offset_moves_the_modal_and_is_clamped_inside_the_work_area()
+    {
+        var work = new PixelRect(0, 0, 1920, 1040);
+        var centered = TdModalLayout.Bounds(work, 1f);
+        var moved = TdModalLayout.Bounds(work, 1f, 100, -50);
+        Assert.Equal(centered.Left + 100, moved.Left);
+        Assert.Equal(centered.Top - 50, moved.Top);
+        var far = TdModalLayout.Bounds(work, 1f, 99999, 99999);
+        Assert.Equal(work.Right, far.Right);
+        Assert.Equal(work.Bottom, far.Bottom);
+        var near = TdModalLayout.Bounds(work, 1f, -99999, -99999);
+        Assert.Equal(work.Left, near.Left);
+        Assert.Equal(work.Top, near.Top);
+    }
+
+    [Fact]
+    public void Saved_offset_from_a_bigger_monitor_falls_back_inside_a_smaller_one()
+    {
+        var small = new PixelRect(0, 0, 1280, 700);
+        var b = TdModalLayout.Bounds(small, 1f, 1800, 900);
+        Assert.True(b.Left >= small.Left && b.Right <= small.Right && b.Top >= small.Top && b.Bottom <= small.Bottom);
+    }
+
+    [Fact]
+    public void Drag_header_is_the_top_strip_of_the_modal()
+    {
+        Assert.True(TdModalLayout.InDragHeader(300, 20));
+        Assert.False(TdModalLayout.InDragHeader(300, 60));
+        Assert.False(TdModalLayout.InDragHeader(-1, 20));
+    }
+
+    [Fact]
     public void Modal_suspends_external_absence_until_closed()
     {
         var focus = new TdFocusState();

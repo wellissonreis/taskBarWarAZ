@@ -24,7 +24,7 @@ internal enum AppCommandKind
 internal sealed record AppCommand(AppCommandKind Kind, int MonitorIndex = -1) : IGameCommand;
 
 /// <summary>Pedido da T-Game para a T-UI (janelas WPF e encerramento).</summary>
-internal enum UiRequest { OpenSettings, OpenAbout, Exit, SaveHudState, SaveOnboarding, SaveTdOptions }
+internal enum UiRequest { OpenSettings, OpenAbout, Exit, SaveHudState, SaveOnboarding, SaveTdOptions, SaveModalPos }
 
 /// <summary>Estado do menu (bandeja/widget) publicado pela T-Game como snapshot imutável (SDD-01 RF-01.4 regra 3).</summary>
 internal sealed record MenuSnapshot(bool Interactive, bool Paused, bool Hidden, IReadOnlyList<string> Monitors, int SelectedMonitor,

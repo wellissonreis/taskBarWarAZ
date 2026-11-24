@@ -52,6 +52,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         gameOptions = new(settings.Td.BandHeightDip, settings.Td.AutoStartEnabled, settings.Audio.Enabled, (int)Math.Round(settings.Audio.Volume * 100), settings.Td.BonusQuestions, settings.Td.FadeWhenUnfocused,
             settings.Td.ContinuousWaves, settings.Td.TowerPanelPinned, settings.Td.GameSpeed, settings.Td.ShowIncome, settings.Td.DiscreetMode, settings.Td.AutoRestart);
         SetCornerUiScale(settings.Td.CornerUiScalePercent);
+        modalOffsetX = dragBaseX = settings.Td.ModalOffsetX; modalOffsetY = dragBaseY = settings.Td.ModalOffsetY;
         bossHotkey = settings.Hotkeys.ToggleVisibility;
         Kick();
     }
@@ -243,6 +244,20 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         scrimWindow.LeftUp += (_, _) => { Present(); controller.Cancel(); };
         popWindow = game.Scene.GetOrCreateTdPopover();
         popWindow.KeyDown += ModalKey;
+        // Mover a modal: arrastar o cabeçalho (fora dos botões) com o botão esquerdo; preso à área de trabalho; grava ao soltar.
+        popWindow.DragHandleAt = (x, y) =>
+            controller.ModalOpen && !controller.CornerPopover && pop is { RuneWindow: false } p
+            && TdModalLayout.InDragHeader(x / PopScale, y / PopScale) && p.HitTest(x / PopScale, y / PopScale) < 0;
+        popWindow.DragMoved += (dx, dy) =>
+        {
+            if (game.Dock.Current is not { } cur) return;
+            var work = cur.Monitor.WorkArea;
+            var b = popBounds;
+            (modalOffsetX, modalOffsetY) = TdModalLayout.ClampOffset(work, b.Width, b.Height,
+                dragBaseX + dx, dragBaseY + dy);
+            Present(); Refresh(true);
+        };
+        popWindow.DragEnded += () => { dragBaseX = modalOffsetX; dragBaseY = modalOffsetY; ui(UiRequest.SaveModalPos); };
         tipWindow = game.Scene.GetOrCreateTdTooltip();
         tipWindow.ClickableAt = (_, _) => TdTooltipView.AcceptsPointer(tipFirstTime);
         hudWindow.Moved += (x, y) =>
@@ -318,6 +333,10 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         Kick();
     }
 
+    // Deslocamento da modal central em relação ao centro (pixels); dragBase = valor no início do arrasto (atualizado ao soltar).
+    private volatile int modalOffsetX, modalOffsetY, dragBaseX, dragBaseY;
+    public (int X, int Y) ModalOffset => (modalOffsetX, modalOffsetY);
+
     private (int X, int Y)? runeDragLast;
     private float runeDragTravel;
 
@@ -368,8 +387,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         }
         if (key is >= 49 and <= 53)
         {
-            TdUiMode[] modes = [TdUiMode.Build, TdUiMode.Runes, TdUiMode.Towers, TdUiMode.Menu, TdUiMode.Help];
-            controller.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.ModalTab, (int)modes[key - 49]));
+            controller.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.ModalTab, (int)TdUiController.ModalTabs[key - 49]));
             return;
         }
         if (pop is null) return;
@@ -513,7 +531,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
             var work = c.Monitor.WorkArea;
             bool quick = controller.CornerPopover;
             int quickW = (int)MathF.Round(pop.Width * UiScale), quickH = (int)MathF.Round(pop.Height * UiScale);
-            var bounds = quick ? new PixelRect(hudBounds.Right - quickW, Math.Max(work.Top, hudBounds.Top - quickH - 2), hudBounds.Right, Math.Max(work.Top, hudBounds.Top - quickH - 2) + quickH) : TdModalLayout.Bounds(work, ModalDpiScale);
+            var bounds = quick ? new PixelRect(hudBounds.Right - quickW, Math.Max(work.Top, hudBounds.Top - quickH - 2), hudBounds.Right, Math.Max(work.Top, hudBounds.Top - quickH - 2) + quickH) : TdModalLayout.Bounds(work, ModalDpiScale, modalOffsetX, modalOffsetY);
             if (pop.RuneWindow)
             {
                 var rune = hud.Items.First(i => i.Action == TdUiAction.RuneWindow);

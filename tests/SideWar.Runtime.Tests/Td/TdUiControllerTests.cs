@@ -398,10 +398,21 @@ public sealed class TdUiControllerTests
     }
 
     [Fact]
+    public void Startup_modal_opens_on_the_first_tab_with_the_rank_card()
+    {
+        var r = new Rig();
+        r.Ui.OpenStartupModal();
+        var pop = r.Ui.BuildPopover()!;
+        Assert.Equal((int)TdUiController.ModalTabs[0], pop.Items.First(i => i.Action == TdUiAction.ModalTab).Arg);
+        Assert.Contains(pop.Items, i => i.Action == TdUiAction.ModalTab && i.Selected && i.Text == "Jogo");
+        Assert.Contains(pop.Items, i => i.SArg == "rank-card");
+    }
+
+    [Fact]
     public void Tabs_keep_one_pause_until_the_window_closes()
     {
         var r = new Rig();
-        foreach (var mode in new[] { TdUiMode.Build, TdUiMode.Runes, TdUiMode.Towers, TdUiMode.Menu, TdUiMode.Help })
+        foreach (var mode in TdUiController.ModalTabs)
         {
             r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.ModalTab, (int)mode));
             Assert.Equal(1, r.Ui.ModalCount);
@@ -537,7 +548,10 @@ public sealed class TdUiControllerTests
         Assert.All(hud.Items.Where(i => i.Kind != TdUiKind.Separator && i.SArg != "seg"), i => Assert.False(string.IsNullOrEmpty(i.Tip)));
         r.Ui.Activate(hud.Items.First(i => i.Action == TdUiAction.HudRestore));
         Assert.True(r.Ui.ModalOpen);
-        Assert.Equal(5, r.Ui.BuildPopover()!.Items.Count(i => i.Action == TdUiAction.ModalTab));
+        var tabs = r.Ui.BuildPopover()!.Items.Where(i => i.Action == TdUiAction.ModalTab).ToArray();
+        Assert.Equal(5, tabs.Length);
+        Assert.Equal((int)TdUiMode.Menu, tabs[0].Arg); // Jogo (patente/XP) é a primeira aba
+        Assert.Equal("Jogo", tabs[0].Text);
     }
 
     [Fact]

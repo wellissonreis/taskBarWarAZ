@@ -1429,12 +1429,15 @@ public sealed partial class TdUiController
     public bool ScrollKey(int dir, bool line = false) =>
         ScrollInfo(_match()) is { } i && ScrollBy(dir * (line ? 1 : i.Visible));
 
+    /// <summary>Ordem das abas da modal: a primeira (Jogo: patente, XP e progresso) é também a aberta ao iniciar.</summary>
+    public static readonly TdUiMode[] ModalTabs = [TdUiMode.Menu, TdUiMode.Build, TdUiMode.Runes, TdUiMode.Towers, TdUiMode.Help];
+
     private TdPopoverView? Modalize(TdPopoverView? view)
     {
         if (view is null) return null;
         var items = new List<TdUiItem>();
-        var modes = new[] { TdUiMode.Build, TdUiMode.Runes, TdUiMode.Towers, TdUiMode.Menu, TdUiMode.Help };
-        string[] labels = ["Construir", "Runas", "Torres", "Jogo", "Como jogar"];
+        var modes = ModalTabs;
+        string[] labels = ["Jogo", "Construir", "Runas", "Torres", "Como jogar"];
         for (int i = 0; i < modes.Length; i++)
             items.Add(new(new DipRect(16 + i * 136, 52, 132, 36), TdUiKind.Button, labels[i],
                 TdUiAction.ModalTab, (int)modes[i], Selected: Mode == modes[i]));

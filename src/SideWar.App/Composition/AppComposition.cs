@@ -200,6 +200,13 @@ internal sealed class AppComposition : IDisposable
             case UiRequest.Exit: RequestExit(); break;
             case UiRequest.SaveHudState: SaveHudState(); break;
             case UiRequest.SaveOnboarding: SaveOnboarding(); break;
+            case UiRequest.SaveModalPos:
+                if (gameSide.TdModalOffset is { } mo && (mo.X != settings.Td.ModalOffsetX || mo.Y != settings.Td.ModalOffsetY))
+                {
+                    var moved = settings with { Td = settings.Td with { ModalOffsetX = mo.X, ModalOffsetY = mo.Y } };
+                    if (settingsStore.Save(moved)) settings = moved;
+                }
+                break;
             case UiRequest.SaveTdOptions:
                 if (gameSide.TdOptions is { } o)
                     SaveSettings(settings with
