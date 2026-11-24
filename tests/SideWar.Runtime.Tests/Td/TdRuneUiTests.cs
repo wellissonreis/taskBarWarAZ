@@ -66,11 +66,11 @@ public sealed class TdRuneUiTests
         var b = hud.Items.Single(i => i.Action == TdUiAction.RuneWindow);
         Assert.Equal(TdIcon.Star, b.Icon);
         Assert.True(b.Rect.X + b.Rect.W <= hud.Width + 0.01f);
-        Assert.True(hud.OverButton(b.Rect.X + b.Rect.W / 2f, 14f));
+        Assert.True(hud.OverButton(b.Rect.X + b.Rect.W / 2f, b.Rect.Y + b.Rect.H / 2));
         // sem Iniciar (corrida contínua em andamento) a largura é exatamente a de repouso
         r.Match.Apply(new SideWar.Core.Td.BuildTower("bolt", 600));
         r.Match.Apply(new StartWave());
-        Assert.Equal((779f + 34f) * 0.7f, r.Ui.BuildHud().Width);
+        Assert.Equal((779f + 34f + 67f + 16f) * 0.7f, r.Ui.BuildHud().Width);
     }
 
     [Fact]
@@ -103,12 +103,47 @@ public sealed class TdRuneUiTests
         Assert.Equal("Runas", pop.Title);
         int visible = pop.Items.Count(i => i.Action == TdUiAction.SelectRune);
         Assert.InRange(visible, 8, 60); // a janela mostra só a região em volta da última runa (zoom fixo), não os 128 nós
-        Assert.Contains(pop.Items, i => i.SArg == "rhintw" && i.Text == "Passe o mouse para ver; clique para despertar.");
+        Assert.Contains(pop.Items, i => i.SArg == "rhintw" && i.Text == "Arraste para mover · roda para zoom");
         Assert.Contains(pop.Items, i => i.SArg == "rlink" && i.Text == "Teia completa");
         Assert.True(r.Rune.Selected);
         r.Ui.Activate(r.Rune);
         Assert.False(r.Ui.RuneWindowOpen);
         Assert.Null(r.Ui.BuildPopover());
+    }
+
+    [Fact]
+    public void Window_pan_zoom_anchor_and_recenter_are_bounded()
+    {
+        var r = new Rig(); r.Ui.Activate(r.Rune);
+        var center = r.Ui.WebCenter;
+        var area = r.Ui.WebArea();
+        float x = area.X + area.W * .7f, y = area.Y + area.H * .4f;
+        float beforeX = center.X + (x - area.X - area.W / 2) / TdUiController.HudWorld;
+        float beforeY = center.Y + (y - area.Y - area.H / 2) / TdUiController.HudWorld;
+        Assert.True(r.Ui.ZoomWeb(1, x, y));
+        var after = r.Ui.WebCenter;
+        Assert.Equal(beforeX, after.X + (x - area.X - area.W / 2) / (TdUiController.HudWorld * r.Ui.WebZoom), 5);
+        Assert.Equal(beforeY, after.Y + (y - area.Y - area.H / 2) / (TdUiController.HudWorld * r.Ui.WebZoom), 5);
+        Assert.True(r.Ui.PanWeb(100000, -100000));
+        Assert.Equal((0f, 1f), r.Ui.WebCenter);
+        r.Ui.ZoomWeb(-100); Assert.Equal(TdUiController.MinWebZoom, r.Ui.WebZoom);
+        r.Ui.ZoomWeb(100); Assert.Equal(TdUiController.MaxWebZoom, r.Ui.WebZoom);
+        r.Ui.Activate(r.Ui.BuildPopover()!.Items.Single(i => i.Action == TdUiAction.RecenterRunes));
+        Assert.Equal(1f, r.Ui.WebZoom);
+        Assert.Equal(center, r.Ui.WebCenter);
+    }
+
+    [Fact]
+    public void Rune_drag_threshold_preserves_click_and_moves_only_after_threshold()
+    {
+        var drag = new TdRuneDrag();
+        drag.Begin(10, 10);
+        Assert.Equal((0f, 0f), drag.Move(13, 10));
+        Assert.False(drag.End());
+        drag.Begin(10, 10);
+        Assert.Equal((4f, 0f), drag.Move(14, 10));
+        Assert.Equal((1f, 2f), drag.Move(15, 12));
+        Assert.True(drag.End());
     }
 
     [Fact]
@@ -378,7 +413,7 @@ public sealed class TdRuneUiTests
         float gap = (b.Rect.X + neighbour.Rect.X + neighbour.Rect.W) / 2f;
         Assert.False(hud.OverButton(gap, 14f));
         Assert.False(hud.OverButton(b.Rect.X + 4f, -3f));
-        Assert.True(hud.OverButton(b.Rect.X + 4f, 14f));
+        Assert.True(hud.OverButton(b.Rect.X + 4f, b.Rect.Y + b.Rect.H / 2));
     }
 
     [Fact]

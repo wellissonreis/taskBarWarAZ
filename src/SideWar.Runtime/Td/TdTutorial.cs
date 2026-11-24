@@ -20,7 +20,7 @@ public sealed class TdTutorial(ITdOnboardingStore store)
         new(TdUiMode.Build, "Créditos compram torres; o Cofre gera renda.", "Torres caras podem ser mais eficazes.", TdIcon.Coin, TargetAction: TdUiAction.ChooseTower),
         new(TdUiMode.Menu, "Em Jogo, veja patente, brasão e XP.", "Vazamentos podem rebaixar sua patente.", TdIcon.Medal, "rank-card"),
         new(TdUiMode.Menu, "Defenda sem vazamentos para formar sequência.", "O desempenho também rende coroas e estrelas.", TdIcon.Crown, "rank-card"),
-        new(TdUiMode.Runes, "Fragmentos despertam runas permanentes.", "Na teia, arraste para mover e use a roda para zoom.", TdIcon.Star, "rfrag"),
+        new(TdUiMode.Runes, "Fragmentos despertam runas permanentes.", "Na janela ou na teia, arraste para mover e use a roda para zoom.", TdIcon.Star, "rfrag"),
         new(TdUiMode.Map, "Fase / Selo mostra o mapa de regiões.", "Cada fase registra estrelas e coroas.", TdIcon.Crown, "mapbg"),
         new(TdUiMode.Map, "Use selos na árvore de melhorias.", "Compre os nós de cada ramo em ordem.", TdIcon.Star, TargetAction: TdUiAction.MapTab, TargetArg: 1, Seals: true),
         new(TdUiMode.Map, "Cada região exige uma patente.", "Sem patente, repita a região; a regra vale nos ciclos.", TdIcon.Medal, "mapbg"),

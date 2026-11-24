@@ -48,6 +48,10 @@ public sealed class TdUiWindow : OverlayChildWindow
     /// (SetCapture, sem foco) e reporta o deslocamento do cursor em pixels de tela desde o início (<see cref="DragMoved"/>). Roda na T-Game.
     /// </summary>
     public Func<int, int, bool>? DragHandleAt { get; set; }
+    public Func<int, int, bool>? CapturePointerAt { get; set; }
+    public event Action<int, int>? LeftDown;
+    public event Action? PointerCaptureLost;
+    private bool pointerCaptured;
     public event Action<int, int>? DragMoved;
     public event Action? DragEnded;
     private bool dragging;
@@ -56,9 +60,18 @@ public sealed class TdUiWindow : OverlayChildWindow
     public bool Dragging => dragging;
     private protected override void OnLeftButtonDown(int x, int y)
     {
-        if (!IsVisible || DragHandleAt is not { } test || !test(x, y) || !PInvoke.GetCursorPos(out var p)) return;
-        dragging = true; dragStartX = p.X; dragStartY = p.Y;
-        PInvoke.SetCapture(new HWND(Handle));
+        if (!IsVisible) return;
+        if (DragHandleAt is { } test && test(x, y) && PInvoke.GetCursorPos(out var p))
+        {
+            dragging = true; dragStartX = p.X; dragStartY = p.Y;
+            PInvoke.SetCapture(new HWND(Handle));
+        }
+        else if (CapturePointerAt is { } capture && capture(x, y))
+        {
+            pointerCaptured = true;
+            PInvoke.SetCapture(new HWND(Handle));
+            LeftDown?.Invoke(x, y);
+        }
     }
     private void EndDrag()
     {
@@ -67,14 +80,21 @@ public sealed class TdUiWindow : OverlayChildWindow
         if (PInvoke.GetCapture() == new HWND(Handle)) PInvoke.ReleaseCapture();
         DragEnded?.Invoke();
     }
-    private protected override void OnCaptureLost() => EndDrag();
+    private protected override void OnCaptureLost()
+    {
+        EndDrag();
+        if (pointerCaptured) { pointerCaptured = false; PointerCaptureLost?.Invoke(); }
+    }
 
     public event Action<int, int>? Moved;
     public event Action? Left;
     public event Action<int, int>? LeftUp;
     public event Action<int, int>? RightUp;
-    public event Action<int>? Wheel;
-    private protected override void OnMouseWheel(int delta) { if (IsVisible) Wheel?.Invoke(delta); }
+    public event Action<int, int, int>? Wheel;
+    private protected override void OnMouseWheel(int delta)
+    {
+        if (IsVisible && PInvoke.GetCursorPos(out var p)) Wheel?.Invoke(delta, p.X - Bounds.Left, p.Y - Bounds.Top);
+    }
 
     /// <summary>Botão esquerdo pressionado no último movimento do mouse (arrastar a teia de runas).</summary>
     public bool LeftHeld => MouseLeftHeld;
@@ -93,6 +113,11 @@ public sealed class TdUiWindow : OverlayChildWindow
     {
         if (dragging) { EndDrag(); return; }
         if (IsVisible) LeftUp?.Invoke(x, y);
+        if (pointerCaptured)
+        {
+            pointerCaptured = false;
+            if (PInvoke.GetCapture() == new HWND(Handle)) PInvoke.ReleaseCapture();
+        }
     }
     private protected override void OnRightButtonUp(int x, int y) { if (IsVisible) RightUp?.Invoke(x, y); }
     private protected override bool UsesHandCursor => false;

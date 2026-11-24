@@ -633,7 +633,7 @@ public sealed partial class TdUiRenderer(Typography typography, int dpi, SpriteA
         // Centro da teia na tela (a teia rola e dá zoom): o item "webctr" informa onde está o núcleo; sem ele, o meio da área.
         float cx = ctr is { } cc ? cc.Rect.X : area.X + area.W / 2f, cy = ctr is { } cd ? cd.Rect.Y : area.Y + area.H / 2f;
         float zoom = ctr is { FontSize: > 0f } cz ? cz.FontSize / (big ? TdUiController.ModalWorld : TdUiController.HudWorld) : 1f;
-        _runeLod = big ? TdUiController.RuneLod(zoom) : 0;
+        _runeLod = TdUiController.RuneLod(zoom);
         c.Save();
         c.ClipRect(new SKRect(_p.Px(area.X + 1), _p.Px(area.Y + 1), _p.Px(area.X + area.W - 1), _p.Px(area.Y + area.H - 1)));
         if (big && _runeLod < 2)
@@ -898,6 +898,10 @@ public sealed partial class TdUiRenderer(Typography typography, int dpi, SpriteA
                     RoundBox(c, r, Palette.Td.Amber.WithAlpha(31), Palette.Td.Amber.WithAlpha(31), 11);
                     DrawRuneDiamond(c, r.X + 11, r.Y + r.H / 2f, 5f);
                     _p.Text(c, it.Text, PanelFont.JetBrainsMono, 12, new DipRect(r.X + 20, r.Y + 3, r.W - 26, 16), Palette.Td.Amber, TextAlign.Right);
+                    break;
+                case "rcenter":
+                    RoundBox(c, r, Palette.Td.BorderStrong, Palette.Td.Button, 5);
+                    DrawIcon(c, TdIcon.Target, r.X + 5, r.Y + 4, 14, Palette.Td.Muted);
                     break;
                 case "rhintw":
                 {

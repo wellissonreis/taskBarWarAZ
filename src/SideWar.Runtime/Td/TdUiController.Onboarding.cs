@@ -519,7 +519,7 @@ public sealed partial class TdUiController
         Card(TdIcon.Medal, "Patentes, brasões e XP ficam em Jogo.");
         Card(TdIcon.Crown, "Vença sem vazamentos para ganhar coroa.");
         Card(TdIcon.Question, "Fragmentos despertam runas permanentes.");
-        Card(TdIcon.Question, "Arraste e use zoom para explorar a teia.");
+        Card(TdIcon.Question, "Na janela de runas, arraste e use a roda para explorar.");
         Card(TdIcon.Alert, MutationHelpText);
         Card(TdIcon.Question, "Responda V ou F para ganhar bônus.");
         Section("FASE / SELO");

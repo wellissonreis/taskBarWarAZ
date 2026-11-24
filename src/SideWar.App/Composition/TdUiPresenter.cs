@@ -258,6 +258,9 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
             Present(); Refresh(true);
         };
         popWindow.DragEnded += () => { dragBaseX = modalOffsetX; dragBaseY = modalOffsetY; ui(UiRequest.SaveModalPos); };
+        popWindow.CapturePointerAt = (x, y) => controller.WebContains(x / PopScale, WebY(y));
+        popWindow.LeftDown += (x, y) => runeDrag.Begin(x, y);
+        popWindow.PointerCaptureLost += () => runeDrag.End();
         tipWindow = game.Scene.GetOrCreateTdTooltip();
         tipWindow.ClickableAt = (_, _) => TdTooltipView.AcceptsPointer(tipFirstTime);
         hudWindow.Moved += (x, y) =>
@@ -273,18 +276,12 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         {
             Present();
             // Aba Runas: arrastar com o botão esquerdo rola a teia (e suprime o clique de despertar ao soltar).
-            if (controller.Mode == TdUiMode.Runes && popWindow.LeftHeld)
+            if (runeDrag.Active && popWindow.LeftHeld)
             {
-                if (runeDragLast is { } last)
-                {
-                    float dx = (x - last.X) / PopScale, dy = (y - last.Y) / PopScale;
-                    runeDragTravel += MathF.Abs(dx) + MathF.Abs(dy);
-                    if (controller.PanWeb(dx, dy)) Refresh(true);
-                }
-                runeDragLast = (x, y);
+                var (dx, dy) = runeDrag.Move(x, y);
+                if ((dx != 0 || dy != 0) && controller.PanWeb(dx / PopScale, dy / PopScale)) Refresh(true);
                 return;
             }
-            runeDragLast = null; runeDragTravel = 0f;
             int h = pop?.HitTest(x / PopScale, y / PopScale) ?? -1;
             if (h < 0 && pop is not null)
                 for (int i = pop.Items.Length - 1; i >= 0; i--)
@@ -301,13 +298,16 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         popWindow.Left += () => { if (popHover != -1) { popHover = -1; controller.Hover(null); Refresh(true); } };
         popWindow.LeftUp += (x, y) =>
         {
-            bool dragged = runeDragTravel > 6f;
-            runeDragLast = null; runeDragTravel = 0f;
-            if (dragged && controller.Mode == TdUiMode.Runes) return; // foi arrasto, não clique
+            bool dragged = runeDrag.End();
+            if (dragged) return;
             Click(pop?.Items, pop?.HitTest(x / PopScale, y / PopScale) ?? -1, x / PopScale);
         };
         popWindow.RightUp += (_, _) => controller.Cancel();
-        popWindow.Wheel += delta => { if (controller.ZoomWeb(Math.Sign(delta)) || controller.ScrollBy(-Math.Sign(delta))) Refresh(true); };
+        popWindow.Wheel += (delta, x, y) =>
+        {
+            float px = x / PopScale, py = WebY(y);
+            if ((controller.WebContains(px, py) && controller.ZoomWeb(Math.Sign(delta), px, py)) || controller.ScrollBy(-Math.Sign(delta))) Refresh(true);
+        };
         tipWindow.LeftUp += (_, _) => { Present(); controller.DismissTip(); };
 
         game.Mode.TdPointerMoved += (x, _) => { Present(); controller.PointerMoved(x / k); };
@@ -337,8 +337,8 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     private volatile int modalOffsetX, modalOffsetY, dragBaseX, dragBaseY;
     public (int X, int Y) ModalOffset => (modalOffsetX, modalOffsetY);
 
-    private (int X, int Y)? runeDragLast;
-    private float runeDragTravel;
+    private readonly TdRuneDrag runeDrag = new();
+    private float WebY(int y) => y / PopScale - (pop is { RuneWindow: true, ArrowTop: true } ? TdPopoverView.ArrowH : 0f);
 
     private void CollapseIfOutside(int x, int y)
     {
@@ -364,7 +364,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     private void ModalKey(int key)
     {
         if (key == 27) { controller.Cancel(); return; }
-        if (controller.Mode == TdUiMode.Runes && key is 37 or 38 or 39 or 40 or 33 or 34 or 36 or 107 or 109 or 187 or 189)
+        if ((controller.Mode == TdUiMode.Runes || controller.RuneWindowOpen) && key is 37 or 38 or 39 or 40 or 33 or 34 or 36 or 107 or 109 or 187 or 189)
         {
             const float step = 96f;
             bool moved = key switch

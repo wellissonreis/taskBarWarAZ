@@ -290,6 +290,7 @@ public sealed partial class TdUiController
                 if (RuneWindowOpen) Close();
                 else if (!ModalOpen && _match().Phase is not (MatchPhase.Vitoria)) OpenRuneWindow();
                 break;
+            case TdUiAction.RecenterRunes: RecenterWeb(); break;
             case TdUiAction.RuneTutorialOpen:
                 DismissRuneCard();
                 if (!ModalOpen && !RuneWindowOpen && _match().Phase is not (MatchPhase.Vitoria)) OpenRuneWindow(fromCard: true);
@@ -611,6 +612,7 @@ public sealed partial class TdUiController
         _rcShown = _rcPending = false; // o jogador foi às runas: o aviso cumpriu o papel
         Mode = TdUiMode.None;
         RuneWindowOpen = true;
+        RecenterWeb();
         UpdateModalPause();
         Touch();
         Changed?.Invoke();
@@ -1176,23 +1178,38 @@ public sealed partial class TdUiController
     public (float X, float Y) WebCenter => (_webPanX, _webPanY);
 
     /// <summary>Roda do mouse na aba Runas: <paramref name="steps"/> &gt; 0 aproxima. Devolve true se a aba é a de runas.</summary>
-    public bool ZoomWeb(int steps)
+    public bool ZoomWeb(int steps, float? anchorX = null, float? anchorY = null)
     {
-        if (Mode != TdUiMode.Runes) return false;
+        if (Mode != TdUiMode.Runes && !RuneWindowOpen) return false;
         float z = Math.Clamp(_webZoom * MathF.Pow(1.18f, steps), MinWebZoom, MaxWebZoom);
-        if (z != _webZoom) { _webZoom = z; Changed?.Invoke(); }
+        if (z != _webZoom)
+        {
+            var area = WebArea();
+            float world = RuneWindowOpen ? HudWorld : ModalWorld;
+            float x = anchorX ?? area.X + area.W / 2, y = anchorY ?? area.Y + area.H / 2;
+            _webPanX = Math.Clamp(_webPanX + (x - area.X - area.W / 2) / world * (1 / _webZoom - 1 / z), 0f, 1f);
+            _webPanY = Math.Clamp(_webPanY + (y - area.Y - area.H / 2) / world * (1 / _webZoom - 1 / z), 0f, 1f);
+            _webZoom = z; Changed?.Invoke();
+        }
         return true;
     }
 
     /// <summary>Arrasto/rolagem da teia na aba Runas: deslocamento em DIP da modal (o conteúdo acompanha o ponteiro). Devolve true se a aba é a de runas.</summary>
     public bool PanWeb(float dxDip, float dyDip)
     {
-        if (Mode != TdUiMode.Runes) return false;
-        float k = ModalWorld * _webZoom;
+        if (Mode != TdUiMode.Runes && !RuneWindowOpen) return false;
+        float k = (RuneWindowOpen ? HudWorld : ModalWorld) * _webZoom;
         _webPanX = Math.Clamp(_webPanX - dxDip / k, 0f, 1f);
         _webPanY = Math.Clamp(_webPanY - dyDip / k, 0f, 1f);
         Changed?.Invoke();
         return true;
+    }
+
+    public DipRect WebArea() => RuneWindowOpen ? new DipRect(10, 40, RuneWebWidth, RuneWebHeight) : new DipRect(16, 102, 688, ModalWebHeight);
+    public bool WebContains(float x, float y)
+    {
+        var a = WebArea();
+        return (RuneWindowOpen || Mode == TdUiMode.Runes) && x >= a.X && x < a.X + a.W && y >= a.Y && y < a.Y + a.H;
     }
 
     /// <summary>Volta o zoom e centraliza na última runa despertada (ou no núcleo).</summary>
@@ -1209,6 +1226,9 @@ public sealed partial class TdUiController
     {
         if (_lastRune is not null)
             foreach (var n in m.RuneWeb) if (n.Id == _lastRune) return ((float)n.X, (float)n.Y);
+        var available = m.RuneWeb.Where(n => m.Frontier.Contains(n.Id))
+            .OrderBy(n => (n.X - 0.5) * (n.X - 0.5) + (n.Y - 0.5) * (n.Y - 0.5)).FirstOrDefault();
+        if (available is not null) return ((float)available.X, (float)available.Y);
         return (0.5f, 0.5f);
     }
     public const float ModalWebHeight = 318f, ModalLegendHeight = 32f, HudLegendHeight = 30f;
@@ -1229,7 +1249,7 @@ public sealed partial class TdUiController
         long frag = m.Fragments;
         int total = 0;
         TdRuneTip? tip = null;
-        float ns = sz == ModalRune ? RuneNodeScale(world / ModalWorld) : 1f; // só a aba Runas dá zoom; o HUD usa tamanho fixo
+        float ns = RuneNodeScale(world / (sz == ModalRune ? ModalWorld : HudWorld));
         foreach (var n in m.RuneWeb)
         {
             bool on = m.IsAwakened(n.Id), av = !on && frontier.Contains(n.Id);
@@ -1320,16 +1340,17 @@ public sealed partial class TdUiController
         };
         var area = new DipRect(10, 40, RuneWebWidth, RuneWebHeight);
         items.Add(new(area, TdUiKind.Label, "", SArg: "webbg"));
-        var focus = RuneFocus(m);
-        AddWebCenter(items, area, focus, HudWorld);
-        var (total, tip) = AddRuneNodes(items, m, area, HudRune, HudWorld, focus);
+        var focus = (_webPanX, _webPanY);
+        AddWebCenter(items, area, focus, HudWorld * _webZoom);
+        var (total, tip) = AddRuneNodes(items, m, area, HudRune, HudWorld * _webZoom, focus);
         items.Add(new(new DipRect(10, 8, 150, 24), TdUiKind.Label, $"{total}/{m.RuneWeb.Count}", SArg: "rcount"));
         items.Add(new(new DipRect(RuneWindowWidth - 10 - 24 - 6 - 54, 9, 54, 22), TdUiKind.Label, m.Fragments.ToString(System.Globalization.CultureInfo.InvariantCulture), SArg: "rpill"));
         // TD.30e: a legenda de ramos cabe (8 chips compactos em 268 DIP) e a janela cresce só HudLegendHeight + 4.
         AddRuneLegend(items, m, area.X, area.Y + area.H + 4f, area.W, HudLegendHeight);
         float fy = area.Y + area.H + 4f + HudLegendHeight + 6f;
-        items.Add(new(new DipRect(10, fy, 168, 30), TdUiKind.Label, "Passe o mouse para ver; clique para despertar.", SArg: "rhintw"));
+        items.Add(new(new DipRect(10, fy, 168, 30), TdUiKind.Label, "Arraste para mover · roda para zoom", SArg: "rhintw"));
         items.Add(new(new DipRect(RuneWindowWidth - 10 - 100, fy, 100, 30), TdUiKind.Button, "Teia completa", TdUiAction.ModalTab, (int)TdUiMode.Runes, SArg: "rlink"));
+        items.Add(new(new DipRect(160, 9, 24, 22), TdUiKind.Button, "Centralizar", TdUiAction.RecenterRunes, SArg: "rcenter", Tip: "Centralizar teia"));
         float boxH = fy + 30 + 10;
         // Seta: aponta para o centro do botão Runas (a janela e o HUD ancoram na mesma borda direita).
         return new TdPopoverView("Runas", [.. items], RuneWindowWidth, boxH + TdPopoverView.ArrowH, 0, ArrowX: RuneWindowWidth / 2f, Tip: tip, RuneWindow: true);
