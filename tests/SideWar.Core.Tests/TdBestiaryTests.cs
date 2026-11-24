@@ -8,12 +8,15 @@ namespace SideWar.Core.Tests;
 
 public sealed class TdBestiaryTests
 {
-    [Fact]
-    public void Boss_enraged_discovery_is_emitted_once_at_the_transition()
+    [Theory]
+    [InlineData("chefe_botnet")]
+    [InlineData("ransomware")]
+    [InlineData("botnet")]
+    public void Boss_enraged_discovery_is_emitted_once_at_the_transition(string id)
     {
         var content = TdContentLoader.LoadEmbedded();
         var match = TdMatchState.Create(content, 1, Rng.Seed(7, 54));
-        int index = content.Enemies.Enemies.Length + Array.FindIndex(content.Enemies.Bosses, b => b.Id == "chefe_botnet");
+        int index = content.Enemies.Enemies.Length + Array.FindIndex(content.Enemies.Bosses, b => b.Id == id);
         var enemies = (List<TdEnemy>)typeof(TdMatchState).GetField("_enemies", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(match)!;
         enemies.Add(new TdEnemy { Id = 1, DefIndex = index, IsBoss = true, Hp = 100, MaxHp = 100 });
         var damage = typeof(TdMatchState).GetMethod("DealDamage", BindingFlags.Instance | BindingFlags.NonPublic)!;

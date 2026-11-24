@@ -47,6 +47,8 @@ public static class TdAnimArt
     {
         fps = id switch
         {
+            "ransomware" => 8,
+            "botnet" => 4 / 0.568,
             "chefe_botnet" => 4 / 0.5,
             "chefe_kraken" => 4 / 0.5,
             "chefe_golem" => 4 / 0.571,

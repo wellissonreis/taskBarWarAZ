@@ -62,7 +62,8 @@ public sealed partial class TdMatchState
             h.AddDouble(e.SlowMult); h.AddInt32(e.SlowTicks); h.AddInt32(e.ParalyzeTicks); h.AddInt32(e.ParalyzeGraceTicks); h.AddInt32(e.PushGraceTicks);
             h.AddInt32(e.InvulnTicks); h.AddDouble(e.VulnBonus); h.AddInt32(e.VulnTicks); h.AddDouble(e.CorrodeAmount);
             h.AddInt32(e.CorrodeTicks); h.AddInt32(e.SinceDamageTicks); h.AddInt32(e.AbilityCdTicks); h.AddByte(e.Triggers);
-            if (e.IsBoss && _enemyStats[e.DefIndex].Id.StartsWith("chefe_", StringComparison.Ordinal)) h.AddBool(e.Enraged);
+            if (e.IsBoss && (_enemyStats[e.DefIndex].Id.StartsWith("chefe_", StringComparison.Ordinal)
+                || _enemyStats[e.DefIndex].Id is "ransomware" or "botnet")) h.AddBool(e.Enraged);
         }
         h.AddInt32(_active.Count);
         foreach (var w in _active)

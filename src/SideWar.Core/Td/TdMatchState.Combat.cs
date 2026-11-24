@@ -392,7 +392,8 @@ public sealed partial class TdMatchState
         double absorbed = Math.Min(e.ShieldHp, dmg);
         e.ShieldHp -= absorbed;
         e.Hp -= dmg - absorbed;
-        if (e.IsBoss && !e.Enraged && _enemyStats[e.DefIndex].Id.StartsWith("chefe_", StringComparison.Ordinal) && e.Hp <= e.MaxHp * 0.5)
+        if (e.IsBoss && !e.Enraged && (_enemyStats[e.DefIndex].Id.StartsWith("chefe_", StringComparison.Ordinal)
+            || _enemyStats[e.DefIndex].Id is "ransomware" or "botnet") && e.Hp <= e.MaxHp * 0.5)
         {
             e.Enraged = true;
             Emit(TdEventType.EnemyEncountered, e.DefIndex, 2);

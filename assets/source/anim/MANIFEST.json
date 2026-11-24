@@ -1633,6 +1633,42 @@
     128
    ],
    "sha256": "deceb5438f4d1383456e5db454a343f1797b4ba0020bedb361fecec613b56530"
+  },
+  {
+   "file": "ransomware_enf-walk.png",
+   "design": "Inimigos — bestiário",
+   "blob": "628fe79afa5ccd588bb6dda99faa9308",
+   "role": "walk",
+   "frames": 4,
+   "durationSeconds": 0.5,
+   "fps": 8.0,
+   "sheetPixels": [
+    768,
+    192
+   ],
+   "framePixels": [
+    192,
+    192
+   ],
+   "sha256": "4bf53a2154a390a6c44be9071ba478102d9161961d3276c2712aaf58d26597db"
+  },
+  {
+   "file": "botnet_enf-walk.png",
+   "design": "Inimigos — bestiário",
+   "blob": "19ae6e247e453a68ddf9efe35b8c4de0",
+   "role": "walk",
+   "frames": 4,
+   "durationSeconds": 0.568,
+   "fps": 7.042253521126761,
+   "sheetPixels": [
+    768,
+    192
+   ],
+   "framePixels": [
+    192,
+    192
+   ],
+   "sha256": "90bebe1874e0b2d24e3d360c48e2577b4fa7002fb3d9a4397a07293b70184d11"
   }
  ]
 }

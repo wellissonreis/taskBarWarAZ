@@ -2,6 +2,7 @@ using SideWar.Core.Content.Td;
 using SideWar.Core.Simulation;
 using SideWar.Core.Td;
 using SideWar.Rendering.Panel;
+using SideWar.Rendering.Scene;
 using SideWar.Rendering.Text;
 using SideWar.Runtime.Td;
 using SkiaSharp;
@@ -11,6 +12,19 @@ namespace SideWar.Rendering.Tests.Golden;
 
 public sealed class TdBestiaryGoldenTests
 {
+    [Theory]
+    [InlineData("ransomware")]
+    [InlineData("botnet")]
+    public void Legacy_bosses_have_enraged_sheets(string id)
+    {
+        Assert.True(TdAnimArt.TryEnragedFps(id, out var fps));
+        Assert.True(fps > 0);
+        using var stream = typeof(TdAnimArt).Assembly.GetManifestResourceStream(TdAnimArt.Resource(id + "_enf-walk.png"));
+        Assert.NotNull(stream);
+        using var bitmap = SKBitmap.Decode(stream);
+        Assert.Equal(4 * bitmap.Height, bitmap.Width);
+    }
+
     [Fact]
     public void Every_design_entry_and_variant_has_an_embedded_four_frame_sheet()
     {
