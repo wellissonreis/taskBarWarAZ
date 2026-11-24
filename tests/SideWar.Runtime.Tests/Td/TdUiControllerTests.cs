@@ -38,6 +38,7 @@ public sealed class TdUiControllerTests
         public void TogglePause() => Calls.Add("pause");
         public void OpenSettings() => Calls.Add("settings");
         public void RequestExit() => Calls.Add("exit");
+        public void ResetProfile() => Calls.Add("reset");
         public bool HudMinimized { get; set; }
         public void SetHudMinimized(bool minimized) { HudMinimized = minimized; Calls.Add("hud:" + minimized); }
         public Action<int>? OnStartStage { get; set; }
@@ -374,6 +375,26 @@ public sealed class TdUiControllerTests
         Assert.Equal("stage1", Assert.Single(r.Host.Calls));
         Assert.False(r.Match.Paused);
         Assert.Equal(MatchPhase.Preparo, r.Match.Phase);
+    }
+
+    [Fact]
+    public void Wipe_in_game_tab_requires_confirmation_and_cancel_keeps_progress()
+    {
+        var r = new Rig();
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
+        Assert.Equal("Recomeçar do zero", Find(r.Ui.BuildPopover()!, TdUiAction.WipePrompt).Text);
+        r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.WipePrompt));
+        Assert.Empty(r.Host.Calls);
+        var confirming = r.Ui.BuildPopover()!;
+        Assert.Contains(confirming.Items, i => i.Text == "Apagar todo o progresso?");
+        Assert.DoesNotContain(confirming.Items, i => i.Action == TdUiAction.WipePrompt);
+        r.Ui.Activate(Find(confirming, TdUiAction.WipeCancel));
+        Assert.Empty(r.Host.Calls);
+        Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Action == TdUiAction.WipePrompt);
+
+        r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.WipePrompt));
+        r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.WipeConfirm));
+        Assert.Equal("reset", Assert.Single(r.Host.Calls));
     }
 
     [Fact]

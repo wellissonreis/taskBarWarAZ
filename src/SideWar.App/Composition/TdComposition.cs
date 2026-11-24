@@ -72,6 +72,13 @@ internal sealed class TdComposition
         Host.Restart(TdMatchState.Create(_content, stageId, Rng.Seed(_runSeed, 54UL), Recorder.Profile.PurchasedNodes, _options));
     }
 
+    /// <summary>"Recomeçar do zero": perfil zerado e gravado, depois corrida nova na fase 1 (runas e nós já vêm do perfil vazio).</summary>
+    public void ResetProfile()
+    {
+        Recorder.ResetProgress();
+        StartStage(1);
+    }
+
     /// <summary>Auto-início (padrão desligado; 5 a 60 s) e ondas contínuas (valem a partir da próxima corrida).</summary>
     public void ApplySettings(AppSettings settings)
     {

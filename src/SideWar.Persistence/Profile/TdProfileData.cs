@@ -40,6 +40,12 @@ public sealed record TdProfileData
     public long RuneFragments { get; init; }
 
     public static TdProfileData Default { get; } = new();
+
+    /// <summary>
+    /// "Recomeçar do zero": perfil novo com todo o progresso apagado (reputação, runas, fragmentos, fases, recordes, nós, legado).
+    /// <see cref="IdleImportDone"/> fica true para o save idle antigo nunca ser importado de novo e devolver selos.
+    /// </summary>
+    public static TdProfileData ResetToNew() => new() { IdleImportDone = true };
 }
 
 /// <summary>Conversão do bitset da teia (<see cref="UInt128"/>) de/para o texto do perfil.</summary>

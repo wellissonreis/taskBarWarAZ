@@ -152,6 +152,19 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
         _log("falha ao gravar profile-td.json");
     }
 
+    /// <summary>
+    /// "Recomeçar do zero": apaga todo o progresso do perfil e grava já. Zera também os pendentes (reputação/runas sujas) e os
+    /// valores "anteriores" do card de fim; a partida nova deve ser criada depois, com o perfil zerado.
+    /// </summary>
+    public void ResetProgress()
+    {
+        Profile = TdProfileData.ResetToNew();
+        PreviousBestRunWaves = 0;
+        PreviousLegacyTotal = 0;
+        LastOutcome = default;
+        Save();
+    }
+
     public void OnMatchEnded(TdMatchState match, TdMatchResult result)
     {
         SyncRunes(match);

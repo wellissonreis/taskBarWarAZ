@@ -56,6 +56,32 @@ public sealed class TdCompositionTests : IDisposable
     }
 
     [Fact]
+    public void ResetProfile_wipes_progress_persists_it_and_starts_a_fresh_stage_1_match()
+    {
+        Directory.CreateDirectory(dir);
+        var clock = new ManualClock();
+        var seeded = new TdProfileStore(SideWar.Persistence.IO.RealFileSystem.Instance, dir, "0.1.0");
+        Assert.True(seeded.Save(TdProfileData.Default with
+        {
+            RuneWeb = TdRuneWeb.ToText(0b11), RuneFragments = 9, Reputation = 500, SealsEarned = 4, BestRunWaves = 30,
+            PurchasedNodes = ["defense.damage1"],
+            Stages = [new TdStageProgressData { StageId = 1, Unlocked = true, Stars = 3, BestScore = 99 }, new TdStageProgressData { StageId = 2, Unlocked = true }],
+        }));
+        var td = TdComposition.Create(dir, "0.1.0", VisibleApp(), clock, new AppSettings(), _ => { }, seed: 7);
+        Assert.Equal(2, td.Host.Match.AwakenedCount);
+        td.ResetProfile();
+        Assert.Equal(1, td.RunStartStage);
+        Assert.Equal(0, td.Host.Match.AwakenedCount);
+        Assert.Equal(0, td.Host.Match.Fragments);
+        var reloaded = new TdProfileStore(SideWar.Persistence.IO.RealFileSystem.Instance, dir, "0.1.0").Load().Profile;
+        Assert.Equal(TdProfileData.Default with { IdleImportDone = true }, reloaded with { Stages = TdProfileData.Default.Stages, PurchasedNodes = [], UnlockedTowers = [], InfiniteRuns = [] });
+        Assert.Equal(0, reloaded.Reputation);
+        Assert.Empty(reloaded.PurchasedNodes);
+        Assert.Single(reloaded.Stages);
+        Assert.True(reloaded.IdleImportDone);
+    }
+
+    [Fact]
     public void Runes_are_permanent_profile_progress_across_runs_and_restarts()
     {
         Directory.CreateDirectory(dir);

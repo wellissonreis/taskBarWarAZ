@@ -627,6 +627,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     public void TogglePause() => runtime.TogglePause();
     public void OpenSettings() => ui(UiRequest.OpenSettings);
     public void RequestExit() => ui(UiRequest.Exit);
+    public void ResetProfile() { td.ResetProfile(); driver.MarkDirty(); }
     bool ITdUiHost.HudMinimized => hudMinimized;
 
     public void SetHudMinimized(bool minimized)

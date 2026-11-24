@@ -33,6 +33,7 @@ public sealed partial class TdUiController
     private bool _endShown;
     private bool _winGuide;
     private bool _confirmRestart;
+    private bool _confirmWipe;
     public bool QuickTowersOpen { get; private set; }
     private bool _endCorner;
     private bool _restartArmed, _returnToEnd;
@@ -402,6 +403,9 @@ public sealed partial class TdUiController
             case TdUiAction.Exit: _host.RequestExit(); break;
             case TdUiAction.RestartPrompt: _confirmRestart = true; Changed?.Invoke(); break;
             case TdUiAction.RestartCancel: _confirmRestart = false; Changed?.Invoke(); break;
+            case TdUiAction.WipePrompt: _confirmWipe = true; Changed?.Invoke(); break;
+            case TdUiAction.WipeCancel: _confirmWipe = false; Changed?.Invoke(); break;
+            case TdUiAction.WipeConfirm: _confirmWipe = false; if (_onb is not null) RedoTutorial(); Close(); _host.ResetProfile(); break;
             case TdUiAction.Restart: { var match = _match(); int stage = match.Options.PersistentRun ? (_host.RunStartStage) : match.StageId; _restartArmed = false; Close(); _host.StartStage(stage); break; }
             case TdUiAction.NextStage: { int stage = _match().StageId + 1; Close(); _host.StartStage(stage); break; }
         }
@@ -572,6 +576,7 @@ public sealed partial class TdUiController
         _noticeText = null;
         _endCorner = false;
         _confirmRestart = false;
+        _confirmWipe = false;
         Mode = TdUiMode.None;
         if (QuizActive) CloseQuiz();
         UpdateModalPause();
@@ -711,6 +716,7 @@ public sealed partial class TdUiController
         _webCentered = false; // cada abertura da aba Runas recentraliza na última runa
         _endCorner = false;
         _confirmRestart = false;
+        _confirmWipe = false;
         Mode = mode;
         UpdateModalPause();
         if (mode != TdUiMode.Inspector) _selectedTowerId = 0;
@@ -1375,7 +1381,11 @@ public sealed partial class TdUiController
                         case TdUiAction.RestartCancel: items.Add(Put(it, lx + 171, 410, 165, 32)); break;
                         case TdUiAction.GameOption: items.Add(Put(it, rx, 122 + opt++ * 31, rw, 31)); break;
                         case TdUiAction.SetSpeed: items.Add(Put(it, rx + rw - 12 - 3 * 36 + (it.Arg - 1) * 36, 122 + 8 * 31 + 4, 32, 23)); break;
-                        case TdUiAction.Exit: items.Add(Put(it, rx, 408, rw, 34)); break;
+                        case TdUiAction.Exit: items.Add(Put(it, rx, 408, 163, 34)); break;
+                        case TdUiAction.WipePrompt: items.Add(Put(it, rx + 175, 408, 163, 34)); break;
+                        case TdUiAction.WipeConfirm: items.Add(Put(it, rx, 410, 163, 32)); break;
+                        case TdUiAction.WipeCancel: items.Add(Put(it, rx + 175, 410, 163, 32)); break;
+                        case TdUiAction.None when it.Text == "Apagar todo o progresso?": items.Add(Put(it, rx, 396, rw, 14) with { SArg = "sec", Tone = TdTone.Warn }); break;
                     }
                 }
                 items.Add(new(new DipRect(lx, 266, w, 14), TdUiKind.Label, "HABILIDADES", SArg: "sec"));
@@ -1703,7 +1713,17 @@ public sealed partial class TdUiController
         s.Add(TdUiKind.Button, options.PanelPinned ? "Painel de torres fixo: ligado" : "Painel de torres fixo: desligado", RowH, TdUiAction.GameOption, 7);
         for (int v = 1; v <= 3; v++)
             s.Add(TdUiKind.Button, $"{v}x", RowH, TdUiAction.SetSpeed, v, selected: Math.Clamp(options.GameSpeed, 1, 3) == v);
-        s.Add(TdUiKind.Button, "Sair da partida", RowH, TdUiAction.Exit, tone: TdTone.Bad);
+        if (_confirmWipe)
+        {
+            s.Add(TdUiKind.Label, "Apagar todo o progresso?", RowH, tone: TdTone.Warn);
+            s.Add(TdUiKind.Button, "Sim, apagar", RowH, TdUiAction.WipeConfirm, tone: TdTone.Bad);
+            s.Add(TdUiKind.Button, "Nao", RowH, TdUiAction.WipeCancel);
+        }
+        else
+        {
+            s.Add(TdUiKind.Button, "Sair da partida", RowH, TdUiAction.Exit, tone: TdTone.Bad);
+            s.Add(TdUiKind.Button, "Recomeçar do zero", RowH, TdUiAction.WipePrompt, tone: TdTone.Bad);
+        }
         return Finish("Jogo", s, 0);
     }
 

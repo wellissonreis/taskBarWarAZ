@@ -23,7 +23,7 @@ public enum TdUiAction : byte
     /// <summary>TD.17: avançar passo informativo do tutorial (OK) e pergunta-bônus (V, F, ignorar).</summary>
     TutorialNext, QuizTrue, QuizFalse, QuizClose,
     /// <summary>TD.16b: abrir a lista de torres (vender/reposicionar) e abrir uma torre da lista.</summary>
-    TowersOpen, OpenTower, ModalTab, TowerPage, AutoStartToggle, GameOption, ResumeAbility, RestartPrompt, RestartCancel, QuickTowers,
+    TowersOpen, OpenTower, ModalTab, TowerPage, AutoStartToggle, GameOption, ResumeAbility, RestartPrompt, RestartCancel, WipePrompt, WipeConfirm, WipeCancel, QuickTowers,
     /// <summary>TD.29b: pausa real (Pause/Resume do Core), velocidade 1x/2x/3x (Arg), seleção de um nó da teia (SArg = id) e despertar runa.</summary>
     PauseToggle, SetSpeed, SelectRune, AwakenRune,
     /// <summary>TD.30c: botão Runas do HUD (abre/fecha a janela de runas ancorada no chip, sem pausar e sem tomar foco).</summary>
@@ -229,6 +229,9 @@ public interface ITdUiHost
     void TogglePause();
     void OpenSettings();
     void RequestExit();
+
+    /// <summary>"Recomeçar do zero" (confirmado no menu): apaga o perfil TD, reinicia o onboarding e começa uma partida nova na fase 1. Configurações ficam.</summary>
+    void ResetProfile() { }
 
     /// <summary>HUD recolhido (lembrado em settings, TD.14).</summary>
     bool HudMinimized { get; }

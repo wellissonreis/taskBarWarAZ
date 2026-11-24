@@ -191,6 +191,27 @@ public class TdProfileStoreTests
     }
 
     [Fact]
+    public void ResetToNew_returns_every_field_to_default_but_keeps_the_idle_import_done()
+    {
+        var dirty = TdProfileData.Default with
+        {
+            SealsEarned = 9, MigratedSeals = 2, IdleImportDone = true, PurchasedNodes = ["defense.damage1"], UnlockedTowers = ["bolt"],
+            InfiniteRuns = [new TdInfiniteRunData { Seed = 5, MaxWave = 40 }], LegacyTotal = 7, BestRunWaves = 33, LegacyLastRun = "r1", RunsPlayed = 4,
+            Reputation = 1234, RuneWeb = TdRuneWeb.ToText(0xff), RuneFragments = 77,
+            Stages = [new TdStageProgressData { StageId = 1, Unlocked = true, Stars = 3, Crown = true, Medals = 5, BestScore = 10, ChallengeCompleted = true }],
+        };
+        var fresh = TdProfileData.ResetToNew();
+        Assert.Equal(TdProfileData.Default with { IdleImportDone = true }, fresh with { Stages = TdProfileData.Default.Stages, PurchasedNodes = TdProfileData.Default.PurchasedNodes, UnlockedTowers = TdProfileData.Default.UnlockedTowers, InfiniteRuns = TdProfileData.Default.InfiniteRuns });
+        Assert.Empty(fresh.PurchasedNodes);
+        Assert.Empty(fresh.UnlockedTowers);
+        Assert.Empty(fresh.InfiniteRuns);
+        var stage = Assert.Single(fresh.Stages);
+        Assert.Equal(new TdStageProgressData { StageId = 1, Unlocked = true }, stage);
+        Assert.Equal(TdRuneWeb.Empty, fresh.RuneWeb);
+        Assert.Equal(0, fresh.Reputation);
+    }
+
+    [Fact]
     public void Rules_RecordStage_StarsNeverDecrease_SealsOnlyForNewStarsAndFirstChallenge()
     {
         var p = TdProfileData.Default;
