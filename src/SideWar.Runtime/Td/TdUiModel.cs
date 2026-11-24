@@ -211,7 +211,7 @@ public sealed record TdTooltipView(string Text, float AnchorX, float AnchorTop)
 /// <param name="Continuous">TD.28b: ondas contínuas (corrida infinita); desligado = modo clássico. Vale na próxima corrida.</param>
 /// <param name="GameSpeed">TD.28c: velocidade do jogo 1, 2 ou 3 (Steps por tick no host).</param>
 /// <param name="PanelPinned">TD.28b: painel rápido de torres sempre aberto junto ao chip.</param>
-public sealed record TdGameOptions(int BandHeight = 64, bool AutoStart = false, bool Sound = false, int Volume = 60, bool Questions = true, bool Fade = true,
+public sealed record TdGameOptions(int BandHeight = 40, bool AutoStart = false, bool Sound = false, int Volume = 60, bool Questions = true, bool Fade = true,
     bool Continuous = true, bool PanelPinned = false, int GameSpeed = 1, bool ShowIncome = false, bool Discreet = false, bool AutoRestart = false, int NoticeSize = 1,
     bool ExtraSpeeds = false, int SpeedMask = TdSpeed.DefaultMask);
 
@@ -242,7 +242,7 @@ public sealed record TdSettingsData
     public AutoStartMode AutoStartMode { get; init; } = AutoStartMode.Immediate;
     public bool AutoRestart { get; init; }
     public int AutoStartSeconds { get; init; } = 15;
-    public int BandHeight { get; init; } = 64;
+    public int BandHeight { get; init; } = 40;
     public int CornerUiScale { get; init; } = 125;
     public int GameSpeed { get; init; } = 1;
     public bool ExtraSpeeds { get; init; }

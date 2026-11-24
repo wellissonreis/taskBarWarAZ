@@ -129,7 +129,7 @@ public sealed record TdSettings
 
     public const int MinBandHeightDip = 32;
     public const int MaxBandHeightDip = 96;
-    public const int DefaultBandHeightDip = 64;
+    public const int DefaultBandHeightDip = SmallBandHeightDip;
     public const int SmallBandHeightDip = 40;
     public const int LargeBandHeightDip = 88;
     public const int MinFadePercent = 10;

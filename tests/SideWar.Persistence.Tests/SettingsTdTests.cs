@@ -203,12 +203,12 @@ public class SettingsTdTests
     public void Defaults_for_band_size_hud_and_focus_fade()
     {
         var td = AppSettings.Default.Td;
-        Assert.Equal(64, td.BandHeightDip);
+        Assert.Equal(TdSettings.SmallBandHeightDip, td.BandHeightDip);
         Assert.True(td.HudMinimized); // TD.17: nasce recolhido
         Assert.True(td.FadeWhenUnfocused);
         Assert.Equal(50, td.FadeOpacityPercent);
         var old = ReadPayload("{\"td\":{\"autoStartEnabled\":true}}").Td; // JSON antigo: campos ausentes = padrão
-        Assert.Equal(64, old.BandHeightDip);
+        Assert.Equal(TdSettings.SmallBandHeightDip, old.BandHeightDip);
         Assert.True(old.FadeWhenUnfocused);
     }
 
@@ -250,7 +250,7 @@ public class SettingsTdTests
     public void Invalid_band_height_and_fade_fall_back_to_default(int value)
     {
         var td = ReadPayload("{\"td\":{\"bandHeightDip\":" + value + ",\"fadeOpacityPercent\":" + (value + 100) + "}}").Td;
-        Assert.Equal(64, td.BandHeightDip);
+        Assert.Equal(TdSettings.SmallBandHeightDip, td.BandHeightDip);
         Assert.Equal(50, td.FadeOpacityPercent);
     }
 
