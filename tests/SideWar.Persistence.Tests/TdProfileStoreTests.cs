@@ -554,10 +554,10 @@ public class TdReputationProfileTests
     [Fact]
     public void ApplyReputation_floors_at_zero_and_rank_goes_down_and_up()
     {
-        var p = TdProfileData.Default with { Reputation = 24_100 };
+        var p = TdProfileData.Default with { Reputation = 27_700 };
         Assert.Equal(TdRankLevel.Pleno, TdProfileRules.Rank(p).Current);
         var down = TdProfileRules.ApplyReputation(p, -300);
-        Assert.Equal(23_800, down.Reputation);
+        Assert.Equal(27_400, down.Reputation);
         Assert.Equal(TdRankLevel.Junior, TdProfileRules.Rank(down).Current); // rebaixado
         Assert.Equal(TdRankLevel.Pleno, TdProfileRules.Rank(TdProfileRules.ApplyReputation(down, 300)).Current); // e sobe de novo
         Assert.Equal(0, TdProfileRules.ApplyReputation(p, -1_000_000).Reputation);
@@ -572,7 +572,7 @@ public class TdReputationProfileTests
         var payload = """{"sealsEarned":1,"stages":[{"stageId":1,"unlocked":true,"stars":3,"bestScore":4000},{"stageId":2,"unlocked":true,"stars":1,"bestScore":2500}]}""";
         fs.Files["/data/profile-td.json"] = Envelope(payload, TdProfileData.Schema, 4);
         var p = store.Load().Profile;
-        Assert.Equal(6_500, p.Reputation);
+        Assert.Equal(5_300, p.Reputation);
         Assert.Equal(TdRankLevel.Junior, TdProfileRules.Rank(p).Current);
         Assert.Equal(TdProfileData.SchemaVersion, SchemaVersionOnDisk(fs.Files["/data/profile-td.json"]));
     }

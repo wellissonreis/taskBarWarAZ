@@ -94,7 +94,7 @@ public sealed class TdUiControllerTests
         var r = new Rig();
         r.Host.SetGameOptions(r.Host.GameOptions with { NoticeSize = size });
         r.Ui.Sync();
-        r.Host.Score = 25000;
+        r.Host.Score = 28000;
         r.Ui.Sync();
         Assert.Equal(height, r.Ui.BuildPopover()!.Height);
         r.Ui.DismissNotice();
@@ -119,14 +119,14 @@ public sealed class TdUiControllerTests
         var r = new Rig();
         r.Ui.Sync();
         Assert.False(r.Ui.NoticeOpen);
-        r.Host.Score = 25000;
+        r.Host.Score = 28000;
         r.Ui.Sync();
         Assert.Equal("Promovido a Pleno!", r.Ui.NoticeText);
         Assert.True(r.Ui.CornerPopover);
         r.Now += TdUiController.StageNoticeSeconds + 1;
         r.Ui.Sync();
         Assert.False(r.Ui.NoticeOpen);
-        r.Host.Score = 5000;
+        r.Host.Score = 6000;
         r.Ui.Sync();
         Assert.Equal("Rebaixado a Júnior", r.Ui.NoticeText); // REPUTACAO: perder XP rebaixa a patente, com toast equivalente
         r.Now += TdUiController.StageNoticeSeconds + 1;
@@ -147,7 +147,7 @@ public sealed class TdUiControllerTests
         r.Ui.CollapseOutside();
         var card = r.Ui.BuildPopover()!;
         Assert.Contains(card.Items, i => i.Text.Contains("Rebaixado a Estagiário"));
-        Assert.Contains(card.Items, i => i.Text.Contains("500 XP"));
+        Assert.Contains(card.Items, i => i.Text.Contains("1300 XP"));
         r.Ui.Activate(Assert.Single(card.Items, i => i.Action == TdUiAction.DemotionContinue));
         Assert.False(r.Match.Paused);
         Assert.False(r.Ui.DemotionCardOpen);
