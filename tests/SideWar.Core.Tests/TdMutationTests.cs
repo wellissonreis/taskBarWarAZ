@@ -355,13 +355,14 @@ public sealed class TdMutationTests
             int n = w.Agenda.Length;
             int mutated = w.Agenda.Count(x => x.Mutations != 0);
             int doubles = w.Agenda.Count(x => s.MutationTraitIds(x.Mutations).Count == 2);
-            Assert.Equal(20, n); // nunca muda a quantidade
+            if (w.Stage <= 6) Assert.Equal(20, n); else Assert.True(n >= 20); // nunca muda a quantidade (ciclos do infinito só aumentam)
             Assert.True(mutated <= Math.Floor(n * 0.3)); // pelo menos 70% sem mutação
             Assert.DoesNotContain(w.Agenda, x => x.IsBoss && x.Mutations != 0);
             if (mutated > 0) firstMutated = Math.Min(firstMutated, w.Abs);
             if (w.Abs <= 20 || w.Stage < 3) Assert.Equal(0, mutated);
             if (w.Abs % 10 == 5) Assert.Equal(0, mutated); // onda de respiro (5ª de cada fase)
             int cap = w.Stage >= 7 && w.Abs > 80 ? 6 : w.Stage >= 5 && w.Abs > 45 ? 4 : 2;
+            if (w.Stage > 6) cap = (int)Math.Ceiling(cap * n / 20.0); // ciclos do infinito têm mais inimigos por onda: os tetos escalam com a quantidade
             Assert.True(mutated <= cap, $"onda {w.Abs}: {mutated} > {cap}");
             if (w.Abs <= 45 || w.Stage < 5) Assert.Equal(0, doubles); // degrau 1: só um traço
             if (w.Abs > 45 && w.Stage >= 5 && !(w.Stage >= 7 && w.Abs > 80)) Assert.True(doubles <= 1);

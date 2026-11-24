@@ -71,7 +71,7 @@ public sealed class TdMatchTests
         Assert.Equal(0, s.WaveNumber);
         Assert.Equal(12, s.TotalWaves);
         Assert.Equal(AutoStartMode.Off, s.AutoStart);
-        Assert.Throws<ArgumentOutOfRangeException>(() => New(9));
+        Assert.Equal(9, New(9).StageNumber);
     }
 
     [Fact(DisplayName = "CA-28.1 / T-28.1 Wave never starts by itself by default; Preparo does not advance the world clock")]
@@ -453,7 +453,7 @@ public sealed class TdMatchTests
         Assert.True(r.Ticks > 0);
     }
 
-    private const ulong GoldenReplay = 1427579694745150227UL;
+    private const ulong GoldenReplay = 13649307859922841172UL;
 
     private static TdReplayResult RunScript(ulong seed)
     {
