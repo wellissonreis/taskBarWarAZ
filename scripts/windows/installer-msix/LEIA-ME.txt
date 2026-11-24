@@ -13,7 +13,7 @@ Como instalar
 1. Extraia o .zip numa pasta e de duplo clique em Cert-Chave-Acesso.cmd
    (so uma vez). Aceite o pedido de administrador; ele apenas faz o Windows
    confiar no certificado de teste. Espere a mensagem "SUCESSO".
-2. De duplo clique em SideWar.msix e clique em Instalar.
+2. De duplo clique em SideWar-*.msix e clique em Instalar.
 3. Abra o SideWar pelo menu Iniciar.
 
 Como desinstalar

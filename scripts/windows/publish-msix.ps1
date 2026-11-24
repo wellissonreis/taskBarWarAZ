@@ -130,7 +130,7 @@ if ($previous.Count -gt 0) {
     New-Item -ItemType Directory -Force -Path $hist | Out-Null
     $previous | Move-Item -Destination $hist -Force
 }
-$finalName = if ($Mode -eq 'StoreUpload') { 'SideWar.msixupload' } else { 'SideWar.msix' }
+$finalName = if ($Mode -eq 'StoreUpload') { 'SideWar.msixupload' } else { "SideWar-$PackageVersion.msix" }
 $final = Join-Path $output $finalName
 Copy-Item -LiteralPath $package.FullName -Destination $final -Force
 Remove-Item -LiteralPath $runOutput -Recurse -Force -ErrorAction SilentlyContinue
