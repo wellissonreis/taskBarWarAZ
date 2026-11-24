@@ -88,6 +88,24 @@ public sealed class TdCompositionTests : IDisposable
     }
 
     [Fact]
+    public void Restarting_the_stage_keeps_credits_without_granting_extra()
+    {
+        Directory.CreateDirectory(dir);
+        var clock = new ManualClock();
+        var td = TdComposition.Create(dir, "0.1.0", VisibleApp(), clock, new AppSettings(), _ => { }, seed: 7);
+        td.Host.OnCommand(new SideWar.Core.Td.LayoutChanged(TdSanityBot.TypicalLayout()));
+        long initial = td.Host.Match.Credits;
+        td.StartStage(td.RunStartStage); // sem gastar: não ganha extra
+        Assert.Equal(initial, td.Host.Match.Credits);
+        td.Host.OnCommand(new SideWar.Core.Td.BuildTower(td.Host.Match.Content.Towers.First(t => t.MinRank <= 0).Id, 150));
+        long spent = td.Host.Match.Credits;
+        Assert.True(spent < initial);
+        td.StartStage(td.RunStartStage); // gastou: reiniciar não devolve nem repõe o inicial, mas nunca fica abaixo do que tinha
+        Assert.Equal(Math.Max(spent, initial), td.Host.Match.Credits);
+        Assert.Equal(spent, td.Host.Match.Credits);
+    }
+
+    [Fact]
     public void Returning_to_a_reached_stage_preserves_towers_xp_and_reached_progress()
     {
         Directory.CreateDirectory(dir);

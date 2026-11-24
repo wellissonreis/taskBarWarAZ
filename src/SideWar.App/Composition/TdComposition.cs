@@ -80,6 +80,8 @@ internal sealed class TdComposition
         _options = Recorder.WithRunes(_options) with { HighestCompletedStage = Recorder.Profile.Stages.Where(s => s.Stars > 0).Select(s => s.StageId).DefaultIfEmpty(0).Max() };
         var next = TdMatchState.Create(_content, stageId, Rng.Seed(_runSeed, 54UL), Recorder.Profile.PurchasedNodes, _options);
         // Trocar de fase, reiniciar a corrida e voltar por trava NUNCA apagam as torres: elas viajam com todo o estado (só "Recomeçar do zero" as limpa).
+        // Reiniciar a MESMA fase preserva o dinheiro: max(créditos atuais, iniciais da fase). Trocar de fase ou "Recomeçar do zero" começam com os iniciais.
+        if (keepTowers && Host.Match.StageNumber == stageId) next.CarryCredits(Host.Match.Credits);
         bool carried = keepTowers && next.ImportTowers(Host.Match.ExportTowers()) > 0;
         Host.Restart(next, carried);
         Host.ApplyAutoStart(_autoStartMode, _autoStartSeconds);

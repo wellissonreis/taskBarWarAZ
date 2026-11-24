@@ -23,6 +23,15 @@ public sealed partial class TdMatchState
     }
 
     /// <summary>
+    /// Reiniciar a mesma fase nunca tira dinheiro: créditos = max(atuais da partida nova, <paramref name="credits"/>). Nunca soma (sem farm: reiniciar não
+    /// concede créditos extras nem bônus de onda de novo). Só vale em Preparo de partida recém-criada.
+    /// </summary>
+    public void CarryCredits(long credits)
+    {
+        if (credits > Credits) Credits = credits;
+    }
+
+    /// <summary>
     /// Entrega as torres a uma partida recém-criada (sem torres). Devolve quantas entraram; as que o <c>LayoutChanged</c> seguinte não comportar
     /// ficam SEM POSIÇÃO (reserva: o jogador recoloca de graça). Nunca reembolsa nem descarta por falta de posição.
     /// </summary>
