@@ -61,4 +61,16 @@ public sealed class TdStageGateTests
         Assert.Equal(2, match.StageNumber);
         Assert.True(match.GateReputation >= TdRank.Threshold(TdRankLevel.Junior));
     }
+
+    [Fact]
+    public void Demotion_during_a_region_waits_for_its_end_before_returning()
+    {
+        var match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 2, Rng.Seed(7, 54), null,
+            TdMatchOptions.Default with { InitialReputation = 5400, ContinuousWaves = false });
+        typeof(TdMatchState).GetMethod("LoseReputation", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(match, [10]);
+        Assert.Equal(2, match.StageNumber);
+        Assert.Equal(TdRankLevel.Estagiario, TdRank.For(match.GateReputation));
+        typeof(TdMatchState).GetMethod("ClearStageAndAdvance", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(match, null);
+        Assert.Equal(1, match.StageNumber);
+    }
 }

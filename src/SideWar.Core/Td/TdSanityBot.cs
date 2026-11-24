@@ -78,10 +78,10 @@ public static class TdSanityBot
     /// mantidos), jogada até derrota ou <paramref name="maxStages"/> fases concluídas (6 = a campanha; mais = ciclo infinito). A cada fase o bot
     /// carrega o roteiro da fase de conteúdo (só construir/runas: mira e venda do roteiro de fase única dependem de ids que a corrida já mudou).
     /// </summary>
-    public static TdRunBotResult RunContinuous(TdContent content, int startStage, TdBotProfile profile, ulong seed, int maxStages = 6, bool awaken = true, Action<TdMatchState>? observe = null, bool stopAtCollapse = true)
+    public static TdRunBotResult RunContinuous(TdContent content, int startStage, TdBotProfile profile, ulong seed, int maxStages = 6, bool awaken = true, Action<TdMatchState>? observe = null, bool stopAtCollapse = true, int? initialReputation = null)
     {
         ArgumentNullException.ThrowIfNull(content);
-        var state = TdMatchState.Create(content, startStage, Rng.Seed(seed, 54), null, TdMatchOptions.Default);
+        var state = TdMatchState.Create(content, startStage, Rng.Seed(seed, 54), null, TdMatchOptions.Default with { InitialReputation = initialReputation });
         var bot = new Runner(state, RunPlan(startStage, profile), profile) { RunMaxStages = maxStages, Awaken = awaken, Observe = observe, StopAtCollapse = stopAtCollapse };
         return bot.PlayRun(seed, startStage);
     }
