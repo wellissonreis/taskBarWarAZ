@@ -952,13 +952,8 @@ public sealed partial class TdUiController
             Add(495 + grow + i * 32, 9, 30, 22, TdUiKind.Button, TdSpeed.Label(v), TdUiAction.SetSpeed, v, enabled: !ModalOpen, selected: speed == v, tip: $"Velocidade {v}x");
         }
         // O TD não tem caixa coletável desde TD.30a; a ação permanece desabilitada.
-        bool shadowOn = m.Shadow, shadowPending = m.ShadowPending is not null;
-        Add(604 + grow + speedExtra, 6, 135, 28, TdUiKind.Button, shadowPending ? (shadowOn ? "Saindo…" : "Entrando…") : shadowOn ? "Sombra ligada" : "Modo sombra", TdUiAction.ShadowToggle,
-            tag: "shadow", enabled: live, selected: shadowOn, icon: TdIcon.Moon,
-            tip: shadowOn ? "Modo sombra ligado: XP congelado, recompensas permanentes em 35%. Clique para sair (vale entre ondas)."
-                : "Modo sombra: farme sem perder nem ganhar XP (recompensas permanentes em 35%). Entra entre ondas.");
-        Add(745 + grow + speedExtra, 6, 28, 28, TdUiKind.Button, "", TdUiAction.HudMinimize, icon: TdIcon.Collapse, tip: "Recolher HUD");
-        return CompactHud(AddRankToHud(new TdHudView(HighlightHud(items), offset + 779 + grow + speedExtra, 40 + y0, Minimized: false, Wave: shown, TotalWaves: m.TotalWaves, Floats: _money.Floats, TopPad: y0)), 0.7f);
+        Add(604 + grow + speedExtra, 6, 28, 28, TdUiKind.Button, "", TdUiAction.HudMinimize, icon: TdIcon.Collapse, tip: "Recolher HUD");
+        return CompactHud(AddRankToHud(new TdHudView(HighlightHud(items), offset + 638 + grow + speedExtra, 40 + y0, Minimized: false, Wave: shown, TotalWaves: m.TotalWaves, Floats: _money.Floats, TopPad: y0)), 0.7f);
     }
 
     /// <summary>XP compacto para o HUD (cabe em até 5 caracteres).</summary>

@@ -16,7 +16,7 @@ public sealed class TdTutorial(ITdOnboardingStore store)
         new(TdUiMode.Bestiary, "Cada inimigo tem pontos fortes e fracos.", "Veja os tipos em Inimigos e escolha a torre certa.", TdIcon.Target),
         new(TdUiMode.Menu, "Patentes liberam torres e fusão.", "Fusão a partir de Júnior; dano no núcleo tira XP.", TdIcon.Medal),
         new(TdUiMode.None, "Velocidade no HUD acelera a partida.", "", TdIcon.FastForward),
-        new(TdUiMode.None, "Modo sombra no HUD farma sem arriscar XP.", "", TdIcon.Moon, HudTarget: TdUiAction.ShadowToggle),
+        new(TdUiMode.None, "Modo sombra farma sem arriscar XP.", "Liga e desliga em Configurações; o atalho também vale.", TdIcon.Moon),
         new(TdUiMode.Menu, "Configurações ficam na engrenagem.", "Abra Como jogar para refazer o tutorial.", TdIcon.Question, TargetAction: TdUiAction.SettingsOpen),
     ]);
 

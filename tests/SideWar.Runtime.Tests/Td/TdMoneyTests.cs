@@ -335,7 +335,7 @@ public sealed class TdMoneyTests
         Assert.All(hud.Items, it => Assert.True(it.Rect.Y >= hud.TopPad));
         Assert.False(hud.OverButton(5f, 4f));                       // a faixa do topo é transparente ao mouse
         var money = hud.Items.Single(i => i.Kind == TdUiKind.Money);
-        Assert.False(hud.OverButton(money.Rect.X + 4, money.Rect.Y + 4));
+        Assert.False(hud.OverButton(money.Rect.X + 4, hud.TopPad - 1f)); // os números flutuantes acima do contador não recebem clique
         r.Host.HudMinimized = true;
         var mini = r.Ui.BuildHud();
         Assert.Equal(0f, mini.TopPad);

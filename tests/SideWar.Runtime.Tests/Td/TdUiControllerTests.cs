@@ -211,20 +211,16 @@ public sealed class TdUiControllerTests
     }
 
     [Fact]
-    public void Shadow_button_in_hud_jogo_tab_and_settings_toggle_the_mode_and_the_hud_shows_it()
+    public void Shadow_in_jogo_tab_settings_and_hotkey_toggle_the_mode_and_the_hud_shows_it()
     {
         var r = new Rig();
         r.Ui.Sync();
         var hud = r.Ui.BuildHud();
-        var btn = hud.Items.Single(i => i.Action == TdUiAction.ShadowToggle);
-        Assert.Equal("Modo sombra", btn.Text);
+        Assert.DoesNotContain(hud.Items, i => i.Action == TdUiAction.ShadowToggle); // o botão saiu da HUD
         Assert.False(hud.Shadow);
-        r.Ui.Activate(btn);
+        r.Ui.ToggleShadow(); // atalho de teclado
         Assert.True(r.Match.Shadow); // Preparo: entra na hora
-        hud = r.Ui.BuildHud();
-        Assert.True(hud.Shadow);
-        Assert.Equal("Sombra ligada", hud.Items.Single(i => i.Action == TdUiAction.ShadowToggle).Text);
-        Assert.True(hud.Items.Single(i => i.Action == TdUiAction.ShadowToggle).Selected);
+        Assert.True(r.Ui.BuildHud().Shadow);
 
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
         var tile = Pick(r.Ui.BuildPopover()!, TdUiAction.ShadowToggle, "shadow-tile");
@@ -263,7 +259,7 @@ public sealed class TdUiControllerTests
         r.Ui.ToggleShadow();
         Assert.True(r.Match.Shadow);
         Assert.Equal(false, r.Match.ShadowPending);
-        Assert.Equal("Saindo…", r.Ui.BuildHud().Items.Single(i => i.Action == TdUiAction.ShadowToggle).Text);
+        Assert.Equal(1, r.Ui.BuildHud().Items.Count(i => i.Action == TdUiAction.HudMinimize));
     }
 
     [Fact]
