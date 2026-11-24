@@ -208,7 +208,8 @@ public sealed record TdTooltipView(string Text, float AnchorX, float AnchorTop)
 /// <param name="GameSpeed">TD.28c: velocidade do jogo 1, 2 ou 3 (Steps por tick no host).</param>
 /// <param name="PanelPinned">TD.28b: painel rápido de torres sempre aberto junto ao chip.</param>
 public sealed record TdGameOptions(int BandHeight = 64, bool AutoStart = false, bool Sound = false, int Volume = 60, bool Questions = true, bool Fade = true,
-    bool Continuous = true, bool PanelPinned = false, int GameSpeed = 1, bool ShowIncome = false, bool Discreet = false, bool AutoRestart = false, int NoticeSize = 1);
+    bool Continuous = true, bool PanelPinned = false, int GameSpeed = 1, bool ShowIncome = false, bool Discreet = false, bool AutoRestart = false, int NoticeSize = 1,
+    bool ExtraSpeeds = false, int SpeedMask = TdSpeed.DefaultMask);
 
 /// <summary>
 /// Todas as opções editáveis do menu Configurações (vista pura do <c>AppSettings</c>; o Runtime não conhece a Persistência). Enums viram índices
@@ -239,6 +240,8 @@ public sealed record TdSettingsData
     public int BandHeight { get; init; } = 64;
     public int CornerUiScale { get; init; } = 125;
     public int GameSpeed { get; init; } = 1;
+    public bool ExtraSpeeds { get; init; }
+    public int SpeedMask { get; init; } = TdSpeed.DefaultMask;
     public int NoticeSize { get; init; } = 1;
     public bool Sound { get; init; }
     public int Volume { get; init; } = 60;
@@ -259,6 +262,7 @@ public sealed record TdSettingsData
     public string ToggleVisibility { get; init; } = "Ctrl+Alt+H";
     public string TogglePause { get; init; } = "Ctrl+Alt+P";
     public string StartWave { get; init; } = "Ctrl+Alt+Space";
+    public string CycleSpeed { get; init; } = "Ctrl+Alt+V";
 }
 
 public interface ITdUiHost
@@ -269,6 +273,8 @@ public interface ITdUiHost
     /// <summary>Consulta (assíncrona) o estado de "Iniciar com o Windows" ao abrir a vista Configurações.</summary>
     void RefreshStartup() { }
     TdGameOptions GameOptions => new();
+    /// <summary>Velocidade efetiva real (Steps por tick); abaixo da pedida quando o teto de tempo por frame corta.</summary>
+    double EffectiveSpeed => 1;
     int LegacyTotal => 0;
     int PreviousLegacyTotal => 0;
     int PreviousBestRunWaves => 0;

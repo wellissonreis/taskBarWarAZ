@@ -251,6 +251,7 @@ public sealed partial class TdUiRenderer(Typography typography, int dpi, SpriteA
             if (it.Sub is not null) _p.Text(c, it.Sub, PanelFont.JetBrainsMono, 8, new DipRect(r.X + 20, r.Y + 17, r.W - 20, 10), Palette.Td.Muted);
             return;
         }
+        if (it.SArg == "speedeff") { _p.Text(c, it.Text, PanelFont.JetBrainsMono, 10, new DipRect(r.X, r.Y + 4, r.W, 14), Palette.Td.Amber); return; }
         if (it.SArg == "speeds") { RoundBox(c, r, Palette.Td.BorderStrong, Palette.Td.Background, 7); return; }
         if (it.SArg == "crate")
         {

@@ -56,8 +56,8 @@ public sealed partial class TdUiController
         items.Add(new(new DipRect(rx, 288, 376, 14), TdUiKind.Label, "CONFIGURAÇÕES", SArg: "sec"));
         items.Add(new(new DipRect(lx, 352, 60, 14), TdUiKind.Label, "AÇÕES", SArg: "sec"));
 
-        items.Add(new(new DipRect(rx, 308 + 3 * 35, 121, 33), TdUiKind.Label, "Velocidade", SArg: "jg-tile-speed"));
-        items.Add(new(new DipRect(rx + 127, 308 + 3 * 35, 248, 33), TdUiKind.Button, "Todas as configurações", TdUiAction.SettingsOpen, Icon: TdIcon.Gear, SArg: "cfg-link"));
+        items.Add(new(new DipRect(rx, 308 + 3 * 35, _host.GameOptions.ExtraSpeeds ? 375 : 121, 33), TdUiKind.Label, "Velocidade", SArg: "jg-tile-speed"));
+        if (!_host.GameOptions.ExtraSpeeds) items.Add(new(new DipRect(rx + 127, 308 + 3 * 35, 248, 33), TdUiKind.Button, "Todas as configurações", TdUiAction.SettingsOpen, Icon: TdIcon.Gear, SArg: "cfg-link"));
         int ab = 0;
         foreach (var it in src)
         {
@@ -82,7 +82,7 @@ public sealed partial class TdUiController
                     break;
                 }
                 case TdUiAction.SetSpeed:
-                    items.Add(Put(it, rx + 8 + (it.Arg - 1) * 33, 308 + 3 * 35 + 15, 30, 17));
+                    items.Add(Put(it, rx + 8 + Math.Max(0, Array.IndexOf(AllowedSpeeds, it.Arg)) * 33, 308 + 3 * 35 + 15, 30, 17));
                     break;
             }
         }

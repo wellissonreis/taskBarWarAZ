@@ -47,7 +47,7 @@ public sealed class TdUiGoldenTests
         public void ClearTip(string id) => _seen.Remove(id);
     }
 
-    public enum UiScene { HudMoney, HudPrep, HudWave, HudMin, HudLarge, HudLargeMin, HudTip, Chooser, ChooserPoint, Inspector, Preview, Map, MapLocked, Seals, Victory, Menu, HudPlacing, Towers, Runes, Help, BaseAttacked, QuickTowers, RuneWindow, RuneWindowPan, RuneWindowZoom, RuneWindowTipAvailable, RuneWindowTipAwake, RuneWindowTipLocked, RunesTipAvailable, RunesTipAwake, RunesTipLocked, RunesBranch, RuneWindowBranch, RuneCard, RuneWindowFromCard, RunesZoomMin, RunesZoomMid }
+    public enum UiScene { HudMoney, HudPrep, HudWave, HudMin, HudLarge, HudLargeMin, HudTip, Chooser, ChooserPoint, Inspector, Preview, Map, MapLocked, Seals, Victory, Menu, HudPlacing, Towers, Runes, Help, BaseAttacked, QuickTowers, RuneWindow, RuneWindowPan, RuneWindowZoom, RuneWindowTipAvailable, RuneWindowTipAwake, RuneWindowTipLocked, RunesTipAvailable, RunesTipAwake, RunesTipLocked, RunesBranch, RuneWindowBranch, RuneCard, RuneWindowFromCard, RunesZoomMin, RunesZoomMid, HudSpeedExtras, MenuSpeedExtras }
 
     public static TheoryData<UiScene, int> Cases()
     {
@@ -87,6 +87,10 @@ public sealed class TdUiGoldenTests
         var item = (TdUiAction a, int arg) => new TdUiItem(default, TdUiKind.Button, "", a, arg);
         switch (scene)
         {
+            case UiScene.HudSpeedExtras or UiScene.MenuSpeedExtras:
+                host.GameOptions = new TdGameOptions(ExtraSpeeds: true, SpeedMask: 0b1000_1111, GameSpeed: 5);
+                if (scene == UiScene.MenuSpeedExtras) ui.Activate(item(TdUiAction.Menu, 0));
+                break;
             case UiScene.HudLarge or UiScene.HudLargeMin:
                 host.Rank = TdRank.Progress(999999);
                 typeof(TdMatchState).GetField("_streak", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(match, 10);
@@ -201,7 +205,7 @@ public sealed class TdUiGoldenTests
             GoldenImage.Blit(tc, tl, 0, 0);
             return tb;
         }
-        bool hud = scene is UiScene.HudMoney or UiScene.HudPrep or UiScene.HudWave or UiScene.HudMin or UiScene.HudLarge or UiScene.HudLargeMin or UiScene.HudPlacing;
+        bool hud = scene is UiScene.HudMoney or UiScene.HudPrep or UiScene.HudWave or UiScene.HudMin or UiScene.HudLarge or UiScene.HudLargeMin or UiScene.HudPlacing or UiScene.HudSpeedExtras;
         if (hud)
         {
             var v = ui.BuildHud();

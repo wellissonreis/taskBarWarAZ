@@ -64,6 +64,18 @@ public sealed partial class TdUiController
     private bool _outsideCollapsed;
     /// <summary>TD.28b: atalho global "minimizar tudo" ativo: nenhum cartão, painel ou modal é aberto e a pergunta-bônus espera.</summary>
     public bool BossHidden { get; private set; }
+    /// <summary>Velocidades do seletor: 1x/2x/3x e, com "Velocidades extras" ligadas, as escolhidas pelo usuário.</summary>
+    private int[] AllowedSpeeds => TdSpeed.Allowed(_host.GameOptions.ExtraSpeeds, _host.GameOptions.SpeedMask);
+
+    /// <summary>Atalho de teclado: cicla só as velocidades habilitadas.</summary>
+    public void CycleSpeed()
+    {
+        var o = _host.GameOptions;
+        var allowed = AllowedSpeeds;
+        _host.SetGameOptions(o with { GameSpeed = TdSpeed.Next(TdSpeed.Resolve(o.GameSpeed, allowed), allowed) });
+        Changed?.Invoke();
+    }
+
     private bool PanelPinned => _host.GameOptions.PanelPinned;
     private bool PinnedIdle => QuickTowersOpen && PanelPinned && !BuildActive;
     public bool NoticeOpen => _host.GameOptions.NoticeSize != 0 && _noticeText is not null && !BossHidden && _now() < _noticeUntil;
@@ -363,7 +375,7 @@ public sealed partial class TdUiController
                 }
                 Changed?.Invoke(); break;
             case TdUiAction.SetSpeed when !ModalOpen || Mode == TdUiMode.Menu:
-                _host.SetGameOptions(_host.GameOptions with { GameSpeed = Math.Clamp(item.Arg, 1, 3) });
+                _host.SetGameOptions(_host.GameOptions with { GameSpeed = TdSpeed.Resolve(item.Arg, AllowedSpeeds) });
                 Changed?.Invoke(); break;
             case TdUiAction.SelectRune when item.SArg is not null:
             {
@@ -906,14 +918,25 @@ public sealed partial class TdUiController
         Add(439 + grow, 11, 1, 18, TdUiKind.Separator, "");
         bool paused = _userPaused && live;
         Add(452 + grow, 6, 28, 28, TdUiKind.Button, "", TdUiAction.PauseToggle, enabled: !ModalOpen && live, selected: paused, icon: paused ? TdIcon.Play : TdIcon.Pause, tip: paused ? "Retomar o jogo" : "Pausar o jogo");
-        Add(492 + grow, 6, 100, 28, TdUiKind.Label, "", tag: "speeds", tip: "Velocidade do jogo");
-        int speed = Math.Clamp(_host.GameOptions.GameSpeed, 1, 3);
-        for (int i = 1; i <= 3; i++)
-            Add(495 + grow + (i - 1) * 32, 9, 30, 22, TdUiKind.Button, $"{i}x", TdUiAction.SetSpeed, i, enabled: !ModalOpen, selected: speed == i, tip: $"Velocidade {i}x");
+        var allowed = AllowedSpeeds;
+        int speed = TdSpeed.Resolve(_host.GameOptions.GameSpeed, allowed);
+        double effective = _host.EffectiveSpeed;
+        bool slow = speed > 3 && (speed >= TdSpeed.Max || effective < speed - 0.5);
+        float speedExtra = (allowed.Length - 3) * 32f + (_host.GameOptions.ExtraSpeeds ? 48f : 0f);
+        Add(492 + grow, 6, 4 + allowed.Length * 32, 28, TdUiKind.Label, "", tag: "speeds", tip: "Velocidade do jogo");
+        for (int i = 0; i < allowed.Length; i++)
+        {
+            int v = allowed[i];
+            string tip = v == TdSpeed.Max ? "Velocidade Máx: o mais rápido que o PC aguentar" : $"Velocidade {v}x";
+            if (v == speed && slow) tip += $" (efetiva ≈{effective.ToString("0", System.Globalization.CultureInfo.InvariantCulture)}x)";
+            Add(495 + grow + i * 32, 9, 30, 22, TdUiKind.Button, TdSpeed.Label(v), TdUiAction.SetSpeed, v, enabled: !ModalOpen, selected: speed == v, tip: tip);
+        }
+        if (_host.GameOptions.ExtraSpeeds)
+            Add(496 + grow + allowed.Length * 32, 9, 44, 22, TdUiKind.Label, slow ? $"≈{effective.ToString("0", System.Globalization.CultureInfo.InvariantCulture)}x" : "", tag: "speedeff", tip: "Velocidade efetiva real (abaixo da pedida: o PC não acompanha)");
         // O TD não tem caixa coletável desde TD.30a; a ação permanece desabilitada.
-        Add(604 + grow, 6, 135, 28, TdUiKind.Button, "Coletar caixa", tag: "crate", enabled: false, tip: "Nenhuma caixa disponível no modo TD.");
-        Add(745 + grow, 6, 28, 28, TdUiKind.Button, "", TdUiAction.HudMinimize, icon: TdIcon.Collapse, tip: "Recolher HUD");
-        return CompactHud(AddRankToHud(new TdHudView(HighlightHud(items), offset + 779 + grow, 40 + y0, Minimized: false, Wave: shown, TotalWaves: m.TotalWaves, Floats: _money.Floats, TopPad: y0)), 0.7f);
+        Add(604 + grow + speedExtra, 6, 135, 28, TdUiKind.Button, "Coletar caixa", tag: "crate", enabled: false, tip: "Nenhuma caixa disponível no modo TD.");
+        Add(745 + grow + speedExtra, 6, 28, 28, TdUiKind.Button, "", TdUiAction.HudMinimize, icon: TdIcon.Collapse, tip: "Recolher HUD");
+        return CompactHud(AddRankToHud(new TdHudView(HighlightHud(items), offset + 779 + grow + speedExtra, 40 + y0, Minimized: false, Wave: shown, TotalWaves: m.TotalWaves, Floats: _money.Floats, TopPad: y0)), 0.7f);
     }
 
     /// <summary>XP compacto para o HUD (cabe em até 5 caracteres).</summary>
@@ -1802,8 +1825,8 @@ public sealed partial class TdUiController
         s.Add(TdUiKind.Button, options.Continuous ? "Ondas contínuas: ligado" : "Ondas contínuas: desligado", RowH, TdUiAction.GameOption, 6, right: "Próxima corrida");
         s.Add(TdUiKind.Button, options.PanelPinned ? "Painel de torres fixo: ligado" : "Painel de torres fixo: desligado", RowH, TdUiAction.GameOption, 7);
         s.Add(TdUiKind.Button, $"Avisos: {options.NoticeSize switch { 0 => "Desligado", 2 => "Médio", 3 => "Grande", _ => "Pequeno" }}", RowH, TdUiAction.GameOption, 8);
-        for (int v = 1; v <= 3; v++)
-            s.Add(TdUiKind.Button, $"{v}x", RowH, TdUiAction.SetSpeed, v, selected: Math.Clamp(options.GameSpeed, 1, 3) == v);
+        foreach (int v in AllowedSpeeds)
+            s.Add(TdUiKind.Button, TdSpeed.Label(v), RowH, TdUiAction.SetSpeed, v, selected: TdSpeed.Resolve(options.GameSpeed, AllowedSpeeds) == v);
         if (_confirmWipe)
         {
             s.Add(TdUiKind.Label, "Apagar todo o progresso?", RowH, tone: TdTone.Warn);

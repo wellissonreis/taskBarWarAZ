@@ -96,6 +96,81 @@ public sealed class TdSpeedAndLiveBandTests
     }
 
     [Fact]
+    public void Extra_speeds_keep_the_same_hash_as_1x_for_the_same_number_of_steps()
+    {
+        var (slow, hostSlow, clockSlow, _) = Rig(1);
+        var (fast, hostFast, clockFast, _) = Rig(20);
+        hostFast.ExtraSpeeds = true;
+        hostFast.FrameBudgetMs = 1e9; // sem corte de tempo: só o número de Steps importa
+        foreach (var h in new[] { hostSlow, hostFast }) { h.OnCommand(new BuildTower("bolt", 600)); h.OnCommand(new StartWave()); }
+        Tick(hostFast, clockFast, 30);
+        while (slow.Frame < fast.Frame) Tick(hostSlow, clockSlow, 1); // mesmo número de Steps, em 1x
+        Assert.Equal(slow.Frame, fast.Frame);
+        Assert.Equal(slow.ComputeStateHash(), fast.ComputeStateHash());
+        Assert.Equal(20.0, hostFast.EffectiveSpeed, 1);
+    }
+
+    [Fact]
+    public void Frame_time_budget_caps_the_steps_and_reports_the_effective_speed()
+    {
+        var (match, host, clock, _) = Rig(TdSpeed.Max);
+        host.ExtraSpeeds = true;
+        host.FrameBudgetMs = 8;
+        double now = 0;
+        host.BudgetClockMs = () => now += 1.0; // cada consulta custa 1 ms
+        host.OnCommand(new BuildTower("bolt", 600));
+        host.OnCommand(new StartWave());
+        host.OnWake(clock);
+        long before = host.StepsExecuted;
+        Tick(host, clock, 1);
+        Assert.InRange(host.StepsExecuted - before, 1, 10); // ≈8 ms de Steps, não milhares
+        Assert.True(host.EffectiveSpeed < 20);
+        Assert.Equal(MatchPhase.Onda, match.Phase);
+        host.ExtraSpeeds = false; // sem extras, Máx volta a 3x
+        before = host.StepsExecuted;
+        Tick(host, clock, 30);
+        Assert.InRange(host.StepsExecuted - before, 80, 93);
+    }
+
+    [Fact]
+    public void Speeds_list_is_1_2_3_by_default_and_cycles_only_the_enabled_extras()
+    {
+        Assert.Equal([1, 2, 3], TdSpeed.Allowed(false, TdSpeed.DefaultMask));
+        var on = TdSpeed.Allowed(true, TdSpeed.DefaultMask);
+        Assert.Equal([1, 2, 3, 5, 10, TdSpeed.Max], on);
+        Assert.Equal(["1x", "2x", "3x", "5x", "10x", "Máx"], on.Select(TdSpeed.Label));
+        Assert.Equal(1, TdSpeed.Next(TdSpeed.Max, on));
+        Assert.Equal(5, TdSpeed.Next(3, on));
+        Assert.Equal(3, TdSpeed.Resolve(4, on));
+        Assert.Equal(3, TdSpeed.Resolve(50, TdSpeed.Allowed(false, 0)));
+    }
+
+    [Fact]
+    public void Hud_and_menu_selector_grow_with_extra_speeds_cycle_and_show_the_effective_speed()
+    {
+        var host = new SpeedHost { HudMinimized = false };
+        var match = TdMatchState.Create(Content, 1, Rng.Seed(1, 54));
+        var ui = new TdUiController(() => match, _ => { }, host, () => 0.0, null);
+        float plain = ui.BuildHud().Width;
+        host.SetGameOptions(host.GameOptions with { ExtraSpeeds = true });
+        var hud = ui.BuildHud();
+        Assert.Equal(["1x", "2x", "3x", "5x", "10x", "Máx"], hud.Items.Where(i => i.Action == TdUiAction.SetSpeed).Select(i => i.Text));
+        Assert.True(hud.Width > plain);
+        ui.CycleSpeed(); Assert.Equal(2, host.GameOptions.GameSpeed);
+        for (int i = 0; i < 4; i++) ui.CycleSpeed();
+        Assert.Equal(TdSpeed.Max, host.GameOptions.GameSpeed);
+        host.EffectiveSpeed = 31.4;
+        var eff = ui.BuildHud().Items.Single(i => i.SArg == "speedeff");
+        Assert.Equal("≈31x", eff.Text);
+        Assert.Contains("efetiva", ui.BuildHud().Items.Single(i => i.Action == TdUiAction.SetSpeed && i.Selected).Tip);
+        ui.CycleSpeed();
+        Assert.Equal(1, host.GameOptions.GameSpeed);
+        Assert.Equal("", ui.BuildHud().Items.Single(i => i.SArg == "speedeff").Text);
+        ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
+        Assert.Equal(6, ui.BuildPopover()!.Items.Count(i => i.Action == TdUiAction.SetSpeed));
+    }
+
+    [Fact]
     public void Speed_selector_in_the_hud_sets_1_2_3_and_marks_the_current_one()
     {
         var host = new SpeedHost();
@@ -124,6 +199,7 @@ public sealed class TdSpeedAndLiveBandTests
 
     private sealed class SpeedHost : ITdUiHost
     {
+        public double EffectiveSpeed { get; set; } = 1;
         public TdGameOptions GameOptions { get; private set; } = new();
         public void SetGameOptions(TdGameOptions options) => GameOptions = options;
         public bool Paused => false;

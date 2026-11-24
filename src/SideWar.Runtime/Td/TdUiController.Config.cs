@@ -71,6 +71,14 @@ public sealed partial class TdUiController
                 Seg("corner", "Tamanho da interface do canto", [("100%", 100), ("150%", 150), ("200%", 200)]);
                 Slider("cornerfine", "Escala do canto", 100, 250, "%");
                 Seg("speed", "Velocidade do jogo", [("1x", 1), ("2x", 2), ("3x", 3)]);
+                Toggle("xspeeds", "Velocidades extras", "Acrescenta 4x, 5x, 8x, 10x, 16x, 20x, 50x e Máx ao seletor (padrão: só 1x/2x/3x).");
+                if (d.ExtraSpeeds)
+                {
+                    var on = new List<(string, int)>();
+                    for (int i = 0; i < TdSpeed.Extras.Length; i++) if ((d.SpeedMask >> i & 1) != 0) on.Add((TdSpeed.Label(TdSpeed.Extras[i]), TdSpeed.Extras[i]));
+                    if (on.Count > 0) Seg("speedx", "Velocidade extra", [.. on], "Máx roda o mais rápido que o PC aguentar, com teto de 8 ms por frame.");
+                    for (int i = 0; i < TdSpeed.Extras.Length; i++) Toggle("xs:" + i, "Mostrar " + TdSpeed.Label(TdSpeed.Extras[i]), "Escolha quais velocidades extras aparecem no seletor e no atalho.");
+                }
                 Seg("notice", "Tamanho dos avisos", [("Desl.", 0), ("Peq.", 1), ("Méd.", 2), ("Grande", 3)]);
                 Toggle("sound", "Som");
                 Slider("volume", "Volume", 0, 100, "%", d.Sound);
@@ -108,6 +116,7 @@ public sealed partial class TdUiController
                 r.Add(new(CfgKind.Hotkey, "hk:visibility", "Visibilidade (boss key)"));
                 r.Add(new(CfgKind.Hotkey, "hk:pause", "Pausa"));
                 r.Add(new(CfgKind.Hotkey, "hk:wave", "Iniciar onda (Tower Defense)"));
+                r.Add(new(CfgKind.Hotkey, "hk:speed", "Ciclar velocidade (TD)"));
                 r.Add(new(CfgKind.Button, "hk:restore", "Restaurar padrão"));
                 break;
             case 4:
@@ -139,8 +148,10 @@ public sealed partial class TdUiController
     private static int CfgGet(TdSettingsData d, string k)
     {
         if (k.StartsWith("mute:", StringComparison.Ordinal)) return (d.AlertsMutedMask >> int.Parse(k.AsSpan(5), CultureInfo.InvariantCulture)) & 1;
+        if (k.StartsWith("xs:", StringComparison.Ordinal)) return (d.SpeedMask >> int.Parse(k.AsSpan(3), CultureInfo.InvariantCulture)) & 1;
         return k switch
         {
+            "xspeeds" => d.ExtraSpeeds ? 1 : 0, "speedx" => d.GameSpeed,
             "mode" => d.GameMode, "startup" => d.StartWithWindows ? 1 : 0, "hide" => d.HideOnFullscreen, "uia" => d.UseUia ? 1 : 0, "autoscale" => d.AutoScale ? 1 : 0,
             "questions" => d.BonusQuestions ? 1 : 0, "income" => d.ShowIncome ? 1 : 0, "discreet" => d.DiscreetMode ? 1 : 0, "continuous" => d.ContinuousWaves ? 1 : 0,
             "pinned" => d.TowerPanelPinned ? 1 : 0, "autostart" => d.AutoStart ? 1 : 0, "autoseconds" => d.AutoStartSeconds, "autorestart" => d.AutoRestart ? 1 : 0,
@@ -161,8 +172,15 @@ public sealed partial class TdUiController
             int bit = 1 << int.Parse(k.AsSpan(5), CultureInfo.InvariantCulture);
             return d with { AlertsMutedMask = b ? d.AlertsMutedMask | bit : d.AlertsMutedMask & ~bit };
         }
+        if (k.StartsWith("xs:", StringComparison.Ordinal))
+        {
+            int bit = 1 << int.Parse(k.AsSpan(3), CultureInfo.InvariantCulture);
+            var nd = d with { SpeedMask = b ? d.SpeedMask | bit : d.SpeedMask & ~bit };
+            return nd with { GameSpeed = TdSpeed.Resolve(nd.GameSpeed, TdSpeed.Allowed(nd.ExtraSpeeds, nd.SpeedMask)) };
+        }
         return k switch
         {
+            "xspeeds" => d with { ExtraSpeeds = b, GameSpeed = b ? d.GameSpeed : Math.Min(d.GameSpeed, 3), SpeedMask = b && d.SpeedMask == 0 ? TdSpeed.DefaultMask : d.SpeedMask }, "speedx" => d with { GameSpeed = v },
             "mode" => d with { GameMode = v }, "startup" => d with { StartWithWindows = b }, "hide" => d with { HideOnFullscreen = v }, "uia" => d with { UseUia = b },
             "autoscale" => d with { AutoScale = b }, "questions" => d with { BonusQuestions = b }, "income" => d with { ShowIncome = b }, "discreet" => d with { DiscreetMode = b },
             "continuous" => d with { ContinuousWaves = b }, "pinned" => d with { TowerPanelPinned = b }, "autostart" => d with { AutoStart = b },
@@ -179,12 +197,12 @@ public sealed partial class TdUiController
 
     private static string HotkeyGet(TdSettingsData d, string k) => k switch
     {
-        "hk:interactive" => d.ToggleInteractive, "hk:visibility" => d.ToggleVisibility, "hk:pause" => d.TogglePause, _ => d.StartWave,
+        "hk:interactive" => d.ToggleInteractive, "hk:visibility" => d.ToggleVisibility, "hk:pause" => d.TogglePause, "hk:speed" => d.CycleSpeed, _ => d.StartWave,
     };
 
     private static TdSettingsData HotkeyPut(TdSettingsData d, string k, string v) => k switch
     {
-        "hk:interactive" => d with { ToggleInteractive = v }, "hk:visibility" => d with { ToggleVisibility = v }, "hk:pause" => d with { TogglePause = v }, _ => d with { StartWave = v },
+        "hk:interactive" => d with { ToggleInteractive = v }, "hk:visibility" => d with { ToggleVisibility = v }, "hk:pause" => d with { TogglePause = v }, "hk:speed" => d with { CycleSpeed = v }, _ => d with { StartWave = v },
     };
 
     private void ApplySetting(TdSettingsData next) { _host.ApplySettings(next); Changed?.Invoke(); }
@@ -275,7 +293,7 @@ public sealed partial class TdUiController
             {
                 var def = new TdSettingsData();
                 _captureKey = null; _hotkeyError = null;
-                ApplySetting(d with { ToggleInteractive = def.ToggleInteractive, ToggleVisibility = def.ToggleVisibility, TogglePause = def.TogglePause, StartWave = def.StartWave });
+                ApplySetting(d with { ToggleInteractive = def.ToggleInteractive, ToggleVisibility = def.ToggleVisibility, TogglePause = def.TogglePause, StartWave = def.StartWave, CycleSpeed = def.CycleSpeed });
                 return true;
             }
         }
@@ -306,7 +324,7 @@ public sealed partial class TdUiController
         try { text = HotkeyParser.Format(new HotkeyChord(mods, (uint)vk)); }
         catch (ArgumentOutOfRangeException) { _hotkeyError = "Tecla não suportada."; Changed?.Invoke(); return; }
         var d = _host.Settings;
-        string[] keys = ["hk:interactive", "hk:visibility", "hk:pause", "hk:wave"];
+        string[] keys = ["hk:interactive", "hk:visibility", "hk:pause", "hk:wave", "hk:speed"];
         foreach (var other in keys)
             if (other != key && string.Equals(HotkeyGet(d, other), text, StringComparison.OrdinalIgnoreCase)) { _hotkeyError = "Já usado por outro atalho."; Changed?.Invoke(); return; }
         _captureKey = null; _hotkeyError = null;

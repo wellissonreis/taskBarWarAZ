@@ -70,6 +70,18 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
     /// </summary>
     public int GameSpeed { get; set; } = 1;
 
+    /// <summary>Velocidades extras (acima de 3x e "Máx") habilitadas; sem isso a velocidade fica limitada a 3x.</summary>
+    public bool ExtraSpeeds { get; set; }
+
+    /// <summary>Teto de tempo (ms) que os Steps de um frame podem consumir acima de 3x e em "Máx": protege a UI e o PC. Os Steps que não couberem não são executados (a velocidade efetiva cai).</summary>
+    public double FrameBudgetMs { get; set; } = 8.0;
+
+    /// <summary>Relógio do teto por frame em ms (injetável em testes).</summary>
+    public Func<double> BudgetClockMs { get; set; } = static () => System.Diagnostics.Stopwatch.GetTimestamp() * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+
+    /// <summary>Velocidade efetiva real (Steps executados por tick de 30 Hz) no último frame em que houve ticks; abaixo da pedida quando o teto de tempo corta.</summary>
+    public double EffectiveSpeed { get; private set; } = 1;
+
     /// <summary>TD.40b2: proteção contra derrota, alertas e suas opções (SDD-38).</summary>
     public TdAlertGuard Alerts => _guard;
 
@@ -161,13 +173,27 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
 
         bool running = Running;
         int ticks = _stepper.Advance(now, running);
-        int steps = ticks * Math.Clamp(GameSpeed, 1, 3);
-        for (int i = 0; i < steps && NeedsSteps; i++)
+        int speed = Math.Clamp(GameSpeed, 1, ExtraSpeeds ? TdSpeed.Max : 3);
+        long steps = ticks == 0 ? 0 : speed >= TdSpeed.Max ? long.MaxValue : (long)ticks * speed;
+        bool timed = speed > 3;
+        double started = timed ? BudgetClockMs() : 0;
+        long done = 0;
+        int seenEvents = Match.Events.Count;
+        for (long i = 0; i < steps && NeedsSteps; i++)
         {
             if (running && _guard.Blocks(Match)) break; // protege ANTES de cada Step (lotes 2x/3x incluídos)
             Match.Step();
             StepsExecuted++;
+            done++;
+            if (!timed) continue;
+            // Alta velocidade: cartões e toasts (patente, base atacada, fase/vitória, runa) precisam aparecer e pausar já; o resto do lote vai ao próximo frame.
+            bool important = false;
+            for (int e = seenEvents; e < Match.Events.Count; e++)
+                if (Match.Events[e].Type is TdEventType.BaseAttacked or TdEventType.ReputationGained or TdEventType.StageCleared or TdEventType.Victory or TdEventType.RuneAwakened) important = true;
+            seenEvents = Match.Events.Count;
+            if (important || BudgetClockMs() - started >= FrameBudgetMs) break;
         }
+        if (ticks > 0) EffectiveSpeed = done / (double)ticks;
         if (running && Match.Phase == MatchPhase.Onda) _guard.Evaluate(Match);
         _lastWake = now;
         _started = true;
