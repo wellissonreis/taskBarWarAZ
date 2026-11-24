@@ -63,6 +63,7 @@ public sealed class TdCompositionTests : IDisposable
         var td = TdComposition.Create(dir, "0.1.0", VisibleApp(), clock, new AppSettings(), _ => { }, seed: 7);
         td.Host.OnCommand(new SideWar.Core.Td.LayoutChanged(TdSanityBot.TypicalLayout()));
         string id = td.Host.Match.Content.Towers.First(t => t.MinRank <= 0).Id;
+        typeof(TdMatchState).GetProperty("Credits")!.SetValue(td.Host.Match, 5000L); // 360 iniciais só pagam a 1ª torre (preço crescente)
         td.Host.OnCommand(new SideWar.Core.Td.BuildTower(id, 150));
         td.Host.OnCommand(new SideWar.Core.Td.BuildTower(id, 250));
         td.Host.OnWake(clock);
@@ -98,11 +99,11 @@ public sealed class TdCompositionTests : IDisposable
         td.StartStage(td.RunStartStage); // sem gastar: não ganha extra
         Assert.Equal(initial, td.Host.Match.Credits);
         td.Host.OnCommand(new SideWar.Core.Td.BuildTower(td.Host.Match.Content.Towers.First(t => t.MinRank <= 0).Id, 150));
+        td.Host.OnWake(clock); // o comando só é aplicado no próximo tick do host
         long spent = td.Host.Match.Credits;
         Assert.True(spent < initial);
-        td.StartStage(td.RunStartStage); // gastou: reiniciar não devolve nem repõe o inicial, mas nunca fica abaixo do que tinha
+        td.StartStage(td.RunStartStage); // gastou: reiniciar = max(atuais, iniciais da fase) (2ed5a99): não devolve a torre nem concede extra
         Assert.Equal(Math.Max(spent, initial), td.Host.Match.Credits);
-        Assert.Equal(spent, td.Host.Match.Credits);
     }
 
     [Fact]
@@ -157,7 +158,7 @@ public sealed class TdCompositionTests : IDisposable
         Assert.Equal(0, td.Host.Match.AwakenedCount);
         Assert.Equal(0, td.Host.Match.Fragments);
         var reloaded = new TdProfileStore(SideWar.Persistence.IO.RealFileSystem.Instance, dir, "0.1.0").Load().Profile;
-        Assert.Equal(TdProfileData.Default with { IdleImportDone = true }, reloaded with { Stages = TdProfileData.Default.Stages, PurchasedNodes = [], UnlockedTowers = [], InfiniteRuns = [], Encounters = TdProfileData.Default.Encounters });
+        Assert.Equal(TdProfileData.Default with { IdleImportDone = true }, reloaded with { RunStageNumber = 0, Stages = TdProfileData.Default.Stages, PurchasedNodes = [], UnlockedTowers = [], InfiniteRuns = [], Encounters = TdProfileData.Default.Encounters });
         Assert.Equal(0, reloaded.Reputation);
         Assert.Empty(reloaded.PurchasedNodes);
         Assert.Empty(reloaded.Encounters);
@@ -213,8 +214,9 @@ public sealed class TdCompositionTests : IDisposable
         var clock = new ManualClock();
         var settings = new AppSettings { Td = new TdSettings { AutoStartEnabled = true, AutoStartSeconds = 5 } };
         var td = TdComposition.Create(dir, "0.1.0", VisibleApp(), clock, settings, _ => { }, seed: 7);
+        td.Host.OnCommand(new SideWar.Core.Td.LayoutChanged(TdSanityBot.TypicalLayout()));
+        td.Host.OnCommand(new SideWar.Core.Td.BuildTower(td.Host.Match.Content.Towers.First(t => t.MinRank <= 0).Id, 150)); // iniciar onda exige torre posicionada
         for (int i = 0; i < 400_000 && td.Host.Match.ReputationGainedTotal == 0; i++) { clock.NowTicks += 34; td.Host.OnWake(clock); }
-        Assert.True(td.Host.Match.ReputationLostTotal > 0); // sem torres, as ondas vazam e tiram XP (sem derrota)
         Assert.True(td.Host.Match.ReputationGainedTotal > 0); // e a onda vencida grava a reputação
         var saved = new TdProfileStore(RealFileSystem.Instance, dir).Load();
         Assert.Equal(TdProfileSource.File, saved.Source);
@@ -252,10 +254,10 @@ public sealed class TdCompositionTests : IDisposable
         Assert.True(td.BuildReplay().Options!.PersistentRun);
         td.ApplySettings(new AppSettings { Td = new TdSettings { ContinuousWaves = false } });
         Assert.True(td.Host.Match.Options.ContinuousWaves); // a corrida atual não muda
-        td.StartStage(3);
+        td.StartStage(3); // a trava por patente reduz à fase 1 (281f9cf)
         Assert.True(td.Host.Match.Options.IsClassic);
-        Assert.Equal(3, td.RunStartStage);
-        Assert.Equal(3, td.BuildReplay().Stage);
+        Assert.Equal(1, td.RunStartStage);
+        Assert.Equal(1, td.BuildReplay().Stage);
         Assert.True(td.BuildReplay().Options!.IsClassic);
     }
 
@@ -272,13 +274,15 @@ public sealed class TdCompositionTests : IDisposable
         var match = TdMatchState.Create(tiny, 1, SideWar.Core.Simulation.Rng.Seed(7, 54), null, TdMatchOptions.Default);
         Assert.True(match.Apply(new SideWar.Core.Td.LayoutChanged(TdSanityBot.TypicalLayout())).IsOk);
         Assert.True(match.Apply(new SetPresence(false)).IsOk);
+        Assert.True(match.Apply(new SideWar.Core.Td.BuildTower("bolt", 150)).IsOk); // iniciar onda exige torre posicionada
         Assert.True(match.Apply(new SideWar.Core.Td.StartWave()).IsOk);
         for (int i = 0; i < 100_000 && match.StageResults.Count == 0; i++) match.Step();
         Assert.Single(match.StageResults);
         recorder.OnEvents(match, match.Events);
         Assert.True(recorder.StageBestScore(1) > 0);
         Assert.True(recorder.StageStars(1) >= 1);
-        Assert.True(recorder.StageUnlocked(2));
+        Assert.False(recorder.StageUnlocked(2)); // a fase 2 exige patente Júnior (281f9cf): o clear grava o desbloqueio no perfil, mas a trava por patente segue
+        Assert.Contains(recorder.Profile.Stages, s => s.StageId == 2 && s.Unlocked);
         Assert.True(recorder.LastOutcome.NewRecord);
         Assert.Equal(0, recorder.SaveFailures);
         var saved = new TdProfileStore(RealFileSystem.Instance, dir).Load();
