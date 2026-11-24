@@ -11,9 +11,8 @@ public sealed partial class TdMatchState
     public const double CycleCountStep = 0.12;
     /// <summary>Cadência: o intervalo entre spawns encurta 6% por ciclo (mais densidade sem alongar demais a onda).</summary>
     public const double CycleIntervalStep = 0.06;
-    /// <summary>Velocidade dos inimigos comuns: +4% por ciclo, com teto de +50% (acima disso o jogo só escala em HP e quantidade).</summary>
+    /// <summary>Velocidade dos inimigos comuns: +4% por ciclo, sem teto artificial.</summary>
     public const double CycleSpeedStep = 0.04;
-    public const double CycleSpeedCap = 1.5;
 
     /// <summary>Inimigos extras que os ciclos misturam nas ondas (blindados, enxames, tanques, voadores, corredores) e o intervalo base de cada um.</summary>
     private static readonly (string Enemy, double Interval)[] CycleExtras =
@@ -23,7 +22,7 @@ public sealed partial class TdMatchState
     private int CycleOf(int stageNumber) => (Math.Max(1, stageNumber) - 1) / _content.Stages.Stages.Length;
 
     /// <summary>Multiplicador de velocidade dos inimigos comuns no ciclo atual.</summary>
-    private double CycleSpeed() => Math.Min(CycleSpeedCap, 1.0 + CycleSpeedStep * Cycle);
+    private double CycleSpeed() => 1.0 + CycleSpeedStep * Cycle;
 
     /// <summary>Onda <paramref name="w"/> da fase atual já escalada pelo ciclo (ciclo 0 devolve o conteúdo intacto).</summary>
     private TdWaveDef EffectiveWave(int w) => EffectiveWave(_waves, w, _stageNumber);

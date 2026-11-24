@@ -51,7 +51,7 @@ public sealed partial class TdMatchState
                 if (_enemies.Count >= rules.MaxEnemiesOnField) return; // teto de 44 em campo (SDD-12): o spawn espera
                 var sp = w.Spawns[w.NextSpawn++];
                 var spawned = MakeEnemy(sp.EnemyIndex, w.Number, TdWorld.PathLength, sp.Mutations);
-                if (!spawned.IsBoss) spawned.Speed *= EarlySpeedFactor(w.Number);
+                if (!spawned.IsBoss) spawned.Speed *= EarlySpeedFactor(w.Number) * CycleSpeed();
                 _enemies.Add(spawned);
                 w.Alive++;
             }
@@ -69,9 +69,9 @@ public sealed partial class TdMatchState
         return hp;
     }
 
-    /// <summary>Início mais calmo (RITMO-INICIO): na fase 1 do primeiro ciclo a velocidade sobe de 70% (onda 1) até 100% (onda 9); depois disso, valores originais.</summary>
+    /// <summary>Início mais calmo (RITMO-INICIO): na fase 1 do primeiro ciclo a velocidade sobe de 70% (onda 1) até 100% (onda 13, 2,5 pp por onda); depois disso, valores originais.</summary>
     private double EarlySpeedFactor(int wave) =>
-        _stageNumber == 1 && Cycle == 0 && wave < 9 ? 0.70 + 0.0375 * (wave - 1) : 1.0;
+        _stageNumber == 1 && Cycle == 0 && wave < 13 ? 0.70 + 0.025 * (wave - 1) : 1.0;
 
     private TdActiveWave WaveOf(int number) => _active.First(w => w.Number == number);
 
