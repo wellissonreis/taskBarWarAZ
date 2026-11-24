@@ -94,7 +94,7 @@ public sealed class TdUiControllerTests
         var r = new Rig();
         r.Host.SetGameOptions(r.Host.GameOptions with { NoticeSize = size });
         r.Ui.Sync();
-        r.Host.Score = 12000;
+        r.Host.Score = 25000;
         r.Ui.Sync();
         Assert.Equal(height, r.Ui.BuildPopover()!.Height);
         r.Ui.DismissNotice();
@@ -119,7 +119,7 @@ public sealed class TdUiControllerTests
         var r = new Rig();
         r.Ui.Sync();
         Assert.False(r.Ui.NoticeOpen);
-        r.Host.Score = 12000;
+        r.Host.Score = 25000;
         r.Ui.Sync();
         Assert.Equal("Promovido a Pleno!", r.Ui.NoticeText);
         Assert.True(r.Ui.CornerPopover);
@@ -132,6 +132,36 @@ public sealed class TdUiControllerTests
         r.Now += TdUiController.StageNoticeSeconds + 1;
         r.Ui.Sync();
         Assert.False(r.Ui.NoticeOpen);
+    }
+
+    [Fact]
+    public void Demotion_pauses_until_continue_even_with_notices_disabled_and_outside_click()
+    {
+        var r = new Rig();
+        r.Host.SetGameOptions(r.Host.GameOptions with { NoticeSize = 0 });
+        r.Ui.Sync();
+        r.Host.Score = 4000;
+        r.Ui.Sync();
+        Assert.True(r.Match.Paused);
+        Assert.True(r.Ui.DemotionCardOpen);
+        r.Ui.CollapseOutside();
+        var card = r.Ui.BuildPopover()!;
+        Assert.Contains(card.Items, i => i.Text.Contains("Rebaixado a Estagiário"));
+        Assert.Contains(card.Items, i => i.Text.Contains("500 XP"));
+        r.Ui.Activate(Assert.Single(card.Items, i => i.Action == TdUiAction.DemotionContinue));
+        Assert.False(r.Match.Paused);
+        Assert.False(r.Ui.DemotionCardOpen);
+    }
+
+    [Fact]
+    public void Promotion_does_not_pause()
+    {
+        var r = new Rig();
+        r.Ui.Sync();
+        r.Host.Score = 25000;
+        r.Ui.Sync();
+        Assert.False(r.Match.Paused);
+        Assert.DoesNotContain(r.Sent, c => c is Pause);
     }
 
     [Fact]
@@ -198,10 +228,10 @@ public sealed class TdUiControllerTests
     }
 
     [Theory]
-    [InlineData(0, "Brasão Estagiário", "0 / 5000 XP|faltam 5000 XP para Júnior")]
-    [InlineData(4999, "Brasão Estagiário", "4999 / 5000 XP|faltam 1 XP para Júnior")]
-    [InlineData(5000, "Brasão Júnior", "5000 / 12000 XP|faltam 7000 XP para Pleno")]
-    [InlineData(34000, "Brasão Arquiteto", "34000 XP|Patente máxima")]
+    [InlineData(0, "Brasão Estagiário", "0 / 4500 XP|faltam 4500 XP para Júnior")]
+    [InlineData(4499, "Brasão Estagiário", "4499 / 4500 XP|faltam 1 XP para Júnior")]
+    [InlineData(4500, "Brasão Júnior", "4500 / 24000 XP|faltam 19500 XP para Pleno")]
+    [InlineData(300000, "Brasão Arquiteto", "300000 XP|Patente máxima")]
     public void Menu_rank_card_swaps_badge_name_and_bar_at_the_limits(int score, string tip, string bar)
     {
         var r = new Rig();
@@ -215,9 +245,9 @@ public sealed class TdUiControllerTests
 
     [Theory]
     [InlineData(0, 0, "Estagiário")]
-    [InlineData(4999, 0, "Estagiário")]
-    [InlineData(5000, 1, "Júnior")]
-    [InlineData(34000, 5, "Arquiteto")]
+    [InlineData(4499, 0, "Estagiário")]
+    [InlineData(4500, 1, "Júnior")]
+    [InlineData(300000, 5, "Arquiteto")]
     public void Menu_rank_and_header_follow_current_score(int score, int level, string name)
     {
         var r = new Rig();

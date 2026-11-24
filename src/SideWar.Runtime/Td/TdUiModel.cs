@@ -31,7 +31,7 @@ public enum TdUiAction : byte
     /// <summary>TD.30e: chip da legenda de ramos (passar o mouse destaca os nós do ramo; SArg = id do tipo) e os botões do cartão "runas no primeiro dano".</summary>
     RuneBranch, RuneTutorialOpen, RuneTutorialDismiss, ViewRunes, TowerCategory,
     /// <summary>TD.40c: cartão de alerta: Salvar / Deixar cair (pausa crítica da proteção), Entendi e "não pausar por este tipo".</summary>
-    AlertSave, AlertFall, AlertDismiss, AlertMute,
+    AlertSave, AlertFall, AlertDismiss, AlertMute, DemotionContinue,
     /// <summary>TD.37b: fusão de torres: abrir o cartão (Arg = id da base), escolher o módulo (SArg = tipo), confirmar, voltar, fechar e dispensar a dica de primeira vez.</summary>
     FuseOpen, FusePick, FuseConfirm, FuseBack, FuseClose, FusionTipDismiss, FusionTry, FusionModule, FusionSelectModule,
     /// <summary>TD.37d: dispensar o aviso de mutantes da próxima onda.</summary>

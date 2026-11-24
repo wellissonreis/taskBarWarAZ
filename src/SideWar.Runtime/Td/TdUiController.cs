@@ -70,7 +70,7 @@ public sealed partial class TdUiController
     public string? NoticeText => NoticeOpen ? _noticeText : null;
     public void DismissNotice() { if (_noticeText is null) return; _noticeText = null; Changed?.Invoke(); }
     /// <summary>Qualquer popover pequeno ancorado ao chip: painel rápido, pergunta-bônus, aviso de fase ou cartão de fim. Nunca ativa janela.</summary>
-    public bool CornerPopover => QuickTowersOpen || RuneWindowOpen || EndCardOpen || NoticeOpen || RuneCardOpen || AlertCardOpen || FuseCardOpen || FusionTipOpen || _fusionChoosingModule || FusionTargetActive || MutationWarnOpen || ((Mode == TdUiMode.None || QuickTowersOpen) && QuizActive);
+    public bool CornerPopover => DemotionCardOpen || QuickTowersOpen || RuneWindowOpen || EndCardOpen || NoticeOpen || RuneCardOpen || AlertCardOpen || FuseCardOpen || FusionTipOpen || _fusionChoosingModule || FusionTargetActive || MutationWarnOpen || ((Mode == TdUiMode.None || QuickTowersOpen) && QuizActive);
     private int _chosenX = -1;       // X lógico já escolhido (passo "escolher a torre"); -1 = ainda no passo do ponto
     private int _moveTowerId;        // > 0: reposicionando uma torre SEM POSIÇÃO (sem escolha de tipo)
     private int _dropTowerId;       // > 0: o fantasma está sobre esta torre (preview de fusão)
@@ -289,6 +289,7 @@ public sealed partial class TdUiController
                 if (!ModalOpen && !RuneWindowOpen && _match().Phase is not (MatchPhase.Vitoria)) OpenRuneWindow(fromCard: true);
                 Changed?.Invoke();
                 break;
+            case TdUiAction.DemotionContinue: ContinueAfterDemotion(); break;
             case TdUiAction.AlertSave or TdUiAction.AlertFall or TdUiAction.AlertDismiss or TdUiAction.AlertMute: ActivateAlert(item.Action); break;
             case TdUiAction.RuneTutorialDismiss: DismissRuneCard(); Changed?.Invoke(); break;
             case TdUiAction.FuseOpen or TdUiAction.FusePick or TdUiAction.FuseConfirm or TdUiAction.FuseBack or TdUiAction.FuseClose: ActivateFuse(item); break;
@@ -344,7 +345,7 @@ public sealed partial class TdUiController
                 if (Mode == TdUiMode.Towers) Changed?.Invoke(); else Close();
                 break;
             case TdUiAction.TowersOpen: SetMode(TdUiMode.Towers); break;
-            case TdUiAction.PauseToggle when !ModalOpen:
+            case TdUiAction.PauseToggle when !ModalOpen && !_demotionPending:
                 if (_match().Phase is MatchPhase.Preparo or MatchPhase.Onda)
                 {
                     _userPaused = !_userPaused;
@@ -678,8 +679,9 @@ public sealed partial class TdUiController
             _noticeUntil = _now() + PromoNoticeSeconds;
             Changed?.Invoke();
         }
-        else if (demoted && !BossHidden)
+        else if (demoted)
         {
+            StartDemotion(rank, progress);
             _noticeTitle = "Rebaixamento";
             _noticeText = $"Rebaixado a {TdRank.DisplayName(rank)}";
             _noticeRank = rank;
@@ -738,7 +740,7 @@ public sealed partial class TdUiController
 
     private void UpdateModalPause()
     {
-        int count = ModalOpen ? 1 : 0;
+        int count = ModalOpen || _demotionPending ? 1 : 0;
         if (_modalCount == count) return;
         bool wasOpen = _modalCount > 0;
         _modalCount = count;
@@ -1008,6 +1010,7 @@ public sealed partial class TdUiController
     {
         var m = _match();
         if (BossHidden) return null;
+        if (DemotionCardOpen) return BuildDemotionCard();
         if (AlertCritical) return BuildAlertCard();
         if (_outsideCollapsed) return null;
         if (AlertWarningOpen) return BuildAlertCard();

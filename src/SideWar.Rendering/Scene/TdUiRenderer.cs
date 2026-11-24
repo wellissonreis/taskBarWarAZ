@@ -1096,6 +1096,12 @@ public sealed partial class TdUiRenderer(Typography typography, int dpi, SpriteA
     private void DrawItem(SKCanvas c, in TdUiItem it, bool hover, float width, bool small)
     {
         var r = it.Rect;
+        if (it.SArg == "demotion-rank")
+        {
+            DrawBrasao(c, it.Arg, new DipRect(r.X, r.Y, 26, 26));
+            _p.Text(c, it.Text, PanelFont.JetBrainsMono, 10, new DipRect(r.X + 32, r.Y + 6, r.W - 32, 16), RankColor(it.Arg));
+            return;
+        }
         float size = small ? 9f : 9.5f;
         var color = ToneColor(it.Tone);
         switch (it.Kind)
