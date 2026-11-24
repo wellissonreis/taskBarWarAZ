@@ -6,23 +6,34 @@ namespace SideWar.Core.Td;
 /// </summary>
 public static class TdReputation
 {
-    /// <summary>XP perdido por ponto de dano que o inimigo daria ao núcleo (antes: 1 ponto de integridade de 20).</summary>
-    public const int XpPerCoreDamage = 25;
+    /// <summary>XP perdido por ponto de dano que o inimigo daria ao núcleo (INFINITO: dói de verdade; algumas ondas ruins derrubam a patente).</summary>
+    public const int XpPerCoreDamage = 200;
     /// <summary>Teto do escudo de XP (runas + árvore de selos), em %.</summary>
     public const int MaxShieldPercent = 75;
     /// <summary>Cada ponto de nó de selos "xpShield" vale tantos % de XP perdida a menos.</summary>
     public const int MetaShieldPercentPerPoint = 3;
 
-    /// <summary>XP por onda vencida: cresce com a onda e a fase; onda que vazou paga metade.</summary>
-    public static int WaveXp(int stageNumber, int wave, bool leaked)
+    /// <summary>Multiplicador da sequência (streak) de ondas sem vazamento: +10% por onda, até x4 (30 ondas limpas). Zera ao vazar.</summary>
+    public const double StreakStep = 0.10, StreakCap = 4.0;
+
+    public static double StreakMultiplier(int streak) => Math.Min(StreakCap, 1.0 + StreakStep * Math.Max(0, streak));
+
+    /// <summary>
+    /// XP por onda vencida (INFINITO): 2 × (6 + onda/6 + 2·√(fase−1)) × multiplicador da sequência sem vazar. Onda que vazou paga metade do
+    /// base, sem multiplicador (e zera a sequência). O vazamento custa <see cref="XpPerCoreDamage"/> por dano: jogo passivo perde mais do que ganha.
+    /// </summary>
+    public static int WaveXp(int stageNumber, int wave, bool leaked, int streak = 0)
     {
-        long xp = 30 + 2L * Math.Max(1, wave) + 10L * (Math.Max(1, stageNumber) - 1);
-        return (int)Math.Min(100_000, leaked ? xp / 2 : xp);
+        long baseXp = 2 * (6L + Math.Max(1, wave) / 6 + (long)(2.0 * Math.Sqrt(Math.Max(1, stageNumber) - 1)));
+        return (int)Math.Min(100_000, leaked ? baseXp / 2 : (long)(baseXp * StreakMultiplier(streak)));
     }
 
-    /// <summary>XP bônus ao concluir uma fase da corrida: base + por fase, e por estrela (1 a 3).</summary>
-    public static int StageClearXp(int stageNumber, int stars) =>
-        (int)Math.Min(100_000, 100L + 20L * (Math.Max(1, stageNumber) - 1) + 50L * Math.Clamp(stars, 1, 3));
+    /// <summary>XP bônus ao concluir uma fase: base + por fase, e por estrela (1 a 3, 150 cada): desempenho (menos vazamento = mais estrelas) paga mais.</summary>
+    public static int StageClearXp(int stageNumber, int stars, bool flawless = false) =>
+        (int)Math.Min(100_000, 100L + 10L * (Math.Max(1, stageNumber) - 1) + 150L * Math.Clamp(stars, 1, 3) + (flawless ? FlawlessStageXp : 0));
+
+    /// <summary>Bônus de fase sem nenhum vazamento (INFINITO): premia desempenho, além do multiplicador da sequência.</summary>
+    public const int FlawlessStageXp = 300;
 
     public static int XpLost(int coreDamage, int shieldPercent)
     {
@@ -41,8 +52,14 @@ public sealed partial class TdMatchState
     /// <summary>Escudo atual de XP perdida, em % (runas + árvore de selos, limitado).</summary>
     public int XpShieldPercent => Math.Min(TdReputation.MaxShieldPercent, Rune("xpShield") + _metaShield * TdReputation.MetaShieldPercentPerPoint);
 
+    private int _streak;
+    /// <summary>Ondas seguidas vencidas sem nenhum vazamento (zera ao vazar); alimenta o multiplicador de XP.</summary>
+    public int Streak => _streak;
+    public double StreakMultiplier => TdReputation.StreakMultiplier(_streak);
+
     private void LoseReputation(int coreDamage)
     {
+        _streak = 0;
         int xp = TdReputation.XpLost(coreDamage, XpShieldPercent);
         if (xp <= 0) return;
         _repLostStage += xp;
@@ -57,7 +74,11 @@ public sealed partial class TdMatchState
         Emit(TdEventType.ReputationGained, xp, wave);
     }
 
-    private void WinWaveReputation(int wave, bool leaked) => GainReputation(TdReputation.WaveXp(_stageNumber, wave, leaked), wave);
+    private void WinWaveReputation(int wave, bool leaked)
+    {
+        _streak = leaked ? 0 : _streak + 1;
+        GainReputation(TdReputation.WaveXp(_stageNumber, wave, leaked, _streak), wave);
+    }
 
     /// <summary>Devolve XP perdido nesta fase (Backup/Snapshot): <paramref name="coreDamageUnits"/> × XP por dano, limitado ao perdido. Retorna o XP recuperado.</summary>
     private int RecoverReputation(int coreDamageUnits)

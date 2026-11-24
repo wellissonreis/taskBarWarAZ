@@ -53,11 +53,11 @@ public sealed partial class TdMatchState
     /// <summary>Teto de eventos retidos até <see cref="ClearEvents"/> (excedente é descartado).</summary>
     public const int MaxEvents = 4096;
 
-    private TdMatchState(TdContent content, TdStageDef stage, TdWaveDef[] waves, Rng rng, IEnumerable<string>? metaNodes, TdMatchOptions options)
+    private TdMatchState(TdContent content, TdStageDef stage, int stageNumber, TdWaveDef[] waves, Rng rng, IEnumerable<string>? metaNodes, TdMatchOptions options)
     {
         _content = content;
         _options = options;
-        _stageNumber = stage.Id;
+        _stageNumber = stageNumber;
         _stage = stage;
         _waves = waves;
         _rng = rng;
@@ -69,7 +69,7 @@ public sealed partial class TdMatchState
         _abilityCd = new int[content.Abilities.Length];
         _abilityActive = new int[content.Abilities.Length];
         _abilityUses = new int[content.Abilities.Length];
-        Credits = stage.StartingCredits + content.Runes.CreditSources.StartingCreditsBonus;
+        Credits = stage.StartingCredits + content.Runes.CreditSources.StartingCreditsBonus + CycleCatchUpCredits(content, stageNumber);
         // Cada nó comprado conta uma vez; créditos de meta são aplicados somente na criação da partida.
         foreach (var node in content.Meta.Branches.SelectMany(b => b.Nodes))
             if (_metaNodes.Contains(node.Id))
@@ -84,7 +84,7 @@ public sealed partial class TdMatchState
     }
 
     /// <summary>
-    /// Cria a partida da fase <paramref name="stageId"/> (1 a 6) em Preparo, com créditos e integridade iniciais.
+    /// Cria a partida da fase <paramref name="stageId"/> (número absoluto: 1 a 6 = primeira volta, 7+ = ciclos do infinito) em Preparo, com créditos e integridade iniciais.
     /// <paramref name="unlockedMetaNodes"/>: ids de nós da árvore já comprados (inclui créditos iniciais e desbloqueio de habilidades, ex.: <c>operation.snapshot</c>).
     /// </summary>
     public static TdMatchState Create(TdContent content, int stageId, Rng rng, IEnumerable<string>? unlockedMetaNodes = null) =>
@@ -95,10 +95,12 @@ public sealed partial class TdMatchState
     {
         ArgumentNullException.ThrowIfNull(options);
         ArgumentNullException.ThrowIfNull(content);
-        var stage = content.Stages.Stages.FirstOrDefault(s => s.Id == stageId)
-            ?? throw new ArgumentOutOfRangeException(nameof(stageId), stageId, "Fase inexistente no td-stages.json.");
-        var waves = content.Waves.Stages.Single(s => s.Stage == stageId).Waves;
-        var match = new TdMatchState(content, stage, waves, rng, unlockedMetaNodes, options);
+        // stageId é o número ABSOLUTO da fase (1 a 6 = primeira volta; 7+ = ciclos do infinito, que repetem o conteúdo das 6 regiões).
+        if (stageId < 1) throw new ArgumentOutOfRangeException(nameof(stageId), stageId, "Fase inexistente no td-stages.json.");
+        var defs = content.Stages.Stages;
+        var stage = defs[(stageId - 1) % defs.Length];
+        var waves = content.Waves.Stages.Single(s => s.Stage == stage.Id).Waves;
+        var match = new TdMatchState(content, stage, stageId, waves, rng, unlockedMetaNodes, options);
         match.ApplyPersistedRunes();
         return match;
     }
@@ -305,9 +307,9 @@ public sealed partial class TdMatchState
             LayoutChanged l => DoLayoutChanged(l),
             PlaceTower p => DoPlace(p),
             MoveTower m => DoMove(m),
+            RelocateTower rl => DoRelocate(rl),
             SellTower s => DoSell(s),
             FuseTower f => DoFuse(f),
-            RelocateTower rl => DoRelocate(rl),
             FuseTowers ft => DoFuseTowers(ft),
             SetAutoStart a => DoSetAutoStart(a),
             SetTargeting g => DoSetTargeting(g),
@@ -466,7 +468,7 @@ public sealed partial class TdMatchState
 
     private void BeginWave(int w)
     {
-        var def = _waves[w - 1];
+        var def = EffectiveWave(w);
         var spawns = new List<(long Due, int Seq, int Index, bool Boss, ushort Mut)>();
         double jitter = _content.Stages.Rules.SpawnJitter;
         int seq = 0;
@@ -540,7 +542,7 @@ public sealed partial class TdMatchState
         _stageClears++;
         Emit(TdEventType.StageCleared, summary.StageNumber, summary.Score);
 
-        GainReputation(TdReputation.StageClearXp(summary.StageNumber, starCount), 0);
+        GainReputation(TdReputation.StageClearXp(summary.StageNumber, starCount, lost == 0), 0);
         _repLostStage = 0;
         _stageIntegrityLoss = 0;
         _backupHealsThisStage = 0;

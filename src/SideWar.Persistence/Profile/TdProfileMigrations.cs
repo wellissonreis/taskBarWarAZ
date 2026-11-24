@@ -13,7 +13,29 @@ public static class TdProfileMigrations
         .Register(TdProfileData.Schema, 2, V2ToV3)
         .Register(TdProfileData.Schema, 3, V3ToV4)
         .Register(TdProfileData.Schema, 4, V4ToV5)
-        .Register(TdProfileData.Schema, 5, V5ToV6);
+        .Register(TdProfileData.Schema, 5, V5ToV6)
+        .Register(TdProfileData.Schema, 6, V6ToV7);
+
+    /// <summary>
+    /// v6 → v7: corrida infinita. Sem corrida salva (<c>runStageNumber</c> = 0: abre na fase sugerida, como antes). O recorde nasce das fases já
+    /// vencidas: fase seguinte à mais alta com estrelas, onda 0; perfil sem estrelas fica sem recorde.
+    /// </summary>
+    private static JsonNode V6ToV7(JsonNode root)
+    {
+        root["runStageNumber"] ??= 0;
+        if (root["bestStageNumber"] is null)
+        {
+            int best = 0;
+            if (root["stages"] is JsonArray stages)
+                foreach (var st in stages)
+                    if (st is JsonObject o && o["stars"] is JsonValue sv && sv.TryGetValue<int>(out var stars) && stars > 0
+                        && o["stageId"] is JsonValue iv && iv.TryGetValue<int>(out var id))
+                        best = Math.Max(best, id + 1);
+            root["bestStageNumber"] = best;
+            root["bestStageWave"] = 0;
+        }
+        return root;
+    }
 
     /// <summary>
     /// v5 → v6: as runas passam a ser progressão permanente. O Legado antigo (<c>legacyTotal</c>) vira nós iniciais, como antes

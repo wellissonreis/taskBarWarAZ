@@ -8,7 +8,7 @@ namespace SideWar.Persistence.Profile;
 public sealed record TdProfileData
 {
     public const string Schema = "sidewar.td-profile";
-    public const int SchemaVersion = 6;
+    public const int SchemaVersion = 7;
 
     /// <summary>Total de selos já ganhos (1 por estrela nova, 1 por desafio, mais os iniciais da migração do idle).</summary>
     public int SealsEarned { get; init; }
@@ -38,6 +38,15 @@ public sealed record TdProfileData
     public string RuneWeb { get; init; } = TdRuneWeb.Empty;
     /// <summary>Fragmentos de runa ainda não gastos (v6), carregados na partida nova.</summary>
     public long RuneFragments { get; init; }
+
+    /// <summary>
+    /// Corrida infinita (v7): número ABSOLUTO da fase em que a corrida atual está (1 a 6 = primeira volta; 7+ = ciclo 2, 3, …). 0 = sem corrida salva
+    /// (vale a fase sugerida pelo mapa). Sobe a cada fase concluída; a próxima abertura do jogo recomeça nessa fase, com a defesa inicial do ciclo.
+    /// </summary>
+    public int RunStageNumber { get; init; }
+    /// <summary>Recorde da corrida infinita (v7): fase absoluta mais alta alcançada (ciclo = (n-1)/6 + 1) e a onda mais alta dentro dela. 0 = nunca jogou.</summary>
+    public int BestStageNumber { get; init; }
+    public int BestStageWave { get; init; }
 
     public static TdProfileData Default { get; } = new();
 

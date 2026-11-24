@@ -112,8 +112,18 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
     public void OnEvents(TdMatchState match, IReadOnlyList<TdEvent> events)
     {
         SyncRunes(match);
+        // Fase absoluta de cada onda do lote: o estado já avançou para a fase seguinte quando a última onda da fase foi concluída no mesmo passo.
+        int clearsInBatch = 0;
+        for (int i = 0; i < events.Count; i++) if (events[i].Type == TdEventType.StageCleared) clearsInBatch++;
+        int stageAt = match.StageNumber - clearsInBatch;
         for (int i = 0; i < events.Count; i++)
         {
+            if (events[i].Type == TdEventType.WaveCompleted)
+            {
+                var best = TdProfileRules.RecordBest(Profile, stageAt, (int)events[i].A);
+                if (!ReferenceEquals(best, Profile)) { Profile = best; _repDirty = true; }
+                continue;
+            }
             if (events[i].Type == TdEventType.RuneAwakened && _runesDirty) { Save(); continue; } // despertar: grava já (raro)
             if (events[i].Type == TdEventType.BaseAttacked) { Profile = TdProfileRules.ApplyReputation(Profile, -events[i].A); _repDirty = true; continue; }
             if (events[i].Type == TdEventType.ReputationGained)
@@ -130,9 +140,28 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
             if (found is not { } sr) continue;
             var result = new TdMatchResult(MatchPhase.Vitoria, sr.Stars, sr.IntegrityLost, sr.Crown, sr.Medals, sr.Score);
             Profile = TdProfileRules.RecordMatch(Profile, _meta, sr.StageId, result, _stageCount, out var outcome);
+            Profile = TdProfileRules.RecordCycleStage(Profile, sr.Cycle); // ciclo 2+: a recompensa em selos continua
+            Profile = TdProfileRules.SetRunStage(Profile, sr.StageNumber + 1); // a corrida infinita segue na fase seguinte (retoma daqui)
+            Profile = TdProfileRules.RecordBest(Profile, sr.StageNumber + 1, 0);
+            stageAt = sr.StageNumber + 1;
             LastOutcome = outcome;
             Save();
         }
+    }
+
+    /// <summary>
+    /// Fase absoluta em que abrir o jogo: a corrida infinita salva no perfil (<c>RunStageNumber</c>, 1 a 6 = primeira volta, 7+ = ciclos) ou, sem
+    /// corrida salva, a fase sugerida pelo mapa.
+    /// </summary>
+    public int ResumeStage() => Profile.RunStageNumber >= 1 ? Profile.RunStageNumber : SuggestedStage();
+
+    /// <summary>Corrida nova começando na fase absoluta <paramref name="stageNumber"/> (mapa, reiniciar): grava para a próxima abertura retomar daí.</summary>
+    public void SetRunStage(int stageNumber)
+    {
+        var next = TdProfileRules.SetRunStage(Profile, stageNumber);
+        if (ReferenceEquals(next, Profile)) return;
+        Profile = next;
+        Save();
     }
 
     private bool _repDirty;

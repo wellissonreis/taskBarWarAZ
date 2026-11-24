@@ -57,6 +57,31 @@ public static class TdProfileRules
         };
     }
 
+    /// <summary>Selos por fase concluída nos ciclos 2, 3, … (a primeira volta paga por estrelas/coroas/medalhas; depois cada fase de ciclo paga 1 selo).</summary>
+    public const int SealsPerCycleStage = 1;
+
+    /// <summary>
+    /// Corrida infinita: recorde (fase absoluta, onda) só sobe. Comparação lexicográfica: fase maior vence; na mesma fase, onda maior.
+    /// </summary>
+    public static TdProfileData RecordBest(TdProfileData p, int stageNumber, int wave)
+    {
+        stageNumber = Math.Clamp(stageNumber, 0, TdProfileSerializer.MaxWave);
+        wave = Math.Clamp(wave, 0, TdProfileSerializer.MaxWave);
+        if (stageNumber < p.BestStageNumber || (stageNumber == p.BestStageNumber && wave <= p.BestStageWave)) return p;
+        return p with { BestStageNumber = stageNumber, BestStageWave = wave };
+    }
+
+    /// <summary>Corrida infinita: guarda a fase absoluta em que a corrida está (a próxima abertura recomeça nela). 0 apaga.</summary>
+    public static TdProfileData SetRunStage(TdProfileData p, int stageNumber)
+    {
+        stageNumber = Math.Clamp(stageNumber, 0, TdProfileSerializer.MaxWave);
+        return stageNumber == p.RunStageNumber ? p : p with { RunStageNumber = stageNumber };
+    }
+
+    /// <summary>Fase de conteúdo concluída em ciclo 2+ (<paramref name="cycle"/> &gt;= 1): +<see cref="SealsPerCycleStage"/> selo (a recompensa continua depois da fase 6).</summary>
+    public static TdProfileData RecordCycleStage(TdProfileData p, int cycle) =>
+        cycle < 1 ? p : p with { SealsEarned = (int)Math.Min(int.MaxValue, (long)p.SealsEarned + SealsPerCycleStage) };
+
     /// <summary>Selos bônus por coroa (primeira vez, RF-28.21).</summary>
     public const int SealsPerCrown = 2;
     /// <summary>Selos bônus por medalha de feito (primeira vez). A medalha Desafio paga <c>SealsPerChallenge</c>.</summary>

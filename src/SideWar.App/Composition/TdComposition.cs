@@ -51,7 +51,7 @@ internal sealed class TdComposition
         ulong runSeed = seed ?? (ulong)DateTime.UtcNow.Ticks;
         var rng = Rng.Seed(runSeed, 54UL);
         var options = settings.Td.ContinuousWaves ? TdMatchOptions.Default : TdMatchOptions.Classic;
-        int stage = recorder.SuggestedStage();
+        int stage = recorder.ResumeStage();
         options = recorder.WithRunes(options) with { HighestCompletedStage = recorder.Profile.Stages.Where(s => s.Stars > 0).Select(s => s.StageId).DefaultIfEmpty(0).Max() };
         var match = TdMatchState.Create(content, stage, rng, recorder.Profile.PurchasedNodes, options);
         var host = new TdGameHost(clock, app, match, recorder, presence);
@@ -65,7 +65,8 @@ internal sealed class TdComposition
     /// <summary>Cria uma corrida nova começando na fase (nós comprados incluídos) e a entrega ao host (reaplica o layout da barra).</summary>
     public void StartStage(int stageId)
     {
-        stageId = Math.Clamp(stageId, 1, StageCount);
+        stageId = Math.Clamp(stageId, 1, TdProfileSerializer.MaxWave); // número absoluto: > StageCount = ciclos do infinito
+        Recorder.SetRunStage(stageId);
         _runSeed = (ulong)DateTime.UtcNow.Ticks;
         RunStartStage = stageId;
         _options = Recorder.WithRunes(_options) with { HighestCompletedStage = Recorder.Profile.Stages.Where(s => s.Stars > 0).Select(s => s.StageId).DefaultIfEmpty(0).Max() };

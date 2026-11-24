@@ -19,12 +19,12 @@ public readonly record struct TdRankProgress(TdRankLevel Current, TdRankLevel? N
 }
 
 /// <summary>
-/// Limiares recalibrados com 20 seeds por fase no TdSanityBot (TD.22): Médio Sênior,
-/// Otimizado na patente máxima e SemContra Estagiário. Evidência em specs/evidencias/TD.22.md.
+/// Limiares do INFINITO, medidos para jogo SEM tomar dano (sequência de ondas limpas, fases de ~30 min): Júnior ~30 min, Pleno ~1h30, Sênior ~4 h,
+/// Especialista ~8 h, Arquiteto ~15 h. Quem vaza demora bem mais ou cai (ver REPORT INFINITO). O XP vem de <see cref="TdReputation"/>.
 /// </summary>
 public static class TdRank
 {
-    private static readonly int[] Thresholds = [0, 5_000, 12_000, 22_000, 29_000, 34_000];
+    private static readonly int[] Thresholds = [0, 4_500, 24_000, 68_000, 145_000, 300_000];
 
     public static int Threshold(TdRankLevel level) => Thresholds[(int)level];
 

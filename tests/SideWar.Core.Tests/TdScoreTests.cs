@@ -162,7 +162,7 @@ public sealed class TdScoreTests
     {
         var o = TdSanityBot.Run(Real, 1, TdBotProfile.Otimizado, 100);
         Assert.True(o.Match.Crown);
-        Assert.Equal(TdMedals.SemVender | TdMedals.SemHabilidades | TdMedals.Pressa, o.Match.Medals); // sem runas de compra, o Otimizado não vende mais
+        Assert.True(o.Match.Medals.HasFlag(TdMedals.SemVender)); // fases longas (60+ ondas): o Otimizado usa habilidades e não chama todas as ondas antes (sem SemHabilidades/Pressa)
         var m = TdSanityBot.Run(Real, 3, TdBotProfile.Medio, 100);
         Assert.True(m.Won);
         Assert.True(m.Match.Medals.HasFlag(TdMedals.SemVender));
@@ -185,12 +185,12 @@ public sealed class TdScoreTests
     public void Rank_Levels()
     {
         Assert.Equal(TdRankLevel.Estagiario, TdRank.For(0));
-        Assert.Equal(TdRankLevel.Estagiario, TdRank.For(4_999));
-        Assert.Equal(TdRankLevel.Junior, TdRank.For(5_000));
-        Assert.Equal(TdRankLevel.Pleno, TdRank.For(12_000));
-        Assert.Equal(TdRankLevel.Senior, TdRank.For(22_000));
-        Assert.Equal(TdRankLevel.Especialista, TdRank.For(29_000));
-        Assert.Equal(TdRankLevel.Arquiteto, TdRank.For(34_000));
+        Assert.Equal(TdRankLevel.Estagiario, TdRank.For(4_499));
+        Assert.Equal(TdRankLevel.Junior, TdRank.For(4_500));
+        Assert.Equal(TdRankLevel.Pleno, TdRank.For(24_000));
+        Assert.Equal(TdRankLevel.Senior, TdRank.For(68_000));
+        Assert.Equal(TdRankLevel.Especialista, TdRank.For(145_000));
+        Assert.Equal(TdRankLevel.Arquiteto, TdRank.For(300_000));
         Assert.Equal(TdRankLevel.Arquiteto, TdRank.For(int.MaxValue));
         for (var l = TdRankLevel.Junior; l <= TdRankLevel.Arquiteto; l++) Assert.True(TdRank.Threshold(l) > TdRank.Threshold(l - 1));
     }
@@ -198,21 +198,21 @@ public sealed class TdScoreTests
     [Fact(DisplayName = "RF-28.21 Rank progress: fraction to the next level; MVP is full")]
     public void Rank_Progress()
     {
-        var p = TdRank.Progress(8_500);
+        var p = TdRank.Progress(14_250);
         Assert.Equal(TdRankLevel.Junior, p.Current);
         Assert.Equal(TdRankLevel.Pleno, p.Next);
         Assert.Equal(0.5, p.Fraction, 3);
-        var m = TdRank.Progress(40_000);
+        var m = TdRank.Progress(400_000);
         Assert.Null(m.Next);
         Assert.Equal(1.0, m.Fraction);
         Assert.Equal(TdRankLevel.Estagiario, TdRank.Progress(-5).Current);
     }
 
     [Theory]
-    [InlineData(0, TdRankLevel.Estagiario, TdRankLevel.Junior, 5000, 0.0)]
-    [InlineData(4999, TdRankLevel.Estagiario, TdRankLevel.Junior, 5000, 0.9998)]
-    [InlineData(5000, TdRankLevel.Junior, TdRankLevel.Pleno, 12000, 0.0)]
-    [InlineData(34000, TdRankLevel.Arquiteto, null, 34000, 1.0)]
+    [InlineData(0, TdRankLevel.Estagiario, TdRankLevel.Junior, 4500, 0.0)]
+    [InlineData(4499, TdRankLevel.Estagiario, TdRankLevel.Junior, 4500, 0.99978)]
+    [InlineData(4500, TdRankLevel.Junior, TdRankLevel.Pleno, 24000, 0.0)]
+    [InlineData(300000, TdRankLevel.Arquiteto, null, 300000, 1.0)]
     public void Rank_Boundaries(int points, TdRankLevel current, TdRankLevel? next, int target, double fraction)
     {
         var progress = TdRank.Progress(points);
@@ -226,14 +226,49 @@ public sealed class TdScoreTests
 
     [Theory]
     [InlineData(0, "brasao_estagiario.png")]
-    [InlineData(4999, "brasao_estagiario.png")]
-    [InlineData(5000, "brasao_junior.png")]
-    [InlineData(12000, "brasao_pleno.png")]
-    [InlineData(22000, "brasao_senior.png")]
-    [InlineData(29000, "brasao_especialista.png")]
-    [InlineData(34000, "brasao_arquiteto.png")]
+    [InlineData(4499, "brasao_estagiario.png")]
+    [InlineData(4500, "brasao_junior.png")]
+    [InlineData(24000, "brasao_pleno.png")]
+    [InlineData(68000, "brasao_senior.png")]
+    [InlineData(145000, "brasao_especialista.png")]
+    [InlineData(300000, "brasao_arquiteto.png")]
     public void Rank_brasao_matches_threshold(int points, string filename) =>
         Assert.Equal(filename, TdRank.Brasao(TdRank.Progress(points).Current));
+
+    [Fact(DisplayName = "INFINITO XP: sem tomar dano ~30 min Júnior, ~1h30 Pleno, ~4 h Sênior, ~8 h Especialista, ~15 h Arquiteto; vazar dói")]
+    public void Rank_TimeToRank_IsLongAndRewardsPerformance()
+    {
+        // Modelo do jogador perfeito: fases de ~30 min, 3 estrelas, nunca vaza (a sequência só cresce); ondas por fase do conteúdo embarcado.
+        var c = SideWar.Core.Content.Td.TdContentLoader.LoadEmbedded();
+        double minutes = 0; long xp = 0; int streak = 0; var at = new Dictionary<TdRankLevel, double>();
+        for (int s = 1; s <= 120; s++)
+        {
+            int waves = c.Stages.Stages[(s - 1) % 6].Waves;
+            for (int w = 1; w <= waves; w++)
+            {
+                xp += TdReputation.WaveXp(s, w, false, ++streak);
+                minutes += 30.0 / waves;
+                var r = TdRank.For((int)xp);
+                if (!at.ContainsKey(r)) at[r] = minutes / 60.0;
+            }
+            xp += TdReputation.StageClearXp(s, 3, true);
+        }
+        Assert.InRange(at[TdRankLevel.Junior], 0.3, 0.8);
+        Assert.InRange(at[TdRankLevel.Pleno], 1.0, 2.2);
+        Assert.InRange(at[TdRankLevel.Senior], 3.0, 5.5);
+        Assert.InRange(at[TdRankLevel.Especialista], 6.0, 11.0);
+        Assert.InRange(at[TdRankLevel.Arquiteto], 12.0, 20.0);
+        // desempenho: sequência multiplica (até x4); vazar paga metade do base e zera a sequência; fase limpa e 3 estrelas pagam mais
+        Assert.Equal(1.0, TdReputation.StreakMultiplier(0));
+        Assert.Equal(2.0, TdReputation.StreakMultiplier(10));
+        Assert.Equal(TdReputation.StreakCap, TdReputation.StreakMultiplier(500));
+        Assert.True(TdReputation.WaveXp(9, 30, false, 30) > 3 * TdReputation.WaveXp(9, 30, false, 0));
+        Assert.True(TdReputation.WaveXp(9, 30, true, 30) < TdReputation.WaveXp(9, 30, false, 0));
+        Assert.True(TdReputation.StageClearXp(9, 3) > TdReputation.StageClearXp(9, 1));
+        Assert.True(TdReputation.StageClearXp(9, 3, true) > TdReputation.StageClearXp(9, 3));
+        // um único inimigo vazando custa mais que várias ondas boas: 1 de dano > 10 ondas iniciais
+        Assert.True(TdReputation.XpLost(1, 0) > 10 * TdReputation.WaveXp(1, 1, false, 1));
+    }
 
     private static int Record(int stage, TdBotProfile p)
     {

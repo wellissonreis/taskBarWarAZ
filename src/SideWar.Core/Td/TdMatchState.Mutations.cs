@@ -216,12 +216,12 @@ public sealed partial class TdMatchState
         if (_options.IsClassic || Phase is MatchPhase.Vitoria) return [];
         TdWaveDef def;
         int stageNumber = _stageNumber;
-        if (NextWaveNumber > 0) def = _waves[NextWaveNumber - 1];
+        if (NextWaveNumber > 0) def = EffectiveWave(NextWaveNumber);
         else if (_options.PersistentRun)
         {
             stageNumber++;
             var defs = _content.Stages.Stages;
-            def = _content.Waves.Stages.Single(s => s.Stage == defs[(stageNumber - 1) % defs.Length].Id).Waves[0];
+            def = EffectiveWave(_content.Waves.Stages.Single(s => s.Stage == defs[(stageNumber - 1) % defs.Length].Id).Waves, 1, stageNumber);
         }
         else return [];
         var plan = PlanMutations(_runWaves + 1, stageNumber, def, (int[])_mutDebut.Clone());

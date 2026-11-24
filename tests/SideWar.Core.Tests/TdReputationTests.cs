@@ -54,9 +54,23 @@ public sealed class TdReputationTests
         var gain = ev.Single(e => e.Type == TdEventType.ReputationGained);
         Assert.Equal(1, gain.B);
         Assert.Equal(TdReputation.WaveXp(1, 1, true), gain.A); // sem torres a onda 1 vazou
-        Assert.Equal(TdReputation.WaveXp(1, 1, false) / 2, gain.A);
+        Assert.Equal(TdReputation.WaveXp(1, 1, false, 0) / 2, gain.A);
+        Assert.Equal(0, s.Streak); // vazou: sem sequência
         Assert.True(TdReputation.WaveXp(2, 5, false) > TdReputation.WaveXp(1, 5, false));
         Assert.True(TdReputation.WaveXp(1, 6, false) > TdReputation.WaveXp(1, 5, false));
+    }
+
+    [Fact]
+    public void Clean_waves_build_a_streak_multiplier_and_a_leak_resets_it()
+    {
+        Assert.Equal(1.0, TdReputation.StreakMultiplier(0));
+        Assert.Equal(1.5, TdReputation.StreakMultiplier(5), 6);
+        Assert.Equal(4.0, TdReputation.StreakMultiplier(30));
+        Assert.Equal(4.0, TdReputation.StreakMultiplier(31));
+        int baseXp = TdReputation.WaveXp(3, 12, false, 0);
+        Assert.Equal((int)(baseXp * 2.0), TdReputation.WaveXp(3, 12, false, 10));
+        Assert.True(TdReputation.WaveXp(3, 12, true, 25) <= baseXp / 2); // vazou: metade, sem multiplicador
+        Assert.True(TdReputation.XpLost(20, 0) >= 4_000); // um chefe que chega à base derruba muito XP
     }
 
     [Fact]
@@ -69,10 +83,10 @@ public sealed class TdReputationTests
     }
 
     [Theory]
-    [InlineData(1, 0, 25)]
-    [InlineData(2, 0, 50)]
-    [InlineData(4, 50, 50)]
-    [InlineData(1, 999, 6)] // escudo limitado a 75%: 25 * 25 / 100 = 6
+    [InlineData(1, 0, 200)]
+    [InlineData(2, 0, 400)]
+    [InlineData(4, 50, 400)]
+    [InlineData(1, 999, 50)] // escudo limitado a 75%: 200 * 25 / 100 = 50
     public void XpLost_applies_the_shield_with_a_cap(int damage, int shield, int expected) =>
         Assert.Equal(expected, TdReputation.XpLost(damage, shield));
 }

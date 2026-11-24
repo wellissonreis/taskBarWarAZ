@@ -220,6 +220,7 @@ public class TdProfileStoreTests
             SealsEarned = 9, MigratedSeals = 2, IdleImportDone = true, PurchasedNodes = ["defense.damage1"], UnlockedTowers = ["bolt"],
             InfiniteRuns = [new TdInfiniteRunData { Seed = 5, MaxWave = 40 }], LegacyTotal = 7, BestRunWaves = 33, LegacyLastRun = "r1", RunsPlayed = 4,
             Reputation = 1234, RuneWeb = TdRuneWeb.ToText(0xff), RuneFragments = 77,
+            RunStageNumber = 14, BestStageNumber = 15, BestStageWave = 33,
             Stages = [new TdStageProgressData { StageId = 1, Unlocked = true, Stars = 3, Crown = true, Medals = 5, BestScore = 10, ChallengeCompleted = true }],
         };
         var fresh = TdProfileData.ResetToNew();
@@ -231,6 +232,57 @@ public class TdProfileStoreTests
         Assert.Equal(new TdStageProgressData { StageId = 1, Unlocked = true }, stage);
         Assert.Equal(TdRuneWeb.Empty, fresh.RuneWeb);
         Assert.Equal(0, fresh.Reputation);
+        Assert.Equal(0, fresh.RunStageNumber); // infinito: ciclo/fase atual e recorde também zeram
+        Assert.Equal(0, fresh.BestStageNumber);
+        Assert.Equal(0, fresh.BestStageWave);
+        Assert.NotEqual(0, dirty.RunStageNumber);
+    }
+
+    [Fact]
+    public void Migration_V6ToV7_starts_without_a_saved_run_and_derives_the_record_from_cleared_stages()
+    {
+        var (fs, store) = Make();
+        var payload = System.Text.Json.Nodes.JsonNode.Parse(J(Full()))!.AsObject();
+        foreach (var key in new[] { "runStageNumber", "bestStageNumber", "bestStageWave" }) payload.Remove(key);
+        fs.Files[F] = Envelope(payload.ToJsonString(), TdProfileData.Schema, 6);
+        var before = Full();
+        var p = store.Load().Profile;
+        Assert.Equal(0, p.RunStageNumber); // sem corrida salva: abre na fase sugerida
+        Assert.Equal(before.Stages.Where(x => x.Stars > 0).Select(x => x.StageId + 1).DefaultIfEmpty(0).Max(), p.BestStageNumber);
+        Assert.Equal(0, p.BestStageWave);
+        Assert.Equal(before.Reputation, p.Reputation); // o resto do perfil é preservado
+        Assert.Equal(TdProfileData.SchemaVersion, SchemaVersionOnDisk(fs.Files[F]));
+        Assert.Equal(J(p), J(store.Load().Profile));
+    }
+
+    [Fact]
+    public void Infinite_run_fields_round_trip_and_are_sanitized()
+    {
+        var (_, store) = Make();
+        var p = Full() with { RunStageNumber = 19, BestStageNumber = 20, BestStageWave = 41 };
+        Assert.True(store.Save(p));
+        var back = store.Load().Profile;
+        Assert.Equal((19, 20, 41), (back.RunStageNumber, back.BestStageNumber, back.BestStageWave));
+        var bad = TdProfileSerializer.Sanitize(Full() with { RunStageNumber = -3, BestStageNumber = 0, BestStageWave = 99 });
+        Assert.Equal((0, 0, 0), (bad.RunStageNumber, bad.BestStageNumber, bad.BestStageWave));
+    }
+
+    [Fact]
+    public void Rules_RecordBest_only_goes_up_by_stage_then_wave_and_SetRunStage_and_cycle_seals_work()
+    {
+        var p = TdProfileData.Default;
+        p = TdProfileRules.RecordBest(p, 7, 12); // ciclo 2, fase 1, onda 12
+        Assert.Equal((7, 12), (p.BestStageNumber, p.BestStageWave));
+        Assert.Same(p, TdProfileRules.RecordBest(p, 7, 12));
+        Assert.Same(p, TdProfileRules.RecordBest(p, 7, 5));
+        Assert.Same(p, TdProfileRules.RecordBest(p, 6, 99));
+        Assert.Equal((7, 13), (TdProfileRules.RecordBest(p, 7, 13).BestStageNumber, TdProfileRules.RecordBest(p, 7, 13).BestStageWave));
+        Assert.Equal((8, 0), (TdProfileRules.RecordBest(p, 8, 0).BestStageNumber, TdProfileRules.RecordBest(p, 8, 0).BestStageWave));
+        Assert.Equal(9, TdProfileRules.SetRunStage(p, 9).RunStageNumber);
+        Assert.Same(p, TdProfileRules.SetRunStage(p, 0));
+        Assert.Same(p, TdProfileRules.RecordCycleStage(p, 0)); // 1a volta: sem selo extra (estrelas/coroas pagam)
+        Assert.Equal(1, TdProfileRules.RecordCycleStage(p, 1).SealsEarned);
+        Assert.Equal(3, TdProfileRules.RecordCycleStage(TdProfileRules.RecordCycleStage(TdProfileRules.RecordCycleStage(p, 1), 2), 5).SealsEarned);
     }
 
     [Fact]
@@ -480,7 +532,7 @@ public class TdProfileStoreTests
         };
         Assert.Equal(12_100, TdProfileRules.TotalScore(p));
         Assert.Equal(TdRankLevel.Estagiario, TdProfileRules.Rank(p).Current); // a patente vem da reputação, não dos recordes
-        Assert.Equal(TdRankLevel.Pleno, TdProfileRules.Rank(p with { Reputation = 12_100 }).Current);
+        Assert.Equal(TdRankLevel.Pleno, TdProfileRules.Rank(p with { Reputation = 24_000 }).Current);
         Assert.Equal(TdRankLevel.Estagiario, TdProfileRules.Rank(TdProfileData.Default).Current);
     }
 
@@ -502,10 +554,10 @@ public class TdReputationProfileTests
     [Fact]
     public void ApplyReputation_floors_at_zero_and_rank_goes_down_and_up()
     {
-        var p = TdProfileData.Default with { Reputation = 12_100 };
+        var p = TdProfileData.Default with { Reputation = 24_100 };
         Assert.Equal(TdRankLevel.Pleno, TdProfileRules.Rank(p).Current);
         var down = TdProfileRules.ApplyReputation(p, -300);
-        Assert.Equal(11_800, down.Reputation);
+        Assert.Equal(23_800, down.Reputation);
         Assert.Equal(TdRankLevel.Junior, TdProfileRules.Rank(down).Current); // rebaixado
         Assert.Equal(TdRankLevel.Pleno, TdProfileRules.Rank(TdProfileRules.ApplyReputation(down, 300)).Current); // e sobe de novo
         Assert.Equal(0, TdProfileRules.ApplyReputation(p, -1_000_000).Reputation);
