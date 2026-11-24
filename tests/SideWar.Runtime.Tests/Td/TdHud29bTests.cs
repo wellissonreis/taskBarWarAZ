@@ -136,11 +136,11 @@ public sealed class TdHud29bTests
         var r = new Rig(store);
         r.Ui.OpenStartupModal();
         r.Ui.Sync();
-        Assert.Equal(TdTutorialStep.HudCollapse, r.Ui.Step);
+        Assert.Equal(TdTutorialStep.Tour, r.Ui.Step);
         Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.SArg == "tut");
         r.Ui.Cancel(); r.Ui.Sync();
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.HudMinimize)); r.Ui.Sync();
-        Assert.Equal(TdTutorialStep.Core, r.Ui.Step);
+        Assert.Equal(TdTutorialStep.Tour, r.Ui.Step);
         Assert.False(store.Done);
     }
 
@@ -149,11 +149,9 @@ public sealed class TdHud29bTests
     {
         var store = new Store { Done = false };
         var r = new Rig(store);
-        r.Ui.OpenStartupModal(); r.Ui.Sync(); r.Ui.Cancel(); r.Ui.Sync();
-        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.HudMinimize)); r.Ui.Sync();
-        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.HudRestore)); r.Ui.Sync();
-        for (int i = 0; i < 3; i++) r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.TutorialNext));
-        Assert.Equal(TdTutorialStep.Build, r.Ui.Step);
+        r.Ui.OpenStartupModal(); r.Ui.Sync();
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.TutorialNext));
+        Assert.Equal(TdTutorialStep.Tour, r.Ui.Step);
         Assert.Contains(r.Ui.BuildHud().Items, i => i.Action == TdUiAction.QuickTowers && i.Highlight);
     }
 

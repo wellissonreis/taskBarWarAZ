@@ -70,13 +70,13 @@ public sealed class TdFirstRunTests
     public void Empty_profile_shows_the_tutorial_and_no_wave_starts_by_itself(bool continuous)
     {
         var (match, game, ui, clock) = Fresh(continuous);
-        Assert.Equal(TdTutorialStep.HudOpen, ui.Step);
+        Assert.Equal(TdTutorialStep.Tour, ui.Step);
         Assert.Equal(AutoStartMode.Off, match.AutoStart);
         long step = (long)(clock.TicksPerSecond / 30);
         for (int i = 0; i < 30 * 600; i++) { clock.AdvanceTicks(step); game.OnWake(clock); ui.Sync(); }
         Assert.Equal(MatchPhase.Preparo, match.Phase);
         Assert.Equal(0, match.WaveNumber);
-        Assert.Equal(TdTutorialStep.HudOpen, ui.Step);
+        Assert.Equal(TdTutorialStep.Tour, ui.Step);
     }
 
     [Theory]

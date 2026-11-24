@@ -112,6 +112,7 @@ public sealed partial class TdUiController
     {
         if (quizDraw is not null) _quizDraw = quizDraw;
         _onb = onboarding;
+        _tutorial = onboarding is null ? null : new TdTutorial(onboarding);
         _quiz = quiz;
         _match = match ?? throw new ArgumentNullException(nameof(match));
         _send = send ?? throw new ArgumentNullException(nameof(send));
@@ -279,6 +280,7 @@ public sealed partial class TdUiController
             case TdUiAction.HowTo: Toggle(TdUiMode.Help); break;
             case TdUiAction.RedoTutorial: RedoTutorial(); break;
             case TdUiAction.TutorialNext: break;
+            case TdUiAction.TutorialPrevious: break;
             case TdUiAction.QuizTrue: AnswerQuiz(true); break;
             case TdUiAction.QuizFalse: AnswerQuiz(false); break;
             case TdUiAction.QuizClose: CloseQuiz(); break;
@@ -1346,14 +1348,30 @@ public sealed partial class TdUiController
                 break;
             case TdUiMode.Help:
             {
-                int n = 0;
+                int row = 0, col = 0;
                 foreach (var it in src)
                 {
                     if (it.Action == TdUiAction.Close) continue;
-                    if (it.Action == TdUiAction.RedoTutorial) { items.Add(Put(it, 16, 400, 180, 40)); continue; }
-                    int row = n / 2 - _helpScroll, col = n % 2; n++;
-                    if (row < 0 || row >= HelpVisibleRows) continue;
-                    items.Add(Put(it, 16 + col * 352, 108 + row * 36, 336, 30));
+                    if (it.Action == TdUiAction.RedoTutorial) { items.Add(Put(it, 16, _tutorial is { Active: true } ? 360 : 400, 180, 40)); continue; }
+                    if (it.SArg == "help-section")
+                    {
+                        if (col != 0) { row++; col = 0; }
+                        int visible = row++ - _helpScroll;
+                        if (visible >= 0 && visible < HelpVisibleRows) items.Add(Put(it, 16, 108 + visible * 36, 688, 30));
+                        continue;
+                    }
+                    int display = row - _helpScroll;
+                    if (display >= 0 && display < HelpVisibleRows)
+                    {
+                        var card = it;
+                        if (it.Text.Length > 36)
+                        {
+                            int split = it.Text.LastIndexOf(' ', 36);
+                            if (split > 0) card = it with { Text = it.Text[..split], Sub = it.Text[(split + 1)..] };
+                        }
+                        items.Add(Put(card, 16 + col * 352, 108 + display * 36, 336, 30));
+                    }
+                    if (++col == 2) { col = 0; row++; }
                 }
                 break;
             }
@@ -1394,8 +1412,7 @@ public sealed partial class TdUiController
     {
         if (Mode == TdUiMode.Help)
         {
-            int count = BuildHelp(m).Items.Count(i => i.Action is not (TdUiAction.Close or TdUiAction.RedoTutorial));
-            int rows = (count + 1) / 2;
+            int rows = HelpRows(BuildHelp(m).Items);
             return rows > HelpVisibleRows ? new(rows, HelpVisibleRows, Math.Clamp(_helpScroll, 0, rows - HelpVisibleRows), 108f, HelpVisibleRows * 36f - 6f) : null;
         }
         if (Mode == TdUiMode.Towers)
@@ -1406,6 +1423,18 @@ public sealed partial class TdUiController
             return count > ModalBuildRows ? new(count, ModalBuildRows, _buildScroll, 158f, ModalBuildRows * 51f - 3f) : null;
         }
         return null;
+    }
+
+    private static int HelpRows(TdUiItem[] items)
+    {
+        int row = 0, col = 0;
+        foreach (var it in items)
+        {
+            if (it.Action is TdUiAction.Close or TdUiAction.RedoTutorial) continue;
+            if (it.SArg == "help-section") { if (col != 0) { row++; col = 0; } row++; }
+            else if (++col == 2) { row++; col = 0; }
+        }
+        return row + (col == 0 ? 0 : 1);
     }
 
     /// <summary>Rolagem da lista da aba atual (roda do mouse: 1 linha por clique; teclado: página). Negativo sobe. Devolve true se a aba tem lista rolável.</summary>
@@ -1453,6 +1482,7 @@ public sealed partial class TdUiController
         {
             items.Add(new(new DipRect(674, 4, 36, 36), TdUiKind.Button, "X", TdUiAction.Close));
             AddBestiary(items);
+            AddModalTutorial(items);
             return new TdPopoverView($"{view.Title}   ¢{_match().Credits}", [.. items], 720, 480, 0);
         }
         if (Mode == TdUiMode.Map)

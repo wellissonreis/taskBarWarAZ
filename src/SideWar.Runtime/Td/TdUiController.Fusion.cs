@@ -268,7 +268,7 @@ public sealed partial class TdUiController
             if (!BossHidden)
             {
                 bool ok = ti >= 0 && m.Towers[ti].HasModule;
-                if (ok) { _ack |= Ack.Fusion; _onb?.MarkTipSeen(FusionTipKey); _ftShown = _ftPending = false; }
+                if (ok) { _onb?.MarkTipSeen(FusionTipKey); _ftShown = _ftPending = false; }
                 _noticeTitle = ok ? "Torre fundida" : "Fusão recusada";
                 _noticeText = ok ? (ti >= 0 ? m.TowerDisplayName(m.Towers[ti]) : name ?? "") : "O Core recusou: confira créditos e limites.";
                 _noticeUntil = _now() + StageNoticeSeconds;

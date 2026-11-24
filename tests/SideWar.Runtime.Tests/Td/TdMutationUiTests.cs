@@ -252,7 +252,16 @@ public sealed class TdMutationUiTests
     {
         var r = new Rig(Real);
         r.Ui.OpenHowTo();
-        Assert.Contains(TdUiController.MutationHelpText, r.Texts());
+        var texts = new List<string>();
+        for (int i = 0; i < 40; i++)
+        {
+            var view = r.Ui.BuildPopover()!;
+            texts.AddRange(view.Items.Select(item => item.Text + (item.Sub is null ? "" : " " + item.Sub)));
+            var scroll = view.Scroll!.Value;
+            if (scroll.Offset == scroll.Total - scroll.Visible) break;
+            r.Ui.ScrollBy(1);
+        }
+        Assert.Contains(TdUiController.MutationHelpText, texts);
     }
 
     [Fact]

@@ -169,7 +169,7 @@ public sealed class TdOnboardingTests
     }
 
     [Fact]
-    public void Tutorial_finishes_when_the_match_ends_after_the_wave_started()
+    public void Tutorial_stays_available_when_the_match_ends_after_the_wave_started()
     {
         var r = new Rig();
         r.BuildBolt();
@@ -182,7 +182,11 @@ public sealed class TdOnboardingTests
         }
         Assert.True(r.Match.Phase is MatchPhase.Vitoria);
         r.Ui.Sync();
-        Assert.True(r.Store.Done);
+        Assert.False(r.Store.Done);
+        r.Ui.Cancel();
+        r.Ack();
+        Assert.Equal(TdTutorialStep.Tour, r.Ui.Step);
+        Assert.Contains(r.Ui.BuildPopover()!.Items, item => item.Action == TdUiAction.TutorialNext);
     }
 
     [Fact]
@@ -236,7 +240,7 @@ public sealed class TdOnboardingTests
         Assert.True(match.IsAwakened(rune));
         Assert.NotEmpty(match.Towers);
         Assert.Equal(TdUiMode.None, r.Ui.Mode);
-        Assert.Equal(TdTutorialStep.Runes, r.Ui.Step);
+        Assert.Equal(TdTutorialStep.Tour, r.Ui.Step);
         Assert.NotNull(r.Ui.BuildPopover());
     }
 
@@ -246,12 +250,10 @@ public sealed class TdOnboardingTests
     public void Tutorial_teaches_chip_modal_close_without_changing_pause_between_tabs()
     {
         var r = new Rig(intro: false, hudMin: true);
-        Assert.Equal(TdTutorialStep.HudOpen, r.Ui.Step);
-        Assert.True(r.Ui.CurrentTip!.Split(' ').Length <= 8);
-        Assert.Null(r.Ui.BuildPopover());
+        Assert.Equal(TdTutorialStep.Tour, r.Ui.Step);
+        Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Action == TdUiAction.TutorialNext);
         r.Click(TdUiAction.HudRestore); r.Ui.Sync();
-        Assert.Equal(TdTutorialStep.HudCollapse, r.Ui.Step);
-        Assert.False(r.Match.Paused);
+        Assert.Equal(TdTutorialStep.Tour, r.Ui.Step);
         r.Click(TdUiAction.HudMinimize); r.Ui.Sync();
         Assert.False(r.Match.Paused);
         Assert.True(r.Host.HudMinimized);

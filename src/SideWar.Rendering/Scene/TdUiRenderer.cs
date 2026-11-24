@@ -546,6 +546,14 @@ public sealed partial class TdUiRenderer(Typography typography, int dpi, SpriteA
                 _p.Text(c, it.Text, PanelFont.JetBrainsMono, 13, new DipRect(r.X, r.Y + 17, r.W, 17), Palette.Td.Text, TextAlign.Right);
                 return;
             case "rhint": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 11, r, Palette.Td.Dim); return;
+            case "help-section": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 11, r, Palette.Td.Amber); return;
+            case "help-card":
+                DrawIcon(c, it.Icon, r.X + 3, r.Y + 7, 14, Palette.Td.Muted);
+                _p.Text(c, it.Text, PanelFont.JetBrainsMono, 10, new DipRect(r.X + 24, r.Y + (it.Sub is null ? 8 : 1), r.W - 24, 14), Palette.Td.Text);
+                if (it.Sub is not null) _p.Text(c, it.Sub, PanelFont.JetBrainsMono, 10, new DipRect(r.X + 24, r.Y + 15, r.W - 24, 14), Palette.Td.Muted);
+                return;
+            case "tour-background": _p.Box(c, r, Palette.Td.BorderStrong, Palette.Td.Background); return;
+            case "tour-detail": _p.Text(c, it.Text, PanelFont.JetBrainsMono, 10, r, Palette.Td.Muted); return;
             case "tut":
                 if (it.Icon != TdIcon.None) DrawIcon(c, it.Icon, r.X, r.Y + 2, 14f, Palette.Td.Amber);
                 _p.Text(c, it.Text, PanelFont.JetBrainsMono, 10, new DipRect(r.X + 22, r.Y + 3, r.W - 22, 14), Palette.Td.Amber);

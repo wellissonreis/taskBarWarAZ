@@ -332,7 +332,15 @@ public sealed class TdFusionDropTests
     {
         var r = new Rig(onboarding: true);
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.ModalTab, (int)TdUiMode.Help));
-        var texts = r.Ui.BuildPopover()!.Items.Select(i => i.Text).ToArray();
+        var texts = new List<string>();
+        for (int i = 0; i < 30; i++)
+        {
+            var page = r.Ui.BuildPopover()!;
+            texts.AddRange(page.Items.Select(item => item.Text));
+            var scroll = page.Scroll!.Value;
+            if (scroll.Offset == scroll.Total - scroll.Visible) break;
+            r.Ui.ScrollBy(1);
+        }
         Assert.Contains(texts, t => t.Contains("HUD"));
         Assert.Contains(texts, t => t.Contains("funde"));
         Assert.Contains(texts, t => t.Contains("runas"));
@@ -343,42 +351,18 @@ public sealed class TdFusionDropTests
     }
 
     [Fact]
-    public void Tutorial_teaches_rank_and_then_fusion_with_short_texts_and_never_without_a_pair()
+    public void Tutorial_teaches_fusion_without_waiting_for_a_pair_then_rank()
     {
         var r = new Rig(onboarding: true);
         r.Store.Done = false;
-        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.FusionTipDismiss)); // o convite da fusão é outro cartão; aqui só o passo do tutorial
-        var seen = new List<TdTutorialStep>();
-        r.Host.SetHudMinimized(false);
-        r.Ui.Sync();
-        r.Host.SetHudMinimized(true);
-        for (int i = 0; i < 40 && r.Ui.Step != TdTutorialStep.Rank && r.Ui.Step != TdTutorialStep.None; i++)
-        {
-            r.Ui.Sync();
-            seen.Add(r.Ui.Step);
-            r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.TutorialNext));
-            r.Ui.Sync();
-        }
-        Assert.Equal(TdTutorialStep.Rank, r.Ui.Step);
-        var call = r.Ui.BuildPopover();
-        Assert.NotNull(call);
-        Assert.True(call!.Items.Any(i => i.Action == TdUiAction.TutorialSkip), call.Title + ":" + string.Join("|", call.Items.Select(i => i.Text)) + " mode=" + r.Ui.Mode);
-        Assert.True(call.Items.Any(i => i.Text.Contains("Patente")), string.Join("|", call.Items.Select(i => i.Text)));
-
-        // Com a onda em curso e 2 torres, a fusão (liberada na fase 2) vira passo.
-        Assert.True(r.Match.Apply(new BuildTower("frost", 700)).IsOk);
-        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.TutorialNext));
-        r.Match.Apply(new StartWave());
-        for (int i = 0; i < 40 && r.Ui.Step != TdTutorialStep.Fusion && r.Ui.Step != TdTutorialStep.None; i++)
-        {
-            r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.TutorialNext));
-            r.Ui.Sync();
-        }
-        Assert.Equal(TdTutorialStep.Fusion, r.Ui.Step);
-        var tip = r.Ui.BuildPopover()!;
-        Assert.Contains(tip.Items, i => i.Text.Contains("solte uma torre sobre outra"));
+        r.Ui.OpenStartupModal();
+        for (int i = 0; i < 5; i++) r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.TutorialNext));
+        Assert.Single(r.Match.Towers);
+        Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Text.Contains("torre sobre outra"));
+        for (int i = 0; i < 3; i++) r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.TutorialNext));
+        Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Text.Contains("patente"));
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.TutorialSkip));
-        Assert.True(r.Store.Done); // mostrado uma vez: pular persiste
+        Assert.True(r.Store.Done);
         Assert.Equal(TdTutorialStep.None, r.Ui.Step);
     }
 
