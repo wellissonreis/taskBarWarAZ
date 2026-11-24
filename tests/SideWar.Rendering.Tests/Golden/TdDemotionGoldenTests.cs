@@ -28,7 +28,7 @@ public sealed class TdDemotionGoldenTests
         public bool StageCrown(int stageId) => false;
         public int StageMedals(int stageId) => 0;
         public int StageBestScore(int stageId) => 0;
-        public int Score { get; set; } = 5000;
+        public int Score { get; set; } = 5800;
         public TdRankProgress Rank => TdRank.Progress(Score);
         public TdRecordOutcome LastOutcome => default;
         public int SealsAvailable => 0;
@@ -46,7 +46,7 @@ public sealed class TdDemotionGoldenTests
         var host = new Host();
         var ui = new TdUiController(() => match, _ => { }, host, () => 0);
         ui.Sync();
-        host.Score = 4000;
+        host.Score = 4800;
         ui.Sync();
         var p = ui.BuildPopover()!;
         using var typo = new Typography();
