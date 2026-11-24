@@ -358,7 +358,7 @@ public sealed partial class TdUiController
                 Changed?.Invoke();
                 break;
             case TdUiAction.Menu: Toggle(TdUiMode.Menu); break;
-            case TdUiAction.HudMinimize: Close(); _host.SetHudMinimized(true); Changed?.Invoke(); break;
+            case TdUiAction.HudMinimize: Close(); if (_userPaused) { _userPaused = false; _send(new Resume()); } /* chip recolhido não mostra pausa: não deixar pausa invisível */ _host.SetHudMinimized(true); Changed?.Invoke(); break;
             case TdUiAction.HudExpand:
             case TdUiAction.HudRestore:
                 if (_host.HudMinimized) { _host.SetHudMinimized(false); Changed?.Invoke(); }
@@ -466,6 +466,7 @@ public sealed partial class TdUiController
             _returnToEnd = false;
             _noticeText = null;
             _userPaused = false;
+            _demotionPending = false; // cartão de rebaixamento é da partida antiga
             _selectedRune = _lastRune = _hoverRune = _hoverBranch = null;
             RuneWindowOpen = false;
             ResetRuneCard(clearSeen: false);
@@ -668,7 +669,8 @@ public sealed partial class TdUiController
         if (BossHidden == hidden) return;
         _restartLast = _now();
         BossHidden = hidden;
-        if (hidden) { Close(); return; }
+        if (hidden) { Close(); UpdateModalPause(); return; }
+        UpdateModalPause();
         _moneyReset = true; // volta no valor real, sem animar a diferença acumulada
         _endShown = false;
         MaintainPinned();
@@ -783,7 +785,7 @@ public sealed partial class TdUiController
 
     private void UpdateModalPause()
     {
-        int count = ModalOpen || _demotionPending ? 1 : 0;
+        int count = ModalOpen || (_demotionPending && !BossHidden) ? 1 : 0; // cartão escondido (boss key) não pode manter pausa invisível
         if (_modalCount == count) return;
         bool wasOpen = _modalCount > 0;
         _modalCount = count;

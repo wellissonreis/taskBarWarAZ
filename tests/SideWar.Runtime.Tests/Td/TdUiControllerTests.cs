@@ -468,6 +468,35 @@ public sealed class TdUiControllerTests
     }
 
     [Fact]
+    public void Demotion_hidden_by_boss_key_never_leaves_an_invisible_pause()
+    {
+        var r = new Rig();
+        r.Ui.Sync();
+        r.Host.Score = 4000;
+        r.Ui.Sync();
+        Assert.True(r.Match.Paused);
+        r.Ui.SetBossHidden(true);
+        Assert.False(r.Match.Paused); // cartão escondido: o jogo não fica pausado sem nada na tela
+        Assert.Null(r.Ui.BuildPopover());
+        r.Ui.SetBossHidden(false);
+        Assert.True(r.Ui.DemotionCardOpen);
+        Assert.True(r.Match.Paused); // voltou o cartão, volta a pausa
+        r.Ui.Activate(Assert.Single(r.Ui.BuildPopover()!.Items, i => i.Action == TdUiAction.DemotionContinue));
+        Assert.False(r.Match.Paused);
+    }
+
+    [Fact]
+    public void Minimizing_the_hud_while_user_paused_resumes_the_game()
+    {
+        var r = new Rig();
+        r.Ui.Sync();
+        r.Ui.Activate(Assert.Single(r.Ui.BuildHud().Items, i => i.Action == TdUiAction.PauseToggle));
+        Assert.True(r.Match.Paused);
+        r.Ui.Activate(Assert.Single(r.Ui.BuildHud().Items, i => i.Action == TdUiAction.HudMinimize));
+        Assert.False(r.Match.Paused); // chip recolhido não mostra pausa
+    }
+
+    [Fact]
     public void Promotion_does_not_pause()
     {
         var r = new Rig();
