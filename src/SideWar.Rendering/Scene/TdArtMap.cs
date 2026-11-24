@@ -52,6 +52,18 @@ public static class TdArtMap
 
     public static readonly TdArtEntry[] Enemies =
     [
+        new("chefe_botnet", SpriteId.EnemyBoss, 28f, default, 0, false, "arte animada Chefões"),
+        new("aliado_botnet", SpriteId.EnemyBoss, 14f, default, 0, false, "arte animada Chefões"),
+        new("chefe_kraken", SpriteId.EnemyBoss, 28f, default, 0, false, "arte animada Chefões"),
+        new("aliado_kraken", SpriteId.EnemyBoss, 14f, default, 0, false, "arte animada Chefões"),
+        new("chefe_golem", SpriteId.EnemyBoss, 28f, default, 0, false, "arte animada Chefões"),
+        new("aliado_golem", SpriteId.EnemyBoss, 14f, default, 0, false, "arte animada Chefões"),
+        new("chefe_ronin", SpriteId.EnemyBoss, 28f, default, 0, false, "arte animada Chefões"),
+        new("aliado_ronin", SpriteId.EnemyBoss, 14f, default, 0, false, "arte animada Chefões"),
+        new("chefe_trojan", SpriteId.EnemyBoss, 28f, default, 0, false, "arte animada Chefões"),
+        new("aliado_trojan", SpriteId.EnemyBoss, 14f, default, 0, false, "arte animada Chefões"),
+        new("chefe_hydra", SpriteId.EnemyBoss, 28f, default, 0, false, "arte animada Chefões"),
+        new("aliado_hydra", SpriteId.EnemyBoss, 14f, default, 0, false, "arte animada Chefões"),
         new("grunt", SpriteId.EnemyGrunt, 16f, default, 0, false, "enemy-scout"),
         new("runner", SpriteId.EnemyGrunt, 13f, Orange, 110, true, "enemy-scout menor + tinta laranja (rápido)"),
         new("swarm", SpriteId.EnemySwarm, 11f, default, 0, false, "enemy-crawler pequeno"),

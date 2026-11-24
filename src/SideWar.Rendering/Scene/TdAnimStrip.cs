@@ -77,13 +77,21 @@ internal sealed class TdAnimStrip : IDisposable
     public static float ScaleForBoxHeight(string boundsFile, int frames, float heightPx) => heightPx / Bounds(boundsFile, frames).Height;
 
     /// <summary>Cozinha a folha na escala dada, ancorada pela caixa de <paramref name="boundsFile"/> (mesma escala/âncora para parada e ataque).</summary>
-    public static TdAnimStrip Bake(string file, int frames, float scale, string boundsFile, int boundsFrames, bool centered = false, bool dnsTint = false)
+    public static TdAnimStrip Bake(string file, int frames, float scale, string boundsFile, int boundsFrames, bool centered = false, bool dnsTint = false, bool pixelated = false)
     {
         var sheet = Sheet(file);
         int fw = sheet.Width / frames, fh = sheet.Height;
         int w = Math.Max(1, (int)MathF.Round(fw * scale, MidpointRounding.AwayFromZero));
         int h = Math.Max(1, (int)MathF.Round(fh * scale, MidpointRounding.AwayFromZero));
-        var sampling = scale >= 1f ? Nearest : Down;
+        if (pixelated && scale < 1f)
+        {
+            int divisor = (int)MathF.Ceiling(1f / scale);
+            while (fw % divisor != 0 || fh % divisor != 0) divisor++;
+            scale = 1f / divisor;
+            w = Math.Max(1, (int)MathF.Round(fw * scale));
+            h = Math.Max(1, (int)MathF.Round(fh * scale));
+        }
+        var sampling = pixelated || scale >= 1f ? Nearest : Down;
         using var bmp = new SKBitmap(new SKImageInfo(w * frames, h, SKColorType.Rgba8888, SKAlphaType.Premul));
         using (var canvas = new SKCanvas(bmp))
         {

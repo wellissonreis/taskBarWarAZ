@@ -98,6 +98,8 @@ public struct TdEnemy
     public int Wave { get; set; }
     public int DefIndex { get; set; }
     public bool IsBoss { get; set; }
+    /// <summary>Chefão especial atingiu metade da vida; não reverte com regeneração.</summary>
+    public bool Enraged { get; set; }
     public double X { get; set; }
     public double Speed { get; set; }
     public double Hp { get; set; }

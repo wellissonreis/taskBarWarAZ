@@ -43,6 +43,8 @@ public sealed class TdBandRenderer : IDisposable
     private TowerAnim?[] _towerAnim = [];
     private TdAnimStrip?[] _enemyAnim = [];
     private double[] _enemyFps = [];
+    private TdAnimStrip?[] _enemyEnraged = [];
+    private double[] _enemyEnragedFps = [];
     private double _now;
     private TdMatchState? _lastMatch;
     private int _lastWidth;
@@ -213,14 +215,21 @@ public sealed class TdBandRenderer : IDisposable
         var bosses = content.Enemies.Bosses;
         _enemyAnim = new TdAnimStrip?[normal.Length + bosses.Length];
         _enemyFps = new double[_enemyAnim.Length];
+        _enemyEnraged = new TdAnimStrip?[_enemyAnim.Length];
+        _enemyEnragedFps = new double[_enemyAnim.Length];
         for (int i = 0; i < _enemyAnim.Length; i++)
         {
             string id = i < normal.Length ? normal[i].Id : bosses[i - normal.Length].Id;
             if (!TdAnimArt.TryEnemyFps(id, out double fps) || !TdArtMap.TryEnemy(id, out var e)) continue;
             string walk = id + "-walk.png";
             float scale = TdAnimStrip.ScaleForBoxHeight(walk, TdAnimArt.WalkFrames, e.HeightDip * px);
-            _enemyAnim[i] = TdAnimStrip.Bake(walk, TdAnimArt.WalkFrames, scale, walk, TdAnimArt.WalkFrames);
+            _enemyAnim[i] = TdAnimStrip.Bake(walk, TdAnimArt.WalkFrames, scale, walk, TdAnimArt.WalkFrames, pixelated: id.StartsWith("chefe_", StringComparison.Ordinal) || id.StartsWith("aliado_", StringComparison.Ordinal));
             _enemyFps[i] = fps;
+            if (TdAnimArt.TryEnragedFps(id, out double enragedFps))
+            {
+                _enemyEnraged[i] = TdAnimStrip.Bake(id + "_enf-walk.png", TdAnimArt.WalkFrames, scale, walk, TdAnimArt.WalkFrames, pixelated: true);
+                _enemyEnragedFps[i] = enragedFps;
+            }
         }
     }
 
@@ -228,6 +237,8 @@ public sealed class TdBandRenderer : IDisposable
     {
         foreach (var a in _towerAnim) a?.Dispose();
         foreach (var a in _enemyAnim) a?.Dispose();
+        foreach (var a in _enemyEnraged) a?.Dispose();
+        _enemyEnraged = []; _enemyEnragedFps = [];
         _towerAnim = []; _enemyAnim = []; _enemyFps = [];
         foreach (var i in _towerImg) i?.Dispose();
         foreach (var i in _chipImg) i?.Dispose();
@@ -366,11 +377,13 @@ public sealed class TdBandRenderer : IDisposable
             var img = e.DefIndex >= 0 && e.DefIndex < _enemyImg.Length ? _enemyImg[e.DefIndex] : null;
             float foot = e.IsBoss ? Ground - 0.5f : flying ? FlyFoot : EnemyFoot;
             var walk = e.DefIndex >= 0 && e.DefIndex < _enemyAnim.Length ? _enemyAnim[e.DefIndex] : null;
+            bool enraged = e.Enraged && e.DefIndex >= 0 && e.DefIndex < _enemyEnraged.Length && _enemyEnraged[e.DefIndex] is not null;
+            if (enraged) walk = _enemyEnraged[e.DefIndex];
             float sw = walk is null ? WidthDip(img) : walk.BoxW / _s, sh = walk is null ? HeightDip(img) : walk.BoxH / _s;
             SKColor border = e.IsBoss ? Palette.Perigo : flying ? Palette.Gelo : (bits & ArmoredBit) != 0 ? Palette.Ambar
                 : (bits & RegenBit) != 0 ? Palette.Menta : (bits & DrainBit) != 0 ? Palette.Td.EnemyDrain : Palette.Td.EnemySolo;
             if (walk is null) Blit(c, img, x, foot);
-            else BlitStrip(c, walk, TdAnimArt.LoopFrame(_now, _enemyFps[e.DefIndex], walk.Frames, e.Id), x, foot);
+            else BlitStrip(c, walk, TdAnimArt.LoopFrame(_now, enraged ? _enemyEnragedFps[e.DefIndex] : _enemyFps[e.DefIndex], walk.Frames, e.Id), x, foot);
             if (e.Mutations != 0 && !e.IsBoss) _marks.Draw(c, e.Mutations, _mutIds, x, foot, sw, sh, e.ShieldHp > 0);
             if ((bits & StealthBit) != 0)
             {

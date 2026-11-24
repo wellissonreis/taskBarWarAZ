@@ -27,8 +27,8 @@ public sealed class TdContentTests
     {
         var c = TdContentLoader.LoadEmbedded();
         Assert.Equal(22, c.Towers.Length);
-        Assert.Equal(17, c.Enemies.Enemies.Length);
-        Assert.Equal(3, c.Enemies.Bosses.Length);
+        Assert.Equal(23, c.Enemies.Enemies.Length);
+        Assert.Equal(9, c.Enemies.Bosses.Length);
         Assert.Equal(6, c.Stages.Stages.Length);
         Assert.Equal(3, c.Abilities.Length);
         Assert.Equal(3, c.Meta.Branches.Length);
@@ -81,7 +81,7 @@ public sealed class TdContentTests
         Assert.Contains("ransomware", LastWave(3));
         Assert.Contains("botnet", LastWave(5));
         Assert.Contains("zeroday", LastWave(6));
-        Assert.DoesNotContain(c.Waves.Stages[0].Waves.SelectMany(w => w.Groups), g => g.Enemy is not ("grunt" or "runner" or "swarm" or "synflood"));
+        Assert.DoesNotContain(c.Waves.Stages[0].Waves.SelectMany(w => w.Groups), g => g.Enemy is not ("grunt" or "runner" or "swarm" or "synflood" or "chefe_botnet" or "aliado_botnet"));
         Assert.DoesNotContain(c.Waves.Stages[2].Waves.SelectMany(w => w.Groups), g => g.Enemy is "flyer" or "regen" or "leech");
         Assert.All(c.Waves.Stages, s => Assert.Contains(s.Waves, w => w.Rest));
     }

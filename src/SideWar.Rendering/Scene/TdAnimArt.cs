@@ -34,8 +34,29 @@ public static class TdAnimArt
     /// <summary>Inimigos (td-enemies) com ciclo de caminhada de 4 quadros e o fps do design (frames / duração CSS).</summary>
     public static readonly (string Id, double Fps)[] Enemies =
     [
+        ("chefe_botnet", 4 / 0.667), ("aliado_botnet", 8),
+        ("chefe_kraken", 4 / 0.667), ("aliado_kraken", 8),
+        ("chefe_golem", 4 / 0.8), ("aliado_golem", 8),
+        ("chefe_ronin", 4 / 0.571), ("aliado_ronin", 8),
+        ("chefe_trojan", 4 / 0.8), ("aliado_trojan", 8),
+        ("chefe_hydra", 4 / 0.667), ("aliado_hydra", 8),
         ("swarm", 8), ("runner", 12), ("armored", 6), ("flyer", 10), ("leech", 6), ("tank", 6), ("ransomware", 6), ("botnet", 5),
     ];
+
+    public static bool TryEnragedFps(string id, out double fps)
+    {
+        fps = id switch
+        {
+            "chefe_botnet" => 4 / 0.5,
+            "chefe_kraken" => 4 / 0.5,
+            "chefe_golem" => 4 / 0.571,
+            "chefe_ronin" => 4 / 0.444,
+            "chefe_trojan" => 4 / 0.571,
+            "chefe_hydra" => 4 / 0.5,
+            _ => 0,
+        };
+        return fps > 0;
+    }
 
     /// <summary>Nome lógico do recurso embutido de um arquivo de assets/source/anim.</summary>
     public static string Resource(string file) => "SideWar.Rendering.Assets.Anim." + file;

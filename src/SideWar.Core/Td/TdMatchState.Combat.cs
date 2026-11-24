@@ -392,6 +392,8 @@ public sealed partial class TdMatchState
         double absorbed = Math.Min(e.ShieldHp, dmg);
         e.ShieldHp -= absorbed;
         e.Hp -= dmg - absorbed;
+        if (e.IsBoss && _enemyStats[e.DefIndex].Id.StartsWith("chefe_", StringComparison.Ordinal) && e.Hp <= e.MaxHp * 0.5)
+            e.Enraged = true;
         e.LastHitTowerId = _damageSource;
         e.SinceDamageTicks = 0;
         _enemies[idx] = e;

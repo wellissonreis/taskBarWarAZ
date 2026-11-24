@@ -185,7 +185,6 @@ public static class TdContentValidator
             CheckTraits(e, o, b.Traits, "traits", true);
             TraitParams(e, o, b.Traits, b.Params, boss: true);
         }
-        Req(e, def.Bosses.Select(b => b.Stage).Distinct().Count() == def.Bosses.Length, "td-enemies: dois chefes na mesma fase");
     }
 
     private static void TraitParams(List<string> e, string owner, string[] traits, Dictionary<string, double> p, bool boss)

@@ -12,7 +12,7 @@
         {"number": 7, "rest": false, "bonusFactor": 1.1, "groups": [{"enemy": "grunt", "count": 5, "offset": 0.0, "interval": 2.7}, {"enemy": "runner", "count": 8, "offset": 26.0, "interval": 1.0}]},
         {"number": 8, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "runner", "count": 20, "offset": 0.0, "interval": 0.8}, {"enemy": "grunt", "count": 2, "offset": 18.2, "interval": 2.53}, {"enemy": "synflood", "count": 4, "offset": 25.0, "interval": 0.8}]},
         {"number": 9, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 4, "offset": 0.0, "interval": 2.53}, {"enemy": "runner", "count": 18, "offset": 33.8, "interval": 0.8}, {"enemy": "swarm", "count": 2, "offset": 35.0, "interval": 0.8}]},
-        {"number": 10, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 4, "offset": 0.0, "interval": 2.53}, {"enemy": "runner", "count": 26, "offset": 38.9, "interval": 0.8}]}
+        {"number": 10, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 4, "offset": 0.0, "interval": 2.53}, {"enemy": "runner", "count": 24, "offset": 38.9, "interval": 0.8}, {"enemy": "chefe_botnet", "count": 1, "offset": 5.0, "interval": 1.0}, {"enemy": "aliado_botnet", "count": 3, "offset": 8.0, "interval": 1.0}]}
       ]
     },
     {
@@ -29,7 +29,7 @@
         {"number": 9, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 5, "offset": 0.0, "interval": 1.65}, {"enemy": "runner", "count": 4, "offset": 18.8, "interval": 1.2}, {"enemy": "armored", "count": 7, "offset": 25.8, "interval": 2.4}]},
         {"number": 10, "rest": true, "bonusFactor": 1.5, "groups": [{"enemy": "grunt", "count": 4, "offset": 0.0, "interval": 1.65}, {"enemy": "armored", "count": 3, "offset": 15.5, "interval": 2.4}]},
         {"number": 11, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 4, "offset": 0.0, "interval": 1.65}, {"enemy": "runner", "count": 6, "offset": 12.1, "interval": 1.2}, {"enemy": "armored", "count": 12, "offset": 24.0, "interval": 2.4}]},
-        {"number": 12, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 4, "offset": 0.0, "interval": 1.65}, {"enemy": "runner", "count": 6, "offset": 15.5, "interval": 1.2}, {"enemy": "armored", "count": 15, "offset": 27.3, "interval": 2.4}]}
+        {"number": 12, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 4, "offset": 0.0, "interval": 1.65}, {"enemy": "runner", "count": 6, "offset": 15.5, "interval": 1.2}, {"enemy": "armored", "count": 15, "offset": 27.3, "interval": 2.4}, {"enemy": "chefe_kraken", "count": 1, "offset": 5.0, "interval": 1.0}, {"enemy": "aliado_kraken", "count": 3, "offset": 8.0, "interval": 1.0}]}
       ]
     },
     {
@@ -46,7 +46,7 @@
         {"number": 9, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "swarm", "count": 10, "offset": 0.0, "interval": 0.45}, {"enemy": "armored", "count": 4, "offset": 8.3, "interval": 2.08}, {"enemy": "tank", "count": 3, "offset": 18.6, "interval": 3.25}, {"enemy": "trojan", "count": 1, "offset": 25.5, "interval": 1.8}]},
         {"number": 10, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 3, "offset": 0.0, "interval": 1.43}, {"enemy": "runner", "count": 5, "offset": 7.7, "interval": 1.04}, {"enemy": "swarm", "count": 16, "offset": 15.9, "interval": 0.45}, {"enemy": "slowloris", "count": 1, "offset": 30.0, "interval": 2}]},
         {"number": 11, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "swarm", "count": 9, "offset": 0.0, "interval": 0.45}, {"enemy": "armored", "count": 5, "offset": 6.5, "interval": 2.08}, {"enemy": "tank", "count": 4, "offset": 20.9, "interval": 3.25}]},
-        {"number": 12, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 5, "offset": 0.0, "interval": 1.43}, {"enemy": "tank", "count": 2, "offset": 16.2, "interval": 3.25}, {"enemy": "ransomware", "count": 1, "offset": 24.7, "interval": 1.3}, {"enemy": "swarm", "count": 10, "offset": 27.9, "interval": 0.45}]}
+        {"number": 12, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 5, "offset": 0.0, "interval": 1.43}, {"enemy": "tank", "count": 2, "offset": 16.2, "interval": 3.25}, {"enemy": "ransomware", "count": 1, "offset": 24.7, "interval": 1.3}, {"enemy": "swarm", "count": 10, "offset": 27.9, "interval": 0.45}, {"enemy": "chefe_golem", "count": 1, "offset": 5.0, "interval": 1.0}, {"enemy": "aliado_golem", "count": 3, "offset": 8.0, "interval": 1.0}]}
       ]
     },
     {
@@ -65,7 +65,7 @@
         {"number": 11, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "swarm", "count": 14, "offset": 0.0, "interval": 0.35}, {"enemy": "armored", "count": 5, "offset": 6.4, "interval": 1.6}, {"enemy": "flyer", "count": 10, "offset": 14.3, "interval": 1.2}]},
         {"number": 12, "rest": true, "bonusFactor": 1.5, "groups": [{"enemy": "grunt", "count": 8, "offset": 0.0, "interval": 1.1}, {"enemy": "flyer", "count": 8, "offset": 8.1, "interval": 1.2}]},
         {"number": 13, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "runner", "count": 8, "offset": 0.0, "interval": 0.8}, {"enemy": "tank", "count": 4, "offset": 6.3, "interval": 2.5}, {"enemy": "flyer", "count": 13, "offset": 15.3, "interval": 1.2}]},
-        {"number": 14, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 5, "offset": 0.0, "interval": 1.1}, {"enemy": "armored", "count": 6, "offset": 5.9, "interval": 1.6}, {"enemy": "tank", "count": 3, "offset": 17.0, "interval": 2.5}, {"enemy": "flyer", "count": 11, "offset": 26.0, "interval": 1.2}]}
+        {"number": 14, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "grunt", "count": 5, "offset": 0.0, "interval": 1.1}, {"enemy": "armored", "count": 6, "offset": 5.9, "interval": 1.6}, {"enemy": "tank", "count": 3, "offset": 17.0, "interval": 2.5}, {"enemy": "flyer", "count": 11, "offset": 26.0, "interval": 1.2}, {"enemy": "chefe_ronin", "count": 1, "offset": 5.0, "interval": 1.0}, {"enemy": "aliado_ronin", "count": 3, "offset": 8.0, "interval": 1.0}]}
       ]
     },
     {
@@ -84,7 +84,7 @@
         {"number": 11, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "swarm", "count": 20, "offset": 0.0, "interval": 0.35}, {"enemy": "regen", "count": 6, "offset": 7.8, "interval": 1.8}, {"enemy": "leech", "count": 3, "offset": 18.3, "interval": 1.8}]},
         {"number": 12, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "runner", "count": 7, "offset": 0.0, "interval": 0.8}, {"enemy": "tank", "count": 5, "offset": 6.3, "interval": 2.5}, {"enemy": "flyer", "count": 9, "offset": 17.8, "interval": 1.2}, {"enemy": "regen", "count": 7, "offset": 28.9, "interval": 1.8}]},
         {"number": 13, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "swarm", "count": 9, "offset": 0.0, "interval": 0.35}, {"enemy": "armored", "count": 8, "offset": 5.0, "interval": 1.6}, {"enemy": "regen", "count": 7, "offset": 19.3, "interval": 1.8}, {"enemy": "leech", "count": 4, "offset": 31.6, "interval": 1.8}]},
-        {"number": 14, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "swarm", "count": 10, "offset": 0.0, "interval": 0.35}, {"enemy": "flyer", "count": 8, "offset": 4.3, "interval": 1.2}, {"enemy": "regen", "count": 8, "offset": 13.0, "interval": 1.8}, {"enemy": "leech", "count": 5, "offset": 25.3, "interval": 1.8}, {"enemy": "botnet", "count": 1, "offset": 34.0, "interval": 1.0}]}
+        {"number": 14, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "swarm", "count": 10, "offset": 0.0, "interval": 0.35}, {"enemy": "flyer", "count": 8, "offset": 4.3, "interval": 1.2}, {"enemy": "regen", "count": 8, "offset": 13.0, "interval": 1.8}, {"enemy": "leech", "count": 1, "offset": 25.3, "interval": 1.8}, {"enemy": "botnet", "count": 1, "offset": 34.0, "interval": 1.0}, {"enemy": "chefe_trojan", "count": 1, "offset": 5.0, "interval": 1.0}, {"enemy": "aliado_trojan", "count": 3, "offset": 8.0, "interval": 1.0}]}
       ]
     },
     {
@@ -104,7 +104,7 @@
         {"number": 12, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "runner", "count": 6, "offset": 0.0, "interval": 0.8}, {"enemy": "swarm", "count": 14, "offset": 6.3, "interval": 0.35}, {"enemy": "regen", "count": 8, "offset": 12.7, "interval": 1.8}]},
         {"number": 13, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "armored", "count": 9, "offset": 0.0, "interval": 1.6}, {"enemy": "tank", "count": 4, "offset": 14.3, "interval": 2.5}, {"enemy": "leech", "count": 5, "offset": 25.8, "interval": 1.8}, {"enemy": "flyer", "count": 9, "offset": 36.3, "interval": 1.2}]},
         {"number": 14, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "swarm", "count": 15, "offset": 0.0, "interval": 0.35}, {"enemy": "tank", "count": 5, "offset": 6.4, "interval": 2.5}, {"enemy": "regen", "count": 7, "offset": 17.9, "interval": 1.8}, {"enemy": "leech", "count": 5, "offset": 30.2, "interval": 1.8}]},
-        {"number": 15, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "armored", "count": 7, "offset": 0.0, "interval": 1.6}, {"enemy": "tank", "count": 4, "offset": 11.1, "interval": 2.5}, {"enemy": "regen", "count": 7, "offset": 20.1, "interval": 1.8}, {"enemy": "flyer", "count": 7, "offset": 32.4, "interval": 1.2}, {"enemy": "zeroday", "count": 1, "offset": 41.1, "interval": 1.0}]}
+        {"number": 15, "rest": false, "bonusFactor": 1.0, "groups": [{"enemy": "armored", "count": 7, "offset": 0.0, "interval": 1.6}, {"enemy": "tank", "count": 4, "offset": 11.1, "interval": 2.5}, {"enemy": "regen", "count": 7, "offset": 20.1, "interval": 1.8}, {"enemy": "flyer", "count": 7, "offset": 32.4, "interval": 1.2}, {"enemy": "zeroday", "count": 1, "offset": 41.1, "interval": 1.0}, {"enemy": "chefe_hydra", "count": 1, "offset": 5.0, "interval": 1.0}, {"enemy": "aliado_hydra", "count": 3, "offset": 8.0, "interval": 1.0}]}
       ]
     }
   ]

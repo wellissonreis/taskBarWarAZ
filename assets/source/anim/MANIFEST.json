@@ -1299,6 +1299,330 @@
     128
    ],
    "sha256": "8f55858f306d909d3c5972e236ff715b34b3a6dfed90f155f4f8415e27c4910d"
+  },
+  {
+   "file": "chefe_botnet-walk.png",
+   "design": "Chefões — fases especiais",
+   "blob": "498fed87981f4005b35448a143c4dc46",
+   "role": "walk",
+   "frames": 4,
+   "durationSeconds": 0.667,
+   "fps": 5.997001499250374,
+   "sheetPixels": [
+    768,
+    192
+   ],
+   "framePixels": [
+    192,
+    192
+   ],
+   "sha256": "12094324294493ab86fcee7d7327eb771c294e27781753fc9298e0ac666aab81"
+  },
+  {
+   "file": "chefe_botnet_enf-walk.png",
+   "design": "Chefões — fases especiais",
+   "blob": "a579072bf7e7cedaa1b4467a29a1c6a8",
+   "role": "walk",
+   "frames": 4,
+   "durationSeconds": 0.5,
+   "fps": 8.0,
+   "sheetPixels": [
+    768,
+    192
+   ],
+   "framePixels": [
+    192,
+    192
+   ],
+   "sha256": "4c72a9db584bd28c7705a5c766955c8ddb4c500a5cfccfa0e3b3663e5e0b1dfa"
+  },
+  {
+   "file": "aliado_botnet-walk.png",
+   "design": "Chefões — fases especiais",
+   "blob": "560c490112366c9a6178edba76213318",
+   "role": "walk",
+   "frames": 4,
+   "durationSeconds": 0.5,
+   "fps": 8.0,
+   "sheetPixels": [
+    512,
+    128
+   ],
+   "framePixels": [
+    128,
+    128
+   ],
+   "sha256": "b806e115daadf0854719fd992e08beca367cc3f6d3fa918463e823bf1052ffeb"
+  },
+  {
+   "file": "chefe_kraken-walk.png",
+   "design": "Chefões — fases especiais",
+   "blob": "4d1bb948ae00e537ed93df1d7d086a51",
+   "role": "walk",
+   "frames": 4,
+   "durationSeconds": 0.667,
+   "fps": 5.997001499250374,
+   "sheetPixels": [
+    768,
+    192
+   ],
+   "framePixels": [
+    192,
+    192
+   ],
+   "sha256": "8e72b1a392f7e54d17c7b210efc841b3bae776079f25836266dd1423f0ecb30f"
+  },
+  {
+   "file": "chefe_kraken_enf-walk.png",
+   "design": "Chefões — fases especiais",
+   "blob": "9574391b8a17285cd11ed115f0d84c08",
+   "role": "walk",
+   "frames": 4,
+   "durationSeconds": 0.5,
+   "fps": 8.0,
+   "sheetPixels": [
+    768,
+    192
+   ],
+   "framePixels": [
+    192,
+    192
+   ],
+   "sha256": "9a6ee47eee0d0973c331afd6a92a0c90e50e2eeb02d9359f485a310655064c9a"
+  },
+  {
+   "file": "aliado_kraken-walk.png",
+   "design": "Chefões — fases especiais",
+   "blob": "98a1bdb00e4dbafd9bb06ac0509e1014",
+   "role": "walk",
+   "frames": 4,
+   "durationSeconds": 0.5,
+   "fps": 8.0,
+   "sheetPixels": [
+    512,
+    128
+   ],
+   "framePixels": [
+    128,
+    128
+   ],
+   "sha256": "4aeb8f5deb2cd4eb977df08a0c95e8d0d64882bb505267658c62c0116bd80db5"
+  },
+  {
+   "file": "chefe_golem-walk.png",
+   "design": "Chefões — fases especiais",
+   "blob": "af42562ad55a2f260c600de806c3242c",
+   "role": "walk",
+   "frames": 4,
+   "durationSeconds": 0.8,
+   "fps": 5.0,
+   "sheetPixels": [
+    768,
+    192
+   ],
+   "framePixels": [
+    192,
+    192
+   ],
+   "sha256": "8f024f50157f4378a65ec5e3a21cbd75da90f164eab2ad5f0cdcfd0e198b39a5"
+  },
+  {
+   "file": "chefe_golem_enf-walk.png",
+   "design": "Chefões — fases especiais",
+   "blob": "81cbdf17ca741573d2a8a66622508c3f",
+   "role": "walk",
+   "frames": 4,
+   "durationSeconds": 0.571,
+   "fps": 7.005253940455342,
+   "sheetPixels": [
+    768,
+    192
+   ],
+   "framePixels": [
+    192,
+    192
+   ],
+   "sha256": "6ec17632517277e87763ae39fe17b101706baa1272d67f25a30f1a20302a4dcb"
+  },
+  {
+   "file": "aliado_golem-walk.png",
+   "design": "Chefões — fases especiais",
+   "blob": "0eed173f5e08272be1c045b0ffe427ad",
+   "role": "walk",
+   "frames": 4,
+   "durationSeconds": 0.5,
+   "fps": 8.0,
+   "sheetPixels": [
+    512,
+    128
+   ],
+   "framePixels": [
+    128,
+    128
+   ],
+   "sha256": "e146b479afd243b55dd7c35aac7ac36427ec1765fb7e8a9b40fa97d18cf24215"
+  },
+  {
+   "file": "chefe_ronin-walk.png",
+   "design": "Chefões — fases especiais",
+   "blob": "064f5d8c7c425ee600fbc0d59667b589",
+   "role": "walk",
+   "frames": 4,
+   "durationSeconds": 0.571,
+   "fps": 7.005253940455342,
+   "sheetPixels": [
+    768,
+    192
+   ],
+   "framePixels": [
+    192,
+    192
+   ],
+   "sha256": "824c4b182bf5c0cd090212172df89c403e650ce063acf1d6230a9c537917fd55"
+  },
+  {
+   "file": "chefe_ronin_enf-walk.png",
+   "design": "Chefões — fases especiais",
+   "blob": "8f52be0918b0822df59e878ca969fc61",
+   "role": "walk",
+   "frames": 4,
+   "durationSeconds": 0.444,
+   "fps": 9.00900900900901,
+   "sheetPixels": [
+    768,
+    192
+   ],
+   "framePixels": [
+    192,
+    192
+   ],
+   "sha256": "11142129bf073bba334f3a5297100daee17bf778c43b2bb1475cb50fe68a89dc"
+  },
+  {
+   "file": "aliado_ronin-walk.png",
+   "design": "Chefões — fases especiais",
+   "blob": "d643da5adfbcb5e61b4dcaf4360e064d",
+   "role": "walk",
+   "frames": 4,
+   "durationSeconds": 0.5,
+   "fps": 8.0,
+   "sheetPixels": [
+    512,
+    128
+   ],
+   "framePixels": [
+    128,
+    128
+   ],
+   "sha256": "5260afe6bfa98b81b346a7813d8c15340b58fa758f3413e11d99911fe20f4cf6"
+  },
+  {
+   "file": "chefe_trojan-walk.png",
+   "design": "Chefões — fases especiais",
+   "blob": "829623441d0d41d779229e4416facb83",
+   "role": "walk",
+   "frames": 4,
+   "durationSeconds": 0.8,
+   "fps": 5.0,
+   "sheetPixels": [
+    768,
+    192
+   ],
+   "framePixels": [
+    192,
+    192
+   ],
+   "sha256": "c27de05de340cef0bb655239d03d1eeb35999db3195fb3090cf50a7c04339ff5"
+  },
+  {
+   "file": "chefe_trojan_enf-walk.png",
+   "design": "Chefões — fases especiais",
+   "blob": "2be08ef3f9075825dcf1232181087b21",
+   "role": "walk",
+   "frames": 4,
+   "durationSeconds": 0.571,
+   "fps": 7.005253940455342,
+   "sheetPixels": [
+    768,
+    192
+   ],
+   "framePixels": [
+    192,
+    192
+   ],
+   "sha256": "41dca51644d1663958a13244ce9dc7a3e1005c1e17ed91d94b4c52360f3ebd3f"
+  },
+  {
+   "file": "aliado_trojan-walk.png",
+   "design": "Chefões — fases especiais",
+   "blob": "d8280dcb85697521f50f7d42ce44cc6a",
+   "role": "walk",
+   "frames": 4,
+   "durationSeconds": 0.5,
+   "fps": 8.0,
+   "sheetPixels": [
+    512,
+    128
+   ],
+   "framePixels": [
+    128,
+    128
+   ],
+   "sha256": "eff66d8766d304096b6e6ecbbd1ff5858ca14d4f9a270aad3048e4b2cbc9bb09"
+  },
+  {
+   "file": "chefe_hydra-walk.png",
+   "design": "Chefões — fases especiais",
+   "blob": "ce740d1f07cd99d80e12ad9ae2d696a5",
+   "role": "walk",
+   "frames": 4,
+   "durationSeconds": 0.667,
+   "fps": 5.997001499250374,
+   "sheetPixels": [
+    768,
+    192
+   ],
+   "framePixels": [
+    192,
+    192
+   ],
+   "sha256": "1963a23b3b0a3357c276903c7226fa8d67a915419923938486e727acb49e9ec2"
+  },
+  {
+   "file": "chefe_hydra_enf-walk.png",
+   "design": "Chefões — fases especiais",
+   "blob": "f1fb5298fb563703337164c4a71422d8",
+   "role": "walk",
+   "frames": 4,
+   "durationSeconds": 0.5,
+   "fps": 8.0,
+   "sheetPixels": [
+    768,
+    192
+   ],
+   "framePixels": [
+    192,
+    192
+   ],
+   "sha256": "a7a4740a68c0c9f44e4f79c56242baaecec3e4ebe8265a7484e532a77b0e53dc"
+  },
+  {
+   "file": "aliado_hydra-walk.png",
+   "design": "Chefões — fases especiais",
+   "blob": "2fd6cbcb5760d785cc0ce5f97065415a",
+   "role": "walk",
+   "frames": 4,
+   "durationSeconds": 0.5,
+   "fps": 8.0,
+   "sheetPixels": [
+    512,
+    128
+   ],
+   "framePixels": [
+    128,
+    128
+   ],
+   "sha256": "deceb5438f4d1383456e5db454a343f1797b4ba0020bedb361fecec613b56530"
   }
  ]
 }
