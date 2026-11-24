@@ -119,6 +119,23 @@ public class SettingsTdTests
     }
 
     [Fact]
+    public void Extra_speeds_default_off_and_roundtrip_with_mask_max_speed_and_cycle_hotkey()
+    {
+        Assert.False(AppSettings.Default.Td.ExtraSpeeds);
+        Assert.Equal(0b1000_1010, AppSettings.Default.Td.ExtraSpeedMask);
+        Assert.Equal("Ctrl+Alt+V", AppSettings.Default.Hotkeys.CycleSpeed);
+        var fs = new FakeFileSystem();
+        var st = new SettingsStore(fs, "/data", utcNow: () => Now);
+        var s = new AppSettings { Td = new TdSettings { ExtraSpeeds = true, ExtraSpeedMask = 0b0110_0001, GameSpeed = 100 }, Hotkeys = new HotkeySettings { CycleSpeed = "Ctrl+Alt+K" } };
+        Assert.True(st.Save(s));
+        var r = st.Load().Settings;
+        Assert.True(r.Td.ExtraSpeeds);
+        Assert.Equal(0b0110_0001, r.Td.ExtraSpeedMask);
+        Assert.Equal(100, r.Td.GameSpeed);
+        Assert.Equal("Ctrl+Alt+K", r.Hotkeys.CycleSpeed);
+    }
+
+    [Fact]
     public void Continuous_waves_default_on_and_tower_panel_pinned_default_off_roundtrip_and_old_files_get_defaults()
     {
         Assert.True(AppSettings.Default.Td.ContinuousWaves);

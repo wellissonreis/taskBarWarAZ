@@ -47,6 +47,7 @@ public static class SettingsSerializer
         w.WriteString("ToggleVisibility", s.Hotkeys.ToggleVisibility);
         w.WriteString("TogglePause", s.Hotkeys.TogglePause);
         w.WriteString("StartTdWave", s.Hotkeys.StartWave);
+        w.WriteString("CycleSpeed", s.Hotkeys.CycleSpeed);
         w.WriteEndObject();
         w.WriteStartObject("audio");
         w.WriteBoolean("enabled", s.Audio.Enabled);
@@ -80,6 +81,8 @@ public static class SettingsSerializer
         w.WriteBoolean("continuousWaves", s.Td.ContinuousWaves);
         w.WriteBoolean("towerPanelPinned", s.Td.TowerPanelPinned);
         w.WriteNumber("gameSpeed", s.Td.GameSpeed);
+        w.WriteBoolean("extraSpeeds", s.Td.ExtraSpeeds);
+        w.WriteNumber("extraSpeedMask", s.Td.ExtraSpeedMask);
         w.WriteString("questionsSeen", s.Td.QuestionsSeen);
         w.WriteBoolean("showIncome", s.Td.ShowIncome);
         w.WriteBoolean("discreetMode", s.Td.DiscreetMode);
@@ -138,6 +141,7 @@ public static class SettingsSerializer
                 ToggleVisibility = Hotkey(hot, "ToggleVisibility", d.Hotkeys.ToggleVisibility),
                 TogglePause = Hotkey(hot, "TogglePause", d.Hotkeys.TogglePause),
                 StartWave = Hotkey(hot, "StartTdWave", d.Hotkeys.StartWave),
+                CycleSpeed = Hotkey(hot, "CycleSpeed", d.Hotkeys.CycleSpeed),
             },
             Audio = new AudioSettings
             {
@@ -171,6 +175,8 @@ public static class SettingsSerializer
                 ContinuousWaves = Bool(td, "continuousWaves", d.Td.ContinuousWaves),
                 TowerPanelPinned = Bool(td, "towerPanelPinned", d.Td.TowerPanelPinned),
                 GameSpeed = IntRange(td, "gameSpeed", TdSettings.MinGameSpeed, TdSettings.MaxGameSpeed, d.Td.GameSpeed),
+                ExtraSpeeds = Bool(td, "extraSpeeds", d.Td.ExtraSpeeds),
+                ExtraSpeedMask = IntRange(td, "extraSpeedMask", 0, 255, d.Td.ExtraSpeedMask),
                 QuestionsSeen = Str(td, "questionsSeen", 1024) ?? d.Td.QuestionsSeen,
                 ShowIncome = Bool(td, "showIncome", d.Td.ShowIncome),
                 DiscreetMode = Bool(td, "discreetMode", d.Td.DiscreetMode),

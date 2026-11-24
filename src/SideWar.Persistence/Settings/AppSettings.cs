@@ -79,6 +79,8 @@ public sealed record HotkeySettings
     public string TogglePause { get; init; } = "Ctrl+Alt+P";
     /// <summary>Iniciar onda / chamar a próxima (só registrado no modo TD).</summary>
     public string StartWave { get; init; } = "Ctrl+Alt+Space";
+    /// <summary>Cicla só as velocidades habilitadas (modo TD).</summary>
+    public string CycleSpeed { get; init; } = "Ctrl+Alt+V";
 }
 
 public sealed record AudioSettings
@@ -169,10 +171,15 @@ public sealed record TdSettings
     public int ModalOffsetY { get; init; }
 
     public const int MinGameSpeed = 1;
-    public const int MaxGameSpeed = 3;
+    public const int MaxGameSpeed = 100; // 100 = "Máx"; só vale com velocidades extras ligadas (o padrão é 1x/2x/3x)
 
     /// <summary>TD.28c: velocidade do jogo (1x, 2x ou 3x): o host executa 1/2/3 Steps por tick de 30 Hz (determinístico: o replay não muda). Não muda com a pausa da modal.</summary>
     public int GameSpeed { get; init; } = MinGameSpeed;
+
+    /// <summary>Velocidades extras (4x, 5x, 8x, 10x, 16x, 20x, 50x, Máx) no seletor; desligado por padrão (só 1x/2x/3x).</summary>
+    public bool ExtraSpeeds { get; init; }
+    /// <summary>Quais extras aparecem (bit i = i-ésima extra); padrão 5x, 10x e Máx.</summary>
+    public int ExtraSpeedMask { get; init; } = 0b1000_1010;
 
     /// <summary>Ids das afirmações do banco já sorteadas (<c>q01;q02</c>…): não repetem até esgotar o banco (TD.17).</summary>
     public string QuestionsSeen { get; init; } = "";
