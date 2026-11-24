@@ -158,7 +158,7 @@ public sealed class TdUiControllerTests
     {
         var r = new Rig();
         r.Ui.Sync();
-        r.Host.Score = 25000;
+        r.Host.Score = 28000;
         r.Ui.Sync();
         Assert.False(r.Match.Paused);
         Assert.DoesNotContain(r.Sent, c => c is Pause);
