@@ -35,7 +35,6 @@ public sealed class TdContinuousHostTests
         public List<string> Calls { get; } = [];
         public bool Paused => false;
         public void TogglePause() { }
-        public void OpenSettings() { }
         public void RequestExit() { }
         public bool HudMinimized { get; set; } = true;
         public void SetHudMinimized(bool minimized) => HudMinimized = minimized;

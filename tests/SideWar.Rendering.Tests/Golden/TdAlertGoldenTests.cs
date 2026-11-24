@@ -20,7 +20,6 @@ public sealed class TdAlertGoldenTests
         public TdGameOptions GameOptions => new(Discreet: true); // sem pulso: golden determinístico
         public bool Paused => false;
         public void TogglePause() { }
-        public void OpenSettings() { }
         public void RequestExit() { }
         public bool HudMinimized => false;
         public void SetHudMinimized(bool minimized) { }

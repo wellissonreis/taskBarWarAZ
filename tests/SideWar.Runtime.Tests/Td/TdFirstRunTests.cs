@@ -19,7 +19,6 @@ public sealed class TdFirstRunTests
     {
         public bool Paused => false;
         public void TogglePause() { }
-        public void OpenSettings() { }
         public void RequestExit() { }
         public bool HudMinimized { get; set; } = true; // padrão de TdSettings.HudMinimized
         public void SetHudMinimized(bool minimized) => HudMinimized = minimized;

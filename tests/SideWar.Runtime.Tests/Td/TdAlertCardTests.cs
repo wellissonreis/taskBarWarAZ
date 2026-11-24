@@ -24,7 +24,6 @@ public sealed class TdAlertCardTests
         public TdGameOptions GameOptions => new(Discreet: discreet);
         public bool Paused => false;
         public void TogglePause() { }
-        public void OpenSettings() { }
         public void RequestExit() { }
         public bool HudMinimized => false;
         public void SetHudMinimized(bool minimized) { }

@@ -31,7 +31,6 @@ public sealed class TdOnboardingGoldenTests
     {
         public bool Paused => false;
         public void TogglePause() { }
-        public void OpenSettings() { }
         public void RequestExit() { }
         public bool HudMinimized { get; set; }
         public void SetHudMinimized(bool minimized) => HudMinimized = minimized;

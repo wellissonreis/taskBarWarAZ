@@ -17,7 +17,6 @@ public sealed class TdRuneUiTests
     {
         public bool Paused => false;
         public void TogglePause() { }
-        public void OpenSettings() { }
         public void RequestExit() { }
         public bool HudMinimized => false;
         public void SetHudMinimized(bool minimized) { }

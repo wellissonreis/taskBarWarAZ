@@ -27,6 +27,177 @@ public sealed class TdUiControllerTests
         Assert.All(items.Where(i => i.Action == TdUiAction.GameOption), i => Assert.True(i.Rect.X >= 328));
         Assert.Contains(items, i => i.SArg == "jg-stat" && i.Arg == 0 && i.Tip == "Coroas: fases vencidas sem vazamentos");
     }
+    private static TdUiItem Pick(TdPopoverView v, TdUiAction action, string? sarg = null, int? arg = null) =>
+        v.Items.Single(i => i.Action == action && (sarg is null || i.SArg == sarg) && (arg is null || i.Arg == arg));
+
+    /// <summary>Rola a seção atual até o controle aparecer (as listas mostram 8 linhas por vez).</summary>
+    private static TdUiItem Reveal(Rig r, TdUiAction action, string sarg, int? arg = null)
+    {
+        r.Ui.ScrollBy(-1000);
+        for (int guard = 0; guard < 60; guard++)
+        {
+            var v = r.Ui.BuildPopover()!;
+            var hit = v.Items.Where(i => i.Action == action && i.SArg == sarg && (arg is null || i.Arg == arg)).ToArray();
+            if (hit.Length == 1) return hit[0];
+            if (!r.Ui.ScrollBy(1)) break;
+        }
+        throw new InvalidOperationException(sarg);
+    }
+
+    private static Rig OpenSettings(int section = 0)
+    {
+        var r = new Rig();
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
+        r.Ui.Activate(Pick(r.Ui.BuildPopover()!, TdUiAction.SettingsOpen, "cfg-gear"));
+        if (section > 0) r.Ui.Activate(Pick(r.Ui.BuildPopover()!, TdUiAction.SettingsSection, arg: section));
+        return r;
+    }
+
+    [Fact]
+    public void Gear_opens_settings_inside_the_menu_and_tray_opens_the_same_view()
+    {
+        var r = new Rig();
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
+        var gear = Pick(r.Ui.BuildPopover()!, TdUiAction.SettingsOpen, "cfg-gear");
+        Assert.True(gear.Rect.X + gear.Rect.W <= 674f, "engrenagem fica à esquerda do X");
+        r.Ui.Activate(gear);
+        Assert.Equal(TdUiMode.Settings, r.Ui.Mode);
+        Assert.Contains("startup", r.Host.Calls);
+        var view = r.Ui.BuildPopover()!;
+        Assert.Equal(6, view.Items.Count(i => i.Action == TdUiAction.SettingsSection));
+        Assert.Contains(view.Items, i => i.Action == TdUiAction.Close);
+
+        var tray = new Rig();
+        tray.Ui.OpenSettingsView();
+        Assert.Equal(TdUiMode.Settings, tray.Ui.Mode);
+        r.Ui.Activate(Pick(view, TdUiAction.ModalTab, arg: (int)TdUiMode.Menu));
+        Assert.Equal(TdUiMode.Menu, r.Ui.Mode);
+    }
+
+    [Fact]
+    public void Jogo_tab_links_to_all_settings()
+    {
+        var r = new Rig();
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
+        r.Ui.Activate(Pick(r.Ui.BuildPopover()!, TdUiAction.SettingsOpen, "cfg-link"));
+        Assert.Equal(TdUiMode.Settings, r.Ui.Mode);
+    }
+
+    [Fact]
+    public void Settings_apply_immediately_for_toggle_choice_and_slider()
+    {
+        var r = OpenSettings();
+        r.Ui.Activate(Reveal(r, TdUiAction.SettingToggle, "income"));
+        Assert.True(r.Host.Settings.ShowIncome);
+        r.Ui.Activate(Reveal(r, TdUiAction.SettingChoice, "speed", 3));
+        Assert.Equal(3, r.Host.Settings.GameSpeed);
+        r.Ui.Activate(Reveal(r, TdUiAction.SettingChoice, "band", 88));
+        Assert.Equal(88, r.Host.Settings.BandHeight);
+        r.Ui.Activate(Reveal(r, TdUiAction.SettingToggle, "sound"));
+        var volume = Reveal(r, TdUiAction.SettingSlider, "volume");
+        Assert.True(volume.Enabled);
+        r.Ui.SetSettingAt(volume, TdSettingsLayout.TrackX + TdSettingsLayout.TrackW / 2f);
+        Assert.Equal(50, r.Host.Settings.Volume);
+        var seconds = Reveal(r, TdUiAction.SettingSlider, "autoseconds");
+        Assert.False(seconds.Enabled);
+        r.Ui.SetSettingAt(seconds, TdSettingsLayout.TrackX + TdSettingsLayout.TrackW);
+        Assert.Equal(15, r.Host.Settings.AutoStartSeconds);
+        r.Ui.Activate(Reveal(r, TdUiAction.SettingToggle, "mute:1"));
+        Assert.Equal(1 << 1, r.Host.Settings.AlertsMutedMask);
+    }
+
+    [Fact]
+    public void Settings_sections_cover_every_old_window_option()
+    {
+        string[] keys0 = ["mode", "hide", "uia", "autoscale", "questions", "income", "discreet", "continuous", "pinned", "autostart", "autoseconds", "autorestart", "band", "bandfine", "corner", "cornerfine", "speed", "alerts", "autopause", "alertsound"];
+        var r = OpenSettings();
+        var seen = new HashSet<string>();
+        for (int guard = 0; guard < 30; guard++)
+        {
+            foreach (var i in r.Ui.BuildPopover()!.Items) if (i.SArg is { } k) seen.Add(k);
+            if (!r.Ui.ScrollBy(3)) break;
+        }
+        foreach (var k in keys0) Assert.Contains(k, seen);
+        string[][] others = [["peek", "peekop", "absent", "absentop", "fade", "fadepct"], ["fpsp", "fpsa", "saver", "forcesaver"], ["hk:interactive", "hk:visibility", "hk:pause", "hk:wave"], ["motion"], ["record", "log"]];
+        for (int s = 1; s <= 5; s++)
+        {
+            var o = OpenSettings(s);
+            var keys = o.Ui.BuildPopover()!.Items.Select(i => i.SArg).ToHashSet();
+            foreach (var k in others[s - 1]) Assert.Contains(k, keys);
+        }
+    }
+
+    [Fact]
+    public void Settings_labels_fit_and_lists_scroll_without_clipping()
+    {
+        for (int s = 0; s < 6; s++)
+        {
+            var r = OpenSettings(s);
+            for (int guard = 0; guard < 40; guard++)
+            {
+                var view = r.Ui.BuildPopover()!;
+                foreach (var i in view.Items.Where(i => i.SArg is not null && i.Rect.Y >= TdSettingsLayout.Top && i.Rect.X >= TdSettingsLayout.ContentX))
+                {
+                    Assert.InRange(i.Rect.Y + i.Rect.H, 0f, TdSettingsLayout.Top + TdSettingsLayout.VisibleRows * TdSettingsLayout.RowH);
+                    Assert.InRange(i.Rect.X + i.Rect.W, 0f, 701f);
+                    if (i.Action is TdUiAction.SettingToggle or TdUiAction.SettingSlider or TdUiAction.SettingHotkey || i.SArg == "cfg-label") Assert.True(i.Text.Length <= 34, i.Text);
+                    if (i.SArg is "cfg-info" or "cfg-group") Assert.True(i.Text.Length <= 70, i.Text);
+                }
+                if (!r.Ui.ScrollBy(2)) break;
+            }
+        }
+        var geral = OpenSettings();
+        Assert.NotNull(geral.Ui.BuildPopover()!.Scroll);
+        var first = geral.Ui.BuildPopover()!.Items.First(i => i.Rect.X >= TdSettingsLayout.ContentX && i.Rect.Y >= TdSettingsLayout.Top).Text;
+        geral.Ui.ScrollBy(3);
+        Assert.NotEqual(first, geral.Ui.BuildPopover()!.Items.First(i => i.Rect.X >= TdSettingsLayout.ContentX && i.Rect.Y >= TdSettingsLayout.Top).Text);
+    }
+
+    [Fact]
+    public void Hotkey_capture_inside_menu_validates_conflicts_and_persists()
+    {
+        var r = OpenSettings(3);
+        r.Ui.Activate(Pick(r.Ui.BuildPopover()!, TdUiAction.SettingHotkey, "hk:pause"));
+        Assert.True(r.Ui.CapturingHotkey);
+        Assert.Equal("Pressione a combinação…", Pick(r.Ui.BuildPopover()!, TdUiAction.SettingHotkey, "hk:pause").Right);
+        r.Ui.CaptureHotkey(16, false, false, true, false); // só Shift: ignora
+        Assert.True(r.Ui.CapturingHotkey);
+        r.Ui.CaptureHotkey('K', false, false, false, false);
+        Assert.Equal("Use Ctrl, Alt, Shift ou Win junto com a tecla.", Pick(r.Ui.BuildPopover()!, TdUiAction.SettingHotkey, "hk:pause").Sub);
+        r.Ui.CaptureHotkey('H', true, true, false, false); // já usado pela visibilidade
+        Assert.Equal("Já usado por outro atalho.", Pick(r.Ui.BuildPopover()!, TdUiAction.SettingHotkey, "hk:pause").Sub);
+        Assert.Equal("Ctrl+Alt+P", r.Host.Settings.TogglePause);
+        r.Ui.CaptureHotkey('K', true, true, false, false);
+        Assert.False(r.Ui.CapturingHotkey);
+        Assert.Equal("Ctrl+Alt+K", r.Host.Settings.TogglePause);
+        Assert.Equal("Ctrl+Alt+K", Pick(r.Ui.BuildPopover()!, TdUiAction.SettingHotkey, "hk:pause").Right);
+
+        r.Ui.Activate(Pick(r.Ui.BuildPopover()!, TdUiAction.SettingHotkey, "hk:wave"));
+        r.Ui.CaptureHotkey(27, false, false, false, false); // Esc cancela
+        Assert.False(r.Ui.CapturingHotkey);
+        Assert.Equal("Ctrl+Alt+Space", r.Host.Settings.StartWave);
+        r.Ui.Activate(Pick(r.Ui.BuildPopover()!, TdUiAction.SettingHotkey, "hk:wave"));
+        r.Ui.Cancel();
+        Assert.False(r.Ui.CapturingHotkey);
+        Assert.Equal(TdUiMode.Settings, r.Ui.Mode);
+
+        r.Ui.Activate(Pick(r.Ui.BuildPopover()!, TdUiAction.SettingsRestoreHotkeys));
+        Assert.Equal("Ctrl+Alt+P", r.Host.Settings.TogglePause);
+    }
+
+    [Fact]
+    public void Diagnostics_and_accessibility_controls_persist()
+    {
+        var r = OpenSettings(5);
+        r.Ui.Activate(Pick(r.Ui.BuildPopover()!, TdUiAction.SettingToggle, "record"));
+        r.Ui.Activate(Pick(r.Ui.BuildPopover()!, TdUiAction.SettingChoice, "log", 3));
+        Assert.True(r.Host.Settings.RecordCommands);
+        Assert.Equal(3, r.Host.Settings.LogLevel);
+        r.Ui.Activate(Pick(r.Ui.BuildPopover()!, TdUiAction.SettingsSection, arg: 4));
+        r.Ui.Activate(Pick(r.Ui.BuildPopover()!, TdUiAction.SettingToggle, "motion"));
+        Assert.True(r.Host.Settings.ReducedMotion);
+    }
+
     [Fact]
     public void Rank_gate_map_shows_required_rank_and_disables_play()
     {
@@ -96,7 +267,9 @@ public sealed class TdUiControllerTests
         public float EndCardAvailableHeight { get; set; } = float.PositiveInfinity;
         public List<string> Calls { get; } = [];
         public void TogglePause() => Calls.Add("pause");
-        public void OpenSettings() => Calls.Add("settings");
+        public TdSettingsData Settings { get; set; } = new();
+        public void ApplySettings(TdSettingsData data) { Settings = data; Calls.Add("apply"); }
+        public void RefreshStartup() => Calls.Add("startup");
         public void RequestExit() => Calls.Add("exit");
         public void ResetProfile() => Calls.Add("reset");
         public bool HudMinimized { get; set; }

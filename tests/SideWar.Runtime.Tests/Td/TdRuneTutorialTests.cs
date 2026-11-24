@@ -15,7 +15,6 @@ public sealed class TdRuneTutorialTests
     {
         public bool Paused { get; set; }
         public void TogglePause() { }
-        public void OpenSettings() { }
         public void RequestExit() { }
         public bool HudMinimized { get; set; }
         public void SetHudMinimized(bool minimized) => HudMinimized = minimized;

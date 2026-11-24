@@ -22,7 +22,6 @@ public sealed class TdOnboardingTests
         public List<string> Calls { get; } = [];
         public bool Paused => false;
         public void TogglePause() { }
-        public void OpenSettings() { }
         public void RequestExit() { }
         public bool HudMinimized { get; set; }
         public void SetHudMinimized(bool minimized) { HudMinimized = minimized; Calls.Add("hud:" + minimized); }

@@ -20,7 +20,6 @@ public sealed class TdUiGoldenTests
         public TdGameOptions GameOptions { get; set; } = new();
         public bool Paused => false;
         public void TogglePause() { }
-        public void OpenSettings() { }
         public void RequestExit() { }
         public bool HudMinimized { get; private set; }
         public void SetHudMinimized(bool minimized) => HudMinimized = minimized;
