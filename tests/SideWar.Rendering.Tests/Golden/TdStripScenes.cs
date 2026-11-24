@@ -30,6 +30,8 @@ public enum TdStripScene
     FuseDropOk,
     FuseDropBlocked,
     FuseFx,
+    /// <summary>Arrasto de torre para fora da faixa: indicador de venda com o reembolso.</summary>
+    SellDrop,
 }
 
 /// <summary>
@@ -56,6 +58,7 @@ public static class TdStripScenes
         TdStripScene.FuseDropOk => "td-strip-fuse-drop-ok",
         TdStripScene.FuseDropBlocked => "td-strip-fuse-drop-blocked",
         TdStripScene.FuseFx => "td-strip-fuse-fx",
+        TdStripScene.SellDrop => "td-strip-sell-drop",
         _ => "td-strip-unpositioned",
     };
 
@@ -109,7 +112,7 @@ public static class TdStripScenes
 
     public static (TdMatchState Match, TdView View, double Now) Build(TdStripScene scene)
     {
-        var m = NewMatch(newEnemies: scene == TdStripScene.NewEnemies, fusion: scene is TdStripScene.Fused or TdStripScene.FuseDropOk or TdStripScene.FuseDropBlocked or TdStripScene.FuseFx, mutants: scene == TdStripScene.Mutants);
+        var m = NewMatch(newEnemies: scene == TdStripScene.NewEnemies, fusion: scene is TdStripScene.Fused or TdStripScene.FuseDropOk or TdStripScene.FuseDropBlocked or TdStripScene.FuseFx or TdStripScene.SellDrop, mutants: scene == TdStripScene.Mutants);
         switch (scene)
         {
             case TdStripScene.AllTowers:
@@ -131,6 +134,7 @@ public static class TdStripScenes
             case TdStripScene.FuseDropOk:
             case TdStripScene.FuseDropBlocked:
             case TdStripScene.FuseFx:
+            case TdStripScene.SellDrop:
             {
                 Build(m, "frost", 330);
                 int target = m.Towers[0].Id;
@@ -139,6 +143,7 @@ public static class TdStripScenes
                 var tv = new TdView(0, 0);
                 if (scene == TdStripScene.FuseDropOk) tv = tv with { PlacingMode = true, GhostX = 330, GhostValid = true, GhostDef = 0, FuseTargetId = target, FuseTargetOk = true, FuseModuleId = "bolt" };
                 else if (scene == TdStripScene.FuseDropBlocked) tv = tv with { PlacingMode = true, GhostX = 330, GhostValid = false, GhostDef = 0, FuseTargetId = target, FuseTargetOk = false, FuseModuleId = "bolt" };
+                else if (scene == TdStripScene.SellDrop) tv = tv with { SellRefund = m.SellValue(target) };
                 else { Do(m, new FuseTower(target, "bolt")); tv = tv with { FuseFxId = target, FuseFxAge = 0.25f }; }
                 return (m, tv, 100.0);
             }

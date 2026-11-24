@@ -90,7 +90,7 @@ public sealed class SceneModeController
     public event Action<float, float>? TdPointerMoved;
     public event Action<float, float, HitTarget>? TdLeftClicked;
     /// <summary>Botão esquerdo solto (modo Interativo): termina o arrasto de torre (X em DIP).</summary>
-    public event Action<float>? TdLeftReleased;
+    public event Action<float, float>? TdLeftReleased;
     public event Action? TdRightClicked;
 
     /// <summary>
@@ -252,7 +252,7 @@ public sealed class SceneModeController
             {
                 short ux = (short)(lParam & 0xFFFF), uy = (short)((lParam >> 16) & 0xFFFF);
                 EndGrab(GrabOver(ux, uy)); // solta a captura ANTES de o jogo reagir; reavalia pelo ponto final
-                TdLeftReleased?.Invoke(SceneHitTester.ToDip(ux, uy, Scale).Item1);
+                { var (rx, ry) = SceneHitTester.ToDip(ux, uy, Scale); TdLeftReleased?.Invoke(rx, ry); }
                 break;
             }
             case PInvoke.WM_CAPTURECHANGED when grab.Captured:
@@ -260,7 +260,7 @@ public sealed class SceneModeController
                 TdGrabCancelled?.Invoke();
                 break;
             case PInvoke.WM_LBUTTONUP when mode.Mode == OverlayMode.Interactive && TdLeftReleased is { } released:
-                released(SceneHitTester.ToDip((short)(lParam & 0xFFFF), (short)((lParam >> 16) & 0xFFFF), Scale).Item1);
+                { var (rx, ry) = SceneHitTester.ToDip((short)(lParam & 0xFFFF), (short)((lParam >> 16) & 0xFFFF), Scale); released(rx, ry); }
                 break;
             case PInvoke.WM_LBUTTONDOWN when mode.Mode != OverlayMode.Interactive && grab.BeginCapture():
             {

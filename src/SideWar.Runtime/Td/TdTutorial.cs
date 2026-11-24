@@ -13,6 +13,7 @@ public sealed class TdTutorial(ITdOnboardingStore store)
         new(TdUiMode.None, "Coloque sua primeira torre.", "Expanda o HUD. Em Torres, escolha e clique na faixa livre.", TdIcon.Build, HudTarget: TdUiAction.QuickTowers),
         new(TdUiMode.None, "Inicie a onda no HUD.", "Auto-início: Imediato por padrão; ajuste em Configurações.", TdIcon.Play, HudTarget: TdUiAction.StartWave),
         new(TdUiMode.None, "Mova uma torre arrastando.", "Solte em um ponto livre; não custa créditos.", TdIcon.Build),
+        new(TdUiMode.None, "Arraste uma torre para fora da faixa para vender.", "Solte acima da faixa: devolve parte dos créditos.", TdIcon.Coin),
         new(TdUiMode.Bestiary, "Cada inimigo tem pontos fortes e fracos.", "Veja os tipos em Inimigos e escolha a torre certa.", TdIcon.Target),
         new(TdUiMode.Menu, "Patentes liberam torres e fusão.", "Fusão a partir de Júnior; dano no núcleo tira XP.", TdIcon.Medal),
         new(TdUiMode.None, "Velocidade no HUD acelera a partida.", "", TdIcon.FastForward),

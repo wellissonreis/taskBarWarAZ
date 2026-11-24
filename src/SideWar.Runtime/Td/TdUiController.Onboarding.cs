@@ -524,6 +524,7 @@ public sealed partial class TdUiController
         Section("TORRES E ECONOMIA");
         Card(TdIcon.Build, "Construir mostra tipos, funções e fraquezas.");
         Card(TdIcon.Build, "Arraste ao vazio para mover sem custo.");
+        Card(TdIcon.Coin, "Arraste uma torre para fora da faixa para vender.");
         Card(TdIcon.Star, "Torre sobre torre: fusão a partir de Júnior.");
         Card(TdIcon.Medal, "Torres liberam conforme a patente.");
         Card(TdIcon.Star, "Fusões ficam mais fortes e ganham nomes.");

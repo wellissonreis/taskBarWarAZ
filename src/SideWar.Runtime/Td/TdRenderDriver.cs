@@ -34,6 +34,9 @@ public readonly record struct TdView(int SelectedTowerId, int HoverTowerId)
     /// <summary>Efeito curto da fusão feita: torre e idade em segundos (&lt; 0 = sem efeito).</summary>
     public int FuseFxId { get; init; }
     public float FuseFxAge { get; init; } = -1f;
+
+    /// <summary>Arrasto de torre fora da faixa: reembolso a mostrar no indicador de venda (&lt; 0 = sem indicador).</summary>
+    public long SellRefund { get; init; } = -1;
 }
 
 /// <summary>Destino dos frames da faixa TD (SceneFrameSink no App; fake nos testes). Só na T-Game.</summary>

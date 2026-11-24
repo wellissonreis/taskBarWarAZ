@@ -113,6 +113,14 @@ public sealed partial class TdUiController
     private bool _dragMoved;
     private float _dragStartX;
     public const float DragThresholdDip = 5f;
+    /// <summary>Venda por arrasto: soltar acima da faixa (Y local &lt; -margem; a margem é a folga da janela) vende a torre arrastada.</summary>
+    public const float SellDragMarginDip = TdBand.EdgeHeadroomDip;
+    private bool _dragSell;
+
+    /// <summary>Arrasto fora da faixa (acima): mostra o indicador de venda; soltar ali vende.</summary>
+    public bool DragSellArmed => _dragTowerId > 0 && _dragSell;
+
+    private long DragSellRefund() => _dragSell && _dragTowerId > 0 ? _match().SellValue(_dragTowerId) : -1;
 
     /// <summary>Arrasto de uma torre colocada em curso (a faixa só mostra o fantasma; a torre fica no lugar até soltar).</summary>
     public bool DraggingTower => _dragTowerId > 0;
@@ -139,17 +147,27 @@ public sealed partial class TdUiController
         _dragTowerId = towerId;
         _dragMoved = false;
         _dragStartX = xDip;
+        _dragSell = false;
         return true;
     }
 
     /// <summary>Mouse movendo durante o arrasto: atualiza o fantasma e o preview da fusão sobre a torre-alvo (igual ao da barra).</summary>
-    public void TowerDragMoved(float xDip)
+    public void TowerDragMoved(float xDip, float yDip = 0f)
     {
         if (_dragTowerId == 0) return;
         var m = _match();
         if (FindTower(m, _dragTowerId) < 0) { CancelTowerDrag(); return; }
-        if (!_dragMoved && MathF.Abs(xDip - _dragStartX) < DragThresholdDip) return;
+        bool outside = float.IsFinite(yDip) && yDip < -SellDragMarginDip;
+        if (!_dragMoved && !outside && MathF.Abs(xDip - _dragStartX) < DragThresholdDip) return;
         _dragMoved = true;
+        if (outside != _dragSell) _dragSell = outside;
+        if (outside)
+        {
+            _dropTowerId = 0;
+            _ghostValid = false;
+            Changed?.Invoke();
+            return;
+        }
         int w = TdBand.WidthDip(m);
         _ghostX = TdPlacement.ToLogical((int)MathF.Round(Math.Clamp(xDip, 0f, w)), w);
         _dropTowerId = 0;
@@ -174,10 +192,25 @@ public sealed partial class TdUiController
     }
 
     /// <summary>Soltou: sobre um par válido funde (a mais forte vira base, sem custo); em ponto livre válido move a torre; ponto inválido ou par inválido, ela fica onde estava; sem mover é clique (inspetor).</summary>
-    public void TowerDragEnd(float xDip)
+    public void TowerDragEnd(float xDip, float yDip = 0f)
     {
         if (_dragTowerId == 0) return;
-        TowerDragMoved(xDip);
+        TowerDragMoved(xDip, yDip);
+        if (_dragSell)
+        {
+            // Soltou fora da faixa: vende (mesmo comando da venda do inspetor), só com a partida em jogo e sem a boss key ativa.
+            int sold = _dragTowerId;
+            var mm = _match();
+            CancelTowerDrag();
+            if (!BossHidden && mm.Phase is MatchPhase.Preparo or MatchPhase.Onda && FindTower(mm, sold) >= 0)
+            {
+                _money.NoteRefund();
+                _send(new SellTower(sold));
+                if (_selectedTowerId == sold) _selectedTowerId = 0;
+            }
+            Changed?.Invoke();
+            return;
+        }
         int dragged = _dragTowerId, target = _dropTowerId, moveX = _ghostX;
         bool moved = _dragMoved, moveOk = _ghostValid && _dropTowerId == 0;
         var check = _dropCheck;
@@ -205,6 +238,7 @@ public sealed partial class TdUiController
         if (_dragTowerId == 0) return;
         _dragTowerId = 0;
         _dragMoved = false;
+        _dragSell = false;
         _dropTowerId = 0;
         _ghostValid = false;
         _ghostX = -1;

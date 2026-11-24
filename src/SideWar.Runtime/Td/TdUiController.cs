@@ -178,7 +178,8 @@ public sealed partial class TdUiController
     /// <summary>Visão da faixa: seleção, fantasma e alcance da torre candidata.</summary>
     public TdView View => new(_selectedTowerId, 0)
     {
-        GhostX = BuildActive || _dragMoved ? _ghostX : -1,
+        GhostX = BuildActive || (_dragMoved && !_dragSell) ? _ghostX : -1,
+        SellRefund = DragSellRefund(),
         GhostValid = _ghostValid,
         GhostDef = _dragTowerId > 0 ? DragDef() : _hoverDef >= 0 ? _hoverDef : -1,
         ChosenX = BuildActive ? _chosenX : -1,
@@ -193,9 +194,9 @@ public sealed partial class TdUiController
     };
 
     /// <summary>Move o mouse sobre a faixa (X em DIP): só importa no passo do ponto.</summary>
-    public void PointerMoved(float xDip)
+    public void PointerMoved(float xDip, float yDip = 0f)
     {
-        if (_dragTowerId > 0) { TowerDragMoved(xDip); return; }
+        if (_dragTowerId > 0) { TowerDragMoved(xDip, yDip); return; }
         if (!ChoosingPoint) return;
         UpdateGhost(xDip);
         Changed?.Invoke();
@@ -252,7 +253,7 @@ public sealed partial class TdUiController
     }
 
     /// <summary>Botão esquerdo solto na cena: termina um arrasto de torre, se houver.</summary>
-    public void SceneLeftUp(float xDip) => TowerDragEnd(xDip);
+    public void SceneLeftUp(float xDip, float yDip = 0f) => TowerDragEnd(xDip, yDip);
 
     public void SceneRightClick()
     {

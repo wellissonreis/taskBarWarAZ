@@ -50,8 +50,9 @@ public sealed class TdTutorialTourGoldenTests
     [InlineData(0)]
     [InlineData(3)]
     [InlineData(4)]
-    [InlineData(6)]
+    [InlineData(5)]
     [InlineData(7)]
+    [InlineData(8)]
     public void Guided_page_matches_golden(int step)
     {
         Assert.SkipUnless(OperatingSystem.IsLinux(), "texto Skia varia por sistema operacional");

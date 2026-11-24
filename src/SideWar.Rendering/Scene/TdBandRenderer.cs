@@ -140,6 +140,7 @@ public sealed class TdBandRenderer : IDisposable
         DrawFire(canvas, match, w);
         DrawHint(canvas, view, now, w);
         DrawPlacingMode(canvas, view, w);
+        DrawSellDrop(canvas, view, w);
         canvas.Restore();
     }
 
@@ -583,6 +584,26 @@ public sealed class TdBandRenderer : IDisposable
         for (int i = 0; i < m.Towers.Count; i++)
             if (m.Towers[i].Id == id && m.Towers[i].Placed) return TdBand.TowerCenterDip(m, m.Towers[i], w);
         return null;
+    }
+
+    // Venda por arrasto: torre arrastada para fora da faixa (acima); véu vermelho com o reembolso. Voltar para dentro apaga.
+    private void DrawSellDrop(SKCanvas c, in TdView view, int w)
+    {
+        if (view.SellRefund < 0) return;
+        _fill.Color = Palette.Perigo.WithAlpha(60);
+        c.DrawRect(0, 0, w, TdBand.HeightDip, _fill);
+        _stroke.Color = Palette.Perigo.WithAlpha(235);
+        _stroke.StrokeWidth = 2f;
+        c.DrawRect(1f, 1f, w - 2f, TdBand.HeightDip - 2f, _stroke);
+        _stroke.StrokeWidth = 1f;
+        string text = $"SOLTE PARA VENDER  +${view.SellRefund}";
+        var font = _typography.GetFont(FontRole.SilkscreenRegular, 8f, 96);
+        float width = font.MeasureText(text);
+        _fill.Color = SKColors.Black.WithAlpha(190);
+        c.DrawRoundRect((w - width) / 2f - 6f, 8f, width + 12f, 16f, 3, 3, _fill);
+        _text.Color = Palette.Perigo;
+        using var blob = SKTextBlob.Create(text, font);
+        if (blob is not null) c.DrawText(blob, (w - width) / 2f, 19f, _text);
     }
 
     // Modo posicionar (TD.16b): a faixa passa a aceitar clique; borda menta em toda a faixa + véu leve, para o modo ser inequívoco.
