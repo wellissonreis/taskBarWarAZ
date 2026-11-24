@@ -23,6 +23,60 @@
    "sha256": "fbebfa73308f48b3e905c2f5c64b354cb562a4824a932be78a6d051cd023cb98"
   },
   {
+   "file": "backup-attack.png",
+   "design": "original",
+   "role": "attack",
+   "frames": 6,
+   "durationSeconds": 0.5,
+   "fps": 12.0,
+   "sheetPixels": [
+    768,
+    128
+   ],
+   "framePixels": [
+    128,
+    128
+   ],
+   "sha256": "10898586226f693bcee07220ab81d301a19f23d1b19be8b0ac02f711661b306d",
+   "generator": "tools/sprites/gen_backup.py"
+  },
+  {
+   "file": "backup-fx.png",
+   "design": "original",
+   "role": "fx",
+   "frames": 4,
+   "durationSeconds": 0.4,
+   "fps": 10.0,
+   "sheetPixels": [
+    256,
+    64
+   ],
+   "framePixels": [
+    64,
+    64
+   ],
+   "sha256": "86b5bb9f146f7a96b294e935d833c4eb8b014ebc1faa4522d318ada01c395d7b",
+   "generator": "tools/sprites/gen_backup.py"
+  },
+  {
+   "file": "backup-idle.png",
+   "design": "original",
+   "role": "idle",
+   "frames": 4,
+   "durationSeconds": 0.667,
+   "fps": 6.0,
+   "sheetPixels": [
+    512,
+    128
+   ],
+   "framePixels": [
+    128,
+    128
+   ],
+   "sha256": "efa22ced43286127cac54e1ddf3ee16678fee1b2011a191e4eb429d256cd58b0",
+   "generator": "tools/sprites/gen_backup.py"
+  },
+  {
    "file": "balancer-attack.png",
    "design": "balanceador",
    "blob": "3cf64575c74c40d545972a58beb410de",

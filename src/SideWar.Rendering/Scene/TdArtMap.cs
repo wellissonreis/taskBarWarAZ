@@ -38,6 +38,7 @@ public static class TdArtMap
         new("eventgrid", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "sprite animado original (assets/source/anim/eventgrid-*, tools/sprites/gen_eventgrid.py)"),
         new("bastion", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "sprite animado original (assets/source/anim/bastion-*, tools/sprites/gen_bastion.py)"),
         new("firewall", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "vetor próprio"),
+        new("backup", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "sprite animado original (assets/source/anim/backup-*, tools/sprites/gen_backup.py)"),
         new("pipeline", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "sprite animado original (assets/source/anim/pipeline-*, tools/sprites/gen_pipeline.py)"),
         new("bolt", SpriteId.TowerBolt, TowerHeightDip, default, 0, false, "tower-bolt"),
         new("frost", SpriteId.TowerFrost, TowerHeightDip, default, 0, false, "tower-frost"),
