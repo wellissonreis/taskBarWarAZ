@@ -38,6 +38,8 @@ public sealed record TdWaveRequest : IGameCommand;
 /// </summary>
 public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
 {
+    // Protege também quando o relógio do orçamento falha ou tem resolução insuficiente.
+    private const int MaxStepsPerWake = 1000;
     private readonly IClock _clock;
     private readonly AppStateMachine _app;
     private readonly ITdMatchObserver? _observer;
@@ -180,7 +182,7 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
         bool running = Running;
         int ticks = _stepper.Advance(now, running);
         int speed = Math.Clamp(GameSpeed, 1, ExtraSpeeds ? TdSpeed.Max : 3);
-        long steps = ticks == 0 ? 0 : speed >= TdSpeed.Max ? long.MaxValue : (long)ticks * speed;
+        long steps = ticks == 0 ? 0 : speed >= TdSpeed.Max ? MaxStepsPerWake : Math.Min(MaxStepsPerWake, (long)ticks * speed);
         bool timed = speed > 3;
         double started = timed ? BudgetClockMs() : 0;
         long done = 0;
