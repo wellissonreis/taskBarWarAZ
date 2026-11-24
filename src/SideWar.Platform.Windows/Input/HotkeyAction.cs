@@ -14,6 +14,8 @@ public enum HotkeyAction
     CancelBuild,
     /// <summary>Cicla as velocidades habilitadas (modo TD); só registrada quando o host informa o atalho.</summary>
     CycleSpeed,
+    /// <summary>Liga/desliga o modo sombra (modo TD); só registrada quando o host informa o atalho.</summary>
+    ToggleShadow,
 }
 
 /// <summary>Posted to the game command sink when a registered hotkey fires. The effect belongs to the host.</summary>

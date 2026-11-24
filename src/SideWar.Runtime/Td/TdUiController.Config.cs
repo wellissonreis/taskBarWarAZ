@@ -82,6 +82,9 @@ public sealed partial class TdUiController
                 Seg("notice", "Tamanho dos avisos", [("Desl.", 0), ("Peq.", 1), ("Méd.", 2), ("Grande", 3)]);
                 Toggle("sound", "Som");
                 Slider("volume", "Volume", 0, 100, "%", d.Sound);
+                Group("MODO SOMBRA");
+                Toggle("shadow", "Modo sombra", "Farme sem perder nem ganhar XP; recompensas permanentes em 35%. Entra e sai entre ondas.");
+                Toggle("shadowabsent", "Sombra ao ficar ausente", "Entra em modo sombra sozinho quando você fica ausente (desligado por padrão).");
                 Group("ALERTAS");
                 Toggle("alerts", "Avisar defesa em risco");
                 Toggle("autopause", "Pausar antes de perder", "Pausa automática: você escolhe Salvar ou Deixar cair.");
@@ -117,6 +120,7 @@ public sealed partial class TdUiController
                 r.Add(new(CfgKind.Hotkey, "hk:pause", "Pausa"));
                 r.Add(new(CfgKind.Hotkey, "hk:wave", "Iniciar onda (Tower Defense)"));
                 r.Add(new(CfgKind.Hotkey, "hk:speed", "Ciclar velocidade (TD)"));
+                r.Add(new(CfgKind.Hotkey, "hk:shadow", "Modo sombra (TD)"));
                 r.Add(new(CfgKind.Button, "hk:restore", "Restaurar padrão"));
                 break;
             case 4:
@@ -151,7 +155,7 @@ public sealed partial class TdUiController
         if (k.StartsWith("xs:", StringComparison.Ordinal)) return (d.SpeedMask >> int.Parse(k.AsSpan(3), CultureInfo.InvariantCulture)) & 1;
         return k switch
         {
-            "xspeeds" => d.ExtraSpeeds ? 1 : 0, "speedx" => d.GameSpeed,
+            "xspeeds" => d.ExtraSpeeds ? 1 : 0, "speedx" => d.GameSpeed, "shadowabsent" => d.ShadowOnAbsent ? 1 : 0,
             "mode" => d.GameMode, "startup" => d.StartWithWindows ? 1 : 0, "hide" => d.HideOnFullscreen, "uia" => d.UseUia ? 1 : 0, "autoscale" => d.AutoScale ? 1 : 0,
             "questions" => d.BonusQuestions ? 1 : 0, "income" => d.ShowIncome ? 1 : 0, "discreet" => d.DiscreetMode ? 1 : 0, "continuous" => d.ContinuousWaves ? 1 : 0,
             "pinned" => d.TowerPanelPinned ? 1 : 0, "autostart" => d.AutoStart ? 1 : 0, "autoseconds" => d.AutoStartSeconds, "autorestart" => d.AutoRestart ? 1 : 0,
@@ -180,6 +184,7 @@ public sealed partial class TdUiController
         }
         return k switch
         {
+            "shadowabsent" => d with { ShadowOnAbsent = b },
             "xspeeds" => d with { ExtraSpeeds = b, GameSpeed = b ? d.GameSpeed : Math.Min(d.GameSpeed, 3), SpeedMask = b && d.SpeedMask == 0 ? TdSpeed.DefaultMask : d.SpeedMask }, "speedx" => d with { GameSpeed = v },
             "mode" => d with { GameMode = v }, "startup" => d with { StartWithWindows = b }, "hide" => d with { HideOnFullscreen = v }, "uia" => d with { UseUia = b },
             "autoscale" => d with { AutoScale = b }, "questions" => d with { BonusQuestions = b }, "income" => d with { ShowIncome = b }, "discreet" => d with { DiscreetMode = b },
@@ -197,12 +202,12 @@ public sealed partial class TdUiController
 
     private static string HotkeyGet(TdSettingsData d, string k) => k switch
     {
-        "hk:interactive" => d.ToggleInteractive, "hk:visibility" => d.ToggleVisibility, "hk:pause" => d.TogglePause, "hk:speed" => d.CycleSpeed, _ => d.StartWave,
+        "hk:interactive" => d.ToggleInteractive, "hk:visibility" => d.ToggleVisibility, "hk:pause" => d.TogglePause, "hk:speed" => d.CycleSpeed, "hk:shadow" => d.ToggleShadow, _ => d.StartWave,
     };
 
     private static TdSettingsData HotkeyPut(TdSettingsData d, string k, string v) => k switch
     {
-        "hk:interactive" => d with { ToggleInteractive = v }, "hk:visibility" => d with { ToggleVisibility = v }, "hk:pause" => d with { TogglePause = v }, "hk:speed" => d with { CycleSpeed = v }, _ => d with { StartWave = v },
+        "hk:interactive" => d with { ToggleInteractive = v }, "hk:visibility" => d with { ToggleVisibility = v }, "hk:pause" => d with { TogglePause = v }, "hk:speed" => d with { CycleSpeed = v }, "hk:shadow" => d with { ToggleShadow = v }, _ => d with { StartWave = v },
     };
 
     private void ApplySetting(TdSettingsData next) { _host.ApplySettings(next); Changed?.Invoke(); }
@@ -222,7 +227,7 @@ public sealed partial class TdUiController
             var row = rows[i];
             float y = TdSettingsLayout.Top + (i - _settingsScroll) * TdSettingsLayout.RowH;
             var rect = new DipRect(x, y, w, h);
-            int value = row.Key.Length == 0 || row.Kind == CfgKind.Hotkey ? 0 : CfgGet(d, row.Key);
+            int value = row.Key == "shadow" ? ((_match().ShadowPending ?? _match().Shadow) ? 1 : 0) : row.Key.Length == 0 || row.Kind == CfgKind.Hotkey ? 0 : CfgGet(d, row.Key);
             switch (row.Kind)
             {
                 case CfgKind.Group:
@@ -279,6 +284,7 @@ public sealed partial class TdUiController
             case TdUiAction.SettingsSection:
                 _settingsSection = Math.Clamp(item.Arg, 0, TdSettingsLayout.Sections.Length - 1); _settingsScroll = 0; _captureKey = null; _hotkeyError = null;
                 Changed?.Invoke(); return true;
+            case TdUiAction.SettingToggle when item.SArg == "shadow": ToggleShadow(); return true;
             case TdUiAction.SettingToggle when item.SArg is { } key:
                 _captureKey = null;
                 ApplySetting(CfgPut(d, key, CfgGet(d, key) == 0 ? 1 : 0)); return true;
@@ -293,7 +299,7 @@ public sealed partial class TdUiController
             {
                 var def = new TdSettingsData();
                 _captureKey = null; _hotkeyError = null;
-                ApplySetting(d with { ToggleInteractive = def.ToggleInteractive, ToggleVisibility = def.ToggleVisibility, TogglePause = def.TogglePause, StartWave = def.StartWave, CycleSpeed = def.CycleSpeed });
+                ApplySetting(d with { ToggleInteractive = def.ToggleInteractive, ToggleVisibility = def.ToggleVisibility, TogglePause = def.TogglePause, StartWave = def.StartWave, CycleSpeed = def.CycleSpeed, ToggleShadow = def.ToggleShadow });
                 return true;
             }
         }
@@ -324,10 +330,38 @@ public sealed partial class TdUiController
         try { text = HotkeyParser.Format(new HotkeyChord(mods, (uint)vk)); }
         catch (ArgumentOutOfRangeException) { _hotkeyError = "Tecla não suportada."; Changed?.Invoke(); return; }
         var d = _host.Settings;
-        string[] keys = ["hk:interactive", "hk:visibility", "hk:pause", "hk:wave", "hk:speed"];
+        string[] keys = ["hk:interactive", "hk:visibility", "hk:pause", "hk:wave", "hk:speed", "hk:shadow"];
         foreach (var other in keys)
             if (other != key && string.Equals(HotkeyGet(d, other), text, StringComparison.OrdinalIgnoreCase)) { _hotkeyError = "Já usado por outro atalho."; Changed?.Invoke(); return; }
         _captureKey = null; _hotkeyError = null;
         ApplySetting(HotkeyPut(d, key, text));
+    }
+}
+
+public sealed partial class TdUiController
+{
+    private bool _awayActive;
+    private long _awayFragments;
+    private int _awayWaves, _awaySeals;
+
+    /// <summary>Resumo discreto ao voltar da ausência em sombra: "Fora: +N frag · +M selos · X ondas".</summary>
+    private void SyncShadowAway(TdMatchState m)
+    {
+        if (m.Shadow && !m.Present && !_awayActive)
+        {
+            _awayActive = true;
+            _awayFragments = m.ShadowFragments; _awayWaves = m.ShadowWaves; _awaySeals = _host.ShadowSeals;
+        }
+        else if (_awayActive && m.Present)
+        {
+            _awayActive = false;
+            long frag = m.ShadowFragments - _awayFragments;
+            int waves = m.ShadowWaves - _awayWaves, seals = _host.ShadowSeals - _awaySeals;
+            if (BossHidden || (frag <= 0 && waves <= 0 && seals <= 0)) return;
+            _noticeTitle = "Sombra"; _noticeRank = null;
+            _noticeText = $"Fora: +{frag} frag · +{seals} selo{(seals == 1 ? "" : "s")} · {waves} onda{(waves == 1 ? "" : "s")}";
+            _noticeUntil = _now() + StageNoticeSeconds;
+            Changed?.Invoke();
+        }
     }
 }

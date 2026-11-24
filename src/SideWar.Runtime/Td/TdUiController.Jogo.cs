@@ -57,7 +57,14 @@ public sealed partial class TdUiController
         items.Add(new(new DipRect(lx, 352, 60, 14), TdUiKind.Label, "AÇÕES", SArg: "sec"));
 
         items.Add(new(new DipRect(rx, 308 + 3 * 35, _host.GameOptions.ExtraSpeeds ? 375 : 121, 33), TdUiKind.Label, "Velocidade", SArg: "jg-tile-speed"));
-        if (!_host.GameOptions.ExtraSpeeds) items.Add(new(new DipRect(rx + 127, 308 + 3 * 35, 248, 33), TdUiKind.Button, "Todas as configurações", TdUiAction.SettingsOpen, Icon: TdIcon.Gear, SArg: "cfg-link"));
+        if (!_host.GameOptions.ExtraSpeeds)
+        {
+            var match = _match();
+            bool on = match.ShadowPending ?? match.Shadow;
+            items.Add(new(new DipRect(rx + 127, 308 + 3 * 35, 121, 33), TdUiKind.Button, on ? "Sombra ligada" : "Modo sombra", TdUiAction.ShadowToggle, Icon: TdIcon.Moon, Selected: on,
+                Enabled: match.Phase is MatchPhase.Preparo or MatchPhase.Onda, Tip: "Farme sem perder nem ganhar XP; recompensas permanentes em 35%. Entra e sai entre ondas.", SArg: "shadow-tile"));
+            items.Add(new(new DipRect(rx + 254, 308 + 3 * 35, 121, 33), TdUiKind.Button, "Configurações", TdUiAction.SettingsOpen, Icon: TdIcon.Gear, SArg: "cfg-link"));
+        }
         int ab = 0;
         foreach (var it in src)
         {

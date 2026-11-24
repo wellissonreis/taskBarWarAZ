@@ -689,6 +689,10 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
 
     /// <summary>Atalho global: cicla só as velocidades habilitadas.</summary>
     public void CycleSpeed() { controller.CycleSpeed(); Kick(); }
+
+    /// <summary>Atalho global: liga/desliga o modo sombra.</summary>
+    public void ToggleShadow() { controller.ToggleShadow(); Kick(); }
+    int ITdUiHost.ShadowSeals => td.Recorder.ShadowSealsSession;
     int ITdUiHost.LegacyTotal => td.Recorder.LegacyTotal;
     int ITdUiHost.PreviousLegacyTotal => td.Recorder.PreviousLegacyTotal;
     int ITdUiHost.PreviousBestRunWaves => td.Recorder.PreviousBestRunWaves;

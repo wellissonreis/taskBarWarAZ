@@ -94,6 +94,7 @@ internal sealed class TdComposition
     {
         _options = settings.Td.ContinuousWaves ? TdMatchOptions.Default : TdMatchOptions.Classic;
         Host.ExtraSpeeds = settings.Td.ExtraSpeeds;
+        Host.ShadowOnAbsent = settings.Td.ShadowOnAbsent;
         Host.GameSpeed = settings.Td.GameSpeed;
         Host.Alerts.Settings.Enabled = settings.Td.AlertsEnabled;
         Host.Alerts.Settings.AutoPause = settings.Td.AlertsAutoPause;

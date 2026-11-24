@@ -61,6 +61,38 @@ public sealed class TdGameHostTests
         Assert.All(r2.Host.Match.Towers, t => Assert.True(t.Placed));
     }
 
+    private sealed class FakePresence : ITdPresence { public bool IsPresent { get; set; } = true; }
+
+    [Fact]
+    public void Absence_enters_shadow_only_when_the_option_is_on_and_shadow_runs_in_preparo_by_itself()
+    {
+        var away = new FakePresence { IsPresent = false };
+        var off = new Rig(input: away);
+        off.Tower();
+        off.Host.OnCommand(new StartWave());
+        off.Wake();
+        Assert.Null(off.Match.ShadowPending);
+        Assert.False(off.Match.Shadow);
+
+        var away2 = new FakePresence { IsPresent = false };
+        var on = new Rig(input: away2);
+        on.Host.ShadowOnAbsent = true;
+        on.Tower();
+        on.Host.OnCommand(new StartWave());
+        on.Wake();
+        Assert.Equal(true, on.Match.ShadowPending); // pedido pendente até a fronteira entre ondas
+        Assert.False(on.Match.Present);
+
+        // em sombra, o Preparo segue sozinho (o host continua dando Steps sem ação do jogador)
+        var preparo = new Rig(match: TdMatchState.Create(Content, 1, Rng.Seed(5, 54), null, TdMatchOptions.Default with { ContinuousWaves = false }));
+        preparo.Tower();
+        preparo.Host.OnCommand(new SetShadow(true));
+        preparo.Wake();
+        long before = preparo.Host.StepsExecuted;
+        preparo.Run(2);
+        Assert.True(preparo.Host.StepsExecuted > before);
+    }
+
     private sealed class Rig
     {
         public readonly FakeClock Clock = new();

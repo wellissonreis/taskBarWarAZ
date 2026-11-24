@@ -172,16 +172,16 @@ public sealed class TdUiControllerTests
         Assert.Equal("Ctrl+Alt+K", r.Host.Settings.TogglePause);
         Assert.Equal("Ctrl+Alt+K", Pick(r.Ui.BuildPopover()!, TdUiAction.SettingHotkey, "hk:pause").Right);
 
-        r.Ui.Activate(Pick(r.Ui.BuildPopover()!, TdUiAction.SettingHotkey, "hk:wave"));
+        r.Ui.Activate(Reveal(r, TdUiAction.SettingHotkey, "hk:wave"));
         r.Ui.CaptureHotkey(27, false, false, false, false); // Esc cancela
         Assert.False(r.Ui.CapturingHotkey);
         Assert.Equal("Ctrl+Alt+Space", r.Host.Settings.StartWave);
-        r.Ui.Activate(Pick(r.Ui.BuildPopover()!, TdUiAction.SettingHotkey, "hk:wave"));
+        r.Ui.Activate(Reveal(r, TdUiAction.SettingHotkey, "hk:wave"));
         r.Ui.Cancel();
         Assert.False(r.Ui.CapturingHotkey);
         Assert.Equal(TdUiMode.Settings, r.Ui.Mode);
 
-        r.Ui.Activate(Pick(r.Ui.BuildPopover()!, TdUiAction.SettingsRestoreHotkeys));
+        r.Ui.Activate(Reveal(r, TdUiAction.SettingsRestoreHotkeys, "cfg-button"));
         Assert.Equal("Ctrl+Alt+P", r.Host.Settings.TogglePause);
     }
 
@@ -196,6 +196,68 @@ public sealed class TdUiControllerTests
         r.Ui.Activate(Pick(r.Ui.BuildPopover()!, TdUiAction.SettingsSection, arg: 4));
         r.Ui.Activate(Pick(r.Ui.BuildPopover()!, TdUiAction.SettingToggle, "motion"));
         Assert.True(r.Host.Settings.ReducedMotion);
+    }
+
+    [Fact]
+    public void Shadow_button_in_hud_jogo_tab_and_settings_toggle_the_mode_and_the_hud_shows_it()
+    {
+        var r = new Rig();
+        r.Ui.Sync();
+        var hud = r.Ui.BuildHud();
+        var btn = hud.Items.Single(i => i.Action == TdUiAction.ShadowToggle);
+        Assert.Equal("Modo sombra", btn.Text);
+        Assert.False(hud.Shadow);
+        r.Ui.Activate(btn);
+        Assert.True(r.Match.Shadow); // Preparo: entra na hora
+        hud = r.Ui.BuildHud();
+        Assert.True(hud.Shadow);
+        Assert.Equal("Sombra ligada", hud.Items.Single(i => i.Action == TdUiAction.ShadowToggle).Text);
+        Assert.True(hud.Items.Single(i => i.Action == TdUiAction.ShadowToggle).Selected);
+
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
+        var tile = Pick(r.Ui.BuildPopover()!, TdUiAction.ShadowToggle, "shadow-tile");
+        Assert.True(tile.Selected);
+        r.Ui.Activate(tile);
+        Assert.False(r.Match.Shadow);
+        r.Ui.OpenSettingsView();
+        r.Ui.Activate(Reveal(r, TdUiAction.SettingToggle, "shadow"));
+        Assert.True(r.Match.Shadow);
+        r.Ui.Activate(Reveal(r, TdUiAction.SettingToggle, "shadowabsent"));
+        Assert.True(r.Host.Settings.ShadowOnAbsent);
+        r.Ui.OpenSettingsView(3);
+        Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.SArg == "hk:shadow");
+    }
+
+    [Fact]
+    public void Leaving_shadow_in_the_middle_of_a_wave_shows_pending_label_and_waits()
+    {
+        var r = new Rig();
+        typeof(TdMatchState).GetProperty("Credits")!.SetValue(r.Match, 5000L);
+        r.Match.Apply(new SideWar.Core.Td.BuildTower("bolt", 150));
+        r.Ui.Sync();
+        r.Ui.ToggleShadow();
+        r.Match.Apply(new StartWave());
+        r.Ui.ToggleShadow();
+        Assert.True(r.Match.Shadow);
+        Assert.Equal(false, r.Match.ShadowPending);
+        Assert.Equal("Saindo…", r.Ui.BuildHud().Items.Single(i => i.Action == TdUiAction.ShadowToggle).Text);
+    }
+
+    [Fact]
+    public void Returning_from_an_absence_in_shadow_shows_a_discreet_summary()
+    {
+        var r = new Rig();
+        typeof(TdMatchState).GetProperty("Credits")!.SetValue(r.Match, 5000L);
+        r.Match.Apply(new SideWar.Core.Td.BuildTower("bolt", 150));
+        r.Match.Apply(new SetShadow(true));
+        r.Match.Apply(new SetPresence(false));
+        r.Ui.Sync();
+        typeof(TdMatchState).GetProperty("ShadowFragments")!.SetValue(r.Match, 7L);
+        typeof(TdMatchState).GetProperty("ShadowWaves")!.SetValue(r.Match, 12);
+        r.Match.Apply(new SetPresence(true));
+        r.Ui.Sync();
+        Assert.True(r.Ui.NoticeOpen);
+        Assert.Equal("Fora: +7 frag · +0 selos · 12 ondas", r.Ui.NoticeText);
     }
 
     [Fact]

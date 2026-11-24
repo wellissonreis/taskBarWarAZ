@@ -304,7 +304,8 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             // Só no modo TD (no idle a tecla não é registrada).
             [HotkeyAction.StartWave] = settings.Hotkeys.StartWave,
             [HotkeyAction.CycleSpeed] = settings.Hotkeys.CycleSpeed,
-        }.Where(kv => td is not null || kv.Key is not (HotkeyAction.StartWave or HotkeyAction.CycleSpeed)).ToDictionary());
+            [HotkeyAction.ToggleShadow] = settings.Hotkeys.ToggleShadow,
+        }.Where(kv => td is not null || kv.Key is not (HotkeyAction.StartWave or HotkeyAction.CycleSpeed or HotkeyAction.ToggleShadow)).ToDictionary());
         hotkeys.Conflict += (_, message) => log(message);
         hotkeys.Register();
         res.Started("hotkeys", hotkeys.Dispose); // UnregisterHotKey
@@ -488,6 +489,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
                     HotkeyAction.ToggleVisibility => AppCommandKind.ToggleVisibility,
                     HotkeyAction.StartWave => AppCommandKind.StartWave,
                     HotkeyAction.CycleSpeed => AppCommandKind.CycleSpeed,
+                    HotkeyAction.ToggleShadow => AppCommandKind.ToggleShadow,
                     HotkeyAction.CancelBuild => AppCommandKind.CancelBuild,
                     _ => AppCommandKind.TogglePause,
                 });
@@ -517,6 +519,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             case AppCommandKind.HowToPlay: tdUi?.OpenHowTo(); break;
             case AppCommandKind.OpenSettings: tdUi?.OpenSettingsMenu(); break;
             case AppCommandKind.CycleSpeed: tdUi?.CycleSpeed(); break;
+            case AppCommandKind.ToggleShadow: tdUi?.ToggleShadow(); break;
             case AppCommandKind.CancelBuild: tdUi?.Controller.Cancel(); break;
             case AppCommandKind.SelectMonitor: SelectMonitor(monitorIndex); break;
             case AppCommandKind.ShowAndInteract:

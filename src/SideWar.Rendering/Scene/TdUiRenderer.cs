@@ -83,6 +83,12 @@ public sealed partial class TdUiRenderer(Typography typography, int dpi, SpriteA
     {
         c.Clear(SKColors.Transparent);
         float s = hud.LayoutScale;
+        if (hud.Shadow)
+        {
+            // Modo sombra: HUD dessaturada e um pouco mais escura (indicador discreto e permanente).
+            using var fade = new SKPaint { ColorFilter = SKColorFilter.CreateColorMatrix(ShadowMatrix) };
+            c.SaveLayer(fade);
+        }
         c.Save();
         c.Scale(s);
         hud = hud with { Width = hud.Width / s, Height = hud.Height / s, TopPad = hud.TopPad / s,
@@ -99,7 +105,16 @@ public sealed partial class TdUiRenderer(Typography typography, int dpi, SpriteA
             foreach (var it in hud.Items)
                 if (it.Kind == TdUiKind.Money) { DrawMoneyFloats(c, it.Rect, floats); break; }
         c.Restore();
+        if (hud.Shadow) c.Restore();
     }
+
+    private static readonly float[] ShadowMatrix =
+    [
+        0.55f, 0.35f, 0.10f, 0, 0,
+        0.20f, 0.70f, 0.10f, 0, 0,
+        0.20f, 0.35f, 0.45f, 0, 0.03f,
+        0, 0, 0, 0.92f, 0,
+    ];
 
     // As barras do design cabem no chip existente e acompanham a onda exibida, sem ampliar o HUD.
     private void DrawWaveTicks(SKCanvas c, DipRect r, int wave, int total)
@@ -249,6 +264,14 @@ public sealed partial class TdUiRenderer(Typography typography, int dpi, SpriteA
             c.DrawCircle(_p.Px(r.X + 7), _p.Px(r.Y + 14), _p.Px(2.2f), coin);
             _p.Text(c, it.Text, PanelFont.JetBrainsMono, Math.Max(13, 11 / layoutScale), new DipRect(r.X + 20, r.Y + (it.Sub is null ? 3 : 1), r.W - 20, 20), Palette.Td.BrightText);
             if (it.Sub is not null) _p.Text(c, it.Sub, PanelFont.JetBrainsMono, 8, new DipRect(r.X + 20, r.Y + 17, r.W - 20, 10), Palette.Td.Muted);
+            return;
+        }
+        if (it.SArg == "shadow")
+        {
+            var edge = it.Selected ? Palette.Td.Amber : Palette.Td.BorderStrong;
+            RoundBox(c, r, edge, it.Selected ? Palette.Td.Amber.WithAlpha(36) : Palette.Td.Background, 6);
+            DrawIcon(c, TdIcon.Moon, r.X + 8, r.Y + (r.H - 14) / 2f, 14, it.Selected ? Palette.Td.Amber : Palette.Td.Muted);
+            _p.Text(c, it.Text, PanelFont.SpaceGrotesk, Math.Max(11, 11 / layoutScale), new DipRect(r.X + 26, r.Y + 4, r.W - 30, 20), it.Selected ? Palette.Td.AmberLight : it.Enabled ? Palette.Td.Muted : Palette.Td.Dim);
             return;
         }
         if (it.SArg == "speedeff") { _p.Text(c, it.Text, PanelFont.JetBrainsMono, 10, new DipRect(r.X, r.Y + 4, r.W, 14), Palette.Td.Amber); return; }

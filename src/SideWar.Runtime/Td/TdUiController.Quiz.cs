@@ -103,7 +103,7 @@ public sealed partial class TdUiController
         int key = QuizKey(m);
         if (_quizQ is null)
         {
-            if (!QuizEnabled) return;
+            if (!QuizEnabled || m.Shadow) return; // sombra: sem perguntas-bônus
             bool tutorial = TutorialOn(m) && !_quizExampleDone;
             bool due;
             if (tutorial) due = m.WaveNumber >= 1 && _quizWave != key && (m.Phase == MatchPhase.Preparo || m.Options.ContinuousWaves); // exemplo guiado do tutorial: logo após a 1ª onda

@@ -532,6 +532,7 @@ public sealed partial class TdUiController
         Card(TdIcon.Expand, "Arraste o cabeçalho para mover o menu.");
         Card(TdIcon.Pause, "Engrenagem: opções e velocidades.");
         Card(TdIcon.Minus, $"Esconder tudo: {_host.BossHotkey}.", TdTone.Accent);
+        Card(TdIcon.Alert, "Modo sombra: farma sem XP (35%).");
         Card(TdIcon.Alert, "Reiniciar mantém suas torres.");
         Card(TdIcon.Alert, "Recomeçar do zero apaga o progresso.");
         if (_onb is not null) s.Add(TdUiKind.Button, "Refazer tutorial", RowH + 2, TdUiAction.RedoTutorial, tone: TdTone.Good, icon: TdIcon.Play);

@@ -22,6 +22,8 @@ internal enum AppCommandKind
     OpenSettings,
     /// <summary>Atalho de velocidade (modo TD).</summary>
     CycleSpeed,
+    /// <summary>Atalho do modo sombra (modo TD).</summary>
+    ToggleShadow,
 }
 
 /// <summary>Comando do App (bandeja, instância única) postado à T-Game; interceptado antes da simulação.</summary>

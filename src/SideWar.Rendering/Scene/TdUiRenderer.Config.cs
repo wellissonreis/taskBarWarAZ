@@ -17,6 +17,14 @@ public sealed partial class TdUiRenderer
         float cy = r.Y + (r.H - 14) / 2f;
         switch (it.SArg)
         {
+            case "shadow-tile":
+            {
+                var edge = it.Selected ? Palette.Td.Amber : Palette.Td.EdgeSoft;
+                RoundBox(c, r, edge, it.Selected ? Palette.Td.Amber.WithAlpha(36) : hover && it.Enabled ? Palette.Td.BorderStrong : Palette.Td.Card, 6);
+                DrawIcon(c, TdIcon.Moon, r.X + 12, r.Y + (r.H - 14) / 2f, 14, it.Selected ? Palette.Td.Amber : Palette.Td.Muted);
+                _p.Text(c, it.Text, PanelFont.SpaceGrotesk, 11, new DipRect(r.X + 34, cy, r.W - 38, 14), it.Selected ? Palette.Td.AmberLight : Palette.Td.Text);
+                return true;
+            }
             case "cfg-gear":
                 DrawIcon(c, TdIcon.Gear, r.X + 10, r.Y + 10, 16, it.Selected ? Palette.Td.Amber : hover ? Palette.Td.Text : Palette.Td.Muted);
                 return true;

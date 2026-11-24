@@ -43,6 +43,8 @@ public enum TdUiAction : byte
     BestiarySelect, TutorialPrevious, RecenterRunes,
     /// <summary>Configurações dentro do menu: abrir pela engrenagem, trocar de seção, ligar/desligar, escolher opção, ajustar slider, capturar atalho e restaurar atalhos (SArg = chave).</summary>
     SettingsOpen, SettingsSection, SettingToggle, SettingChoice, SettingSlider, SettingHotkey, SettingsRestoreHotkeys,
+    /// <summary>Modo sombra: liga/desliga (HUD, aba Jogo, Configurações e atalho).</summary>
+    ShadowToggle,
 }
 
 /// <summary>Ícone do HUD desenhado por código (TD.14); o renderer mapeia para caminhos vetoriais.</summary>
@@ -55,6 +57,8 @@ public enum TdIcon : byte
     Castle, Pause,
     /// <summary>Engrenagem do cabeçalho do menu (abre as Configurações).</summary>
     Gear,
+    /// <summary>Modo sombra (lua).</summary>
+    Moon,
     /// <summary>TD.30c: estrela/runa (botão Runas do HUD).</summary>
     Star,
     Functions, Cosmos, Sentinel, Vault, Backup, Cdn, Queue, Policy, Aks, Pipeline,
@@ -124,7 +128,7 @@ public sealed record TdPopoverView(string Title, TdUiItem[] Items, float Width, 
 /// usa a escala configurada para o canto. <see cref="Minimized"/> = chip pequeno (núcleo e onda) no canto.
 /// </summary>
 public sealed record TdHudView(TdUiItem[] Items, float Width, float Height, bool Minimized = false, int Wave = 0, int TotalWaves = 0,
-    IReadOnlyList<TdMoneyFloat>? Floats = null, float TopPad = 0f, float LayoutScale = 1f)
+    IReadOnlyList<TdMoneyFloat>? Floats = null, float TopPad = 0f, float LayoutScale = 1f, bool Shadow = false)
 {
     /// <summary>Faixa transparente (DIP) acima do chip enquanto há "+N" visíveis (TD.33d); o fundo do HUD começa em <c>TopPad</c>.</summary>
     public const float FloatPad = 16f;
@@ -189,7 +193,7 @@ public sealed record TdHudView(TdUiItem[] Items, float Width, float Height, bool
         {
             h.Add(it.Text); h.Add(it.Right); h.Add(it.Sub); h.Add(it.Arg); h.Add(it.Enabled); h.Add(it.Selected); h.Add(it.Highlight); h.Add((int)it.Tone); h.Add((int)(it.Fill * 100)); h.Add((int)it.Icon); h.Add((int)it.RightIcon);
         }
-        h.Add(Minimized); h.Add(Wave); h.Add(TotalWaves); h.Add(TopPad);
+        h.Add(Minimized); h.Add(Wave); h.Add(TotalWaves); h.Add(TopPad); h.Add(Shadow);
         if (Floats is { Count: > 0 })
             foreach (var f in Floats) { h.Add(f.Text); h.Add((int)(f.Rise * 2f)); h.Add(f.Alpha / 16); }
         return h.ToHashCode();
@@ -241,6 +245,7 @@ public sealed record TdSettingsData
     public int CornerUiScale { get; init; } = 125;
     public int GameSpeed { get; init; } = 1;
     public bool ExtraSpeeds { get; init; }
+    public bool ShadowOnAbsent { get; init; }
     public int SpeedMask { get; init; } = TdSpeed.DefaultMask;
     public int NoticeSize { get; init; } = 1;
     public bool Sound { get; init; }
@@ -263,6 +268,7 @@ public sealed record TdSettingsData
     public string TogglePause { get; init; } = "Ctrl+Alt+P";
     public string StartWave { get; init; } = "Ctrl+Alt+Space";
     public string CycleSpeed { get; init; } = "Ctrl+Alt+V";
+    public string ToggleShadow { get; init; } = "Ctrl+Alt+S";
 }
 
 public interface ITdUiHost
@@ -273,6 +279,8 @@ public interface ITdUiHost
     /// <summary>Consulta (assíncrona) o estado de "Iniciar com o Windows" ao abrir a vista Configurações.</summary>
     void RefreshStartup() { }
     TdGameOptions GameOptions => new();
+    /// <summary>Selos ganhos em sombra na sessão (resumo da ausência).</summary>
+    int ShadowSeals => 0;
     /// <summary>Velocidade efetiva real (Steps por tick); abaixo da pedida quando o teto de tempo por frame corta.</summary>
     double EffectiveSpeed => 1;
     int LegacyTotal => 0;

@@ -135,6 +135,10 @@ internal static class TdIconPainter
             }
             case TdIcon.Check:
                 c.DrawLine(P(2.5f, 8.5f), P(6.5f, 12.5f), line); c.DrawLine(P(6.5f, 12.5f), P(13.5f, 3.5f), line); break;
+            case TdIcon.Moon: // lua: arco grosso com abertura à direita + ponto (estrela)
+                line.StrokeWidth = Math.Max(line.StrokeWidth, 2.2f * u);
+                c.DrawArc(SKRect.Create(P(3, 3).X, P(3, 3).Y, 10 * u, 10 * u), 50f, 270f, false, line);
+                c.DrawCircle(P(11.5f, 4.5f), 1f * u, fill); break;
             case TdIcon.Gear: // engrenagem: anel central e 8 dentes
                 c.DrawCircle(P(8, 8), 4.2f * u, line); c.DrawCircle(P(8, 8), 1.6f * u, line);
                 for (int t = 0; t < 8; t++)

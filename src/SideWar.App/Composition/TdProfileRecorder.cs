@@ -40,9 +40,13 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
 
     /// <summary>Opções da próxima partida com a teia permanente do perfil (só fora do modo clássico).</summary>
     public TdMatchOptions WithRunes(TdMatchOptions options) =>
-        options.PersistentRun ? options with { InitialAwakened = RuneBits, InitialFragments = RuneFragments, InitialReputation = Profile.Reputation } : options with { InitialAwakened = default, InitialFragments = 0, InitialReputation = Profile.Reputation };
+        options.PersistentRun ? options with { InitialAwakened = RuneBits, InitialFragments = RuneFragments, InitialReputation = Profile.Reputation, InitialShadow = Profile.Shadow } : options with { InitialAwakened = default, InitialFragments = 0, InitialReputation = Profile.Reputation };
 
     private bool _runesDirty;
+
+    /// <summary>Selos e ondas ganhos em sombra nesta sessão (resumo "enquanto você estava fora").</summary>
+    public int ShadowSealsSession { get; private set; }
+    public int ShadowWavesSession { get; private set; }
 
     /// <summary>Copia a teia e os fragmentos da partida para o perfil (em memória); só em partidas persistentes. </summary>
     private void SyncRunes(TdMatchState match)
@@ -127,10 +131,19 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
         for (int i = 0; i < events.Count; i++) if (events[i].Type == TdEventType.StageCleared) clearsInBatch++;
         int stageAt = match.StageNumber;
         for (int i = 0; i < events.Count; i++) if (events[i].Type == TdEventType.StageCleared) { stageAt = (int)events[i].A; break; }
+        bool shadow = Profile.Shadow; // em sombra: sem recordes, estrelas/coroas nem registro de fase (só a progressão da corrida e o que o Core já reduziu)
         for (int i = 0; i < events.Count; i++)
         {
+            if (events[i].Type == TdEventType.ShadowChanged)
+            {
+                shadow = events[i].A == 1;
+                Profile = Profile with { Shadow = shadow };
+                Save();
+                continue;
+            }
             if (events[i].Type == TdEventType.WaveCompleted)
             {
+                if (shadow) { ShadowWavesSession++; continue; }
                 var best = TdProfileRules.RecordBest(Profile, stageAt, (int)events[i].A);
                 if (!ReferenceEquals(best, Profile)) { Profile = best; _repDirty = true; }
                 continue;
@@ -149,6 +162,14 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
             for (int j = match.StageResults.Count - 1; j >= 0; j--)
                 if (match.StageResults[j].StageNumber == events[i].A) { found = match.StageResults[j]; break; }
             if (found is not { } sr) continue;
+            if (shadow)
+            {
+                Profile = TdProfileRules.RecordShadowCycleStage(Profile, sr.Cycle, out int shadowSeals);
+                ShadowSealsSession += shadowSeals;
+                stageAt = match.StageNumber;
+                Save();
+                continue;
+            }
             var result = new TdMatchResult(MatchPhase.Vitoria, sr.Stars, sr.IntegrityLost, sr.Crown, sr.Medals, sr.Score);
             Profile = TdProfileRules.RecordMatch(Profile, _meta, sr.StageId, result, _stageCount, out var outcome);
             Profile = TdProfileRules.RecordCycleStage(Profile, sr.Cycle); // ciclo 2+: a recompensa em selos continua
@@ -159,7 +180,7 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
         if (clearsInBatch > 0)
         {
             Profile = TdProfileRules.SetRunStage(Profile, match.StageNumber);
-            Profile = TdProfileRules.RecordBest(Profile, match.StageNumber, 0);
+            if (!shadow) Profile = TdProfileRules.RecordBest(Profile, match.StageNumber, 0);
             Save();
         }
     }
@@ -226,6 +247,7 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
     {
         SyncRunes(match);
         FlushReputation();
+        if (match.Shadow) { Save(); return; } // sombra: não registra recorde, estrelas nem coroa
         Profile = TdProfileRules.RecordMatch(Profile, _meta, match.StageId, result, _stageCount, out var outcome);
         LastOutcome = outcome;
         Save();

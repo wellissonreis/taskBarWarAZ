@@ -67,6 +67,15 @@ public sealed partial class TdUiController
     /// <summary>Velocidades do seletor: 1x/2x/3x e, com "Velocidades extras" ligadas, as escolhidas pelo usuário.</summary>
     private int[] AllowedSpeeds => TdSpeed.Allowed(_host.GameOptions.ExtraSpeeds, _host.GameOptions.SpeedMask);
 
+    /// <summary>Liga/desliga o modo sombra (botão, Configurações e atalho). Entra/sai entre ondas: em Onda o pedido fica pendente.</summary>
+    public void ToggleShadow()
+    {
+        var m = _match();
+        if (m.Phase is not (MatchPhase.Preparo or MatchPhase.Onda)) return;
+        _send(new SetShadow(!(m.ShadowPending ?? m.Shadow)));
+        Changed?.Invoke();
+    }
+
     /// <summary>Atalho de teclado: cicla só as velocidades habilitadas.</summary>
     public void CycleSpeed()
     {
@@ -407,6 +416,7 @@ public sealed partial class TdUiController
                 _host.SetGameOptions(next);
                 Changed?.Invoke(); break;
             }
+            case TdUiAction.ShadowToggle: ToggleShadow(); break;
             case TdUiAction.AutoStartToggle:
                 _send(new SetAutoStart(_match().AutoStart == AutoStartMode.Off ? AutoStartMode.Countdown : AutoStartMode.Off, 15));
                 Changed?.Invoke(); break;
@@ -451,6 +461,7 @@ public sealed partial class TdUiController
             _lastMatch = m;
             _seenStages = m.StageResults.Count;
             _restartArmed = false;
+            _awayActive = false;
             _restartRemaining = 0;
             _returnToEnd = false;
             _noticeText = null;
@@ -481,6 +492,7 @@ public sealed partial class TdUiController
         SyncAlertCard();
         SyncFuse(m);
         SyncMutationWarn(m);
+        SyncShadowAway(m);
         UpdateModalPause();
         if (m.Phase is MatchPhase.Vitoria)
         {
@@ -685,7 +697,7 @@ public sealed partial class TdUiController
             _seenStages = n;
             if (BossHidden) return;
             var r = m.StageResults[^1];
-            var o = _host.LastOutcome;
+            var o = m.Shadow ? default : _host.LastOutcome; // sombra: sem recorde/selos de fase
             _noticeTitle = null;
             _noticeRank = null;
             _noticeText = $"Fase {r.StageNumber}" + (r.Crown ? " +coroa" : "") + (o.NewRecord ? " +recorde" : "");
@@ -849,7 +861,9 @@ public sealed partial class TdUiController
 
     // ================================================================ HUD
 
-    public TdHudView BuildHud()
+    public TdHudView BuildHud() => BuildHudCore() with { Shadow = _match().Shadow };
+
+    private TdHudView BuildHudCore()
     {
         var m = _match();
         var items = new List<TdUiItem>(14);
@@ -934,7 +948,11 @@ public sealed partial class TdUiController
         if (_host.GameOptions.ExtraSpeeds)
             Add(496 + grow + allowed.Length * 32, 9, 44, 22, TdUiKind.Label, slow ? $"≈{effective.ToString("0", System.Globalization.CultureInfo.InvariantCulture)}x" : "", tag: "speedeff", tip: "Velocidade efetiva real (abaixo da pedida: o PC não acompanha)");
         // O TD não tem caixa coletável desde TD.30a; a ação permanece desabilitada.
-        Add(604 + grow + speedExtra, 6, 135, 28, TdUiKind.Button, "Coletar caixa", tag: "crate", enabled: false, tip: "Nenhuma caixa disponível no modo TD.");
+        bool shadowOn = m.Shadow, shadowPending = m.ShadowPending is not null;
+        Add(604 + grow + speedExtra, 6, 135, 28, TdUiKind.Button, shadowPending ? (shadowOn ? "Saindo…" : "Entrando…") : shadowOn ? "Sombra ligada" : "Modo sombra", TdUiAction.ShadowToggle,
+            tag: "shadow", enabled: live, selected: shadowOn, icon: TdIcon.Moon,
+            tip: shadowOn ? "Modo sombra ligado: XP congelado, recompensas permanentes em 35%. Clique para sair (vale entre ondas)."
+                : "Modo sombra: farme sem perder nem ganhar XP (recompensas permanentes em 35%). Entra entre ondas.");
         Add(745 + grow + speedExtra, 6, 28, 28, TdUiKind.Button, "", TdUiAction.HudMinimize, icon: TdIcon.Collapse, tip: "Recolher HUD");
         return CompactHud(AddRankToHud(new TdHudView(HighlightHud(items), offset + 779 + grow + speedExtra, 40 + y0, Minimized: false, Wave: shown, TotalWaves: m.TotalWaves, Floats: _money.Floats, TopPad: y0)), 0.7f);
     }

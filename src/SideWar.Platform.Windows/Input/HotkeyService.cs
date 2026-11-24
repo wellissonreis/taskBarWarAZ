@@ -20,7 +20,7 @@ public sealed class HotkeyService : IDisposable
     private const int FirstId = 0x5701;
     internal static int IdFor(HotkeyAction action) => FirstId + (int)action;
     private static readonly HotkeyAction[] BaseActions = [HotkeyAction.ToggleInteractive, HotkeyAction.ToggleVisibility, HotkeyAction.TogglePause];
-    private const int ActionCount = 6;
+    private const int ActionCount = 7;
 
     private readonly GameThread owner;
     private readonly SceneWindow scene;
@@ -47,6 +47,7 @@ public sealed class HotkeyService : IDisposable
         var actions = new List<HotkeyAction>(BaseActions);
         if (bindings is not null && bindings.ContainsKey(HotkeyAction.StartWave)) actions.Add(HotkeyAction.StartWave);
         if (bindings is not null && bindings.ContainsKey(HotkeyAction.CycleSpeed)) actions.Add(HotkeyAction.CycleSpeed);
+        if (bindings is not null && bindings.ContainsKey(HotkeyAction.ToggleShadow)) actions.Add(HotkeyAction.ToggleShadow);
         Actions = [.. actions];
         foreach (var a in Actions)
             text[(int)a] = bindings is not null && bindings.TryGetValue(a, out var t) ? t : Describe(a);
@@ -64,6 +65,7 @@ public sealed class HotkeyService : IDisposable
         HotkeyAction.StartWave => "Ctrl+Alt+Space",
         HotkeyAction.CancelBuild => "Esc",
         HotkeyAction.CycleSpeed => "Ctrl+Alt+V",
+        HotkeyAction.ToggleShadow => "Ctrl+Alt+S",
         _ => throw new ArgumentOutOfRangeException(nameof(action)),
     };
 

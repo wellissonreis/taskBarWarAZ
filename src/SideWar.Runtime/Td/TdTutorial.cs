@@ -30,6 +30,7 @@ public sealed class TdTutorial(ITdOnboardingStore store)
         new(TdUiMode.Menu, "Use a boss key para esconder tudo.", "O atalho aparece em Como jogar.", TdIcon.Minus, "rank-chip"),
         new(TdUiMode.Menu, "Use habilidades quando estiverem prontas.", "Elas ajudam a defender durante as ondas.", TdIcon.Scale, TargetAction: TdUiAction.ResumeAbility),
         new(TdUiMode.Menu, "Perguntas bônus podem render recompensas.", "Ative ou desative as perguntas em Jogo.", TdIcon.Question, TargetAction: TdUiAction.GameOption, TargetArg: 4),
+        new(TdUiMode.Menu, "Modo sombra farma sem arriscar XP.", "Recompensas permanentes a 35%; fica na HUD e em Jogo.", TdIcon.Moon, HudTarget: TdUiAction.ShadowToggle),
         new(TdUiMode.Menu, "Recomeçar do zero apaga o progresso.", "A opção fica em Jogo e pede confirmação.", TdIcon.Alert, TargetAction: TdUiAction.WipePrompt),
         new(TdUiMode.Bestiary, "Conheça os inimigos no bestiário.", "Confira características e fraquezas.", TdIcon.Target, TargetAction: TdUiAction.ModalTab, TargetArg: (int)TdUiMode.Bestiary),
         new(TdUiMode.Help, "Consulte Como jogar quando quiser.", "Use Refazer tutorial para rever estes passos.", TdIcon.Question, TargetAction: TdUiAction.ModalTab, TargetArg: (int)TdUiMode.Help),

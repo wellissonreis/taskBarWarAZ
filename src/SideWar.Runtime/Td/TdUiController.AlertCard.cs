@@ -20,7 +20,7 @@ public sealed partial class TdUiController
     private TdAlertGuard? AlertGuard => _host.Alerts;
 
     /// <summary>Alerta crítico retido (a partida espera a escolha do jogador): nunca recolhe sozinho nem ao clicar fora.</summary>
-    public bool AlertCritical => !BossHidden && !ModalOpen && AlertGuard is { Holding: true, HoldAlert: not null } && AlertPhaseOk(_match());
+    public bool AlertCritical => !BossHidden && !ModalOpen && AlertGuard is { Holding: true, HoldAlert: not null } && !_match().Shadow && AlertPhaseOk(_match());
 
     /// <summary>Cartão de alerta em exibição (crítico ou aviso/dica ainda dentro do tempo).</summary>
     public bool AlertCardOpen => AlertCritical || AlertWarningOpen;
@@ -29,7 +29,7 @@ public sealed partial class TdUiController
     {
         get
         {
-            if (BossHidden || _acHidden || ModalOpen || BuildActive || AlertGuard is not { Holding: false, Current: not null } g) return false;
+            if (BossHidden || _acHidden || ModalOpen || BuildActive || _match().Shadow || AlertGuard is not { Holding: false, Current: not null } g) return false;
             return AlertPhaseOk(_match()) && g.Raised == _acRaised && _now() < _acUntil && (Mode == TdUiMode.None || QuickTowersOpen);
         }
     }

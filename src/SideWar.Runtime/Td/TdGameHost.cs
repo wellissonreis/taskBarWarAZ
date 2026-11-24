@@ -73,6 +73,9 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
     /// <summary>Velocidades extras (acima de 3x e "Máx") habilitadas; sem isso a velocidade fica limitada a 3x.</summary>
     public bool ExtraSpeeds { get; set; }
 
+    /// <summary>Entra em modo sombra sozinho ao ficar ausente (Configurações; desligado por padrão).</summary>
+    public bool ShadowOnAbsent { get; set; }
+
     /// <summary>Teto de tempo (ms) que os Steps de um frame podem consumir acima de 3x e em "Máx": protege a UI e o PC. Os Steps que não couberem não são executados (a velocidade efetiva cai).</summary>
     public double FrameBudgetMs { get; set; } = 8.0;
 
@@ -109,9 +112,9 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
 
     /// <summary>Precisa de Step: Onda, ou Preparo com a contagem de auto-início ligada (senão 0 fps).</summary>
     private bool NeedsSteps => Match.Phase == MatchPhase.Onda
-        || (Match.Phase == MatchPhase.Preparo && Match.AutoStart == AutoStartMode.Countdown);
+        || (Match.Phase == MatchPhase.Preparo && (Match.AutoStart == AutoStartMode.Countdown || Match.Shadow));
 
-    private bool Running => !IsShutdown && _app.SimulationRunning && !Match.Paused && !_guard.Holding && NeedsSteps;
+    private bool Running => !IsShutdown && _app.SimulationRunning && !Match.Paused && (Match.Shadow || !_guard.Holding) && NeedsSteps;
 
     public long? NextDeadline
     {
@@ -181,7 +184,7 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
         int seenEvents = Match.Events.Count;
         for (long i = 0; i < steps && NeedsSteps; i++)
         {
-            if (running && _guard.Blocks(Match)) break; // protege ANTES de cada Step (lotes 2x/3x incluídos)
+            if (running && !Match.Shadow && _guard.Blocks(Match)) break; // protege ANTES de cada Step (lotes 2x/3x incluídos)
             Match.Step();
             StepsExecuted++;
             done++;
@@ -194,7 +197,7 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
             if (important || BudgetClockMs() - started >= FrameBudgetMs) break;
         }
         if (ticks > 0) EffectiveSpeed = done / (double)ticks;
-        if (running && Match.Phase == MatchPhase.Onda) _guard.Evaluate(Match);
+        if (running && Match.Phase == MatchPhase.Onda && !Match.Shadow) _guard.Evaluate(Match); // sombra: sem alertas nem pausa de proteção
         _lastWake = now;
         _started = true;
 
@@ -229,6 +232,7 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
         if (_presence is null || !_app.SimulationRunning || Match.Phase != MatchPhase.Onda) return;
         bool present = _presence.IsPresent;
         if (present != Match.Present) Apply(new SetPresence(present));
+        if (ShadowOnAbsent && !present && !Match.Shadow && Match.ShadowPending != true) Apply(new SetShadow(true));
     }
 
     private void DrainCommands()
