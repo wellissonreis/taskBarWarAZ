@@ -32,6 +32,35 @@ public sealed class TdGameHostTests
         Assert.Equal(1, r.Obs.Abandoned);
     }
 
+    [Fact]
+    public void Restart_with_carried_towers_keeps_them_and_places_the_reserve_on_the_first_layout()
+    {
+        var old = TdMatchState.Create(Content, 1, Rng.Seed(1, 54), null, TdMatchOptions.Default);
+        var layout = new SideWar.Core.Td.LayoutChanged(TdSanityBot.TypicalLayout());
+        old.Apply(layout);
+        typeof(TdMatchState).GetProperty("Credits")!.SetValue(old, 5000L);
+        old.Apply(new BuildTower("bolt", 150));
+        old.Apply(new BuildTower("bolt", 250));
+        var r = new Rig(match: old);
+        r.Host.OnCommand(layout);
+        r.Wake();
+        var next = TdMatchState.Create(Content, 2, Rng.Seed(2, 54), null, TdMatchOptions.Default);
+        Assert.Equal(2, next.ImportTowers(old.ExportTowers()));
+        r.Host.Restart(next, carriedTowers: true);
+        Assert.Equal(old.ExportTowers(), r.Host.Match.ExportTowers());
+        Assert.All(r.Host.Match.Towers, t => Assert.True(t.Placed));
+
+        // sem layout conhecido: o auto-posicionamento espera o primeiro LayoutChanged
+        var fresh = TdMatchState.Create(Content, 1, Rng.Seed(3, 54), null, TdMatchOptions.Default);
+        Assert.Equal(2, fresh.ImportTowers(old.ExportTowers()));
+        var r2 = new Rig(match: fresh);
+        r2.Host.AutoPlaceOnNextLayout();
+        r2.Host.OnCommand(new SideWar.Core.Td.LayoutChanged(StripLayout.Create(1920, 1920, 0f, 0f, 1920, TowerHost.Taskbar, [new FreeZone(1300, 1800)])));
+        r2.Wake();
+        Assert.Equal(2, r2.Host.Match.Towers.Count);
+        Assert.All(r2.Host.Match.Towers, t => Assert.True(t.Placed));
+    }
+
     private sealed class Rig
     {
         public readonly FakeClock Clock = new();

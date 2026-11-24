@@ -117,6 +117,9 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
     public void OnEvents(TdMatchState match, IReadOnlyList<TdEvent> events)
     {
         SyncRunes(match);
+        for (int i = 0; i < events.Count; i++)
+            if (events[i].Type is TdEventType.TowerBuilt or TdEventType.TowerSold or TdEventType.TowerFused or TdEventType.TowerPlaced or TdEventType.TowerUnplaced or TdEventType.TowerTargeting or TdEventType.StageCleared)
+            { SaveTowers(match); break; }
         var encounters = TdProfileRules.RecordEncounters(Profile, match, events);
         if (!ReferenceEquals(encounters, Profile)) { Profile = encounters; Save(); }
         // Fase absoluta de cada onda do lote: o estado já avançou para a fase seguinte quando a última onda da fase foi concluída no mesmo passo.
@@ -171,6 +174,19 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
     public void SetRunStage(int stageNumber)
     {
         var next = TdProfileRules.SetRunStage(Profile, stageNumber);
+        if (ReferenceEquals(next, Profile)) return;
+        Profile = next;
+        Save();
+    }
+
+    /// <summary>Torres salvas da corrida (entregues à partida nova ao abrir o app, trocar de fase ou reiniciar a corrida).</summary>
+    public IReadOnlyList<TdTowerCarry> RunTowers => [.. Profile.RunTowers.Select(t => new TdTowerCarry(t.DefId, t.X, t.Placed, t.PurchasePrice, (byte)t.Targeting, t.ModuleDefId, t.ModulePrice))];
+
+    /// <summary>Grava as torres da partida no perfil (só se mudaram).</summary>
+    public void SaveTowers(TdMatchState match)
+    {
+        var next = TdProfileRules.SetRunTowers(Profile, [.. match.ExportTowers().Select(c => new TdRunTowerData
+            { DefId = c.DefId, X = c.X, Placed = c.Placed, PurchasePrice = c.PurchasePrice, Targeting = c.Targeting, ModuleDefId = c.ModuleDefId, ModulePrice = c.ModulePrice })]);
         if (ReferenceEquals(next, Profile)) return;
         Profile = next;
         Save();

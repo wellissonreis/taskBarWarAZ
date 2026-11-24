@@ -54,7 +54,9 @@ internal sealed class TdComposition
         int stage = recorder.ResumeStage();
         options = recorder.WithRunes(options) with { HighestCompletedStage = recorder.Profile.Stages.Where(s => s.Stars > 0).Select(s => s.StageId).DefaultIfEmpty(0).Max() };
         var match = TdMatchState.Create(content, stage, rng, recorder.Profile.PurchasedNodes, options);
+        bool restored = match.ImportTowers(recorder.RunTowers) > 0; // reabrir o app nunca apaga as torres
         var host = new TdGameHost(clock, app, match, recorder, presence);
+        if (restored) host.AutoPlaceOnNextLayout();
         var td = new TdComposition(host, recorder, content) { _options = options, _runSeed = runSeed, RunStartStage = stage };
         td.ApplySettings(settings);
         return td;
@@ -63,7 +65,7 @@ internal sealed class TdComposition
     public int StageCount => _content.Stages.Stages.Length;
 
     /// <summary>Cria uma corrida nova começando na fase (nós comprados incluídos) e a entrega ao host (reaplica o layout da barra).</summary>
-    public void StartStage(int stageId)
+    public void StartStage(int stageId, bool keepTowers = true)
     {
         stageId = Math.Clamp(stageId, 1, TdProfileSerializer.MaxWave); // número absoluto: > StageCount = ciclos do infinito
         int index = (stageId - 1) % StageCount;
@@ -73,14 +75,18 @@ internal sealed class TdComposition
         _runSeed = (ulong)DateTime.UtcNow.Ticks;
         RunStartStage = stageId;
         _options = Recorder.WithRunes(_options) with { HighestCompletedStage = Recorder.Profile.Stages.Where(s => s.Stars > 0).Select(s => s.StageId).DefaultIfEmpty(0).Max() };
-        Host.Restart(TdMatchState.Create(_content, stageId, Rng.Seed(_runSeed, 54UL), Recorder.Profile.PurchasedNodes, _options));
+        var next = TdMatchState.Create(_content, stageId, Rng.Seed(_runSeed, 54UL), Recorder.Profile.PurchasedNodes, _options);
+        // Trocar de fase, reiniciar a corrida e voltar por trava NUNCA apagam as torres: elas viajam com todo o estado (só "Recomeçar do zero" as limpa).
+        bool carried = keepTowers && next.ImportTowers(Host.Match.ExportTowers()) > 0;
+        Host.Restart(next, carried);
+        Recorder.SaveTowers(next);
     }
 
     /// <summary>"Recomeçar do zero": perfil zerado e gravado, depois corrida nova na fase 1 (runas e nós já vêm do perfil vazio).</summary>
     public void ResetProfile()
     {
         Recorder.ResetProgress();
-        StartStage(1);
+        StartStage(1, keepTowers: false);
     }
 
     /// <summary>Auto-início (padrão desligado; 5 a 60 s) e ondas contínuas (valem a partir da próxima corrida).</summary>

@@ -56,6 +56,38 @@ public sealed class TdCompositionTests : IDisposable
     }
 
     [Fact]
+    public void Towers_survive_stage_change_restart_reopen_and_only_the_wipe_clears_them()
+    {
+        Directory.CreateDirectory(dir);
+        var clock = new ManualClock();
+        var td = TdComposition.Create(dir, "0.1.0", VisibleApp(), clock, new AppSettings(), _ => { }, seed: 7);
+        td.Host.OnCommand(new SideWar.Core.Td.LayoutChanged(TdSanityBot.TypicalLayout()));
+        string id = td.Host.Match.Content.Towers.First(t => t.UnlockStage <= 1).Id;
+        td.Host.OnCommand(new SideWar.Core.Td.BuildTower(id, 150));
+        td.Host.OnCommand(new SideWar.Core.Td.BuildTower(id, 250));
+        td.Host.OnWake(clock);
+        Assert.Equal(2, td.Host.Match.Towers.Count);
+        var before = td.Host.Match.ExportTowers();
+        Assert.Equal(2, td.Recorder.Profile.RunTowers.Count); // gravadas no perfil já na construção
+
+        td.StartStage(2); // mapa: Jogar (a trava pode reduzir à fase 1; as torres vêm junto de qualquer forma)
+        Assert.Equal(before, td.Host.Match.ExportTowers());
+        Assert.All(td.Host.Match.Towers, t => Assert.True(t.Placed));
+        td.StartStage(td.RunStartStage); // Reiniciar corrida
+        Assert.Equal(before, td.Host.Match.ExportTowers());
+
+        var reopened = TdComposition.Create(dir, "0.1.0", VisibleApp(), clock, new AppSettings(), _ => { }, seed: 8);
+        Assert.Equal(2, reopened.Host.Match.Towers.Count);
+        reopened.Host.OnCommand(new SideWar.Core.Td.LayoutChanged(TdSanityBot.TypicalLayout()));
+        reopened.Host.OnWake(clock);
+        Assert.Equal(before, reopened.Host.Match.ExportTowers());
+
+        reopened.ResetProfile();
+        Assert.Empty(reopened.Host.Match.Towers);
+        Assert.Empty(reopened.Recorder.Profile.RunTowers);
+    }
+
+    [Fact]
     public void ResetProfile_wipes_progress_persists_it_and_starts_a_fresh_stage_1_match()
     {
         Directory.CreateDirectory(dir);

@@ -69,7 +69,7 @@ public sealed partial class TdUiController
                 case TdUiAction.RestartPrompt: items.Add(Put(it, lx, 410, 147, 32) with { Icon = TdIcon.Restore, SArg = "menu-action" }); break;
                 case TdUiAction.Restart: items.Add(Put(it, lx, 410, 71, 32) with { SArg = "menu-action" }); break;
                 case TdUiAction.RestartCancel: items.Add(Put(it, lx + 76, 410, 71, 32) with { SArg = "menu-action" }); break;
-                case TdUiAction.None when it.Text == "Reiniciar?": items.Add(Put(it, lx + 64, 352, 150, 14) with { SArg = "jg-warn", Tone = TdTone.Warn }); break;
+                case TdUiAction.None when it.Text == "Reiniciar? Torres ficam": items.Add(Put(it, lx + 64, 352, 150, 14) with { SArg = "jg-warn", Tone = TdTone.Warn }); break;
                 case TdUiAction.Exit: items.Add(Put(it, lx + 153, 410, 147, 32) with { SArg = "menu-action" }); break;
                 case TdUiAction.WipePrompt: items.Add(Put(it, 196, 350, 120, 18) with { FontSize = 10f }); break;
                 case TdUiAction.WipeConfirm: items.Add(Put(it, 196, 350, 58, 18) with { FontSize = 10f }); break;

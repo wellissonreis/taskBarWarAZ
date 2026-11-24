@@ -1782,7 +1782,7 @@ public sealed partial class TdUiController
         }
         if (_confirmRestart)
         {
-            s.Add(TdUiKind.Label, "Reiniciar?", RowH, tone: TdTone.Warn);
+            s.Add(TdUiKind.Label, "Reiniciar? Torres ficam", RowH, tone: TdTone.Warn);
             s.Add(TdUiKind.Button, "Sim", RowH, TdUiAction.Restart, tone: TdTone.Bad);
             s.Add(TdUiKind.Button, "Nao", RowH, TdUiAction.RestartCancel);
         }

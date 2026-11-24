@@ -139,10 +139,11 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
         OnCommand(new SetAutoStart(enabled ? AutoStartMode.Countdown : AutoStartMode.Off, Math.Clamp(seconds, 5, 60)));
 
     /// <summary>Troca a partida (nova fase/revanche). O log recomeça; o último layout da barra é reaplicado na nova partida.</summary>
-    public void Restart(TdMatchState next)
+    public void Restart(TdMatchState next, bool carriedTowers = false)
     {
         Match = next ?? throw new ArgumentNullException(nameof(next));
-        if (_lastLayout is not null) Match.Apply(_lastLayout);
+        if (_lastLayout is not null) { Match.Apply(_lastLayout); if (carriedTowers) Match.AutoPlaceReserve(); }
+        else _autoPlaceOnLayout = carriedTowers;
         _pending.Clear();
         _log.Clear();
         _endReported = false;
@@ -216,10 +217,16 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
         }
     }
 
+    private bool _autoPlaceOnLayout;
+
+    /// <summary>Torres carregadas de outra sessão/fase: no primeiro layout da barra, as que não couberem no lugar original vão ao ponto válido mais próximo.</summary>
+    public void AutoPlaceOnNextLayout() => _autoPlaceOnLayout = true;
+
     private void Apply(IGameCommand applied)
     {
         if (applied is SideWar.Core.Td.LayoutChanged layout) _lastLayout = layout;
         var result = Match.Apply(applied);
+        if (applied is SideWar.Core.Td.LayoutChanged && _autoPlaceOnLayout) { _autoPlaceOnLayout = false; Match.AutoPlaceReserve(); }
         int seq = _log.Count > 0 && _log[^1].Frame == Match.Frame ? _log[^1].Seq + 1 : 0;
         _log.Add(new TdLogEntry(Match.Frame, applied, seq));
         _results.Enqueue((applied, result));

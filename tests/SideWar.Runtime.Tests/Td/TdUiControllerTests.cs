@@ -656,7 +656,7 @@ public sealed class TdUiControllerTests
         var r = new Rig();
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
         r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.RestartPrompt));
-        Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Text == "Reiniciar?");
+        Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Text == "Reiniciar? Torres ficam");
         r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.RestartCancel));
         Assert.Empty(r.Host.Calls);
         r.Ui.Activate(Find(r.Ui.BuildPopover()!, TdUiAction.RestartPrompt));
