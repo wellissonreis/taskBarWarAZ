@@ -33,10 +33,10 @@ public sealed partial class TdUiController
         const float width = 250;
         var items = new List<TdUiItem>
         {
-            new(new DipRect(12, 12, 226, 26), TdUiKind.Label, $"Rebaixado a {TdRank.DisplayName(_demotionRank)}", Arg: (int)_demotionRank, SArg: "demotion-rank"),
-            new(new DipRect(12, 45, 226, 20), TdUiKind.Label, $"Faltam {_demotionMissingXp} XP para recuperar", Tone: TdTone.Dim),
-            new(new DipRect(12, 72, 226, 24), TdUiKind.Button, "Continuar", TdUiAction.DemotionContinue, Tone: TdTone.Accent),
+            new(new DipRect(12, 30, 226, 26), TdUiKind.Label, $"Rebaixado a {TdRank.DisplayName(_demotionRank)}", Arg: (int)_demotionRank, SArg: "demotion-rank"),
+            new(new DipRect(12, 63, 226, 20), TdUiKind.Label, $"Faltam {_demotionMissingXp} XP para recuperar", Tone: TdTone.Dim),
+            new(new DipRect(12, 90, 226, 24), TdUiKind.Button, "Continuar", TdUiAction.DemotionContinue, Tone: TdTone.Accent),
         };
-        return new TdPopoverView("Rebaixamento", [.. items], width, 108, 0f);
+        return new TdPopoverView("Rebaixamento", [.. items], width, 126, 0f);
     }
 }
