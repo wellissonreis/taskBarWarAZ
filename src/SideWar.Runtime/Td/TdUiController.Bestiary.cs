@@ -32,7 +32,9 @@ public sealed partial class TdUiController
         items.Add(new(new DipRect(432, 100, 272, 336), TdUiKind.Label, "", SArg: "best-panel"));
         if (count == 0)
         {
-            items.Add(new(new DipRect(460, 200, 216, 115), TdUiKind.Label, $"Aparece a partir da fase {selected.Stage}", Icon: TdIcon.Lock, SArg: "best-locked"));
+            int stage = _match().Content.Waves.Stages.Where(s => s.Waves.Any(w => w.Groups.Any(g => g.Enemy == selected.Id)))
+                .Select(s => s.Stage).DefaultIfEmpty(selected.Stage).Min();
+            items.Add(new(new DipRect(460, 200, 216, 115), TdUiKind.Label, $"Aparece a partir da fase {stage}", Icon: TdIcon.Lock, SArg: "best-locked"));
         }
         else
         {
@@ -75,7 +77,7 @@ public sealed partial class TdUiController
             string id = name switch
             {
                 "Raio" => "bolt", "Canhão" => "cannon", "Gelo" => "frost", "Fila" => "queue",
-                "Escudo" => "shield", "Front Door" => "frontdoor", "Scale Set" => "scaleset",
+                "Escudo" => "shield", "Front Door" => "frontdoor", "Scale Set" => "scaleset", "Balanceador" => "balancer",
                 "Functions" => "functions", "CDN" => "cdn", "Cosmos" => "cosmos", "WAF" => "waf",
                 "Sentinel" => "sentinel", "Policy" => "policy", "AKS" => "aks", _ => "",
             };

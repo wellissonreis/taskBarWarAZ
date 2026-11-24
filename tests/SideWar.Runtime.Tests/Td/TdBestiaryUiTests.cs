@@ -45,6 +45,9 @@ public sealed class TdBestiaryUiTests
         Assert.Contains(view.Items, i => i.Text == "Aparece a partir da fase 1" && i.SArg == "best-locked");
         Assert.All(view.Items.Where(i => i.Action == TdUiAction.BestiarySelect), i => Assert.Equal("???", i.Text));
         Assert.DoesNotContain(view.Items, i => i.SArg?.StartsWith("best-variant:", StringComparison.Ordinal) == true);
+        ui.Activate(new(default, TdUiKind.Button, "", TdUiAction.BestiarySelect, 4));
+        Assert.Contains(ui.BuildPopover()!.Items, i => i.Text == "Aparece a partir da fase 5");
+        ui.Activate(new(default, TdUiKind.Button, "", TdUiAction.BestiarySelect, 0));
         var tile = view.Items.First(i => i.Action == TdUiAction.BestiarySelect);
         ui.Hover(tile);
         view = ui.BuildPopover()!;
@@ -57,6 +60,9 @@ public sealed class TdBestiaryUiTests
         Assert.Equal(1, view.Items.Single(i => i.SArg == "best-variant:enxame_elite").Fill);
         ui.Hover(null);
         Assert.DoesNotContain(ui.BuildPopover()!.Items, i => i.SArg?.StartsWith("best-variant:", StringComparison.Ordinal) == true);
+        host.Seen["chefe_hydra"] = 1;
+        ui.Activate(new(default, TdUiKind.Button, "", TdUiAction.BestiarySelect, 13));
+        Assert.Contains(ui.BuildPopover()!.Items, i => i.SArg == "best-tower:balancer");
     }
     [Fact]
     public void Construir_offers_economy_and_scrolls_the_full_catalog()
