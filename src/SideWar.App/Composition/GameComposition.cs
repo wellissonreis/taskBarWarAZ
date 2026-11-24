@@ -132,6 +132,9 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
 
     /// <summary>Onboarding TD (TD.15), lido pela T-UI ao gravar as configurações.</summary>
     public SideWar.Runtime.Td.TdGameOptions? TdOptions => tdUi?.GameOptions;
+    /// <summary>Opções completas editadas no menu Configurações (lidas na T-UI ao gravar).</summary>
+    public SideWar.Runtime.Td.TdSettingsData? TdSettingsData => tdUi?.Settings;
+    public void SetStartup(StartupState state) => tdUi?.SetStartup(state);
 
     /// <summary>TD.40c: máscara de alertas silenciados (lida pela T-UI ao gravar as configurações).</summary>
     public int? TdAlertsMutedMask => tdUi?.AlertsMutedMask;
@@ -510,6 +513,7 @@ internal sealed class GameComposition : IAppEffectHandler, IDisposable
             case AppCommandKind.StartWave: td?.Host.RequestWave(); break;
             case AppCommandKind.ToggleHud: tdUi?.ToggleHud(); break;
             case AppCommandKind.HowToPlay: tdUi?.OpenHowTo(); break;
+            case AppCommandKind.OpenSettings: tdUi?.OpenSettingsMenu(); break;
             case AppCommandKind.CancelBuild: tdUi?.Controller.Cancel(); break;
             case AppCommandKind.SelectMonitor: SelectMonitor(monitorIndex); break;
             case AppCommandKind.ShowAndInteract:

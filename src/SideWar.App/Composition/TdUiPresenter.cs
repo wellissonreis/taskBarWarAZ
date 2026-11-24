@@ -41,6 +41,34 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     private volatile bool hudMinimized;
     private volatile TdGameOptions gameOptions = new();
     public TdGameOptions GameOptions => gameOptions;
+    private volatile TdSettingsData settingsData = new();
+    private StartupState startupState;
+    private SideWar.Persistence.Settings.AppSettings? lastSettings;
+    public TdSettingsData Settings => settingsData;
+
+    /// <summary>Aplica na hora a edição feita no menu Configurações (a gravação segue na T-UI, como as opções rápidas).</summary>
+    public void ApplySettings(TdSettingsData data)
+    {
+        settingsData = data;
+        gameOptions = new(data.BandHeight, data.AutoStart, data.Sound, data.Volume, data.BonusQuestions, data.FadeWhenUnfocused, data.ContinuousWaves, data.TowerPanelPinned,
+            data.GameSpeed, data.ShowIncome, data.DiscreetMode, data.AutoRestart, data.NoticeSize);
+        td.Host.GameSpeed = data.GameSpeed;
+        ui(UiRequest.SaveSettingsData);
+        Kick();
+    }
+
+    public void RefreshStartup() => ui(UiRequest.RefreshStartup);
+
+    /// <summary>Estado de "Iniciar com o Windows" vindo da T-UI.</summary>
+    public void SetStartup(StartupState state)
+    {
+        startupState = state;
+        if (lastSettings is not null) settingsData = TdSettingsMap.From(lastSettings, state);
+        Kick();
+    }
+
+    /// <summary>Bandeja/widget/engrenagem: abre o menu já na vista Configurações.</summary>
+    public void OpenSettingsMenu() { controller.OpenSettingsView(); Kick(); }
     public void SetGameOptions(TdGameOptions options)
     {
         gameOptions = options;
@@ -51,6 +79,8 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     {
         gameOptions = new(settings.Td.BandHeightDip, settings.Td.AutoStartEnabled, settings.Audio.Enabled, (int)Math.Round(settings.Audio.Volume * 100), settings.Td.BonusQuestions, settings.Td.FadeWhenUnfocused,
             settings.Td.ContinuousWaves, settings.Td.TowerPanelPinned, settings.Td.GameSpeed, settings.Td.ShowIncome, settings.Td.DiscreetMode, settings.Td.AutoRestart, settings.Td.NoticeSize);
+        lastSettings = settings;
+        settingsData = TdSettingsMap.From(settings, startupState);
         SetCornerUiScale(settings.Td.CornerUiScalePercent);
         modalOffsetX = dragBaseX = settings.Td.ModalOffsetX; modalOffsetY = dragBaseY = settings.Td.ModalOffsetY;
         bossHotkey = settings.Hotkeys.ToggleVisibility;
@@ -363,6 +393,13 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
 
     private void ModalKey(int key)
     {
+        if (controller.CapturingHotkey)
+        {
+            var (ctrl, alt, shift, win) = NativeKeys.Modifiers();
+            controller.CaptureHotkey(key, ctrl, alt, shift, win);
+            Refresh(true);
+            return;
+        }
         if (key == 27) { controller.Cancel(); return; }
         if ((controller.Mode == TdUiMode.Runes || controller.RuneWindowOpen) && key is 37 or 38 or 39 or 40 or 33 or 34 or 36 or 107 or 109 or 187 or 189)
         {
@@ -412,6 +449,8 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         var item = items[index];
         if (x is { } pointerX && item.Action == TdUiAction.GameOption && item.Arg == 3)
             controller.SetVolumeAt(item, pointerX);
+        else if (x is { } sliderX && item.Action == TdUiAction.SettingSlider)
+            controller.SetSettingAt(item, sliderX);
         else controller.Activate(item);
         Kick();
     }
@@ -657,7 +696,6 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
 
     public bool Paused => (runtime.App.PauseReasons & Runtime.Timing.PauseReason.User) != 0;
     public void TogglePause() => runtime.TogglePause();
-    public void OpenSettings() => ui(UiRequest.OpenSettings);
     public void RequestExit() => ui(UiRequest.Exit);
     public void ResetProfile() { td.ResetProfile(); driver.MarkDirty(); }
     bool ITdUiHost.HudMinimized => hudMinimized;

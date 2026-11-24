@@ -41,7 +41,6 @@ internal sealed class AppComposition : IDisposable
     private GameThread? game;
     private TrayIcon? tray;
     private ShutdownCoordinator? shutdown;
-    private SettingsWindow? settingsWindow;
     private AboutWindow? aboutWindow;
     private CancellationTokenSource? tooltipWait;
 
@@ -151,7 +150,6 @@ internal sealed class AppComposition : IDisposable
 
     private void CloseUi()
     {
-        settingsWindow?.Close();
         aboutWindow?.Close();
         foreach (var failure in uiResources.StopAll()) log(failure.ToString());
         instance?.Dispose(); // libera o mutex antes do Shutdown (RF-07.10 passo 4)
@@ -183,7 +181,7 @@ internal sealed class AppComposition : IDisposable
             case MenuCommandKind.TogglePause: PostGame(new AppCommand(AppCommandKind.TogglePause)); break;
             case MenuCommandKind.ToggleVisibility: PostGame(new AppCommand(AppCommandKind.ToggleVisibility)); break;
             case MenuCommandKind.SelectMonitor: PostGame(new AppCommand(AppCommandKind.SelectMonitor, command.MonitorIndex)); break;
-            case MenuCommandKind.OpenSettings: OpenSettings(previousForeground); break;
+            case MenuCommandKind.OpenSettings: OpenSettings(); break;
             case MenuCommandKind.OpenAbout: OpenAbout(previousForeground); break;
             case MenuCommandKind.Exit: RequestExit(); break;
         }
@@ -195,7 +193,9 @@ internal sealed class AppComposition : IDisposable
         nint previous = ForegroundRestorer.Capture();
         switch (request)
         {
-            case UiRequest.OpenSettings: OpenSettings(previous); break;
+            case UiRequest.OpenSettings: OpenSettings(); break;
+            case UiRequest.SaveSettingsData: SaveSettingsData(); break;
+            case UiRequest.RefreshStartup: RefreshStartup(); break;
             case UiRequest.OpenAbout: OpenAbout(previous); break;
             case UiRequest.Exit: RequestExit(); break;
             case UiRequest.SaveHudState: SaveHudState(); break;
@@ -218,26 +218,68 @@ internal sealed class AppComposition : IDisposable
         }
     });
 
-    // T5.9: uma instância por vez, só por ação do usuário; ao fechar devolve o foco anterior.
-    private void OpenSettings(nint previousForeground)
+    // Configurações vivem dentro do menu (engrenagem): bandeja e widget só pedem à T-Game que abra o menu na vista Configurações.
+    private void OpenSettings()
     {
         if (IsShuttingDown) return;
-        if (settingsWindow is not null) { settingsWindow.Activate(); return; }
-        var vm = new SettingsViewModel(settings, SaveSettings, new StartupService());
-        vm.PropertyChanged += (_, e) =>
+        if (settings.GameMode != GameMode.Td)
         {
-            if (e.PropertyName != nameof(SettingsViewModel.TdCornerUiScale)) return;
-            try { game?.Post(() => gameSide.PreviewCornerUiScale(vm.TdCornerUiScale)); }
-            catch (InvalidOperationException) { }
-        };
-        settingsWindow = new SettingsWindow(vm, () =>
+            // Modo clássico não tem o menu: volta ao Tower Defense (vale ao reiniciar) e o menu abre na próxima execução.
+            SaveSettings(settings with { GameMode = GameMode.Td });
+            return;
+        }
+        PostGame(new AppCommand(AppCommandKind.OpenSettings));
+    }
+
+    private readonly StartupService startupService = new();
+    private StartupState startupState;
+
+    /// <summary>Consulta o estado de "Iniciar com o Windows" (só empacotado) e entrega à T-Game.</summary>
+    private async void RefreshStartup()
+    {
+        StartupState state = default;
+        try
         {
-            settingsWindow = null;
-            try { game?.Post(() => gameSide.PreviewCornerUiScale(settings.Td.CornerUiScalePercent)); }
-            catch (InvalidOperationException) { }
-            ForegroundRestorer.Restore(previousForeground);
+            if (startupService.IsPackaged)
+            {
+                var status = await startupService.GetStatusAsync();
+                state = StartupFrom(status);
+            }
+        }
+        catch (Exception) { state = new(true, false, false, "Não foi possível consultar a inicialização no Windows."); }
+        PublishStartup(state);
+    }
+
+    private static StartupState StartupFrom(StartupStatus status) => new(true, status is StartupStatus.Enabled or StartupStatus.Disabled,
+        status is StartupStatus.Enabled or StartupStatus.EnabledByPolicy,
+        status switch
+        {
+            StartupStatus.DisabledByUser => "Desativado nas configurações do Windows. Altere lá para reativar.",
+            StartupStatus.DisabledByPolicy => "Desativado por política do Windows.",
+            StartupStatus.EnabledByPolicy => "Ativado por política do Windows.",
+            _ => null,
         });
-        settingsWindow.Show();
+
+    private void PublishStartup(StartupState state)
+    {
+        startupState = state;
+        try { game?.Post(() => gameSide.SetStartup(state)); }
+        catch (InvalidOperationException) { }
+    }
+
+    private async void SetStartupEnabled(bool enabled)
+    {
+        try { PublishStartup(StartupFrom(await startupService.SetEnabledAsync(enabled))); }
+        catch (Exception) { PublishStartup(startupState with { Message = "Não foi possível alterar a inicialização no Windows." }); }
+    }
+
+    /// <summary>Grava (já aplicado na T-Game) o que o menu Configurações editou; "Iniciar com o Windows" vai ao StartupService.</summary>
+    private void SaveSettingsData()
+    {
+        if (gameSide.TdSettingsData is not { } data) return;
+        var next = TdSettingsMap.Apply(settings, data);
+        if (!next.Equals(settings)) SaveSettings(next);
+        if (startupState is { Visible: true, Available: true } && data.StartWithWindows != startupState.Enabled) SetStartupEnabled(data.StartWithWindows);
     }
 
     private void OpenAbout(nint previousForeground)
