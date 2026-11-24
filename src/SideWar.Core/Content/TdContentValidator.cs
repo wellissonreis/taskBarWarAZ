@@ -20,7 +20,7 @@ public static class TdContentValidator
     private static readonly string[] EffectKinds =
         ["startingCredits", "sellRefund", "maxTowers", "damagePercent", "rangePercent", "xpShield", "abilityCooldownPercent", "unlockAbility", "autoStartBonusPercent"];
 
-    private const int MinWaveEnemies = 3;
+    private const int MinWaveEnemies = 1;
     private const int MaxWaveEnemies = 32;
     private const int MaxNonRestRun = 5;
 

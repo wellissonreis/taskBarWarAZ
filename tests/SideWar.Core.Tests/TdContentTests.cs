@@ -108,7 +108,7 @@ public sealed class TdContentTests
     {
         AssertError(With("td-enemies.json", "\"copyHpFraction\": 0.35", "\"copyHpFraction\": 0"), "copyHpFraction");
         AssertError(With("td-enemies.json", "\"revealRange\": 55", "\"revealRange\": 0"), "revealRange");
-        AssertError(With("td-enemies.json", "\"shieldHp\": 80", "\"shieldHp\": 0"), "shieldHp");
+        AssertError(With("td-enemies.json", "\"shieldHp\": 170", "\"shieldHp\": 0"), "shieldHp");
     }
 
     [Fact(DisplayName = "TD.1 Validator rejects a tower without declared weakness or with an unknown trait")]
@@ -151,11 +151,11 @@ public sealed class TdContentTests
     [Fact(DisplayName = "TD.1 Validator checks wave authoring rules")]
     public void Validator_ChecksWaves()
     {
-        AssertError(With("td-waves.json", "{\"enemy\": \"grunt\", \"count\": 3, \"offset\": 0.0, \"interval\": 4.0}", "{\"enemy\": \"flyer\", \"count\": 4, \"offset\": 0.0, \"interval\": 2.53}"), "só é introduzido na fase 2");
-        AssertError(With("td-waves.json", "{\"enemy\": \"grunt\", \"count\": 3, \"offset\": 0.0, \"interval\": 4.0}", "{\"enemy\": \"fantasma\", \"count\": 4, \"offset\": 0.0, \"interval\": 2.53}"), "'fantasma' não existe");
-        AssertError(With("td-waves.json", "{\"enemy\": \"grunt\", \"count\": 3, \"offset\": 0.0, \"interval\": 4.0}", "{\"enemy\": \"grunt\", \"count\": 1, \"offset\": 0.0, \"interval\": 2.53}"), "fora de [3, 32]");
+        AssertError(With("td-waves.json", "{\"enemy\": \"grunt\", \"count\": 1, \"offset\": 0.0, \"interval\": 7.6}", "{\"enemy\": \"flyer\", \"count\": 4, \"offset\": 0.0, \"interval\": 2.53}"), "só é introduzido na fase 2");
+        AssertError(With("td-waves.json", "{\"enemy\": \"grunt\", \"count\": 1, \"offset\": 0.0, \"interval\": 7.6}", "{\"enemy\": \"fantasma\", \"count\": 4, \"offset\": 0.0, \"interval\": 2.53}"), "'fantasma' não existe");
+        AssertError(With("td-waves.json", "{\"enemy\": \"grunt\", \"count\": 1, \"offset\": 0.0, \"interval\": 7.6}", "{\"enemy\": \"grunt\", \"count\": 40, \"offset\": 0.0, \"interval\": 2.53}"), "fora de [1, 32]");
         AssertError(With("td-stages.json", "\"waves\": 60,", "\"waves\": 61,"), "td-waves.1");
-        AssertError(With("td-waves.json", "\"number\": 5, \"rest\": true, \"bonusFactor\": 1.7, \"groups\": [{\"enemy\": \"grunt\", \"count\": 3,", "\"number\": 5, \"rest\": false, \"bonusFactor\": 1.0, \"groups\": [{\"enemy\": \"grunt\", \"count\": 3,"), "sem respiro");
+        AssertError(With("td-waves.json", "\"number\": 5, \"rest\": true, \"bonusFactor\": 1.7, \"groups\": [{\"enemy\": \"grunt\", \"count\": 1,", "\"number\": 5, \"rest\": false, \"bonusFactor\": 1.0, \"groups\": [{\"enemy\": \"grunt\", \"count\": 1,"), "sem respiro");
     }
 
     [Fact(DisplayName = "TD.1 Validator checks the meta tree and abilities")]

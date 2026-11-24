@@ -132,6 +132,10 @@ public struct TdEnemy
     public byte Triggers { get; set; }
     /// <summary>Id da torre do último dano recebido (0 = zona); só observação, fora do hash.</summary>
     public int LastHitTowerId { get; set; }
+    /// <summary>Leitura (fora do hash): efetividade do último acerto (0 neutro, 1 forte, 2 fraco), o dano dele e os ticks restantes do aviso.</summary>
+    public byte EffectKind { get; set; }
+    public int EffectDamage { get; set; }
+    public int EffectTicks { get; set; }
 }
 
 /// <summary>Spawn agendado: <c>DueTick</c> relativo ao início da onda (ticks de mundo).</summary>

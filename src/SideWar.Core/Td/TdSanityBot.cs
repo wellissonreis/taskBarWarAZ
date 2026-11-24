@@ -14,6 +14,10 @@ public enum TdBotProfile : byte
     Otimizado,
     /// <summary>Como o médio, mas SEM o contra do conceito da fase (deve perder).</summary>
     SemContra,
+    /// <summary>RITMO-TANK: escolhe sempre a torre FORTE contra o que a onda traz (e evita as fracas); usa o contra de verdade.</summary>
+    Counter,
+    /// <summary>RITMO-TANK: constrói torres de ataque sorteadas (sem olhar o inimigo): a referência "sem estratégia".</summary>
+    Aleatorio,
 }
 
 /// <summary>Resultado de uma partida do SanityBot (uma fase, um perfil, uma seed).</summary>
@@ -86,7 +90,7 @@ public static class TdSanityBot
         return bot.PlayRun(seed, startStage);
     }
 
-    private static Step[] RunPlan(int stageId, TdBotProfile profile) => [.. TdBotPlans.For(stageId, profile).Where(s => s.Kind is 'b' or 'r' or 's')];
+    private static Step[] RunPlan(int stageId, TdBotProfile profile) => profile is TdBotProfile.Counter or TdBotProfile.Aleatorio ? [] : [.. TdBotPlans.For(stageId, profile).Where(s => s.Kind is 'b' or 'r' or 's')];
 
     private sealed class Runner
     {
@@ -107,6 +111,7 @@ public static class TdSanityBot
             _s = s; _plan = plan; _profile = profile;
         }
 
+        private bool Dynamic => _profile is TdBotProfile.Counter or TdBotProfile.Aleatorio;
         private bool Smart => _profile != TdBotProfile.Novato; // o novato não usa habilidades
         private bool Expert => _profile == TdBotProfile.Otimizado;
 
@@ -220,8 +225,71 @@ public static class TdSanityBot
                 if (r == StepResult.Wait) return;
                 _next++;
             }
+            if (Dynamic) { while (DynamicBuild()) { } return; }
             if (!(_profile == TdBotProfile.SemContra && _s.StageId == 1)) // SemContra na fase 1 ignora a construção (conceito da fase)
                 while (Fallback()) { }
+        }
+
+        private static readonly int[] DynamicX = [900, 640, 450, 1000, 780, 350, 560, 1100, 250, 700, 820, 400, 950, 300, 600, 1050];
+        private int _dynamicBuilt;
+        private ulong _pick = 0x9E3779B97F4A7C15UL;
+
+        private int NextPick(int n)
+        {
+            _pick ^= _pick << 13; _pick ^= _pick >> 7; _pick ^= _pick << 17; // xorshift determinístico
+            return (int)(_pick % (ulong)n);
+        }
+
+        /// <summary>Counter: a torre de ataque com mais acertos fortes (e menos fracos) sobre a composição da onda; Aleatório: sorteia entre as de ataque.</summary>
+        private string ChooseTower()
+        {
+            var towers = _s.Content.Towers;
+            var pool = towers.Where(t => t.Kind == "attack" && t.Damage > 0 && t.UnlockStage <= _s.UnlockedTowerStage).ToArray();
+            if (pool.Length == 0) return "bolt";
+            if (_profile == TdBotProfile.Aleatorio) return pool[NextPick(pool.Length)].Id;
+            int wave = Math.Clamp(_s.Phase == MatchPhase.Onda ? _s.WaveNumber : _s.NextWaveNumber, 1, _s.TotalWaves);
+            var def = _s.EffectiveWaveDef(wave);
+            string best = pool[0].Id; double bestScore = double.MinValue;
+            foreach (var t in pool)
+            {
+                double weight = 0, weighted = 0;
+                foreach (var g in def.Groups)
+                {
+                    var traits = TraitsOf(g.Enemy);
+                    bool strong = traits.Any(x => t.Strong.Contains(x)), weak = traits.Any(x => t.Weak.Contains(x));
+                    double mult = strong && !weak ? TdMatchState.StrongDamageMultiplier : weak && !strong ? TdMatchState.WeakDamageMultiplier : 1.0;
+                    double w = g.Count * HpOf(g.Enemy);
+                    weight += w; weighted += w * mult;
+                }
+                double avg = weight > 0 ? weighted / weight : 1.0;
+                double dps = t.Damage / Math.Max(0.1, t.Interval);
+                double score = dps * avg / Math.Sqrt(Math.Max(1, t.Cost));
+                if (score > bestScore) { bestScore = score; best = t.Id; }
+            }
+            return best;
+        }
+
+        private string[] TraitsOf(string id) =>
+            _s.Content.Enemies.Enemies.FirstOrDefault(e => e.Id == id)?.Traits ?? _s.Content.Enemies.Bosses.FirstOrDefault(e => e.Id == id)?.Traits ?? [];
+
+        private double HpOf(string id) =>
+            _s.Content.Enemies.Enemies.FirstOrDefault(e => e.Id == id)?.Hp ?? _s.Content.Enemies.Bosses.FirstOrDefault(e => e.Id == id)?.Hp ?? 1;
+
+        private bool DynamicBuild()
+        {
+            if (_s.Towers.Count >= TdMatchState.TechnicalTowerLimit || _dynamicBuilt >= 22) return false;
+            string kind = ChooseTower();
+            int di = Array.FindIndex(_s.Content.Towers, t => t.Id == kind);
+            if (di < 0 || _s.Credits < _s.NextTowerCost(di)) return false;
+            foreach (int x in Candidates(DynamicX[_dynamicBuilt % DynamicX.Length]))
+                if (_s.Apply(new BuildTower(kind, x)).IsOk)
+                {
+                    _types[_s.Towers[^1].Id] = kind;
+                    _builtCount++;
+                    _dynamicBuilt++;
+                    return true;
+                }
+            return false;
         }
 
         private static readonly int[] FallbackX = [1000, 780, 520, 350, 900, 640, 250, 1100];

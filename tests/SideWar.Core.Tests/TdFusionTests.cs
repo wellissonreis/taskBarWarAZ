@@ -241,8 +241,8 @@ public sealed class TdFusionTests
     {
         var s = Arena("grunt", 2); int id = Build(s, "cannon", 1100); Fuse(s, id, "bolt"); Start(s, 1100); Steps(s, 2);
         var loss = s.Enemies.Select(e => e.MaxHp - e.Hp).OrderDescending().ToArray();
-        Assert.Equal(108, loss[0]);
-        Assert.Equal(50, loss[1]);
+        Assert.Equal(168, loss[0]);
+        Assert.Equal(80, loss[1]);
     }
 
     [Fact(DisplayName = "CA-37.3 Raio explosivo: Raio impact splashes ground enemies with the Canhão radius/factor; main target hit once; flyers spared")]
@@ -254,7 +254,7 @@ public sealed class TdFusionTests
         Assert.Equal(12, loss[1]);
         var f = Arena("flyer", 2); int fid = Build(f, "bolt", 1100); Fuse(f, fid, "cannon"); Start(f, 1100); Steps(f, 2);
         var floss = f.Enemies.Select(e => e.MaxHp - e.Hp).OrderDescending().ToArray();
-        Assert.Equal(24, floss[0]); Assert.Equal(0, floss[1]);
+        Assert.Equal(38, floss[0]); Assert.Equal(0, floss[1]);
     }
 
     [Fact(DisplayName = "CA-37.3 Raio encadeado: exactly one extra jump with 40% of the shot, nearest by distance then Id")]
@@ -309,7 +309,7 @@ public sealed class TdFusionTests
     {
         var plain = Arena(); Build(plain, "frost", 1100); Start(plain, 1100); Steps(plain, 100);
         var s = Arena(); int id = Build(s, "frost", 1100); Fuse(s, id, "cannon"); Start(s, 1100); Steps(s, 100);
-        Assert.Equal(35, Lost(s) - Lost(plain));
+        Assert.Equal(56, Lost(s) - Lost(plain));
         var fp = Arena("flyer"); Build(fp, "frost", 1100); Start(fp, 1100); Steps(fp, 100);
         var f = Arena("flyer"); int fid = Build(f, "frost", 1100); Fuse(f, fid, "cannon"); Start(f, 1100); Steps(f, 100);
         Assert.Equal(Lost(fp), Lost(f));

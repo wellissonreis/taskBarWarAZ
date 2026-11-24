@@ -26,7 +26,7 @@ public sealed class TdInfiniteTests
     {
         foreach (var st in C.Stages.Stages) Assert.InRange(st.Waves, 55, 120); // ~0,4-0,5 min por onda => 25-40 min por fase
         var w1 = C.Waves.Stages[0].Waves;
-        Assert.Equal(3, w1[0].Groups.Sum(g => g.Count)); // início calmo (RITMO-INICIO) preservado
+        Assert.Equal(1, w1[0].Groups.Sum(g => g.Count)); // início calmo (RITMO-INICIO) preservado
         Assert.True(w1.Take(7).All(w => w.Groups.Sum(g => g.Count) <= 13));
         Assert.Contains(w1, w => w.Rest);
     }
@@ -106,7 +106,7 @@ public sealed class TdInfiniteTests
     [Fact]
     public void A_continuous_run_never_ends_after_stage_6_and_reports_cycle_in_the_stage_summary()
     {
-        var r = TdSanityBot.RunContinuous(C, 6, TdBotProfile.Medio, 1, 3); // fase 6 -> 7 (ciclo 2) -> 8
+        var r = TdSanityBot.RunContinuous(C, 6, TdBotProfile.Medio, 1, 3, stopAtCollapse: false); // fase 6 -> 7 (ciclo 2) -> 8
         Assert.Equal(3, r.StagesCleared);
         Assert.Equal([6, 7, 8], r.Stages.Select(x => x.StageNumber));
         Assert.Equal([0, 1, 1], r.Stages.Select(x => x.Cycle));

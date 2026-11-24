@@ -16,7 +16,7 @@ public sealed partial class TdMatchState
 
     /// <summary>Inimigos extras que os ciclos misturam nas ondas (blindados, enxames, tanques, voadores, corredores) e o intervalo base de cada um.</summary>
     private static readonly (string Enemy, double Interval)[] CycleExtras =
-        [("armored", 1.6), ("swarm", 0.4), ("tank", 2.5), ("flyer", 1.2), ("runner", 0.8)];
+        [("armored", 3.0), ("swarm", 0.8), ("tank", 4.8), ("flyer", 2.3), ("runner", 1.5)];
 
     /// <summary>Ciclo da fase absoluta <paramref name="stageNumber"/> (0 = primeira volta pelas fases do conteúdo).</summary>
     private int CycleOf(int stageNumber) => (Math.Max(1, stageNumber) - 1) / _content.Stages.Stages.Length;
@@ -50,7 +50,7 @@ public sealed partial class TdMatchState
         if (w < waves.Length && (w + stageNumber) % 3 == 0)
         {
             var (enemy, interval) = CycleExtras[(cycle * 7 + stageNumber + w) % CycleExtras.Length];
-            groups.Add(new TdWaveGroupDef(enemy, Math.Min(30, 3 + 2 * cycle), 2.0, interval / intervalDiv));
+            groups.Add(new TdWaveGroupDef(enemy, Math.Min(14, 2 + cycle), 2.0, interval / intervalDiv));
         }
         return def with { Groups = [.. groups] };
     }

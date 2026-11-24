@@ -212,7 +212,7 @@ public sealed class TdMutationTests
         var (_, tr, st) = Run(Rig(Mut(0, 5, Cat("shielded"), Cat("durable")), "trojan", 10), 1);
         Assert.NotEmpty(tr);
         Assert.All(tr, m => Assert.Equal(["durable"], st.MutationTraitIds(m.Enemy.Mutations)));
-        Assert.All(tr, m => Assert.Equal(120, m.Enemy.ShieldHp)); // escudo nativo intacto
+        Assert.All(tr, m => Assert.Equal(255, m.Enemy.ShieldHp)); // escudo nativo intacto
         _ = s;
     }
 
@@ -255,7 +255,7 @@ public sealed class TdMutationTests
     {
         var (_, encrypted, state) = Run(Rig(Mut(0, 5, Cat("shielded"), Cat("durable")), "encrypted", 10), 1);
         Assert.NotEmpty(encrypted);
-        Assert.All(encrypted, m => { Assert.Equal(80, m.Enemy.ShieldHp); Assert.Equal(["durable"], state.MutationTraitIds(m.Enemy.Mutations)); });
+        Assert.All(encrypted, m => { Assert.Equal(170, m.Enemy.ShieldHp); Assert.Equal(["durable"], state.MutationTraitIds(m.Enemy.Mutations)); });
         var c = Rig(Mut(0, 5, Cat("durable")), "fragment", 10, edit: e => e.Id == "fragment" ? e with { Hp = 30, Speed = 20 } : e);
         var match = New(c);
         Assert.True(match.Apply(new BuildTower("bolt", 1100)).IsOk);

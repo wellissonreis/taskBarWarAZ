@@ -28,10 +28,10 @@ public sealed class TdAzureTowersTests
     {
         var s = Arena("trojan"); Build(s, "frost", 1100);
         Assert.True(s.Apply(new StartWave()).IsOk); Steps(s, 1);
-        Assert.Equal(111, s.Enemies[0].ShieldHp); Assert.Equal(s.Enemies[0].MaxHp, s.Enemies[0].Hp);
+        Assert.Equal(246, s.Enemies[0].ShieldHp); Assert.Equal(s.Enemies[0].MaxHp, s.Enemies[0].Hp);
         Assert.Equal(0, s.Enemies[0].SlowTicks);
         var enemies = (List<TdEnemy>)s.Enemies; var enemy = enemies[0]; enemy.Speed = 0; enemies[0] = enemy;
-        Steps(s, 27 * 14);
+        Steps(s, 27 * 34);
         Assert.Equal(0, s.Enemies[0].ShieldHp); Assert.True(s.Enemies[0].SlowTicks > 0);
         Assert.True(s.Enemies[0].Hp < s.Enemies[0].MaxHp);
     }
@@ -70,7 +70,7 @@ public sealed class TdAzureTowersTests
     {
         var shield = Arena("encrypted"); Build(shield, "frost", 1100);
         Assert.True(shield.Apply(new StartWave()).IsOk); Steps(shield, 1);
-        Assert.InRange(shield.Enemies[0].ShieldHp, 1, 79);
+        Assert.InRange(shield.Enemies[0].ShieldHp, 1, 169);
         Assert.Equal(shield.Enemies[0].MaxHp, shield.Enemies[0].Hp);
         Assert.Equal(0, shield.Enemies[0].SlowTicks);
         var hidden = Arena("dnstunnel"); Build(hidden, "bolt", 1100);
@@ -236,7 +236,7 @@ public sealed class TdAzureTowersTests
         Steps(s, 100);
         Assert.Equal(3, s.Towers[0].ShotCount);
         Assert.Single(s.Enemies, e => e.Hp < e.MaxHp);
-        Assert.Equal(66, s.Enemies.Sum(e => e.MaxHp - e.Hp));
+        Assert.Equal(105, s.Enemies.Sum(e => e.MaxHp - e.Hp)); // RITMO-TANK: forte x1,6
         Steps(s, 30);
         Assert.Equal(3, s.Towers[0].ShotCount);
     }
@@ -274,13 +274,40 @@ public sealed class TdAzureTowersTests
         for (int i = 0; i < 180; i++) { a.Step(); b.Step(); Assert.Equal(a.ComputeStateHash(), b.ComputeStateHash()); }
     }
     [Fact]
+    public void StrongAndWeakTowersMarkTheHitAndScaleTheDamage()
+    {
+        var strong = Arena("tank"); Build(strong, "bolt", 1100); // Raio é forte contra durável
+        Assert.True(strong.Apply(new StartWave()).IsOk); Steps(strong, 2);
+        var weak = Arena("tank"); Build(weak, "cannon", 1100); // Canhão é fraco contra durável
+        Assert.True(weak.Apply(new StartWave()).IsOk); Steps(weak, 2);
+        var hit = strong.Enemies.Single(e => e.Hp < e.MaxHp);
+        var miss = weak.Enemies.Single(e => e.Hp < e.MaxHp);
+        Assert.Equal((byte)1, hit.EffectKind);
+        Assert.Equal((byte)2, miss.EffectKind);
+        Assert.True(hit.EffectTicks > 0 && hit.EffectDamage > 0);
+        Assert.Equal(1.6, TdMatchState.StrongDamageMultiplier);
+        Assert.Equal(0.5, TdMatchState.WeakDamageMultiplier);
+        Assert.Equal(hit.MaxHp - hit.Hp, hit.EffectDamage);
+    }
+
+    [Fact]
+    public void EffectivenessMarkIsNotPartOfTheHash()
+    {
+        var a = Arena("tank"); var b = Arena("tank");
+        foreach (var s in new[] { a, b }) { Build(s, "bolt", 1100); Assert.True(s.Apply(new StartWave()).IsOk); }
+        Steps(a, 3); Steps(b, 3);
+        var list = (List<TdEnemy>)b.Enemies; var e = list[0]; e.EffectKind = 2; e.EffectTicks = 99; e.EffectDamage = 12345; list[0] = e;
+        Assert.Equal(a.ComputeStateHash(), b.ComputeStateHash());
+    }
+
+    [Fact]
     public void CosmosChainsOncePerEnemyWithFalloff()
     {
         var s = Arena("grunt", 4);
         Build(s, "cosmos", 1100);
         Assert.True(s.Apply(new StartWave()).IsOk);
         Steps(s, 2);
-        Assert.Equal(new double[] { 10, 12, 16, 20 }, s.Enemies.Select(e => e.MaxHp - e.Hp).Order().ToArray());
+        Assert.Equal(new double[] { 16, 20, 25, 32 }, s.Enemies.Select(e => e.MaxHp - e.Hp).Order().ToArray());
     }
 
     [Fact]

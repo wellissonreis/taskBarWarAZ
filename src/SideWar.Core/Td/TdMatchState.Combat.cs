@@ -70,6 +70,7 @@ public sealed partial class TdMatchState
             if (e.VulnTicks > 0 && --e.VulnTicks == 0) e.VulnBonus = 0;
             if (e.CorrodeTicks > 0 && --e.CorrodeTicks == 0) e.CorrodeAmount = 0;
             if (e.SinceDamageTicks < ResetFocusCap * 1000) e.SinceDamageTicks++;
+            if (e.EffectTicks > 0) e.EffectTicks--;
             if (st.RegenPct > 0 && e.SinceDamageTicks >= st.RegenDelayTicks && e.Hp < e.MaxHp)
                 e.Hp = Math.Min(e.MaxHp, e.Hp + e.MaxHp * st.RegenPct / TdWorld.TicksPerSecond);
             if (st.ActRange > 0)
@@ -399,6 +400,8 @@ public sealed partial class TdMatchState
             Emit(TdEventType.EnemyEncountered, e.DefIndex, 2);
         }
         e.LastHitTowerId = _damageSource;
+        if (_lastEffect != 0) { e.EffectKind = _lastEffect; e.EffectDamage = (int)Math.Min(int.MaxValue, dmg); e.EffectTicks = EffectShowTicks; }
+        _lastEffect = 0;
         e.SinceDamageTicks = 0;
         _enemies[idx] = e;
     }
@@ -408,6 +411,12 @@ public sealed partial class TdMatchState
     /// (4) multiplicadores de habilidade/aura (+ redução do Ransomware); (5) armadura efetiva (corrosão, depois perfuração);
     /// <c>max(1, floor)</c>. Hook TD.5: bônus de meta (dano %) entram no passo 4.
     /// </summary>
+    /// <summary>Multiplicadores de efetividade: a escolha de torre contra o tipo do inimigo precisa pesar.</summary>
+    public const double StrongDamageMultiplier = 1.6, WeakDamageMultiplier = 0.5;
+    /// <summary>Quanto tempo (ticks) o aviso de efetividade fica sobre o inimigo.</summary>
+    public const int EffectShowTicks = 24;
+    private byte _lastEffect;
+
     private double ComputeDamage(in TdTower tower, TdTowerDef def, in TdEnemy target, TdEnemyStats st, int towerIndex, double factor, double burst)
     {
         double raw = def.Damage * Stat(tower, def, "damageMultiplier", 1.0) * factor;
@@ -419,6 +428,19 @@ public sealed partial class TdMatchState
         if (armored) raw *= Stat(tower, def, "damageMultiplierVsArmored", 1.0);
         if (st.NativeTraits.Contains("swarm")) raw *= Stat(tower, def, "damageMultiplierVsSwarm", 1.0);
         raw *= burst;
+        if (def.Damage > 0)
+        {
+            // Efetividade (RITMO-TANK): torre FORTE contra um traço do inimigo causa x1,6; FRACA, x0,5 (os dois ao mesmo tempo se anulam).
+            bool strongHit = false, weakHit = false;
+            foreach (var trait in st.NativeTraits)
+            {
+                if (Array.IndexOf(def.Strong, trait) >= 0) strongHit = true;
+                if (Array.IndexOf(def.Weak, trait) >= 0) weakHit = true;
+            }
+            if (strongHit && !weakHit) { raw *= StrongDamageMultiplier; _lastEffect = 1; }
+            else if (weakHit && !strongHit) { raw *= WeakDamageMultiplier; _lastEffect = 2; }
+            else _lastEffect = 0;
+        }
         if (target.VulnTicks > 0) raw *= 1.0 + target.VulnBonus;
         raw *= 1.0 + _auraDamage[towerIndex];
         if (st.BlockedReduction > 0 && Dist(tower.X, target.X) <= st.ActRange) raw *= 1.0 - st.BlockedReduction;

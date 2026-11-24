@@ -389,7 +389,7 @@ public sealed class TdCombatTests
     {
         var s = New(Arena([new G("ransomware", 1)]));
         int near = Build(s, "bolt", 1100);
-        Assert.Equal(6.0, FirstHit(s)); // floor(14*0,7 - 3)
+        Assert.Equal(12.0, FirstHit(s)); // floor(14*0,7*1,6 - 3): Raio é forte contra durável
         Until(s, () => s.Towers.Any(t => t.DisabledTicks > 0), 400);
         Assert.True(s.Tick >= 300);
         Assert.Contains(s.Events, e => e.Type == TdEventType.TowerDisabled);
@@ -399,7 +399,7 @@ public sealed class TdCombatTests
         Build(out2, "bolt", 1040); // 160 do portal... dentro do alcance (150) só depois; usa 1070: 130 > 120
         out2.Apply(new SellTower(1));
         Build(out2, "bolt", 1070);
-        Assert.Equal(11.0, FirstHit(out2)); // fora da área de 120: sem redução
+        Assert.Equal(19.0, FirstHit(out2)); // fora da área de 120: sem redução
     }
 
     [Fact(DisplayName = "RF-28.8 Botnet: splits into 6 swarm at 66% and 33% HP and the wave still completes")]
@@ -450,7 +450,7 @@ public sealed class TdCombatTests
 
     // ---------------------------------------------------------------- determinismo
 
-    private const ulong GoldenStage3 = 9055018318908809777UL;
+    private const ulong GoldenStage3 = 13399603436167498875UL;
 
     private static List<TdLogEntry> ScriptLog() => new List<TdLogEntry>
         {

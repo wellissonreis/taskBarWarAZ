@@ -91,7 +91,7 @@ public sealed partial class TdMatchState
                 if (firewall > 0 && e.ShieldHp <= 0) mult = Math.Min(mult, 1.0 - (st.IsBoss ? FirewallBossSlow() : firewall));
                 mult = Math.Max(mult, 1.0 - st.SlowCap); // teto de lentidão (chefes 20%, Zero-day 0%)
             }
-            e.X -= e.Speed * (e.Enraged ? 1.3 : 1.0) * mult / TdWorld.TicksPerSecond;
+            e.X -= e.Speed * (e.Enraged ? 1.6 : 1.0) * mult / TdWorld.TicksPerSecond;
             if (e.X > leakX)
             {
                 if (st.IsBoss && st.InvulnTicks > 0) e = BossPathTriggers(e, st);

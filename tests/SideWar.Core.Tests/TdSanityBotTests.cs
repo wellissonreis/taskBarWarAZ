@@ -11,12 +11,15 @@ public sealed class TdSanityBotTests
 {
     private static readonly TdContent Content = TdContentLoader.LoadEmbedded();
 
+    /// <summary>Perfis com roteiro por fase (os dinâmicos Counter/Aleatório têm testes próprios).</summary>
+    private static readonly TdBotProfile[] ScriptedProfiles = [TdBotProfile.Novato, TdBotProfile.Medio, TdBotProfile.Otimizado, TdBotProfile.SemContra];
+
     internal static string Dump(TdContent content, int seeds)
     {
         var sb = new StringBuilder();
         sb.AppendLine("fase perfil     vit  estrelas  perda  creditos torres score onda  combate_s  total_s  rej  perde_onda  kills");
         for (int stage = 1; stage <= 6; stage++)
-            foreach (var p in Enum.GetValues<TdBotProfile>())
+            foreach (var p in ScriptedProfiles)
             {
                 var rs = Enumerable.Range(0, seeds).Select(i => TdSanityBot.Run(content, stage, p, (ulong)(100 + i))).ToArray();
                 double wins = rs.Count(r => r.Won) / (double)seeds;
@@ -35,13 +38,13 @@ public sealed class TdSanityBotTests
         return sb.ToString();
     }
 
-    private const ulong GoldenOptimizedStage3 = 8155062404230206600UL;
+    private const ulong GoldenOptimizedStage3 = 4808652867481392360UL;
     private const int Seeds = 20;
     private static readonly Lazy<TdBotResult[]> Matrix = new(() =>
     {
         var list = new List<TdBotResult>();
         for (int stage = 1; stage <= 6; stage++)
-            foreach (var p in Enum.GetValues<TdBotProfile>())
+            foreach (var p in ScriptedProfiles)
                 for (int i = 0; i < Seeds; i++)
                     list.Add(TdSanityBot.Run(Content, stage, p, (ulong)(100 + i)));
         return [.. list];

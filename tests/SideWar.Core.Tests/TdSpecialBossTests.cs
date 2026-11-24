@@ -24,7 +24,7 @@ public sealed class TdSpecialBossTests
     }
 
     [Fact]
-    public void BossEnragesAtHalfHealthAndMovesThirtyPercentFaster()
+    public void BossEnragesAtHalfHealthAndMovesSixtyPercentFaster()
     {
         var content = TdContentLoader.LoadEmbedded();
         var match = TdMatchState.Create(content, 1, Rng.Seed(1, 2));
@@ -41,6 +41,6 @@ public sealed class TdSpecialBossTests
         Assert.True(enemies[0].Enraged);
         double x = enemies[0].X;
         move.Invoke(match, null);
-        Assert.Equal(before * 1.3, x - enemies[0].X, 8);
+        Assert.Equal(before * 1.6, x - enemies[0].X, 8);
     }
 }
