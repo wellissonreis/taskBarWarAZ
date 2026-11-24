@@ -208,6 +208,34 @@ public sealed class TdFusionDropTests
     }
 
     [Fact]
+    public void Dragging_a_placed_tower_to_a_free_valid_spot_moves_it_and_to_an_invalid_one_keeps_it()
+    {
+        var r = new Rig();
+        var (id, x2) = AddSecond(r);
+        int fromX = r.Match.Towers.First(t => t.Id == id).X;
+        long credits = r.Match.Credits;
+        Assert.True(r.Ui.BeginTowerDrag(id, x2));
+        r.Ui.TowerDragMoved(x2 - 120f);
+        Assert.True(r.Ui.View.GhostValid);
+        Assert.True(r.Ui.View.GhostX >= 0);
+        r.Ui.TowerDragEnd(x2 - 120f);
+        Assert.Contains(r.Sent, c => c is RelocateTower rt && rt.TowerId == id);
+        Assert.Equal(2, r.Match.Towers.Count);
+        Assert.NotEqual(fromX, r.Match.Towers.First(t => t.Id == id).X);
+        Assert.Equal(credits, r.Match.Credits);
+
+        // fora da zona livre: volta ao lugar, nada enviado
+        int sent = r.Sent.Count;
+        int x = r.Match.Towers.First(t => t.Id == id).X;
+        r.Ui.BeginTowerDrag(id, x2);
+        r.Ui.TowerDragMoved(5f);
+        Assert.False(r.Ui.View.GhostValid);
+        r.Ui.TowerDragEnd(5f);
+        Assert.Equal(sent, r.Sent.Count);
+        Assert.Equal(x, r.Match.Towers.First(t => t.Id == id).X);
+    }
+
+    [Fact]
     public void A_simple_press_and_release_on_a_tower_still_opens_the_inspector_and_esc_cancels_a_drag()
     {
         var r = new Rig();

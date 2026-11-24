@@ -36,6 +36,12 @@ public sealed record PlaceTower(int TowerId, int X) : IGameCommand;
 /// <summary>Reposiciona, sem custo, uma torre SEM POSIÇÃO em X lógico (snap de 44 DIP); mantém a recarga. Torre posicionada é rejeitada (NotUnpositioned).</summary>
 public sealed record MoveTower(int TowerId, int X) : IGameCommand;
 
+/// <summary>
+/// Muda de lugar uma torre JÁ POSICIONADA (arrastar e soltar num ponto livre válido, snap de 44 DIP). Sem custo; mantém nível, módulo, runas, mira e
+/// estatísticas; a torre não atira por <see cref="TdMatchState.RelocateCooldownSeconds"/> s. Inválido (fora da zona/sobreposto) é rejeitado sem alterar nada.
+/// </summary>
+public sealed record RelocateTower(int TowerId, int X) : IGameCommand;
+
 /// <summary>Sinal "presente agora" do hospedeiro (ex-RF-28.19): enviado ao log só quando muda; o Core nunca lê relógio nem entrada.</summary>
 public sealed record SetPresence(bool Present) : IGameCommand;
 

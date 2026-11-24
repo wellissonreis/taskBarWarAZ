@@ -135,6 +135,31 @@ public sealed partial class TdMatchState
         return Reposition(i, cmd.X);
     }
 
+    /// <summary>Recarga (s) em que a torre movida não atira, para não abusar do deslocamento no meio da onda.</summary>
+    public const double RelocateCooldownSeconds = 1.0;
+
+    private CommandResult DoRelocate(RelocateTower cmd)
+    {
+        if (!Running) return Reject(CommandReason.InvalidPhase);
+        int i = FindTower(cmd.TowerId);
+        if (i < 0) return Reject(CommandReason.TowerNotFound);
+        if (!_towers[i].Placed) return Reject(CommandReason.NotPlaced);
+        var reason = ResolvePlacement(cmd.X, cmd.TowerId, out int px);
+        if (reason != CommandReason.None) return Reject(reason);
+        var t = _towers[i];
+        if (px == t.X) return CommandResult.Ok; // mesmo ponto: nada muda, sem recarga
+        t.X = px;
+        t.CooldownTicks = Math.Max(t.CooldownTicks, Ticks(RelocateCooldownSeconds) + 1);
+        t.BurstLeft = 0;
+        t.BurstGapTicks = 0;
+        t.FocusTargetId = 0;
+        t.FocusHits = 0;
+        _towers[i] = t;
+        _nodes.RemoveAll(n => n.TowerId == t.Id); // nós/pods antigos ficariam no ponto velho
+        Emit(TdEventType.TowerPlaced, t.Id, px);
+        return CommandResult.Ok;
+    }
+
     private CommandResult Reposition(int i, int x)
     {
         var reason = ResolvePlacement(x, _towers[i].Id, out int px);

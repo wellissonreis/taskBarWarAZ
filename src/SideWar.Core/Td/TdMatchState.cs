@@ -307,6 +307,7 @@ public sealed partial class TdMatchState
             MoveTower m => DoMove(m),
             SellTower s => DoSell(s),
             FuseTower f => DoFuse(f),
+            RelocateTower rl => DoRelocate(rl),
             FuseTowers ft => DoFuseTowers(ft),
             SetAutoStart a => DoSetAutoStart(a),
             SetTargeting g => DoSetTargeting(g),

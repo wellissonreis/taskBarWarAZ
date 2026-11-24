@@ -163,20 +163,33 @@ public sealed partial class TdUiController
             int ti = FindTower(m, hit.TowerId);
             if (ti >= 0) _ghostX = m.Towers[ti].X;
         }
+        else
+        {
+            // Ponto livre: fantasma com o alcance, verde se o Core aceitaria mover para lá (snap de 44 DIP, dentro da zona, sem sobrepor), vermelho/âmbar se não.
+            var reason = m.ValidatePlacement(_ghostX, _dragTowerId, out int snapped);
+            _ghostValid = reason == CommandReason.None;
+            if (_ghostValid) _ghostX = snapped;
+        }
         Changed?.Invoke();
     }
 
-    /// <summary>Soltou: sobre um par válido funde (a mais forte vira base, sem custo); fora, ou par inválido, a torre fica onde estava; sem mover é clique (inspetor).</summary>
+    /// <summary>Soltou: sobre um par válido funde (a mais forte vira base, sem custo); em ponto livre válido move a torre; ponto inválido ou par inválido, ela fica onde estava; sem mover é clique (inspetor).</summary>
     public void TowerDragEnd(float xDip)
     {
         if (_dragTowerId == 0) return;
         TowerDragMoved(xDip);
-        int dragged = _dragTowerId, target = _dropTowerId;
-        bool moved = _dragMoved;
+        int dragged = _dragTowerId, target = _dropTowerId, moveX = _ghostX;
+        bool moved = _dragMoved, moveOk = _ghostValid && _dropTowerId == 0;
         var check = _dropCheck;
         CancelTowerDrag();
         if (!moved) { OpenInspector(dragged); return; }
-        if (target == 0 || !check.IsOk) { Changed?.Invoke(); return; }
+        if (target == 0)
+        {
+            if (moveOk) _send(new RelocateTower(dragged, moveX)); // ponto válido e vazio: move sem custo (recarga curta no Core)
+            Changed?.Invoke();
+            return;
+        }
+        if (!check.IsOk) { Changed?.Invoke(); return; }
         var m = _match();
         var (baseId, _, _) = m.CheckFusionTowers(target, dragged);
         _fuseAwait = baseId;
