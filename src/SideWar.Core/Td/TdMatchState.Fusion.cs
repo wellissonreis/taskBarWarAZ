@@ -161,6 +161,54 @@ public sealed partial class TdMatchState
         return sc > tc || (sc == tc && source.ComponentTotal > target.ComponentTotal);
     }
 
+    private Rng _demotionRng;
+    private int _fusionLossCount;
+    private List<int> _lastFusionLoss = [];
+
+    /// <summary>Sorteio injetável (testes): recebe N e devolve 0..N-1. Nulo = gerador próprio da partida (não consome o RNG principal).</summary>
+    public Func<int, int>? DemotionPick { get; set; }
+    /// <summary>Quantos rebaixamentos já destruíram componentes de fusão.</summary>
+    public int FusionLossCount => _fusionLossCount;
+    /// <summary>Definições (índices de torre) perdidas no último rebaixamento.</summary>
+    public IReadOnlyList<int> LastFusionLoss => _lastFusionLoss;
+
+    /// <summary>Rebaixamento: sorteia e destrói componentes de fusão acima do limite da nova patente (a base fica; sem reembolso).</summary>
+    private void TrimFusionsToRank()
+    {
+        int limit = Math.Max(1, FusionMaxComponents);
+        var lost = new List<int>();
+        for (int i = 0; i < _towers.Count; i++)
+        {
+            var t = _towers[i];
+            if (t.ComponentTotal <= limit) continue;
+            var parts = new List<TdFusionPart>(t.ModuleCount);
+            for (int k = 0; k < t.ModuleCount; k++) parts.Add(new(t.ModuleDef(k), t.ModulePriceAt(k)));
+            while (parts.Count + 1 > limit)
+            {
+                int pick = Math.Clamp(NextDemotionPick(parts.Count), 0, parts.Count - 1);
+                lost.Add(parts[pick].DefIndex);
+                Emit(TdEventType.FusionLost, t.Id, parts[pick].DefIndex);
+                parts.RemoveAt(pick);
+            }
+            t.ModuleSlot = 0;
+            t.ModulePrice = 0;
+            t.ExtraModules = null;
+            t.ModuleCdTicks = 0;
+            if (parts.Count > 0) AddModules(ref t, parts);
+            _towers[i] = t;
+        }
+        if (lost.Count == 0) return;
+        _lastFusionLoss = lost;
+        _fusionLossCount++;
+    }
+
+    private int NextDemotionPick(int n)
+    {
+        if (DemotionPick is { } pick) return pick(n);
+        if (_demotionRng.Inc == 0) _demotionRng = Rng.Seed(_mutSeed, 97);
+        return (int)(_demotionRng.NextUInt() % (uint)n);
+    }
+
     /// <summary>Preview completo de um arrasto (nome, quantidade resultante e limite), mesmo quando bloqueado. Arrastar não cobra.</summary>
     public TdFusionCheck CheckFusionDrag(int targetId, int sourceId)
     {

@@ -217,19 +217,17 @@ public sealed class TdContinuousRunTests
     }
 
     [Fact]
-    public void Sanity_bot_run_is_deterministic_and_clears_the_campaign_with_kept_towers()
+    public void Sanity_bot_run_is_deterministic_and_clears_stage_one_with_kept_towers()
     {
         var content = TdContentLoader.LoadEmbedded();
-        // ECONOMIA: com dinheiro escasso o bot sofre dano a partir da fase 4 e passa do limite de colapso na campanha (o jogo não tem game over):
-        // mede a campanha inteira e limita o dano a menos de 2 x o colapso (difícil, mas não impossível).
-        var a = TdSanityBot.RunContinuous(content, 1, TdBotProfile.Otimizado, 100, stopAtCollapse: false);
-        var b = TdSanityBot.RunContinuous(content, 1, TdBotProfile.Otimizado, 100, stopAtCollapse: false);
+        // BAL-1: o roteiro do bot (torres sem fusão) já não zera a campanha; mede a primeira fase, com chefe.
+        var a = TdSanityBot.RunContinuous(content, 1, TdBotProfile.Otimizado, 100, 1, stopAtCollapse: false);
+        var b = TdSanityBot.RunContinuous(content, 1, TdBotProfile.Otimizado, 100, 1, stopAtCollapse: false);
         Assert.Equal(a.StateHash, b.StateHash);
-        Assert.Equal(6, a.StagesCleared);
-        Assert.InRange(a.XpLost, 1, 2 * TdSanityBot.CollapseXp - 1);
-        Assert.Equal(6, a.Stages.Count);
-        Assert.True(a.TowersAtEnd >= 12);
-        Assert.Equal(7, a.StageNumber); // já em cima do ciclo infinito
+        Assert.Equal(1, a.StagesCleared);
+        Assert.Single(a.Stages);
+        Assert.True(a.TowersAtEnd >= 8, $"{a.TowersAtEnd} torres");
+        Assert.Equal(2, a.StageNumber);
     }
 
     [Fact]
@@ -242,11 +240,11 @@ public sealed class TdContinuousRunTests
     }
 
     [Fact]
-    public void Sanity_bot_run_novato_falls_in_the_infinite_cycle()
+    public void Sanity_bot_run_novato_falls_early()
     {
         var content = TdContentLoader.LoadEmbedded();
-        var r = TdSanityBot.RunContinuous(content, 1, TdBotProfile.Novato, 100, 30);
+        var r = TdSanityBot.RunContinuous(content, 1, TdBotProfile.Novato, 100, 6);
         Assert.True(r.Defeated);
-        Assert.InRange(r.StagesCleared, 4, 29); // passa as fases iniciais, mas não sustenta a corrida infinita
+        Assert.InRange(r.StagesCleared, 0, 3); // BAL-1: sem escolher torres nem fundir, não passa das fases iniciais
     }
 }

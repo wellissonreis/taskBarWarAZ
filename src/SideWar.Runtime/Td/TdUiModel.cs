@@ -45,6 +45,8 @@ public enum TdUiAction : byte
     SettingsOpen, SettingsSection, SettingToggle, SettingChoice, SettingSlider, SettingHotkey, SettingsRestoreHotkeys,
     /// <summary>Modo sombra: liga/desliga (HUD, aba Jogo, Configurações e atalho).</summary>
     ShadowToggle,
+    /// <summary>BAL-1: fecha o aviso da derrota para o chefe (o jogo continua pausado).</summary>
+    BossDefeatDismiss,
 }
 
 /// <summary>Ícone do HUD desenhado por código (TD.14); o renderer mapeia para caminhos vetoriais.</summary>

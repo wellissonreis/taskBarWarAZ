@@ -22,11 +22,11 @@
     ]
   },
   "stages": [
-    { "id": 1, "minRank": 0, "title": "Brazil South",    "region": "brazilsouth",   "concept": "Tutorial: construir e iniciar a onda", "waves": 84, "startingCredits": 280, "challenge": "frugal" },
-    { "id": 2, "minRank": 1, "title": "East US",         "region": "eastus",        "concept": "Blindados e mira", "waves": 180, "startingCredits": 300, "challenge": "purist" },
-    { "id": 3, "minRank": 2, "title": "West Europe",     "region": "westeurope",    "concept": "Controle, habilidade e o primeiro chefe", "waves": 303, "startingCredits": 300, "challenge": "marathon" },
-    { "id": 4, "minRank": 3, "title": "Japan East",      "region": "japaneast",     "concept": "Voadores e suporte (respiro)", "waves": 389, "startingCredits": 340, "challenge": "frugal" },
-    { "id": 5, "minRank": 4, "title": "UK South",        "region": "uksouth",       "concept": "Regeneração e drenagem", "waves": 475, "startingCredits": 380, "challenge": "purist" },
-    { "id": 6, "minRank": 5, "title": "Australia East",  "region": "australiaeast", "concept": "Prova final", "waves": 475, "startingCredits": 560, "challenge": "marathon" }
+    { "id": 1, "minRank": 0, "title": "Brazil South",    "region": "brazilsouth",   "concept": "Tutorial: construir e iniciar a onda", "waves": 84, "startingCredits": 280, "hpStart": 1.0, "hpEnd": 6, "bossHp": 4, "bossOffStrategy": 0.25, "challenge": "frugal" },
+    { "id": 2, "minRank": 1, "title": "East US",         "region": "eastus",        "concept": "Blindados e mira", "waves": 180, "startingCredits": 300, "hpStart": 4, "hpEnd": 13, "bossHp": 4, "bossOffStrategy": 0.25, "challenge": "purist" },
+    { "id": 3, "minRank": 2, "title": "West Europe",     "region": "westeurope",    "concept": "Controle, habilidade e o primeiro chefe", "waves": 303, "startingCredits": 300, "hpStart": 6, "hpEnd": 11, "bossHp": 4.5, "bossOffStrategy": 0.25, "challenge": "marathon" },
+    { "id": 4, "minRank": 3, "title": "Japan East",      "region": "japaneast",     "concept": "Voadores e suporte (respiro)", "waves": 389, "startingCredits": 340, "hpStart": 7, "hpEnd": 11, "bossHp": 1.2, "challenge": "frugal" },
+    { "id": 5, "minRank": 4, "title": "UK South",        "region": "uksouth",       "concept": "Regeneração e drenagem", "waves": 475, "startingCredits": 380, "hpStart": 9, "hpEnd": 15, "bossHp": 2, "challenge": "purist" },
+    { "id": 6, "minRank": 5, "title": "Australia East",  "region": "australiaeast", "concept": "Prova final", "waves": 475, "startingCredits": 560, "hpStart": 10, "hpEnd": 14, "bossHp": 1.2, "challenge": "marathon" }
   ]
 }

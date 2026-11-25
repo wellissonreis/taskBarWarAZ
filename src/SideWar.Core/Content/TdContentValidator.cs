@@ -120,6 +120,9 @@ public static class TdContentValidator
         }
 
         var stages = def.Stages;
+        foreach (var st in stages)
+            Req(e, st.HpStart > 0 && st.HpEnd >= st.HpStart && st.BossHp >= 1 && st.BossOffStrategy is > 0 and <= 1,
+                $"td-stages fase {st.Id}: hpStart > 0, hpEnd >= hpStart, bossHp >= 1 e bossOffStrategy em (0, 1]");
         Req(e, stages.Length >= 1, "td-stages: ao menos uma fase");
         var regions = new HashSet<string>(StringComparer.Ordinal);
         for (var i = 0; i < stages.Length; i++)

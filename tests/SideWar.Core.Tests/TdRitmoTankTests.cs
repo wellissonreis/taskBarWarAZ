@@ -38,7 +38,7 @@ public sealed class TdRitmoTankTests
         Assert.True(C.Enemies.Enemies.Single(e => e.Id == "tank").Hp >= 1200);
         Assert.True(C.Enemies.Enemies.Single(e => e.Id == "slowloris").Hp >= 600);
         foreach (var b in C.Enemies.Bosses) Assert.True(b.Hp >= 2000, b.Id);
-        double[] baseHpPerWave = [749, 666, 1484, 1278, 1661, 2026]; // medido antes da ficha
+        double[] baseHpPerWave = [653, 666, 1484, 1278, 1661, 2026]; // fase 1 remedida com as fases longas (84 ondas)
         for (int i = 0; i < C.Waves.Stages.Length; i++)
         {
             double hp = C.Waves.Stages[i].Waves.Average(w => w.Groups.Sum(g =>
@@ -56,15 +56,28 @@ public sealed class TdRitmoTankTests
     [Fact]
     public void The_counter_bot_loses_clearly_less_than_the_random_bot()
     {
+        // Escala de campanha neutra: mede a vantagem de escolher o contra, não o balanceamento (TdCampaignRulesTests).
+        var neutral = C with { Stages = C.Stages with { Stages = C.Stages.Stages.Select(s => s with { HpStart = 1, HpEnd = 1, BossHp = 1 }).ToArray() } };
         long counter = 0, random = 0;
         double counterMin = 0, randomMin = 0;
+        // Mede o DANO que chegou ao núcleo: o XP perdido deixou de ser proporcional (de Sênior em diante cada chegada custa meia barra).
+        (long Damage, double Seconds) Play(int stage, TdBotProfile profile)
+        {
+            long damage = 0;
+            var r = TdSanityBot.RunContinuous(neutral, stage, profile, 11, 2, stopAtCollapse: false, initialReputation: 300000, initialAwakened: UInt128.MaxValue, observe: m =>
+            {
+                foreach (var e in m.Events) if (e.Type == TdEventType.EnemyLeaked) damage += e.B;
+                m.ClearEvents();
+            });
+            return (damage, r.CombatSeconds);
+        }
         foreach (int stage in new[] { 3, 6 })
         {
-            var c = TdSanityBot.RunContinuous(C, stage, TdBotProfile.Counter, 11, 2, initialReputation: 300000, stopAtCollapse: false);
-            var r = TdSanityBot.RunContinuous(C, stage, TdBotProfile.Aleatorio, 11, 2, initialReputation: 300000, stopAtCollapse: false);
-            counter += c.XpLost; random += r.XpLost; counterMin += c.CombatSeconds; randomMin += r.CombatSeconds;
+            var c = Play(stage, TdBotProfile.Counter);
+            var r = Play(stage, TdBotProfile.Aleatorio);
+            counter += c.Damage; random += r.Damage; counterMin += c.Seconds; randomMin += r.Seconds;
         }
-        Assert.True(counter * 2 < random, $"vazamento (XP): counter {counter} vs aleatório {random}");
+        Assert.True(counter * 2 < random, $"dano no núcleo: counter {counter} vs aleatório {random}");
         Assert.True(counterMin < randomMin, $"tempo: counter {counterMin / 60:F0} min vs aleatório {randomMin / 60:F0} min");
     }
 }

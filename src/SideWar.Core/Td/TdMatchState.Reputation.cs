@@ -35,6 +35,16 @@ public static class TdReputation
     public static int StageClearXp(int stageNumber, int stars, bool flawless = false) =>
         (int)Math.Min(100_000, 100L + 10L * (Math.Max(1, stageNumber) - 1) + 150L * Math.Clamp(stars, 1, 3) + (flawless ? FlawlessStageXp : 0));
 
+    /// <summary>Campanha: XP ganho (%) a partir de Sênior (rumo a Especialista) e a partir de Especialista (rumo a Arquiteto).</summary>
+    public const int SeniorXpGainPercent = 60, SpecialistXpGainPercent = 40;
+
+    /// <summary>Barra de XP da patente (do limiar dela ao próximo; na máxima, a última barra).</summary>
+    public static int RankBar(TdRankLevel rank)
+    {
+        var from = rank == TdRankLevel.Arquiteto ? TdRankLevel.Especialista : rank;
+        return TdRank.Threshold(from + 1) - TdRank.Threshold(from);
+    }
+
     /// <summary>Bônus de fase sem nenhum vazamento (INFINITO): premia desempenho, além do multiplicador da sequência.</summary>
     public const int FlawlessStageXp = 300;
 
@@ -66,12 +76,16 @@ public sealed partial class TdMatchState
     {
         if (_shadow) return; // sombra: XP congelado (sem perda nem rebaixamento)
         _streak = 0;
-        int xp = TdReputation.XpLost(coreDamage, XpShieldPercent);
+        var before = (TdRankLevel)CurrentRankId;
+        // Sênior em diante: cada chegada à base custa METADE da barra da patente atual (sem escudo).
+        bool halfBar = _options.UsesCampaignRules && before >= TdRankLevel.Senior;
+        int xp = coreDamage <= 0 ? 0 : halfBar ? TdReputation.RankBar(before) / 2 : TdReputation.XpLost(coreDamage, XpShieldPercent);
         if (xp <= 0) return;
         _repLostStage += xp;
         ReputationLostTotal += xp;
         GateReputation = (int)Math.Max(0L, (long)GateReputation - xp);
         Emit(TdEventType.BaseAttacked, xp, coreDamage);
+        if (halfBar && CurrentRankId < (int)before) TrimFusionsToRank();
     }
 
     /// <summary>Bônus de XP ganho das runas "xpGainBp" (pontos-base). Vale só para ganho (onda/fase), nunca para a perda (xpShield) nem para recuperação.</summary>
@@ -80,6 +94,8 @@ public sealed partial class TdMatchState
     private void GainReputation(int xp, int wave, bool boost = true)
     {
         if (xp <= 0 || _shadow) return; // sombra: sem ganho de XP
+        if (boost && _options.UsesCampaignRules && CurrentRankId >= (int)TdRankLevel.Senior)
+            xp = (int)Math.Max(1L, (long)xp * (CurrentRankId >= (int)TdRankLevel.Especialista ? TdReputation.SpecialistXpGainPercent : TdReputation.SeniorXpGainPercent) / 100);
         if (boost && XpGainBp > 0) xp = (int)Math.Min(100_000L, (long)xp * (10_000 + XpGainBp) / 10_000);
         ReputationGainedTotal += xp;
         GateReputation = (int)Math.Min(100_000_000L, (long)GateReputation + xp);

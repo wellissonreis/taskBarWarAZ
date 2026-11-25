@@ -235,29 +235,41 @@ public sealed class TdScoreTests
     public void Rank_brasao_matches_threshold(int points, string filename) =>
         Assert.Equal(filename, TdRank.Brasao(TdRank.Progress(points).Current));
 
-    [Fact(DisplayName = "INFINITO XP: sem tomar dano ~30 min Júnior, ~1h30 Pleno, ~4 h Sênior, ~8 h Especialista, ~15 h Arquiteto; vazar dói")]
+    [Fact(DisplayName = "INFINITO XP: patentes em ondas crescentes; de Especialista em diante a campanha exige mais ondas; vazar dói")]
     public void Rank_TimeToRank_IsLongAndRewardsPerformance()
     {
-        // Modelo do jogador perfeito: fases de ~30 min, 3 estrelas, nunca vaza (a sequência só cresce); ondas por fase do conteúdo embarcado.
+        // Jogador perfeito (3 estrelas, nunca vaza) sobre as ondas por fase do conteúdo; conta ONDAS até cada patente.
         var c = SideWar.Core.Content.Td.TdContentLoader.LoadEmbedded();
-        double minutes = 0; long xp = 0; int streak = 0; var at = new Dictionary<TdRankLevel, double>();
-        for (int s = 1; s <= 120; s++)
+        Dictionary<TdRankLevel, int> Waves(bool campaign)
         {
-            int waves = c.Stages.Stages[(s - 1) % 6].Waves;
-            for (int w = 1; w <= waves; w++)
+            long xp = 0; int streak = 0, total = 0; var at = new Dictionary<TdRankLevel, int>();
+            void Gain(int amount)
             {
-                xp += TdReputation.WaveXp(s, w, false, ++streak);
-                minutes += 30.0 / waves;
                 var r = TdRank.For((int)xp);
-                if (!at.ContainsKey(r)) at[r] = minutes / 60.0;
+                if (campaign && r >= TdRankLevel.Senior)
+                    amount = Math.Max(1, amount * (r >= TdRankLevel.Especialista ? TdReputation.SpecialistXpGainPercent : TdReputation.SeniorXpGainPercent) / 100);
+                xp += amount;
             }
-            xp += TdReputation.StageClearXp(s, 3, true);
+            for (int s = 1; s <= 120; s++)
+            {
+                for (int w = 1; w <= c.Stages.Stages[(s - 1) % 6].Waves; w++)
+                {
+                    Gain(TdReputation.WaveXp(s, w, false, ++streak));
+                    total++;
+                    at.TryAdd(TdRank.For((int)xp), total);
+                }
+                Gain(TdReputation.StageClearXp(s, 3, true));
+            }
+            return at;
         }
-        Assert.InRange(at[TdRankLevel.Junior], 0.3, 0.8);
-        Assert.InRange(at[TdRankLevel.Pleno], 1.0, 2.2);
-        Assert.InRange(at[TdRankLevel.Senior], 3.0, 5.5);
-        Assert.InRange(at[TdRankLevel.Especialista], 6.0, 11.0);
-        Assert.InRange(at[TdRankLevel.Arquiteto], 12.0, 20.0);
+        var plain = Waves(false);
+        var campaign = Waves(true);
+        Assert.InRange(campaign[TdRankLevel.Junior], 40, 100);
+        Assert.InRange(campaign[TdRankLevel.Pleno], 120, 260);
+        Assert.InRange(campaign[TdRankLevel.Senior], 250, 500);
+        Assert.Equal(plain[TdRankLevel.Senior], campaign[TdRankLevel.Senior]);
+        Assert.True(campaign[TdRankLevel.Especialista] > plain[TdRankLevel.Especialista]);
+        Assert.True(campaign[TdRankLevel.Arquiteto] > plain[TdRankLevel.Arquiteto] * 1.2);
         // desempenho: sequência multiplica (até x4); vazar paga metade do base e zera a sequência; fase limpa e 3 estrelas pagam mais
         Assert.Equal(1.0, TdReputation.StreakMultiplier(0));
         Assert.Equal(2.0, TdReputation.StreakMultiplier(10));

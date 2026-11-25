@@ -24,7 +24,7 @@ public sealed class TdInfiniteTests
     [Fact]
     public void Every_stage_is_long_and_the_opening_of_stage_1_stays_calm()
     {
-        foreach (var st in C.Stages.Stages) Assert.InRange(st.Waves, 55, 120); // ~0,4-0,5 min por onda => 25-40 min por fase
+        foreach (var st in C.Stages.Stages) Assert.InRange(st.Waves, 55, 475); // fases longas (docs/balanceamento-fases-xp.md)
         var w1 = C.Waves.Stages[0].Waves;
         Assert.Equal(1, w1[0].Groups.Sum(g => g.Count)); // início calmo (RITMO-INICIO) preservado
         Assert.True(w1.Take(7).All(w => w.Groups.Sum(g => g.Count) <= 13));
@@ -106,11 +106,19 @@ public sealed class TdInfiniteTests
     [Fact]
     public void A_continuous_run_never_ends_after_stage_6_and_reports_cycle_in_the_stage_summary()
     {
-        var r = TdSanityBot.RunContinuous(C, 6, TdBotProfile.Medio, 1, 3, stopAtCollapse: false); // fase 6 -> 7 (ciclo 2) -> 8
+        // Escala de campanha neutra e teia completa: mede o ciclo infinito, não o balanceamento (TdCampaignRulesTests).
+        // Fases encurtadas para 20 ondas (mantendo a do chefe): as três fases completas estouram o teto de passos do bot.
+        var waves = C.Waves.Stages.Select(st => new TdStageWavesDef(st.Stage, [.. st.Waves.Take(19), st.Waves[^1] with { Number = 20 }])).ToArray();
+        var neutral = C with
+        {
+            Waves = new TdWavesDef(waves),
+            Stages = C.Stages with { Stages = C.Stages.Stages.Select(s => s with { Waves = 20, HpStart = 0.25, HpEnd = 0.25, BossHp = 1, StartingCredits = 20_000 }).ToArray() },
+        };
+        var r = TdSanityBot.RunContinuous(neutral, 6, TdBotProfile.Medio, 1, 3, stopAtCollapse: false, initialAwakened: UInt128.MaxValue); // fase 6 -> 7 (ciclo 2) -> 8
         Assert.Equal(3, r.StagesCleared);
         Assert.Equal([6, 7, 8], r.Stages.Select(x => x.StageNumber));
         Assert.Equal([0, 1, 1], r.Stages.Select(x => x.Cycle));
         Assert.Equal([6, 1, 2], r.Stages.Select(x => x.StageId));
-        Assert.All(r.Stages, x => Assert.InRange(x.CombatSeconds / 60, 15, 60));
+        Assert.All(r.Stages, x => Assert.True(x.CombatSeconds > 0));
     }
 }

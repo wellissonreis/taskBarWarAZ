@@ -210,6 +210,10 @@ public sealed partial class TdMatchState
                     _towers[j] = functions;
                 }
                 e.PushGraceTicks = Ticks(Stat(t, def, "pushGraceSeconds", 3));
+                // Campanha: várias Filas não podem empurrar mais depressa do que o inimigo anda (a onda ficaria presa para sempre).
+                // O próximo empurrão só vem depois de ele ter tempo de andar 4x o trecho devolvido.
+                if (_options.UsesCampaignRules && e.Speed > 0)
+                    e.PushGraceTicks = Math.Max(e.PushGraceTicks, Ticks(4 * amount / e.Speed));
             }
             else
             {
@@ -382,6 +386,7 @@ public sealed partial class TdMatchState
     {
         var e = _enemies[idx];
         if (e.InvulnTicks > 0 || dmg <= 0) { _lastEffect = 0; return; }
+        if (FinalBossImmune && e.Wave == TotalWaves && IsRegionalBoss(_enemyStats[e.DefIndex])) { _lastEffect = 0; return; }
         double absorbed = Math.Min(e.ShieldHp, dmg);
         e.ShieldHp -= absorbed;
         e.Hp -= dmg - absorbed;
@@ -439,6 +444,9 @@ public sealed partial class TdMatchState
             else if (weakHit && !strongHit) { raw *= _options.Difficulty == TdDifficulty.Hard ? 0.25 : WeakDamageMultiplier; _lastEffect = 2; }
             else _lastEffect = 0;
         }
+        // Chefe regional da última onda: só a torre com vantagem contra ele causa o dano cheio (vence-se por estratégia, não por volume).
+        if (_options.UsesCampaignRules && target.Wave == TotalWaves && IsRegionalBoss(st) && !def.Strong.Intersect(st.NativeTraits).Any())
+            raw *= _stage.BossOffStrategy;
         if (target.VulnTicks > 0) raw *= 1.0 + target.VulnBonus;
         raw *= 1.0 + _auraDamage[towerIndex];
         if (st.BlockedReduction > 0 && Dist(tower.X, target.X) <= st.ActRange) raw *= 1.0 - st.BlockedReduction;
@@ -465,7 +473,7 @@ public sealed partial class TdMatchState
             var e = _enemies[i];
             if (e.Hp <= 0 || e.InvulnTicks > 0) continue;
             if (!VisibleToTower(e, def)) continue;
-            if (def.Id == "queue" && (e.PushGraceTicks > 0 || _held.Contains(e.Id))) continue;
+            if (def.Id == "queue" && (e.PushGraceTicks > 0 || _held.Contains(e.Id) || IsUnstoppable(e))) continue;
             if (e.Flying && def.Targets != "both") continue;
             if (Dist(e.X, tower.X) > range || Dist(e.X, tower.X) < Stat(tower, def, "minRange", 0)) continue;
             if (best < 0 || Better(mode, e, _enemies[best], tower.X)) best = i;
@@ -759,11 +767,21 @@ public sealed partial class TdMatchState
         var st = _enemyStats[defIndex];
         Emit(TdEventType.EnemyEncountered, defIndex, 0);
         if (mutations != 0 && !st.IsBoss) Emit(TdEventType.EnemyEncountered, defIndex, 1);
-        double hp = ScaledHp(st.Hp, wave);
+        // Alvo único não ganha com área nem quantidade: chefes ficam fora da escala de campanha (já crescem por onda e fase);
+        // o chefe regional da última onda é calibrado por <c>bossHp</c>.
+        double factor = st.IsBoss ? 1.0 : CampaignHpFactor(wave);
+        double hp = ScaledHp(st.Hp, wave) * factor;
+        double shield = st.ShieldHp * factor, armor = st.Armor;
+        if (_options.UsesCampaignRules && wave == TotalWaves && IsRegionalBoss(st))
+        {
+            hp *= _stage.BossHp;
+            shield = Math.Max(shield, hp * FinalBossShieldFraction);
+            armor += FinalBossArmorBonus;
+        }
         var e = new TdEnemy
         {
             Id = _nextEnemyId++, Wave = wave, DefIndex = defIndex, IsBoss = st.IsBoss, X = x, Speed = st.Speed,
-            Hp = hp, MaxHp = hp, ShieldHp = st.ShieldHp, Armor = st.Armor, Gold = st.Gold, CoreDamage = st.CoreDamage, Flying = st.Flying,
+            Hp = hp, MaxHp = hp, ShieldHp = shield, Armor = armor, Gold = st.Gold, CoreDamage = st.CoreDamage, Flying = st.Flying,
             SlowMult = 1.0, AbilityCdTicks = st.ActInitialCdTicks,
         };
         return mutations == 0 || st.IsBoss ? e : ApplyMutations(e, st, mutations);

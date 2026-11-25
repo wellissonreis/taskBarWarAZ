@@ -82,10 +82,10 @@ public static class TdSanityBot
     /// mantidos), jogada até derrota ou <paramref name="maxStages"/> fases concluídas (6 = a campanha; mais = ciclo infinito). A cada fase o bot
     /// carrega o roteiro da fase de conteúdo (só construir/runas: mira e venda do roteiro de fase única dependem de ids que a corrida já mudou).
     /// </summary>
-    public static TdRunBotResult RunContinuous(TdContent content, int startStage, TdBotProfile profile, ulong seed, int maxStages = 6, bool awaken = true, Action<TdMatchState>? observe = null, bool stopAtCollapse = true, int? initialReputation = null)
+    public static TdRunBotResult RunContinuous(TdContent content, int startStage, TdBotProfile profile, ulong seed, int maxStages = 6, bool awaken = true, Action<TdMatchState>? observe = null, bool stopAtCollapse = true, int? initialReputation = null, TdDifficulty difficulty = TdDifficulty.Casual, UInt128 initialAwakened = default)
     {
         ArgumentNullException.ThrowIfNull(content);
-        var state = TdMatchState.Create(content, startStage, Rng.Seed(seed, 54), null, TdMatchOptions.Default with { InitialReputation = initialReputation });
+        var state = TdMatchState.Create(content, startStage, Rng.Seed(seed, 54), null, TdMatchOptions.Default with { InitialReputation = initialReputation, Difficulty = difficulty, InitialAwakened = initialAwakened });
         var bot = new Runner(state, RunPlan(startStage, profile), profile) { RunMaxStages = maxStages, Awaken = awaken, Observe = observe, StopAtCollapse = stopAtCollapse };
         return bot.PlayRun(seed, startStage);
     }
@@ -130,6 +130,7 @@ public static class TdSanityBot
                     _next = 0;
                     _fallbackBuilt = 0;
                 }
+                if (_s.Paused) Send(new Resume()); // derrota para o chefe pausa: o jogador simulado retoma
                 if (_s.Phase == MatchPhase.Preparo)
                 {
                     Spend();
@@ -173,6 +174,7 @@ public static class TdSanityBot
             long maxFrames = 30L * 3600 * 2;
             while (_s.Frame < maxFrames && _s.Phase is MatchPhase.Preparo or MatchPhase.Onda && _s.ReputationLostTotal < CollapseXp)
             {
+                if (_s.Paused) Send(new Resume());
                 if (_s.Phase == MatchPhase.Preparo)
                 {
                     Spend();

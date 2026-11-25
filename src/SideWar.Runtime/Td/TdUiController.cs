@@ -98,7 +98,7 @@ public sealed partial class TdUiController
     public bool PromotionPending => _pendingPromotion is not null;
     public void DismissNotice() { if (_noticeText is null) return; _noticeText = null; Changed?.Invoke(); }
     /// <summary>Qualquer popover pequeno ancorado ao chip: painel rápido, pergunta-bônus, aviso de fase ou cartão de fim. Nunca ativa janela.</summary>
-    public bool CornerPopover => DemotionCardOpen || QuickTowersOpen || RuneWindowOpen || EndCardOpen || (NoticeOpen && (!PromotionOpen || (!ModalOpen && !BuildActive && (!QuickTowersOpen || PinnedIdle) && !QuizActive))) || RuneCardOpen || AlertCardOpen || FuseCardOpen || FuseDragCardOpen || FusionTipOpen || _fusionChoosingModule || FusionTargetActive || MutationWarnOpen || ((Mode == TdUiMode.None || QuickTowersOpen) && QuizActive)
+    public bool CornerPopover => DemotionCardOpen || BossDefeatOpen || QuickTowersOpen || RuneWindowOpen || EndCardOpen || (NoticeOpen && (!PromotionOpen || (!ModalOpen && !BuildActive && (!QuickTowersOpen || PinnedIdle) && !QuizActive))) || RuneCardOpen || AlertCardOpen || FuseCardOpen || FuseDragCardOpen || FusionTipOpen || _fusionChoosingModule || FusionTargetActive || MutationWarnOpen || ((Mode == TdUiMode.None || QuickTowersOpen) && QuizActive)
         || (_tutorial is { Active: true } && (Mode == TdUiMode.None || BuildActive));
     private int _chosenX = -1;       // X lógico já escolhido (passo "escolher a torre"); -1 = ainda no passo do ponto
     private int _moveTowerId;        // > 0: reposicionando uma torre SEM POSIÇÃO (sem escolha de tipo)
@@ -390,10 +390,14 @@ public sealed partial class TdUiController
                 if (Mode == TdUiMode.Towers) Changed?.Invoke(); else Close();
                 break;
             case TdUiAction.TowersOpen: SetMode(TdUiMode.Towers); break;
-            case TdUiAction.PauseToggle when !ModalOpen && !_demotionPending:
+            case TdUiAction.BossDefeatDismiss:
+                _bossCardDismissed = true;
+                Changed?.Invoke(); break;
+            case TdUiAction.PauseToggle when !ModalOpen:
                 if (_match().Phase is MatchPhase.Preparo or MatchPhase.Onda)
                 {
                     _userPaused = !_userPaused;
+                    if (!_userPaused) _bossDefeatWave = 0; // retomada manual: o aviso da derrota sai
                     _send(_userPaused ? new Pause() : new Resume());
                 }
                 Changed?.Invoke(); break;
@@ -484,6 +488,7 @@ public sealed partial class TdUiController
             _returnToEnd = false;
             _noticeText = null;
             _userPaused = false;
+            ResetPenalties(m);
             _demotionPending = false; // cartão de rebaixamento é da partida antiga
             _runePath.Clear(); _runePathPending = null; _runePathNotice = null;
             _selectedRune = _lastRune = _hoverRune = _hoverBranch = null;
@@ -703,6 +708,7 @@ public sealed partial class TdUiController
         if (!ReferenceEquals(_rewindMatch, m)) { _rewindMatch = m; _seenBossRewinds = m.BossRewinds; _pendingBossRewindWave = 0; }
         bool rewound = m.BossRewinds > _seenBossRewinds;
         _seenBossRewinds = m.BossRewinds;
+        SyncPenalties(m);
         if (rewound) _pendingBossRewindWave = Math.Max(1, m.TotalWaves - 10);
         var progress = _host.Rank;
         var rank = progress.Current;
@@ -774,7 +780,7 @@ public sealed partial class TdUiController
             _noticeUntil = _now() + StageNoticeSeconds;
             Changed?.Invoke();
         }
-        else if (_pendingBossRewindWave > 0 && !BossHidden && !NoticeOpen)
+        else if (_pendingBossRewindWave > 0 && _bossDefeatWave == 0 && !BossHidden && !NoticeOpen)
         {
             _noticeTitle = null;
             _noticeRank = null;
@@ -835,7 +841,7 @@ public sealed partial class TdUiController
         Changed?.Invoke();
     }
 
-    private void UpdateModalPause() => _modalCount = ModalOpen || (_demotionPending && !BossHidden) ? 1 : 0;
+    private void UpdateModalPause() => _modalCount = ModalOpen ? 1 : 0;
 
     /// <summary>Abre a tela inicial sem interromper a partida.</summary>
     public void OpenStartupModal() { if (_tutorial is { Active: true }) Close(); else SetMode(TdUiMode.Menu); }
@@ -1116,9 +1122,13 @@ public sealed partial class TdUiController
     {
         var m = _match();
         if (BossHidden) return null;
-        if (DemotionCardOpen) return BuildDemotionCard();
+        // Avisos de punição ficam no canto sem travar nada: cedem lugar enquanto o jogador constrói ou configura.
+        bool operating = BuildActive || Mode != TdUiMode.None || (QuickTowersOpen && !PinnedIdle) || RuneWindowOpen || _fusionChoosingModule || FusionTargetActive;
+        if (DemotionCardOpen && !operating) return BuildDemotionCard();
         if (AlertCritical) return BuildAlertCard();
         if (FuseDragCardOpen) return BuildFuseDragCard(m);
+        // Derrota para o chefe: fica no canto até a retomada, mas cede lugar a quem está reconfigurando as torres.
+        if (BossDefeatOpen && !operating) return BuildBossDefeatCard(m);
         if (PromotionOpen && !BuildActive && (Mode == TdUiMode.None || PinnedIdle) && !QuizActive) return BuildNotice();
         if (_outsideCollapsed) return null;
         if (AlertWarningOpen) return BuildAlertCard();

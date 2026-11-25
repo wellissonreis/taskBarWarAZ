@@ -212,6 +212,10 @@ public enum TdEventType : byte
     ShadowChanged,
     // A = onda para a qual a fase voltou após dano na última onda.
     BossRewind,
+    // Chefe da última onda venceu: a partida fica pausada até o jogador retomar. A = onda para a qual voltou.
+    BossDefeat,
+    // Rebaixamento (Sênior+) destruiu um componente de fusão. A = id da torre; B = índice da definição perdida.
+    FusionLost,
 }
 
 /// <summary>Evento observável (não entra no hash). <c>A</c>/<c>B</c>: valores do evento (onda, créditos, id etc.).</summary>
@@ -252,6 +256,8 @@ public enum TdDifficulty : byte { Casual, Hard, Extreme }
 
 public sealed record TdMatchOptions(bool ContinuousWaves = true, bool PersistentRun = true, int StageClearHeal = 5, int? HighestCompletedStage = null, UInt128 InitialAwakened = default, long InitialFragments = 0, int? InitialReputation = null, bool InitialShadow = false, TdDifficulty Difficulty = TdDifficulty.Casual)
 {
+    /// <summary>Regras de campanha (escala de HP, chefe final, meia barra de XP): valem fora do modo clássico.</summary>
+    public bool UsesCampaignRules => !IsClassic;
     public static TdMatchOptions Default { get; } = new();
     public static TdMatchOptions Classic { get; } = new(false, false, 0);
     public bool IsClassic => !ContinuousWaves && !PersistentRun;

@@ -12,7 +12,11 @@ namespace SideWar.Core.Tests;
 /// <summary>TD.37c (SDD-37 §4, CA-37.4, 37.5 e 37.7): mutações combináveis de inimigos no Core.</summary>
 public sealed class TdMutationTests
 {
-    private static readonly TdContent Real = TdContentLoader.LoadEmbedded();
+    // Escala de campanha neutra: estes testes medem a mecânica das mutações, não o balanceamento (coberto em TdCampaignRulesTests).
+    private static readonly TdContent Real = Neutral(TdContentLoader.LoadEmbedded());
+
+    private static TdContent Neutral(TdContent c) =>
+        c with { Stages = c.Stages with { Stages = c.Stages.Stages.Select(s => s with { HpStart = 1, HpEnd = 1, BossHp = 1 }).ToArray() } };
 
     private static TdMutationTraitDef Trait(string id, string label, double hp = 1, double speed = 1, double armor = 0, double shield = 0, bool fly = false, params string[] excl) =>
         new(id, label, label, 1, hp, speed, armor, shield, fly, excl);
@@ -180,7 +184,7 @@ public sealed class TdMutationTests
             Assert.Equal((long)Math.Floor(flyer.Gold * 1.3), d.Enemy.Gold); // 1,15 por traço: 1,3 (teto)
             Assert.Equal("Bot aéreo Tank Lento", s.MutatedName(d.Enemy.DefIndex, d.Enemy.Mutations));
             Assert.Equal(["flying", "durable", "slow"], s.EnemyTraitUnion(d.Enemy));
-            var plainHp = flyer.Hp * Math.Pow(s.Content.Stages.Rules.HpWaveGrowth, d.Wave - 1) * (1 + s.Content.Stages.Rules.HpStageStep * 5); // fase 6 (14 ondas)
+            var plainHp = flyer.Hp * (1 + (s.Content.Stages.Rules.HpWaveGrowth - 1) * (d.Wave - 1)) * (1 + s.Content.Stages.Rules.HpStageStep * 5); // fase 6 (14 ondas)
             Assert.Equal(plainHp * 1.7, d.Enemy.MaxHp, 3);
         }
         Assert.Equal(14, waves.Count);

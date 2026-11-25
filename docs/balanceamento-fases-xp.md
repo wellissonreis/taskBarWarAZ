@@ -14,3 +14,32 @@ Cada comprimento é `arredondar para o inteiro mais próximo (1,25 × média de 
 | 6 Arquiteto | — | — | — | — | 475 |
 
 As promoções do perfil médio ocorreram, respectivamente, nas ondas 68 da fase 1, 128 da fase 2, 190 da fase 3, 198 da fase 4 e 187 da fase 5. Os intervalos são contados em ondas concluídas desde a promoção anterior; a numeração exibida durante a observação já aponta para a onda seguinte.
+
+## Escala de campanha (BAL-1)
+
+Vale fora do modo clássico (`TdMatchOptions.UsesCampaignRules`). Os valores por região ficam em `td-stages.json` (`hpStart`, `hpEnd`, `bossHp`).
+
+- HP e escudo dos inimigos comuns = fórmula acima × curva da região (reta de `hpStart` na onda 1 a `hpEnd` na última, sem platô) × dificuldade (Casual 1, Difícil 1,05, Extremo 1,1).
+- Chefes ficam fora da curva e da dificuldade (crescem só por onda, fase e ciclo).
+- Chefe regional da última onda: × `bossHp`, escudo de 35% do HP e armadura +10.
+- Nas regiões 1 a 3, torre sem vantagem contra o chefe regional causa só 25% do dano (`bossOffStrategy`).
+- Chefes (não aliados) da última onda não são empurrados, retidos nem paralisados.
+- Fila: o mesmo inimigo só é empurrado de novo depois de ter tempo de andar 4× o trecho devolvido, para nenhuma onda ficar presa.
+- Chefe regional da região final (6, em qualquer ciclo): só recebe dano com a teia 128/128.
+- Chefe da última onda chega à base: volta 10 ondas, mantém torres e créditos e **pausa** (única pausa automática; retomada manual).
+- A calibração usa formações compráveis com a renda real (~4 mil créditos na fase 1; ~105 mil acumulados até a fase 6).
+
+| Região | hpStart | hpEnd | bossHp |
+|---|---:|---:|---:|
+| 1 | 1 | 6 | 4 |
+| 2 | 4 | 13 | 4 |
+| 3 | 6 | 11 | 4,5 |
+| 4 | 7 | 11 | 1,2 |
+| 5 | 9 | 15 | 2 |
+| 6 | 10 | 14 | 1,2 |
+
+### XP de patente
+
+- Ganho: 60% a partir de Sênior (rumo a Especialista) e 40% a partir de Especialista (rumo a Arquiteto). Os limiares não mudaram.
+- Perda abaixo de Sênior: 200 XP por ponto de dano no núcleo, com escudo (regra anterior).
+- Perda de Sênior em diante: cada inimigo que chega à base custa metade da barra da patente atual (do limiar dela ao próximo), sem escudo. Se rebaixar, as fusões acima do limite da nova patente são destruídas, escolhidas ao acaso; a torre base fica.

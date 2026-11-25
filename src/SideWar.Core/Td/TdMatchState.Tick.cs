@@ -69,6 +69,48 @@ public sealed partial class TdMatchState
         return hp;
     }
 
+    /// <summary>Multiplicador de HP/escudo por dificuldade (campanha), desde a onda 1.</summary>
+    public const double HardHpMultiplier = 1.05, ExtremeHpMultiplier = 1.1;
+    /// <summary>Chefe regional da última onda: escudo (fração do HP) e armadura extra.</summary>
+    public const double FinalBossShieldFraction = 0.35, FinalBossArmorBonus = 10;
+
+    /// <summary>
+    /// Escala de campanha: sobe em linha reta, sem platô, de <c>hpStart</c> (onda 1) a <c>hpEnd</c> (última onda) da região,
+    /// acompanhando o progresso de runas e fusões esperado, vezes a dificuldade. 1 no modo clássico.
+    /// </summary>
+    public double CampaignHpFactor(int wave)
+    {
+        if (!_options.UsesCampaignRules) return 1.0;
+        double difficulty = _options.Difficulty switch { TdDifficulty.Hard => HardHpMultiplier, TdDifficulty.Extreme => ExtremeHpMultiplier, _ => 1.0 };
+        return CampaignCurve(wave) * difficulty;
+    }
+
+    /// <summary>A escala da região sem a dificuldade (1 no modo clássico).</summary>
+    public double CampaignCurve(int wave)
+    {
+        if (!_options.UsesCampaignRules) return 1.0;
+        double p = Math.Clamp((wave - 1) / (double)Math.Max(1, _waves.Length - 1), 0.0, 1.0);
+        return _stage.HpStart + (_stage.HpEnd - _stage.HpStart) * p;
+    }
+
+    private static bool IsRegionalBoss(TdEnemyStats st) => st.IsBoss && st.Id.StartsWith("chefe_", StringComparison.Ordinal);
+
+    /// <summary>
+    /// Chefe (não aliado) da última onda na campanha: não é empurrado, retido nem paralisado, para a onda sempre terminar
+    /// (vitória ou derrota) em vez de ficar presa para sempre.
+    /// </summary>
+    private bool IsUnstoppable(in TdEnemy e)
+    {
+        var st = _enemyStats[e.DefIndex];
+        return _options.UsesCampaignRules && st.IsBoss && e.Wave == TotalWaves && !st.Id.StartsWith("aliado_", StringComparison.Ordinal);
+    }
+
+    /// <summary>Região final da campanha (última fase do conteúdo, em qualquer ciclo).</summary>
+    public bool IsFinalRegion => _stage.Id == _content.Stages.Stages.Length;
+
+    /// <summary>Regra-mestra: o chefe da região final só recebe dano com a teia inteira despertada.</summary>
+    public bool FinalBossImmune => _options.UsesCampaignRules && IsFinalRegion && AwakenedCount < _content.Runes.Nodes.Length;
+
     /// <summary>Início mais calmo (RITMO-INICIO): na fase 1 do primeiro ciclo a velocidade sobe de 70% (onda 1) até 100% (onda 13, 2,5 pp por onda); depois disso, valores originais.</summary>
     private double EarlySpeedFactor(int wave) =>
         _stageNumber == 1 && Cycle == 0 && wave < 13 ? 0.70 + 0.025 * (wave - 1) : 1.0;
@@ -84,7 +126,7 @@ public sealed partial class TdMatchState
             var e = _enemies[i];
             var st = _enemyStats[e.DefIndex];
             double mult = 1.0;
-            if (e.ParalyzeTicks > 0 || _held.Contains(e.Id)) mult = 0.0;
+            if ((e.ParalyzeTicks > 0 || _held.Contains(e.Id)) && !IsUnstoppable(e)) mult = 0.0;
             else
             {
                 if (e.SlowTicks > 0) mult = Math.Min(mult, e.SlowMult);
@@ -103,7 +145,11 @@ public sealed partial class TdMatchState
             _stageIntegrityLoss = (int)Math.Min(int.MaxValue, (long)_stageIntegrityLoss + e.CoreDamage);
             _hasLeaked = true;
             WaveOf(e.Wave).Leaked = true;
-            if (e.CoreDamage > 0 && e.Wave == TotalWaves && WaveOf(e.Wave).Agenda.Any(s => s.IsBoss)) _finalWaveFailed = true;
+            if (e.CoreDamage > 0 && e.Wave == TotalWaves && WaveOf(e.Wave).Agenda.Any(s => s.IsBoss))
+            {
+                _finalWaveFailed = true;
+                if (st.IsBoss && !st.Id.StartsWith("aliado_", StringComparison.Ordinal)) _bossBreached = true;
+            }
             RecordLeak(e);
             Emit(TdEventType.EnemyLeaked, e.Id, e.CoreDamage);
             LoseReputation(e.CoreDamage); // sem game over: só perde XP de reputação

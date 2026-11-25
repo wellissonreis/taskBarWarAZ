@@ -38,7 +38,7 @@ public sealed class TdSanityBotTests
         return sb.ToString();
     }
 
-    private const ulong GoldenOptimizedStage3 = 4163913753670389508UL;
+    private const ulong GoldenOptimizedStage3 = 16810462603831132436UL; // BAL-1: o StateHash inclui o hash do conteúdo
     private const int Seeds = 20;
     private static readonly Lazy<TdBotResult[]> Matrix = new(() =>
     {

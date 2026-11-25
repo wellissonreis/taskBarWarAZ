@@ -56,7 +56,8 @@ public sealed record TdMatchRulesDef(
     TdChallengeDef[] Challenges, TdBonusQuestionDef BonusQuestion, TdFragmentsDef Fragments);
 
 public sealed record TdStageDef(
-    int Id, string Title, string Region, string Concept, int Waves, long StartingCredits, string Challenge, int MinRank = 0);
+    int Id, string Title, string Region, string Concept, int Waves, long StartingCredits, string Challenge, int MinRank = 0,
+    double HpStart = 1, double HpEnd = 1, double BossHp = 1, double BossOffStrategy = 1);
 
 public sealed record TdStagesDef(TdMatchRulesDef Rules, TdStageDef[] Stages);
 

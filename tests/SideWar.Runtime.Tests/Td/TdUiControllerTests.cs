@@ -355,7 +355,7 @@ public sealed class TdUiControllerTests
     private const int Width = 1000;
     private static readonly string[] Affordable = ["bolt", "frost", "cannon"];
 
-    private sealed class FakeHost : ITdUiHost
+    internal sealed class FakeHost : ITdUiHost
     {
         public TdGameOptions GameOptions { get; private set; } = new();
         public void SetGameOptions(TdGameOptions options) => GameOptions = options;
@@ -482,7 +482,7 @@ public sealed class TdUiControllerTests
     }
 
     [Fact]
-    public void Demotion_pauses_until_continue_even_with_notices_disabled_and_outside_click()
+    public void Demotion_card_never_pauses_and_stays_with_notices_disabled_and_outside_click()
     {
         var r = new Rig();
         r.Host.SetGameOptions(r.Host.GameOptions with { NoticeSize = 0 });

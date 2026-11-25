@@ -50,6 +50,9 @@ public sealed partial class TdMatchState
     private bool _countdownActive;
     private bool _bonusAnswered;
     private bool _finalWaveFailed;
+    private bool _bossBreached;
+    /// <summary>Derrotas para o chefe da última onda (cada uma recua 10 ondas e pausa).</summary>
+    public int BossDefeats { get; private set; }
     /// <summary>Quantidade de recuos após dano na onda final.</summary>
     public int BossRewinds { get; private set; }
 
@@ -527,8 +530,17 @@ public sealed partial class TdMatchState
                     RestartCountdown();
                     StartImmediateIfReady();
                 }
+                if (_bossBreached && _options.UsesCampaignRules)
+                {
+                    // Única pausa automática do jogo: o jogador precisa reconfigurar as torres e retomar à mão.
+                    BossDefeats++;
+                    Paused = true;
+                    Emit(TdEventType.BossDefeat, target);
+                }
+                _bossBreached = false;
                 return;
             }
+            _bossBreached = false;
             if (_options.PersistentRun)
             {
                 ClearStageAndAdvance();
