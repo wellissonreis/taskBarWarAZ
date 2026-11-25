@@ -394,8 +394,9 @@ public sealed class TdUiControllerTests
         public double Now;
         public TdUiController Ui;
 
-        public Rig()
+        public Rig(int score = 7000)
         {
+            Host.Score = score;
             Ui = new TdUiController(() => Match, Send, Host, () => Now);
         }
 
@@ -415,17 +416,17 @@ public sealed class TdUiControllerTests
     }
 
     [Theory]
-    [InlineData(1, 22f)]
-    [InlineData(2, 27.5f)]
-    [InlineData(3, 33f)]
-    public void Notice_sizes_and_click_dismissal(int size, float height)
+    [InlineData(1)]
+    [InlineData(2)]
+    [InlineData(3)]
+    public void Notice_sizes_and_click_dismissal(int size)
     {
         var r = new Rig();
         r.Host.SetGameOptions(r.Host.GameOptions with { NoticeSize = size });
         r.Ui.Sync();
         r.Host.Score = 28000;
         r.Ui.Sync();
-        Assert.Equal(height, r.Ui.BuildPopover()!.Height);
+        Assert.Equal("PROMOÇÃO!", r.Ui.BuildPopover()!.Title);
         r.Ui.DismissNotice();
         Assert.False(r.Ui.NoticeOpen);
     }
@@ -537,6 +538,39 @@ public sealed class TdUiControllerTests
         r.Ui.Sync();
         Assert.False(r.Match.Paused);
         Assert.DoesNotContain(r.Sent, c => c is Pause);
+    }
+
+    [Fact]
+    public void Promotion_card_lists_unlocks_for_every_crossed_rank_and_expires()
+    {
+        var r = new Rig(0);
+        r.Ui.Sync();
+        r.Host.Score = TdRank.Threshold(TdRankLevel.Pleno);
+        r.Ui.Sync();
+        var card = r.Ui.BuildPopover()!;
+        Assert.Equal("PROMOÇÃO!", card.Title);
+        Assert.Contains(card.Items, i => i.Text == $"Fusão: até {r.Match.FusionLimitAt((int)TdRankLevel.Pleno)} torres");
+        foreach (var tower in r.Match.Content.Towers.Where(t => t.MinRank is > 0 and <= 2))
+            Assert.Contains(card.Items, i => i.Text == $"Torre: {tower.Name}");
+        foreach (var ability in r.Match.Content.Abilities.Where(a => a.MinRank is > 0 and <= 2))
+            Assert.Contains(card.Items, i => i.Text == $"Habilidade: {ability.Name}");
+        Assert.False(r.Match.Paused);
+        r.Now += TdUiController.PromoNoticeSeconds + 0.1;
+        r.Ui.Sync();
+        Assert.False(r.Ui.NoticeOpen);
+    }
+
+    [Fact]
+    public void Promotion_while_boss_hidden_does_not_appear_after_showing()
+    {
+        var r = new Rig(0);
+        r.Ui.Sync();
+        r.Ui.SetBossHidden(true);
+        r.Host.Score = TdRank.Threshold(TdRankLevel.Junior);
+        r.Ui.Sync();
+        r.Ui.SetBossHidden(false);
+        r.Ui.Sync();
+        Assert.False(r.Ui.NoticeOpen);
     }
 
     [Fact]

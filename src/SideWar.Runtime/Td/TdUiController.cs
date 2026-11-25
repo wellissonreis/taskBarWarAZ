@@ -701,6 +701,7 @@ public sealed partial class TdUiController
         if (rewound) _pendingBossRewindWave = Math.Max(1, m.TotalWaves - 10);
         var progress = _host.Rank;
         var rank = progress.Current;
+        var previousRank = _seenRank;
         bool promoted = rank > _seenRank;
         bool demoted = rank < _seenRank;
         _seenRank = rank;
@@ -731,6 +732,7 @@ public sealed partial class TdUiController
         }
         if (promoted && !BossHidden)
         {
+            _promotionPreviousRank = previousRank;
             _noticeTitle = "Promoção";
             _noticeText = $"Promovido a {TdRank.DisplayName(rank)}!";
             if (m.Options.InitialReputation is not null)
@@ -781,6 +783,8 @@ public sealed partial class TdUiController
 
     private TdPopoverView BuildNotice()
     {
+        if (_noticeTitle == "Promoção" && _noticeRank is { } promotion)
+            return BuildPromotion(_match(), _promotionPreviousRank, promotion);
         // Toast discreto: uma linha, tamanho configurável, sem animação e somente um por vez.
         var tone = _noticeRank is not null ? TdTone.Accent : _noticeTitle == AttackTitle ? TdTone.Warn : _noticeTitle == "Fusão recusada" ? TdTone.Warn : TdTone.Good;
         float scale = _host.GameOptions.NoticeSize switch { 2 => 1.25f, 3 => 1.5f, _ => 1f };

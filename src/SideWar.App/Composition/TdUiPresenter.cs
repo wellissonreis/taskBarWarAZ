@@ -277,6 +277,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         scrimWindow = game.Scene.CreateTdScrim();
         scrimWindow.LeftUp += (_, _) => { Present(); controller.Cancel(); };
         popWindow = game.Scene.GetOrCreateTdPopover();
+        popWindow.ClickableAt = (_, _) => pop?.Title != "PROMOÇÃO!";
         popWindow.KeyDown += ModalKey;
         // Mover a modal: arrastar o cabeçalho (fora dos botões) com o botão esquerdo; preso à área de trabalho; grava ao soltar.
         popWindow.DragHandleAt = (x, y) =>
@@ -576,6 +577,12 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
             bool quick = controller.CornerPopover;
             int quickW = (int)MathF.Round(pop.Width * UiScale), quickH = (int)MathF.Round(pop.Height * UiScale);
             var bounds = quick ? new PixelRect(hudBounds.Right - quickW, Math.Max(work.Top, hudBounds.Top - quickH - 2), hudBounds.Right, Math.Max(work.Top, hudBounds.Top - quickH - 2) + quickH) : TdModalLayout.Bounds(work, ModalDpiScale, modalOffsetX, modalOffsetY);
+            if (quick && pop.Title == "PROMOÇÃO!")
+            {
+                int left = work.Left + (work.Right - work.Left - quickW) / 2;
+                int top = work.Top + (work.Bottom - work.Top - quickH) / 2;
+                bounds = new PixelRect(left, top, left + quickW, top + quickH);
+            }
             if (pop.RuneWindow)
             {
                 var rune = hud.Items.First(i => i.Action == TdUiAction.RuneWindow);
