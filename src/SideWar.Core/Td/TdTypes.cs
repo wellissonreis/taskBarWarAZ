@@ -60,10 +60,29 @@ public struct TdTower
     public long ModulePrice { get; set; }
     /// <summary>Recarga da ação periódica do módulo (temporizador separado do da base).</summary>
     public int ModuleCdTicks { get; set; }
+    /// <summary>Módulos além do primeiro (fusões de 3 a 6 torres). Imutável: cada fusão troca o array.</summary>
+    public TdFusionPart[]? ExtraModules { get; set; }
     public readonly bool HasModule => ModuleSlot > 0;
+    /// <summary>Torres que compõem a entidade (base + módulos).</summary>
+    public readonly int ComponentTotal => HasModule ? 2 + (ExtraModules?.Length ?? 0) : 1;
+    public readonly int ModuleCount => ComponentTotal - 1;
+    /// <summary>Índice de definição do módulo <paramref name="k"/> (0 = o primeiro).</summary>
+    public readonly int ModuleDef(int k) => k == 0 ? ModuleSlot - 1 : ExtraModules![k - 1].DefIndex;
+    public readonly long ModulePriceAt(int k) => k == 0 ? ModulePrice : ExtraModules![k - 1].Price;
+    /// <summary>Tipos (índices de definição) da entidade, base primeiro.</summary>
+    public readonly int[] Components()
+    {
+        var list = new int[ComponentTotal];
+        list[0] = DefIndex;
+        for (int k = 0; k < ModuleCount; k++) list[k + 1] = ModuleDef(k);
+        return list;
+    }
     /// <summary>Índice de definição do módulo (-1 sem módulo).</summary>
     public readonly int ModuleDefIndex => ModuleSlot - 1;
 }
+
+/// <summary>Módulo adicional de uma fusão: tipo e preço efetivamente pago.</summary>
+public readonly record struct TdFusionPart(int DefIndex, long Price);
 
 /// <summary>Nó bloqueador do balanceador (RF-28.5): retém até <c>Holds</c> inimigos de solo e causa <c>Dps</c>/s.</summary>
 public struct TdNode

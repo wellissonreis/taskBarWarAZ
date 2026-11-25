@@ -495,6 +495,13 @@ public static class TdContentValidator
     public static readonly string[] FusionRoles = ["attack", "control", "support", "economy"];
     public static readonly string[] FusionEffects = ["hitDamage", "hitSlow", "hitSplash", "hitChain", "hitCorrode", "nodeSlow", "periodicDamage", "periodicSlow"];
 
+    public const int MaxFusionComponents = 6;
+    public static readonly Dictionary<string, string[]> FusionRecipeEffects = new(StringComparer.Ordinal)
+    {
+        ["hitDamage"] = ["damagePct"], ["hitSlow"] = ["factor", "seconds"], ["hitChain"] = ["jumps", "damagePct"], ["hitSplash"] = ["radius", "damagePct"],
+        ["hitCorrode"] = ["armorPct", "seconds"], ["damageBonus"] = ["bp"], ["damageAura"] = ["bp"], ["waveCredits"] = ["credits"],
+    };
+
     private static void Fusion(TdContent c, List<string> e)
     {
         var f = c.Fusion;
@@ -535,6 +542,39 @@ public static class TdContentValidator
             }
             foreach (var o in nm.Overrides)
                 Req(e, towers.ContainsKey(o.Base ?? "") && towers.ContainsKey(o.Module ?? "") && Text(o.Name), $"td-fusion.names.overrides.{o.Base}+{o.Module}: torre inexistente ou nome vazio");
+        }
+
+        if (f.MaxComponentsByRank is { } max)
+            Req(e, max.Length == 6 && max.All(v => v is >= 2 and <= MaxFusionComponents) && max.Zip(max.Skip(1)).All(p => p.First <= p.Second),
+                "td-fusion.maxComponentsByRank deve ter 6 valores não decrescentes entre 2 e 6");
+        Req(e, f.ExtraComponentDamageBp >= 0, "td-fusion.extraComponentDamageBp não pode ser negativo");
+
+        var recipeIds = new HashSet<string>(StringComparer.Ordinal);
+        var recipeSets = new HashSet<string>(StringComparer.Ordinal);
+        var recipeNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var r in f.Recipes ?? [])
+        {
+            var o = $"td-fusion.recipes.{r.Id}";
+            Req(e, Text(r.Id) && recipeIds.Add(r.Id ?? ""), $"{o}: id vazio ou repetido");
+            Req(e, Text(r.Name) && recipeNames.Add(r.Name ?? ""), $"{o}.name vazio ou repetido");
+            var parts = r.Parts ?? [];
+            Req(e, parts.Length is >= 3 and <= MaxFusionComponents, $"{o}.parts deve ter de 3 a 6 torres");
+            bool known = parts.All(p => towers.ContainsKey(p ?? ""));
+            Req(e, known, $"{o}.parts: torre inexistente");
+            Req(e, recipeSets.Add(string.Join('+', parts.Order(StringComparer.Ordinal))), $"{o}: combinação repetida");
+            foreach (var g in parts.GroupBy(p => p))
+                if (towers.TryGetValue(g.Key ?? "", out var d) && d.Stats.TryGetValue("maxPerPlayer", out var lim))
+                    Req(e, g.Count() <= lim, $"{o}.parts: '{g.Key}' acima do limite do tipo");
+            Req(e, r.Effects is { Count: > 0 }, $"{o}.effects vazio");
+            bool damage = false;
+            foreach (var (kind, prm) in r.Effects ?? [])
+            {
+                if (!FusionRecipeEffects.TryGetValue(kind, out var keys)) { e.Add($"{o}.effects desconhecido '{kind}'"); continue; }
+                Req(e, keys.Length == prm.Count && keys.All(k => prm.TryGetValue(k, out var v) && v > 0), $"{o}.{kind} exige {string.Join(", ", keys)} positivos");
+                if (kind == "hitSlow") Req(e, prm.GetValueOrDefault("factor") < 1, $"{o}.hitSlow.factor deve ser menor que 1");
+                damage |= kind is "hitDamage" or "hitChain" or "hitSplash";
+            }
+            if (damage && known) Req(e, parts.Any(p => towers[p].Damage > 0), $"{o}: efeito de dano exige uma torre com dano");
         }
 
         var seen = new HashSet<(string, string)>();

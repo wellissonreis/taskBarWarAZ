@@ -160,7 +160,8 @@ public sealed partial class TdMatchState
         for (int i = 0; i < _towers.Count; i++)
         {
             if (_towers[i].DefIndex == defIndex) n++;
-            if (_towers[i].ModuleSlot == defIndex + 1) n++; // componentes de híbridos contam por tipo (SDD-37 RF-37.3)
+            for (int k = 0; k < _towers[i].ModuleCount; k++)
+                if (_towers[i].ModuleDef(k) == defIndex) n++; // componentes de híbridos contam por tipo (SDD-37 RF-37.3)
         }
         return n;
     }

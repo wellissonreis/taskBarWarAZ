@@ -108,6 +108,8 @@ public enum CommandReason : byte
     AlreadyFused,
     /// <summary><c>FuseTower</c> numa torre SEM POSIÇÃO (SDD-37 RF-37.2).</summary>
     NotPlaced,
+    /// <summary>Fusão acima do número de torres que a patente atual permite.</summary>
+    FusionLimit,
 }
 
 /// <summary>Resultado de um comando: <c>Missing</c> = créditos que faltam (só em <see cref="CommandReason.InsufficientCredits"/>).</summary>

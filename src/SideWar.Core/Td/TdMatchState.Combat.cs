@@ -130,15 +130,7 @@ public sealed partial class TdMatchState
                 dmg += Stat(s, sd, "neighborDamageBonus", 0);
                 if (bolt) rng += Stat(s, sd, "boltRangeBonus", 0);
             }
-            // Módulo genérico de suporte (SDD-37 RF-37.5): +5% de dano às entidades posicionadas no alcance do módulo, inclusive a própria (o híbrido nunca fica mais fraco que a base).
-            for (int j = 0; j < n; j++)
-            {
-                var s = _towers[j];
-                if (!s.HasModule || s.DisabledTicks > 0 || !s.Placed || !t.Placed) continue;
-                var md = _content.Towers[s.ModuleDefIndex];
-                if (FusionRole(s.ModuleDefIndex) != "support" || FusionPair(s.DefIndex, s.ModuleDefIndex) is not null || Dist(s.X, t.X) > EffectiveRange(md)) continue;
-                dmg += _content.Fusion.Generic["support"]["damageAuraBp"] / 10000.0;
-            }
+            dmg += FusionAuraBonus(i); // suporte genérico, receitas e ganho por torre na fusão
             _auraCadence[i] = cad;
             _auraDamage[i] = dmg;
             _auraRange[i] = rng;

@@ -108,7 +108,15 @@ public sealed record TdFusionPairDef(string Base, string Module, string Name, st
 /// </summary>
 public sealed record TdFusionDef(
     [property: JsonRequired] int MinRank, string[] ResolveOrder, Dictionary<string, string[]> Roles,
-    Dictionary<string, Dictionary<string, double>> Generic, TdFusionPairDef[] Pairs, TdFusionNamesDef? Names = null);
+    Dictionary<string, Dictionary<string, double>> Generic, TdFusionPairDef[] Pairs, TdFusionNamesDef? Names = null,
+    TdFusionRecipeDef[]? Recipes = null, int[]? MaxComponentsByRank = null, int ExtraComponentDamageBp = 0);
+
+/// <summary>
+/// Combinação nomeada de 3 a 6 torres. <c>Parts</c> é um multiconjunto (a ordem não importa; a base conta). <c>Effects</c>: hitDamage {damagePct} | hitSlow {factor, seconds} |
+/// hitChain {jumps, damagePct} | hitSplash {radius, damagePct} | hitCorrode {armorPct, seconds} | damageBonus {bp} | damageAura {bp} | waveCredits {credits}.
+/// A patente mínima é derivada: a das componentes e a que permite essa quantidade de torres.
+/// </summary>
+public sealed record TdFusionRecipeDef(string Id, string Name, string[] Parts, Dictionary<string, Dictionary<string, double>> Effects);
 
 /// <summary>Nome próprio de um par base+módulo que NÃO tem efeito nomeado (continua no efeito genérico por papel): só troca o rótulo.</summary>
 public sealed record TdFusionNameOverride(string Base, string Module, string Name);
