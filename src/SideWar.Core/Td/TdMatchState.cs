@@ -80,6 +80,7 @@ public sealed partial class TdMatchState
                         if (effect.Kind == "startingCredits") Credits += (long)effect.Value;
                         else if (effect.Kind == "xpShield") _metaShield += (int)effect.Value;
                     }
+        _startGrant = Credits;
         AutoStart = content.Stages.Rules.AutoStart.DefaultMode switch { "countdown" => AutoStartMode.Countdown, "immediate" => AutoStartMode.Immediate, _ => AutoStartMode.Off };
         AutoStartSeconds = content.Stages.Rules.AutoStart.DefaultCountdownSeconds;
         RestartCountdown();
@@ -361,7 +362,8 @@ public sealed partial class TdMatchState
         if (_countdownActive && _countdownTicks > 0)
         {
             double remaining = _countdownTicks / (double)TdWorld.TicksPerSecond;
-            long bonus = CeilEps(remaining * CallBonusFactor(w));
+            // ECONOMIA: mesmo teto da chamada antecipada; contagem longa (até 60 s) não paga mais que o bônus da onda.
+            long bonus = Math.Min(CeilEps(remaining * CallBonusFactor(w)), CeilEps(_content.Stages.Rules.CallNext.BonusCapFactor * WaveBonusFor(w)));
             if (bonus > 0)
             {
                 Credits = Sat.Add(Credits, bonus);

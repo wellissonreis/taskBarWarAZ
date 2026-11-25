@@ -133,6 +133,7 @@ public sealed partial class TdMatchState
             long bonus = WaveBonusFor(w.Number);
             if (!w.Leaked) bonus += _content.Runes.CreditSources.NoLeakBase + (long)_content.Runes.CreditSources.NoLeakPerWave * w.Number;
             bonus += (long)Rune("waveCredits"); // runas de Créditos (TD.29a)
+            bonus = Income(bonus);
             Credits = Simulation.Sat.Add(Credits, bonus);
             foreach (var tower in _towers)
             {
@@ -140,6 +141,7 @@ public sealed partial class TdMatchState
                 long income = ModuleVaultIncome(tower);
                 if (def.Id == "vault" && tower.Placed && tower.DisabledTicks == 0)
                     income += (long)Stat(tower, def, "creditsPerWave", 0) + (w.Leaked ? 0 : (long)Stat(tower, def, "noLeakBonus", 0));
+                income = Income(income);
                 if (income <= 0) continue;
                 Credits = Simulation.Sat.Add(Credits, income);
                 Emit(TdEventType.VaultIncome, tower.Id, income);

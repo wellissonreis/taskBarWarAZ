@@ -209,12 +209,12 @@ public sealed class TdContentTests
         AssertError(With("td-stages.json", "\"towerCostTableLow\": [100, 120, 144, 173,", "\"towerCostTableLow\": [100, 120, 144,"), "towerCostTableLow deve ter 48 entradas");
     }
 
-    [Fact(DisplayName = "Créditos: fontes calibradas para decisões espaçadas")]
+    [Fact(DisplayName = "Créditos: fontes escassas (ECONOMIA)")]
     public void CreditSources_AreStored()
     {
         var c = TdContentLoader.LoadEmbedded().Runes.CreditSources;
-        Assert.Equal((80, 50, 3), (c.StartingCreditsBonus, c.WaveBonusBase, c.WaveBonusPerWave));
-        Assert.Equal((15, 1), (c.NoLeakBase, c.NoLeakPerWave));
-        Assert.Equal((35, 2, 90), (c.BonusQuestionBase, c.BonusQuestionPerWave, c.BossCredits));
+        Assert.Equal((80, 16, 0), (c.StartingCreditsBonus, c.WaveBonusBase, c.WaveBonusPerWave));
+        Assert.Equal((4, 0), (c.NoLeakBase, c.NoLeakPerWave));
+        Assert.Equal((25, 0, 30), (c.BonusQuestionBase, c.BonusQuestionPerWave, c.BossCredits));
     }
 }

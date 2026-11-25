@@ -102,8 +102,8 @@ public sealed class TdCompositionTests : IDisposable
         td.Host.OnWake(clock); // o comando só é aplicado no próximo tick do host
         long spent = td.Host.Match.Credits;
         Assert.True(spent < initial);
-        td.StartStage(td.RunStartStage); // gastou: reiniciar = max(atuais, iniciais da fase) (2ed5a99): não devolve a torre nem concede extra
-        Assert.Equal(Math.Max(spent, initial), td.Host.Match.Credits);
+        td.StartStage(td.RunStartStage); // gastou: a torre trazida é paga pelos iniciais (ECONOMIA): reiniciar não devolve o dinheiro gasto
+        Assert.Equal(spent, td.Host.Match.Credits);
     }
 
     [Fact]

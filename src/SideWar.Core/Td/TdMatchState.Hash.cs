@@ -29,7 +29,7 @@ public sealed partial class TdMatchState
         h.AddBool(_countdownActive);
         h.AddInt32(_countdownTicks);
         h.AddInt64(CooldownReductionTicks);
-        if (_shadow || _shadowRequest >= 0) { h.AddBool(_shadow); h.AddInt32(_shadowRequest); h.AddInt64(_shadowRemainder); } // só em sombra: hashes antigos não mudam
+        if (_shadow || _shadowRequest >= 0) { h.AddBool(_shadow); h.AddInt32(_shadowRequest); h.AddInt64(_shadowRemainder); h.AddInt64(_shadowCreditRemainder); } // só em sombra: hashes antigos não mudam
         h.AddInt32(_nextTowerId);
         h.AddInt32(_nextEnemyId);
         h.AddInt32(_nextNodeId);

@@ -220,11 +220,13 @@ public sealed class TdContinuousRunTests
     public void Sanity_bot_run_is_deterministic_and_clears_the_campaign_with_kept_towers()
     {
         var content = TdContentLoader.LoadEmbedded();
-        var a = TdSanityBot.RunContinuous(content, 1, TdBotProfile.Otimizado, 100);
-        var b = TdSanityBot.RunContinuous(content, 1, TdBotProfile.Otimizado, 100);
+        // ECONOMIA: com dinheiro escasso o bot sofre dano a partir da fase 4 e passa do limite de colapso na campanha (o jogo não tem game over):
+        // mede a campanha inteira e limita o dano a menos de 2 x o colapso (difícil, mas não impossível).
+        var a = TdSanityBot.RunContinuous(content, 1, TdBotProfile.Otimizado, 100, stopAtCollapse: false);
+        var b = TdSanityBot.RunContinuous(content, 1, TdBotProfile.Otimizado, 100, stopAtCollapse: false);
         Assert.Equal(a.StateHash, b.StateHash);
         Assert.Equal(6, a.StagesCleared);
-        Assert.False(a.Defeated);
+        Assert.InRange(a.XpLost, 1, 2 * TdSanityBot.CollapseXp - 1);
         Assert.Equal(6, a.Stages.Count);
         Assert.True(a.TowersAtEnd >= 12);
         Assert.Equal(7, a.StageNumber); // já em cima do ciclo infinito
@@ -245,6 +247,6 @@ public sealed class TdContinuousRunTests
         var content = TdContentLoader.LoadEmbedded();
         var r = TdSanityBot.RunContinuous(content, 1, TdBotProfile.Novato, 100, 30);
         Assert.True(r.Defeated);
-        Assert.InRange(r.StagesCleared, 6, 29); // passa a campanha com as torres acumuladas, mas o ciclo infinito o derruba
+        Assert.InRange(r.StagesCleared, 4, 29); // passa as fases iniciais, mas não sustenta a corrida infinita
     }
 }

@@ -64,7 +64,7 @@ public sealed class TdShadowModeTests
     }
 
     [Fact]
-    public void Run_in_shadow_keeps_xp_and_still_pays_credits_with_a_fraction_of_the_fragments()
+    public void Run_in_shadow_keeps_xp_and_pays_fewer_credits_and_fragments()
     {
         var normal = Create();
         var shadow = Create(shadow: true);
@@ -74,6 +74,7 @@ public sealed class TdShadowModeTests
         Assert.Equal(0, shadow.ReputationGainedTotal);
         Assert.True(normal.ReputationGainedTotal > 0);
         Assert.True(shadow.Credits > 0);
+        Assert.True(shadow.Credits < normal.Credits, $"sombra {shadow.Credits} vs normal {normal.Credits}"); // sem risco, rende menos
         Assert.InRange(shadow.Fragments, 0, normal.Fragments); // fração, nunca mais que o normal
         Assert.True(shadow.Fragments <= TdShadow.Scale(normal.Fragments) + 1);
     }

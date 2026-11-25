@@ -691,9 +691,10 @@ public sealed partial class TdMatchState
             if (e.Hp <= 0)
             {
                 _enemies.RemoveAt(i);
-                Credits = Sat.Add(Credits, (long)e.Gold + (e.IsBoss ? _content.Runes.CreditSources.BossCredits : 0));
+                long loot = Income((long)e.Gold + (e.IsBoss ? _content.Runes.CreditSources.BossCredits : 0));
+                Credits = Sat.Add(Credits, loot);
                 if (e.IsBoss) GainFragments(_content.Stages.Rules.Fragments.PerBoss);
-                Emit(TdEventType.EnemyKilled, e.Id, e.Gold);
+                Emit(TdEventType.EnemyKilled, e.Id, _shadow ? loot : e.Gold);
                 _killsByTower[e.LastHitTowerId] = _killsByTower.GetValueOrDefault(e.LastHitTowerId) + 1;
                 WaveOf(e.Wave).Alive--;
                 var deadStats = _enemyStats[e.DefIndex];

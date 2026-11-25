@@ -300,8 +300,17 @@ public static class TdSanityBot
         private bool Fallback()
         {
             int towers = _s.Towers.Count;
-            string kind = _plan.FirstOrDefault(p => p.Kind == 'b').Tower ?? "bolt";
+            // ECONOMIA: com dinheiro escasso, um jogador razoável não junta para o 9º Raio; compra o tipo de ataque do roteiro mais barato agora.
+            string kind = "bolt";
             int di = Array.FindIndex(_s.Content.Towers, t => t.Id == kind);
+            long cheapest = long.MaxValue;
+            foreach (var step in _plan)
+            {
+                if (step.Kind != 'b') continue;
+                int d = Array.FindIndex(_s.Content.Towers, t => t.Id == step.Tower);
+                if (_s.Content.Towers[d].Damage <= 0 || _s.NextTowerCost(d) >= cheapest) continue;
+                (kind, di, cheapest) = (step.Tower, d, _s.NextTowerCost(d));
+            }
             if (towers < TdMatchState.TechnicalTowerLimit && _fallbackBuilt < FallbackLimit && _s.Credits >= _s.NextTowerCost(di))
                 foreach (int x in Candidates(FallbackX[_fallbackBuilt % FallbackX.Length]))
                     if (_s.Apply(new BuildTower(kind, x)).IsOk)

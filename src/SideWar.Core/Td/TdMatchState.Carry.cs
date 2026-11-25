@@ -22,18 +22,24 @@ public sealed partial class TdMatchState
         return list;
     }
 
+    private long _startGrant;      // créditos iniciais concedidos a esta partida (fase + metas)
+    private long _carriedCredits;  // dinheiro trazido da partida anterior (reinício da mesma fase)
+
     /// <summary>
-    /// Reiniciar a mesma fase nunca tira dinheiro: créditos = max(atuais da partida nova, <paramref name="credits"/>). Nunca soma (sem farm: reiniciar não
-    /// concede créditos extras nem bônus de onda de novo). Só vale em Preparo de partida recém-criada.
+    /// Reiniciar a mesma fase nunca tira dinheiro: <paramref name="credits"/> é preservado se for maior que o concedido. Nunca soma. Só vale em
+    /// Preparo de partida recém-criada (antes ou depois de <see cref="ImportTowers"/>).
     /// </summary>
     public void CarryCredits(long credits)
     {
+        _carriedCredits = Math.Max(_carriedCredits, credits);
         if (credits > Credits) Credits = credits;
     }
 
     /// <summary>
     /// Entrega as torres a uma partida recém-criada (sem torres). Devolve quantas entraram; as que o <c>LayoutChanged</c> seguinte não comportar
     /// ficam SEM POSIÇÃO (reserva: o jogador recoloca de graça). Nunca reembolsa nem descarta por falta de posição.
+    /// ECONOMIA: os créditos iniciais pagam primeiro as torres trazidas (<c>max(trazido, iniciais − investido)</c>); senão, gastar tudo e
+    /// reiniciar/reabrir daria o dinheiro inicial de novo, sem fim.
     /// </summary>
     public int ImportTowers(IEnumerable<TdTowerCarry> towers)
     {
@@ -52,6 +58,9 @@ public sealed partial class TdMatchState
             });
         }
         if (_towers.Count > _peakTowers) _peakTowers = _towers.Count;
+        long invested = 0;
+        foreach (var t in _towers) invested = Sat.Add(invested, Sat.Add(t.PurchasePrice, t.ModulePrice));
+        if (_towers.Count > 0) Credits = Math.Max(_carriedCredits, Math.Max(0, _startGrant - invested));
         return _towers.Count;
     }
 
