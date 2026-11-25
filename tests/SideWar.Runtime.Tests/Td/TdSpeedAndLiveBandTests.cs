@@ -137,10 +137,12 @@ public sealed class TdSpeedAndLiveBandTests
     {
         Assert.Equal([1, 2, 3], TdSpeed.Allowed(false, TdSpeed.DefaultMask));
         var on = TdSpeed.Allowed(true, TdSpeed.DefaultMask);
-        Assert.Equal([1, 2, 3, 5, 10, TdSpeed.Max], on);
-        Assert.Equal(["1x", "2x", "3x", "5x", "10x", "Máx"], on.Select(TdSpeed.Label));
-        Assert.Equal(1, TdSpeed.Next(TdSpeed.Max, on));
+        Assert.Equal([1, 2, 3, 5, 10], on);
+        Assert.Equal(["1x", "2x", "3x", "5x", "10x"], on.Select(TdSpeed.Label));
+        Assert.Equal(1, TdSpeed.Next(10, on));
         Assert.Equal(5, TdSpeed.Next(3, on));
+        Assert.Equal([1, 2, 3, 4, 5, 8, 10], TdSpeed.Allowed(true, 0xFF));
+        Assert.Equal(10, TdSpeed.Resolve(TdSpeed.Max, TdSpeed.Allowed(true, 0xFF)));
         Assert.Equal(3, TdSpeed.Resolve(4, on));
         Assert.Equal(3, TdSpeed.Resolve(50, TdSpeed.Allowed(false, 0)));
     }
@@ -159,17 +161,17 @@ public sealed class TdSpeedAndLiveBandTests
         Assert.Equal(2, cycle.Arg); // o botão único avança para a próxima velocidade
         Assert.Equal(plain, hud.Width); // extras nunca alargam a HUD
         ui.CycleSpeed(); Assert.Equal(2, host.GameOptions.GameSpeed);
-        for (int i = 0; i < 4; i++) ui.CycleSpeed();
-        Assert.Equal(TdSpeed.Max, host.GameOptions.GameSpeed);
-        host.EffectiveSpeed = 31.4;
+        for (int i = 0; i < 3; i++) ui.CycleSpeed();
+        Assert.Equal(10, host.GameOptions.GameSpeed);
+        host.EffectiveSpeed = 7.4;
         var eff = ui.BuildHud().Items.Single(i => i.SArg == "speedeff");
-        Assert.Equal("≈31x", eff.Text);
+        Assert.Equal("≈7x", eff.Text);
         Assert.Contains("efetiva", ui.BuildHud().Items.Single(i => i.Action == TdUiAction.SetSpeed && i.Selected).Tip);
         ui.CycleSpeed();
         Assert.Equal(1, host.GameOptions.GameSpeed);
         Assert.DoesNotContain(ui.BuildHud().Items, i => i.SArg == "speedeff"); // sem rótulo vazio na HUD
         ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
-        Assert.Equal(6, ui.BuildPopover()!.Items.Count(i => i.Action == TdUiAction.SetSpeed));
+        Assert.Equal(5, ui.BuildPopover()!.Items.Count(i => i.Action == TdUiAction.SetSpeed));
     }
 
     [Theory]

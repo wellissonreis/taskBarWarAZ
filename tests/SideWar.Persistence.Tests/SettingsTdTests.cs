@@ -158,7 +158,7 @@ public class SettingsTdTests
         var r = st.Load().Settings;
         Assert.True(r.Td.ExtraSpeeds);
         Assert.Equal(0b0110_0001, r.Td.ExtraSpeedMask);
-        Assert.Equal(100, r.Td.GameSpeed);
+        Assert.Equal(10, r.Td.GameSpeed);
         Assert.Equal("Ctrl+Alt+K", r.Hotkeys.CycleSpeed);
     }
 

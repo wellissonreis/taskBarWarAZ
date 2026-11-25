@@ -73,12 +73,12 @@ public sealed partial class TdUiController
                 Seg("corner", "Tamanho da interface do canto", [("100%", 100), ("150%", 150), ("200%", 200)]);
                 Slider("cornerfine", "Escala do canto", 100, 250, "%");
                 Seg("speed", "Velocidade do jogo", [("1x", 1), ("2x", 2), ("3x", 3)]);
-                Toggle("xspeeds", "Velocidades extras", "Acrescenta 4x, 5x, 8x, 10x, 16x, 20x, 50x e Máx ao seletor (padrão: só 1x/2x/3x).");
+                Toggle("xspeeds", "Velocidades extras", "Acrescenta 4x, 5x, 8x e 10x ao seletor (padrão: só 1x/2x/3x).");
                 if (d.ExtraSpeeds)
                 {
                     var on = new List<(string, int)>();
                     for (int i = 0; i < TdSpeed.Extras.Length; i++) if ((d.SpeedMask >> i & 1) != 0) on.Add((TdSpeed.Label(TdSpeed.Extras[i]), TdSpeed.Extras[i]));
-                    if (on.Count > 0) Seg("speedx", "Velocidade extra", [.. on], "Máx roda o mais rápido que o PC aguentar, com teto de 8 ms por frame.");
+                    if (on.Count > 0) Seg("speedx", "Velocidade extra", [.. on], "Escolha a velocidade do jogo.");
                     for (int i = 0; i < TdSpeed.Extras.Length; i++) Toggle("xs:" + i, "Mostrar " + TdSpeed.Label(TdSpeed.Extras[i]), "Escolha quais velocidades extras aparecem no seletor e no atalho.");
                 }
                 Seg("notice", "Tamanho dos avisos", [("Desl.", 0), ("Peq.", 1), ("Méd.", 2), ("Grande", 3)]);

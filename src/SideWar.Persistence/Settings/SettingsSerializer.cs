@@ -190,7 +190,7 @@ public static class SettingsSerializer
                 ContinuousWaves = Bool(td, "continuousWaves", d.Td.ContinuousWaves),
                 Difficulty = (SideWar.Core.Td.TdDifficulty)IntRange(td, "difficulty", 0, 2, (int)d.Td.Difficulty),
                 TowerPanelPinned = Bool(td, "towerPanelPinned", d.Td.TowerPanelPinned),
-                GameSpeed = IntRange(td, "gameSpeed", TdSettings.MinGameSpeed, TdSettings.MaxGameSpeed, d.Td.GameSpeed),
+                GameSpeed = Math.Min(10, IntRange(td, "gameSpeed", TdSettings.MinGameSpeed, TdSettings.MaxGameSpeed, d.Td.GameSpeed)),
                 ExtraSpeeds = Bool(td, "extraSpeeds", d.Td.ExtraSpeeds),
                 ShadowOnAbsent = Bool(td, "shadowOnAbsent", d.Td.ShadowOnAbsent),
                 ShowTypeInfo = Bool(td, "showTypeInfo", d.Td.ShowTypeInfo),

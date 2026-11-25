@@ -9,9 +9,9 @@ public static class TdSpeed
     public const int Max = 100;
     public static readonly int[] Defaults = [1, 2, 3];
     /// <summary>Extras na ordem do seletor; o índice é o bit da máscara.</summary>
-    public static readonly int[] Extras = [4, 5, 8, 10, 16, 20, 50, Max];
-    /// <summary>Extras já marcadas quando o usuário liga "Velocidades extras": 5x, 10x e Máx.</summary>
-    public const int DefaultMask = 0b1000_1010;
+    public static readonly int[] Extras = [4, 5, 8, 10];
+    /// <summary>Extras já marcadas quando o usuário liga "Velocidades extras": 5x e 10x.</summary>
+    public const int DefaultMask = 0b0000_1010;
 
     public static string Label(int speed) => speed >= Max ? "Máx" : $"{speed}x";
 
