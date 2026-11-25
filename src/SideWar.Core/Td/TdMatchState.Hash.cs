@@ -12,6 +12,7 @@ public sealed partial class TdMatchState
     {
         var h = StateHasher.Create();
         h.AddString(_content.ContentHash);
+        if (_options.Difficulty != TdDifficulty.Casual) h.AddByte((byte)_options.Difficulty);
         h.AddInt32(_stage.Id);
         if (_options.HighestCompletedStage is int highestCompleted) h.AddInt32(highestCompleted);
         h.AddInt32(GateReputation);

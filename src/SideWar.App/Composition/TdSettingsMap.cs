@@ -12,6 +12,7 @@ internal static class TdSettingsMap
     public static TdSettingsData From(AppSettings s, StartupState startup) => new()
     {
         GameMode = s.GameMode == GameMode.Td ? 1 : 0,
+        Difficulty = (int)s.Td.Difficulty,
         StartWithWindows = startup.Visible ? startup.Enabled : s.Behavior.StartWithWindows,
         StartupVisible = startup.Visible, StartupAvailable = startup.Available, StartupMessage = startup.Message,
         HideOnFullscreen = (int)s.Behavior.HideOnFullscreen,
@@ -45,6 +46,7 @@ internal static class TdSettingsMap
         Taskbar = s.Taskbar with { UseUia = d.UseUia },
         Td = s.Td with
         {
+            Difficulty = (SideWar.Core.Td.TdDifficulty)Math.Clamp(d.Difficulty, 0, 2),
             AutoStartMode = d.AutoStartMode, AutoRestart = d.AutoRestart, AutoStartSeconds = Math.Clamp(d.AutoStartSeconds, TdSettings.MinAutoStartSeconds, TdSettings.MaxAutoStartSeconds),
             BandHeightDip = Math.Clamp(d.BandHeight, TdSettings.MinBandHeightDip, TdSettings.MaxBandHeightDip),
             CornerUiScalePercent = Math.Clamp(d.CornerUiScale, TdSettings.MinCornerUiScalePercent, TdSettings.MaxCornerUiScalePercent),

@@ -381,7 +381,7 @@ public sealed partial class TdMatchState
     private void DealDamage(int idx, double dmg)
     {
         var e = _enemies[idx];
-        if (e.InvulnTicks > 0 || dmg <= 0) return;
+        if (e.InvulnTicks > 0 || dmg <= 0) { _lastEffect = 0; return; }
         double absorbed = Math.Min(e.ShieldHp, dmg);
         e.ShieldHp -= absorbed;
         e.Hp -= dmg - absorbed;
@@ -429,8 +429,14 @@ public sealed partial class TdMatchState
                 if (Array.IndexOf(def.Strong, trait) >= 0) strongHit = true;
                 if (Array.IndexOf(def.Weak, trait) >= 0) weakHit = true;
             }
-            if (strongHit && !weakHit) { raw *= StrongDamageMultiplier; _lastEffect = 1; }
-            else if (weakHit && !strongHit) { raw *= WeakDamageMultiplier; _lastEffect = 2; }
+            if (weakHit && _options.Difficulty == TdDifficulty.Extreme)
+            {
+                _lastEffect = 2;
+                if (tower.ComponentTotal == 1) return 0;
+                raw *= 0.1;
+            }
+            else if (strongHit && !weakHit) { raw *= StrongDamageMultiplier; _lastEffect = 1; }
+            else if (weakHit && !strongHit) { raw *= _options.Difficulty == TdDifficulty.Hard ? 0.25 : WeakDamageMultiplier; _lastEffect = 2; }
             else _lastEffect = 0;
         }
         if (target.VulnTicks > 0) raw *= 1.0 + target.VulnBonus;
@@ -587,6 +593,21 @@ public sealed partial class TdMatchState
     }
 
     /// <summary>Nós retêm (até <c>Holds</c> inimigos de solo cada), causam dano/s e caem por pressão ou tempo; zonas de queimadura queimam.</summary>
+    // Nós e pods causam dano contínuo fora de ComputeDamage; usam a fraqueza da torre que os criou.
+    private double NodeDamage(TdNode node, in TdEnemy enemy, double damage)
+    {
+        if (_options.Difficulty == TdDifficulty.Casual) return damage;
+        int index = FindTower(node.TowerId);
+        if (index < 0) return damage;
+        var tower = _towers[index];
+        var def = _content.Towers[tower.DefIndex];
+        var traits = _enemyStats[enemy.DefIndex].NativeTraits;
+        bool weak = traits.Any(def.Weak.Contains);
+        if (!weak) return damage;
+        if (_options.Difficulty == TdDifficulty.Extreme) return tower.HasModule ? damage * 0.1 : 0;
+        return traits.Any(def.Strong.Contains) ? damage : damage * 0.5;
+    }
+
     private void TickNodesAndZones()
     {
         _held.Clear();
@@ -606,7 +627,7 @@ public sealed partial class TdMatchState
                         if (enemy.Flying || enemy.Hp <= 0 || enemy.InvulnTicks > 0 || !VisibleToTower(enemy, def) || Dist(enemy.X, tower.X) > EffectiveRange(def)) continue;
                         if (target < 0 || Better(TdTargeting.First, enemy, _enemies[target], tower.X)) target = j;
                     }
-                    if (target >= 0) { _damageSource = n.TowerId; DealDamage(target, n.Dps / TdWorld.TicksPerSecond); }
+                    if (target >= 0) { _damageSource = n.TowerId; DealDamage(target, NodeDamage(n, _enemies[target], n.Dps / TdWorld.TicksPerSecond)); }
                 }
                 if (--n.LifeTicks > 0) _nodes[ni++] = n;
                 else { Emit(TdEventType.NodeEnded, n.TowerId); _nodes.RemoveAt(ni); }
@@ -621,7 +642,7 @@ public sealed partial class TdMatchState
                 _held.Add(e.Id);
                 held++;
                 _damageSource = n.TowerId;
-                DealDamage(i, n.Dps / TdWorld.TicksPerSecond);
+                DealDamage(i, NodeDamage(n, e, n.Dps / TdWorld.TicksPerSecond));
                 ApplyNodeModuleSlow(n.TowerId, i);
                 pressure += e.CoreDamage * NodeHpDrainPerCoreDamage / TdWorld.TicksPerSecond;
             }
@@ -656,7 +677,7 @@ public sealed partial class TdMatchState
             double dmg = n.Dps * NodeExplosionDpsFactor;
             _damageSource = n.TowerId;
             for (int i = 0; i < _enemies.Count; i++)
-                if (!_enemies[i].Flying && _enemies[i].Hp > 0 && Dist(_enemies[i].X, n.X) <= NodeExplosionRadius) DealDamage(i, dmg);
+                if (!_enemies[i].Flying && _enemies[i].Hp > 0 && Dist(_enemies[i].X, n.X) <= NodeExplosionRadius) DealDamage(i, NodeDamage(n, _enemies[i], dmg));
         }
         if ((n.Flags & 2) != 0 && broken)
         {

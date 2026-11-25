@@ -91,6 +91,7 @@ public static class SettingsSerializer
         w.WriteString("tipsSeen", s.Td.TipsSeen);
         w.WriteBoolean("bonusQuestions", s.Td.BonusQuestions);
         w.WriteBoolean("continuousWaves", s.Td.ContinuousWaves);
+        w.WriteNumber("difficulty", (int)s.Td.Difficulty);
         w.WriteBoolean("towerPanelPinned", s.Td.TowerPanelPinned);
         w.WriteNumber("gameSpeed", s.Td.GameSpeed);
         w.WriteBoolean("extraSpeeds", s.Td.ExtraSpeeds);
@@ -187,6 +188,7 @@ public static class SettingsSerializer
                 TipsSeen = Str(td, "tipsSeen", 1024) ?? d.Td.TipsSeen,
                 BonusQuestions = Bool(td, "bonusQuestions", d.Td.BonusQuestions),
                 ContinuousWaves = Bool(td, "continuousWaves", d.Td.ContinuousWaves),
+                Difficulty = (SideWar.Core.Td.TdDifficulty)IntRange(td, "difficulty", 0, 2, (int)d.Td.Difficulty),
                 TowerPanelPinned = Bool(td, "towerPanelPinned", d.Td.TowerPanelPinned),
                 GameSpeed = IntRange(td, "gameSpeed", TdSettings.MinGameSpeed, TdSettings.MaxGameSpeed, d.Td.GameSpeed),
                 ExtraSpeeds = Bool(td, "extraSpeeds", d.Td.ExtraSpeeds),

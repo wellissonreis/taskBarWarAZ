@@ -11,6 +11,17 @@ public class SettingsTdTests
     private static readonly DateTime Now = new(2026, 11, 16, 12, 0, 0, DateTimeKind.Utc);
 
     [Fact]
+    public void Difficulty_defaults_to_casual_and_roundtrips()
+    {
+        Assert.Equal(SideWar.Core.Td.TdDifficulty.Casual, ReadPayload("{\"td\":{}}").Td.Difficulty);
+        Assert.Equal(SideWar.Core.Td.TdDifficulty.Casual, ReadPayload("{\"td\":{\"difficulty\":99}}").Td.Difficulty);
+        var fs = new FakeFileSystem();
+        var store = new SettingsStore(fs, "/data", utcNow: () => Now);
+        Assert.True(store.Save(new AppSettings { Td = new TdSettings { Difficulty = SideWar.Core.Td.TdDifficulty.Extreme } }));
+        Assert.Equal(SideWar.Core.Td.TdDifficulty.Extreme, store.Load().Settings.Td.Difficulty);
+    }
+
+    [Fact]
     public void Alert_options_migrate_and_roundtrip_independently()
     {
         var old = ReadPayload("{\"td\":{\"autoRestart\":true}}").Td;

@@ -224,6 +224,7 @@ public sealed record TdGameOptions(int BandHeight = 40, bool AutoStart = false, 
 /// </summary>
 public sealed record TdSettingsData
 {
+    public int Difficulty { get; init; }
     public int GameMode { get; init; } = 1;
     public bool StartWithWindows { get; init; }
     public bool StartupVisible { get; init; }

@@ -53,7 +53,7 @@ internal sealed class TdComposition
         var recorder = TdProfileRecorder.Load(tdStore, () => idle.Load(), content.Meta, content.Stages.Stages.Length, log);
         ulong runSeed = seed ?? (ulong)DateTime.UtcNow.Ticks;
         var rng = Rng.Seed(runSeed, 54UL);
-        var options = settings.Td.ContinuousWaves ? TdMatchOptions.Default : TdMatchOptions.Classic;
+        var options = (settings.Td.ContinuousWaves ? TdMatchOptions.Default : TdMatchOptions.Classic) with { Difficulty = settings.Td.Difficulty };
         int stage = recorder.ResumeStage();
         options = recorder.WithRunes(options) with { HighestCompletedStage = recorder.Profile.Stages.Where(s => s.Stars > 0).Select(s => s.StageId).DefaultIfEmpty(0).Max() };
         var match = TdMatchState.Create(content, stage, rng, recorder.Profile.PurchasedNodes, options);
@@ -98,7 +98,7 @@ internal sealed class TdComposition
     /// <summary>Auto-início (imediato por padrão; contagem de 5 a 60 s) e ondas contínuas (valem a partir da próxima corrida).</summary>
     public void ApplySettings(AppSettings settings)
     {
-        _options = settings.Td.ContinuousWaves ? TdMatchOptions.Default : TdMatchOptions.Classic;
+        _options = (settings.Td.ContinuousWaves ? TdMatchOptions.Default : TdMatchOptions.Classic) with { Difficulty = settings.Td.Difficulty };
         Host.ExtraSpeeds = settings.Td.ExtraSpeeds;
         Host.ShadowOnAbsent = settings.Td.ShadowOnAbsent;
         Host.GameSpeed = settings.Td.GameSpeed;

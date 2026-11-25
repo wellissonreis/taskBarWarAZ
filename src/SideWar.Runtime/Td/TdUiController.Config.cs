@@ -58,6 +58,7 @@ public sealed partial class TdUiController
                 Toggle("uia", "UI Automation (barra de tarefas)", "Usa UI Automation para localizar a barra de tarefas.");
                 Toggle("autoscale", "Auto-escala");
                 Group("TOWER DEFENSE");
+                Seg("difficulty", "Dificuldade (próx. corrida)", [("Casual", 0), ("Difícil", 1), ("Extremo", 2)], "Inimigos resistem mais às torres contra as quais são fortes.");
                 Toggle("questions", "Pergunta-bônus entre ondas");
                 Toggle("income", "Mostrar renda (+X/s)", "Mostra a renda de créditos abaixo do contador.");
                 Toggle("typeinfo", "Mostrar tipo e efetividade", "Barra de vida, ícone de tipo e número de dano forte/fraco sobre os inimigos.");
@@ -156,7 +157,7 @@ public sealed partial class TdUiController
         return k switch
         {
             "xspeeds" => d.ExtraSpeeds ? 1 : 0, "speedx" => d.GameSpeed, "shadowabsent" => d.ShadowOnAbsent ? 1 : 0, "typeinfo" => d.ShowTypeInfo ? 1 : 0,
-            "mode" => d.GameMode, "startup" => d.StartWithWindows ? 1 : 0, "hide" => d.HideOnFullscreen, "uia" => d.UseUia ? 1 : 0, "autoscale" => d.AutoScale ? 1 : 0,
+            "difficulty" => d.Difficulty, "mode" => d.GameMode, "startup" => d.StartWithWindows ? 1 : 0, "hide" => d.HideOnFullscreen, "uia" => d.UseUia ? 1 : 0, "autoscale" => d.AutoScale ? 1 : 0,
             "questions" => d.BonusQuestions ? 1 : 0, "income" => d.ShowIncome ? 1 : 0, "discreet" => d.DiscreetMode ? 1 : 0, "continuous" => d.ContinuousWaves ? 1 : 0,
             "pinned" => d.TowerPanelPinned ? 1 : 0, "autostart" => (int)d.AutoStartMode, "autoseconds" => d.AutoStartSeconds, "autorestart" => d.AutoRestart ? 1 : 0,
             "band" or "bandfine" => d.BandHeight, "corner" or "cornerfine" => d.CornerUiScale, "speed" => d.GameSpeed, "notice" => d.NoticeSize,
@@ -186,7 +187,7 @@ public sealed partial class TdUiController
         {
             "shadowabsent" => d with { ShadowOnAbsent = b }, "typeinfo" => d with { ShowTypeInfo = b },
             "xspeeds" => d with { ExtraSpeeds = b, GameSpeed = b ? d.GameSpeed : Math.Min(d.GameSpeed, 3), SpeedMask = b && d.SpeedMask == 0 ? TdSpeed.DefaultMask : d.SpeedMask }, "speedx" => d with { GameSpeed = v },
-            "mode" => d with { GameMode = v }, "startup" => d with { StartWithWindows = b }, "hide" => d with { HideOnFullscreen = v }, "uia" => d with { UseUia = b },
+            "difficulty" => d with { Difficulty = v }, "mode" => d with { GameMode = v }, "startup" => d with { StartWithWindows = b }, "hide" => d with { HideOnFullscreen = v }, "uia" => d with { UseUia = b },
             "autoscale" => d with { AutoScale = b }, "questions" => d with { BonusQuestions = b }, "income" => d with { ShowIncome = b }, "discreet" => d with { DiscreetMode = b },
             "continuous" => d with { ContinuousWaves = b }, "pinned" => d with { TowerPanelPinned = b }, "autostart" => d with { AutoStartMode = (AutoStartMode)v, AutoStart = b },
             "autoseconds" => d with { AutoStartSeconds = v }, "autorestart" => d with { AutoRestart = b }, "band" or "bandfine" => d with { BandHeight = v },

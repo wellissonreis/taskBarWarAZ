@@ -108,6 +108,7 @@ public sealed record TaskbarSettings
 /// <summary>Opções da partida TD (SDD-28 RF-28.3). Auto-início imediato por padrão; contagem de 5 a 60 s.</summary>
 public sealed record TdSettings
 {
+    public SideWar.Core.Td.TdDifficulty Difficulty { get; init; } = SideWar.Core.Td.TdDifficulty.Casual;
     /// <summary>Exibe alertas preditivos; independente da proteção automática.</summary>
     public bool AlertsEnabled { get; init; } = true;
     /// <summary>Opção legada, ignorada.</summary>
