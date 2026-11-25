@@ -15,7 +15,7 @@ public sealed class TdTutorial(ITdOnboardingStore store)
         new(TdUiMode.None, "Mova uma torre arrastando.", "Solte em um ponto livre; não custa créditos.", TdIcon.Build),
         new(TdUiMode.None, "Arraste uma torre para fora da faixa para vender.", "Solte acima da faixa: devolve parte dos créditos.", TdIcon.Coin),
         new(TdUiMode.Bestiary, "Cada inimigo tem pontos fortes e fracos.", "Veja os tipos em Inimigos e escolha a torre certa.", TdIcon.Target),
-        new(TdUiMode.Menu, "Patentes liberam torres e fusão.", "Fusão a partir de Júnior; dano no núcleo tira XP.", TdIcon.Medal),
+        new(TdUiMode.Menu, "Patentes liberam torres e fusão.", "Júnior funde 3 torres; dano no núcleo tira XP.", TdIcon.Medal),
         new(TdUiMode.None, "Velocidade no HUD acelera a partida.", "", TdIcon.FastForward),
         new(TdUiMode.None, "Modo sombra farma sem arriscar XP.", "Liga e desliga em Configurações; o atalho também vale.", TdIcon.Moon),
         new(TdUiMode.Menu, "Configurações ficam na engrenagem.", "Abra Como jogar para refazer o tutorial.", TdIcon.Question, TargetAction: TdUiAction.SettingsOpen),

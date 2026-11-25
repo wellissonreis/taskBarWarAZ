@@ -13,6 +13,7 @@ public static class TdProfileRules
         bool changed = false;
         foreach (var e in events)
         {
+            if (e.Type == TdEventType.TowerFused) { changed |= DiscoverRecipes(match, (int)e.A, encounters); continue; }
             if (e.Type != TdEventType.EnemyEncountered) continue;
             var id = match.EnemyDefId((int)e.A) + (e.B == 1 ? ":elite" : e.B == 2 ? ":enraged" : "");
             encounters.TryGetValue(id, out var count);
@@ -23,6 +24,18 @@ public static class TdProfileRules
         {
             Encounters = encounters.Select(e => new TdEncounterData { Id = e.Key, Count = e.Value }).ToArray(),
         };
+    }
+
+    /// <summary>Descoberta progressiva das receitas de fusão: cada combinação contida na torre fundida entra uma vez como <c>recipe:id</c>.</summary>
+    private static bool DiscoverRecipes(TdMatchState match, int towerId, Dictionary<string, int> encounters)
+    {
+        bool changed = false;
+        foreach (var t in match.Towers)
+        {
+            if (t.Id != towerId) continue;
+            foreach (var recipe in match.RecipesIn(t.Components())) changed |= encounters.TryAdd("recipe:" + recipe.Id, 1);
+        }
+        return changed;
     }
 
     public static TdProfileData RecordLegacy(TdProfileData profile, string runId, int waves)

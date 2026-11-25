@@ -76,9 +76,10 @@ public sealed class TdFusionUiTests
         Assert.True(late.Find(TdUiAction.FuseOpen).Enabled);
         var early = new Rig(1);
         early.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "T", TdUiAction.OpenTower, early.Tower));
-        var locked = early.Find(TdUiAction.FuseOpen);
-        Assert.False(locked.Enabled);
-        Assert.Contains("Júnior", locked.Text);
+        Assert.True(early.Find(TdUiAction.FuseOpen).Enabled); // Estagiário funde 2
+        Assert.True(early.Match.Apply(new FuseTower(early.Tower, "bolt")).IsOk);
+        early.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "T", TdUiAction.OpenTower, early.Tower));
+        Assert.DoesNotContain(early.Ui.BuildPopover()!.Items, i => i.Action == TdUiAction.FuseOpen); // no limite da patente
         var check = early.Match.CheckFusion(early.Tower, "bolt");
         Assert.Contains("Júnior", TdUiController.FusionReasonText(early.Match, check));
     }
@@ -126,7 +127,7 @@ public sealed class TdFusionUiTests
         var insp = r.Ui.BuildPopover()!;
         Assert.StartsWith("Gelo elétrico", insp.Title, StringComparison.Ordinal);
         Assert.Contains(insp.Items, i => i.Action == TdUiAction.Sell && i.Right == $"+${r.Match.SellValue(r.Tower)}");
-        Assert.DoesNotContain(insp.Items, i => i.Action == TdUiAction.FuseOpen); // sem terceira componente
+        Assert.Contains(insp.Items, i => i.Action == TdUiAction.FuseOpen); // Arquiteto ainda cabe mais torres
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "Torres", TdUiAction.TowersOpen));
         var row = r.Ui.BuildPopover()!.Items.First(i => i.Action == TdUiAction.OpenTower);
         Assert.Equal("Gelo elétrico", row.Text);
@@ -171,7 +172,7 @@ public sealed class TdFusionUiTests
         Assert.NotNull(TdUiController.FusionReasonText(r.Match, new TdFusionCheck(CommandReason.TowerTypeLimit, 0, 0, "", false, "")));
         Assert.Contains("Preparo", TdUiController.FusionReasonText(r.Match, new TdFusionCheck(CommandReason.InvalidPhase, 0, 0, "", false, "")));
         Assert.Contains("posição", TdUiController.FusionReasonText(r.Match, new TdFusionCheck(CommandReason.NotPlaced, 0, 0, "", false, "")));
-        Assert.Contains("2 componentes", TdUiController.FusionReasonText(r.Match, new TdFusionCheck(CommandReason.AlreadyFused, 0, 0, "", false, "")));
+        Assert.Contains("Máximo de 6", TdUiController.FusionReasonText(r.Match, new TdFusionCheck(CommandReason.AlreadyFused, 0, 0, "", false, "")));
         Assert.Null(TdUiController.FusionReasonText(r.Match, new TdFusionCheck(CommandReason.None, 0, 0, "", false, "")));
         Assert.NotNull(vault);
     }

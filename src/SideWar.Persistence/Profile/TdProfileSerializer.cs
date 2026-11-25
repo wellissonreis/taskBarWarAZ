@@ -73,7 +73,8 @@ public static class TdProfileSerializer
             UnlockedTowers = Distinct(p.UnlockedTowers),
             RunTowers = (p.RunTowers ?? []).Where(t => t is not null && !string.IsNullOrWhiteSpace(t.DefId)).Take(TdMatchState.TechnicalTowerLimit)
                 .Select(t => t with { X = Math.Clamp(t.X, 0, (int)TdWorld.PathLength), PurchasePrice = Math.Clamp(t.PurchasePrice, 0, MaxScore), ModulePrice = Math.Clamp(t.ModulePrice, 0, MaxScore),
-                    Targeting = Math.Clamp(t.Targeting, 0, 4), ModuleDefId = string.IsNullOrWhiteSpace(t.ModuleDefId) ? null : t.ModuleDefId }).ToArray(),
+                    Targeting = Math.Clamp(t.Targeting, 0, 4), ModuleDefId = string.IsNullOrWhiteSpace(t.ModuleDefId) ? null : t.ModuleDefId,
+                    ExtraModules = string.IsNullOrWhiteSpace(t.ExtraModules) || t.ExtraModules.Length > 256 ? null : t.ExtraModules }).ToArray(),
             Encounters = (p.Encounters ?? []).Where(e => e is not null && !string.IsNullOrWhiteSpace(e.Id) && e.Count > 0)
                 .GroupBy(e => e.Id, StringComparer.Ordinal).Select(g => new TdEncounterData { Id = g.Key, Count = Math.Clamp(g.Max(e => e.Count), 1, MaxScore) })
                 .Take(MaxListEntries).ToArray(),

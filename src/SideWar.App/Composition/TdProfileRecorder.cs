@@ -217,13 +217,13 @@ internal sealed class TdProfileRecorder : ITdMatchObserver
     }
 
     /// <summary>Torres salvas da corrida (entregues à partida nova ao abrir o app, trocar de fase ou reiniciar a corrida).</summary>
-    public IReadOnlyList<TdTowerCarry> RunTowers => [.. Profile.RunTowers.Select(t => new TdTowerCarry(t.DefId, t.X, t.Placed, t.PurchasePrice, (byte)t.Targeting, t.ModuleDefId, t.ModulePrice))];
+    public IReadOnlyList<TdTowerCarry> RunTowers => [.. Profile.RunTowers.Select(t => new TdTowerCarry(t.DefId, t.X, t.Placed, t.PurchasePrice, (byte)t.Targeting, t.ModuleDefId, t.ModulePrice, t.ExtraModules))];
 
     /// <summary>Grava as torres da partida no perfil (só se mudaram).</summary>
     public void SaveTowers(TdMatchState match)
     {
         var next = TdProfileRules.SetRunTowers(Profile, [.. match.ExportTowers().Select(c => new TdRunTowerData
-            { DefId = c.DefId, X = c.X, Placed = c.Placed, PurchasePrice = c.PurchasePrice, Targeting = c.Targeting, ModuleDefId = c.ModuleDefId, ModulePrice = c.ModulePrice })]);
+            { DefId = c.DefId, X = c.X, Placed = c.Placed, PurchasePrice = c.PurchasePrice, Targeting = c.Targeting, ModuleDefId = c.ModuleDefId, ModulePrice = c.ModulePrice, ExtraModules = c.ExtraModules })]);
         if (ReferenceEquals(next, Profile)) return;
         Profile = next;
         Save();

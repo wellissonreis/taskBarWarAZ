@@ -118,4 +118,6 @@ public sealed record TdRunTowerData
     public int Targeting { get; init; }
     public string? ModuleDefId { get; init; }
     public long ModulePrice { get; init; }
+    /// <summary>Módulos além do primeiro, como <c>id:preço,id:preço</c> (texto mantém a igualdade do registro).</summary>
+    public string? ExtraModules { get; init; }
 }

@@ -104,7 +104,8 @@ public sealed class TdFusionDropTests
     [Fact]
     public void Dropping_on_an_invalid_pair_shows_a_short_reason_and_does_nothing()
     {
-        var r = new Rig(stage: 1); // fusão só a partir de Júnior
+        var r = new Rig(stage: 1); // Estagiário funde 2: a terceira torre é recusada
+        Assert.True(r.Match.Apply(new FuseTower(r.Tower, "bolt")).IsOk);
         long before = r.Match.Credits;
         int sent = r.Sent.Count;
         r.Pick("bolt");
@@ -116,7 +117,7 @@ public sealed class TdFusionDropTests
         Assert.True(r.Ui.SceneLeftClick(r.TowerX(), 20f, HitTarget.None));
         Assert.Equal(sent, r.Sent.Count);
         Assert.Equal(before, r.Match.Credits);
-        Assert.False(r.Match.Towers[0].HasModule);
+        Assert.Equal(2, r.Match.Towers[0].ComponentTotal);
         Assert.True(r.Ui.BuildActive); // segue escolhendo
     }
 
@@ -137,7 +138,7 @@ public sealed class TdFusionDropTests
     }
 
     [Fact]
-    public void Moving_off_the_tower_returns_to_normal_placement_and_a_fused_tower_is_refused()
+    public void Moving_off_the_tower_returns_to_normal_placement_and_a_fused_tower_takes_a_third()
     {
         var r = new Rig();
         r.Pick("bolt");
@@ -149,11 +150,49 @@ public sealed class TdFusionDropTests
         Assert.True(r.Match.Towers[0].HasModule);
         r.Pick("cannon");
         r.Ui.PointerMoved(r.TowerX());
-        Assert.False(r.Ui.View.FuseTargetOk);
-        Assert.Contains("já fundida", r.Ui.BuildPopover()!.Title);
+        Assert.True(r.Ui.View.FuseTargetOk);
+        Assert.Contains("3/6: Zona de Disponibilidade", r.Ui.BuildPopover()!.Title);
     }
 
     // ---------------------------------------------------------------- arrastar uma torre já colocada
+
+    [Fact]
+    public void Dragging_onto_a_hybrid_shows_recipe_and_count_then_adds_the_third_tower()
+    {
+        var r = new Rig(stage: 2); // Júnior: até 3 torres
+        Assert.True(r.Match.Apply(new FuseTower(r.Tower, "bolt")).IsOk);
+        var (id, x2) = AddSecond(r, "cannon");
+        Assert.True(r.Ui.BeginTowerDrag(id, x2));
+        r.Ui.TowerDragMoved(r.TowerX());
+        Assert.True(r.Ui.View.FuseTargetOk);
+        var card = r.Ui.BuildPopover()!;
+        Assert.Equal("Soltar funde", card.Title);
+        Assert.Contains(card.Items, i => i.Text == "Zona de Disponibilidade");
+        Assert.Contains(card.Items, i => i.Text.Contains("3 de 3 torres", StringComparison.Ordinal));
+        Assert.Contains(card.Items, i => i.Text.StartsWith("Receita:", StringComparison.Ordinal));
+        r.Ui.TowerDragEnd(r.TowerX());
+        var t = Assert.Single(r.Match.Towers);
+        Assert.Equal(3, t.ComponentTotal);
+        r.Ui.Sync();
+        Assert.Equal("Torre fundida", r.Ui.BuildPopover()!.Title);
+    }
+
+    [Fact]
+    public void Dragging_above_the_rank_limit_explains_the_needed_rank_and_changes_nothing()
+    {
+        var r = new Rig(stage: 1);
+        Assert.True(r.Match.Apply(new FuseTower(r.Tower, "bolt")).IsOk);
+        var (id, x2) = AddSecond(r, "dns");
+        int sent = r.Sent.Count;
+        Assert.True(r.Ui.BeginTowerDrag(id, x2));
+        r.Ui.TowerDragMoved(r.TowerX());
+        var card = r.Ui.BuildPopover()!;
+        Assert.Equal("Fusão bloqueada", card.Title);
+        Assert.Contains(card.Items, i => i.Text.Contains("exigem Júnior", StringComparison.Ordinal));
+        r.Ui.TowerDragEnd(r.TowerX());
+        Assert.Equal(sent, r.Sent.Count);
+        Assert.Equal(2, r.Match.Towers.Count);
+    }
 
     private static (int Id, float X) AddSecond(Rig r, string type = "bolt", int logical = 760)
     {
@@ -196,7 +235,8 @@ public sealed class TdFusionDropTests
         Assert.DoesNotContain(r.Sent, c => c is FuseTowers);
         Assert.Equal(2, r.Match.Towers.Count);
 
-        var early = new Rig(stage: 1); // fusão bloqueada
+        var early = new Rig(stage: 1); // já no limite de 2 do Estagiário
+        Assert.True(early.Match.Apply(new FuseTower(early.Tower, "bolt")).IsOk);
         var (id2, x3) = AddSecond(early);
         early.Ui.BeginTowerDrag(id2, x3);
         early.Ui.TowerDragMoved(early.TowerX());
@@ -347,6 +387,46 @@ public sealed class TdFusionDropTests
         var redo = r.Ui.BuildPopover()!.Items.First(i => i.Action == TdUiAction.RedoTutorial);
         r.Ui.Activate(redo);
         Assert.False(r.Store.Done);
+    }
+
+    private sealed class Discovered : ITdUiHost
+    {
+        public bool Paused => false;
+        public void TogglePause() { }
+        public void RequestExit() { }
+        public bool HudMinimized { get; set; } = true;
+        public void SetHudMinimized(bool minimized) => HudMinimized = minimized;
+        public void StartStage(int stageId) { }
+        public int StageCount => 6;
+        public bool StageUnlocked(int stageId) => true;
+        public int StageStars(int stageId) => 0;
+        public bool StageCrown(int stageId) => false;
+        public int StageMedals(int stageId) => 0;
+        public int StageBestScore(int stageId) => 0;
+        public TdRankProgress Rank => TdRank.Progress(0);
+        public TdRecordOutcome LastOutcome => default;
+        public int SealsAvailable => 0;
+        public bool NodePurchased(string nodeId) => false;
+        public bool PurchaseNode(string nodeId) => true;
+        public int EncounterCount(string id) => id == "recipe:zona-disponibilidade" ? 1 : 0;
+    }
+
+    [Fact]
+    public void Help_lists_only_the_discovered_recipes_and_counts_the_hidden_ones()
+    {
+        var r = new Rig();
+        var ui = new TdUiController(() => r.Match, _ => { }, new Discovered(), () => 0.0, null);
+        ui.OpenHowTo();
+        var items = new List<TdUiItem>();
+        for (int i = 0; i < 60; i++)
+        {
+            var page = ui.BuildPopover()!;
+            items.AddRange(page.Items);
+            if (!ui.ScrollBy(1)) break;
+        }
+        Assert.Contains(items, i => i.Text == "Zona de Disponibilidade" && i.Sub == "Raio+Gelo+Canhão");
+        Assert.Contains(items, i => i.Text.StartsWith("??? ", StringComparison.Ordinal));
+        Assert.DoesNotContain(items, i => i.Text == "Zero Trust");
     }
 
     [Fact]

@@ -91,7 +91,7 @@ public sealed partial class TdUiController
     public string? NoticeText => NoticeOpen ? _noticeText : null;
     public void DismissNotice() { if (_noticeText is null) return; _noticeText = null; Changed?.Invoke(); }
     /// <summary>Qualquer popover pequeno ancorado ao chip: painel rápido, pergunta-bônus, aviso de fase ou cartão de fim. Nunca ativa janela.</summary>
-    public bool CornerPopover => DemotionCardOpen || QuickTowersOpen || RuneWindowOpen || EndCardOpen || NoticeOpen || RuneCardOpen || AlertCardOpen || FuseCardOpen || FusionTipOpen || _fusionChoosingModule || FusionTargetActive || MutationWarnOpen || ((Mode == TdUiMode.None || QuickTowersOpen) && QuizActive);
+    public bool CornerPopover => DemotionCardOpen || QuickTowersOpen || RuneWindowOpen || EndCardOpen || NoticeOpen || RuneCardOpen || AlertCardOpen || FuseCardOpen || FuseDragCardOpen || FusionTipOpen || _fusionChoosingModule || FusionTargetActive || MutationWarnOpen || ((Mode == TdUiMode.None || QuickTowersOpen) && QuizActive);
     private int _chosenX = -1;       // X lógico já escolhido (passo "escolher a torre"); -1 = ainda no passo do ponto
     private int _moveTowerId;        // > 0: reposicionando uma torre SEM POSIÇÃO (sem escolha de tipo)
     private int _dropTowerId;       // > 0: o fantasma está sobre esta torre (preview de fusão)
@@ -330,7 +330,7 @@ public sealed partial class TdUiController
             case TdUiAction.FusionSelectModule when item.SArg is not null:
                 _fusionChoosingModule = false;
                 _fusionTargetModule = item.SArg;
-                _selectedTowerId = _match().Towers.Where(t => t.Placed && !t.HasModule).Select(t => t.Id).FirstOrDefault();
+                _selectedTowerId = _match().Towers.Where(t => CanReceiveModule(_match(), t)).Select(t => t.Id).FirstOrDefault();
                 Changed?.Invoke(); break;
             case TdUiAction.MutationWarnDismiss: DismissMutationWarn(); break;
             case TdUiAction.QuickTowers:
@@ -839,7 +839,7 @@ public sealed partial class TdUiController
             _dropCheck = m.CheckFusion(hit.TowerId, _placementType);
             _ghostX = m.Towers[ti].X;
             _ghostValid = _dropCheck.IsOk;
-            _notice = _dropCheck.IsOk ? $"Soltar funde: {_dropCheck.Name} ${_dropCheck.Cost}" : "Fusão: " + DropReasonText(m, _dropCheck);
+            _notice = _dropCheck.IsOk ? $"Soltar funde ({_dropCheck.Count}/{_dropCheck.Limit}): {_dropCheck.Name} ${_dropCheck.Cost}" : "Fusão: " + DropReasonText(m, _dropCheck);
             return;
         }
         int logical = TdPlacement.ToLogical((int)MathF.Round(Math.Clamp(xDip, 0f, w)), w);
@@ -1078,6 +1078,7 @@ public sealed partial class TdUiController
         if (BossHidden) return null;
         if (DemotionCardOpen) return BuildDemotionCard();
         if (AlertCritical) return BuildAlertCard();
+        if (FuseDragCardOpen) return BuildFuseDragCard(m);
         if (_outsideCollapsed) return null;
         if (AlertWarningOpen) return BuildAlertCard();
         if (!BuildActive && (Mode == TdUiMode.None || QuickTowersOpen) && _quizQ is not null && QuizPhaseOk(m)) return BuildQuiz(m);
@@ -1176,7 +1177,7 @@ public sealed partial class TdUiController
         items.Add(new TdUiItem(new DipRect(30, statusY, w - 60, 20), TdUiKind.Label, (tut && BuildActive ? _notice ?? "Clique em um ponto livre da faixa" : NextTowerHint(m)), Tone: TdTone.Dim));
         items.Add(new TdUiItem(new DipRect(w - 30, statusY, 22, 20), TdUiKind.Button, ">", TdUiAction.BuildCatalogPage, 1, Enabled: (_buildPage + 1) * pageSize < count));
         float h = statusY + 24;
-        return new TdPopoverView(BuildActive && _dropTowerId > 0 ? (_dropCheck.IsOk ? $"FUNDIR: {_dropCheck.Name}  ${_dropCheck.Cost}" : "FUSÃO: " + DropReasonText(m, _dropCheck)) : BuildActive ? "TORRES   Toque na faixa" : "TORRES   Escolha uma torre", [.. items], w, h, 0, Quick: true);
+        return new TdPopoverView(BuildActive && _dropTowerId > 0 ? (_dropCheck.IsOk ? $"FUNDIR {_dropCheck.Count}/{_dropCheck.Limit}: {_dropCheck.Name}  ${_dropCheck.Cost}" : "FUSÃO: " + DropReasonText(m, _dropCheck)) : BuildActive ? "TORRES   Toque na faixa" : "TORRES   Escolha uma torre", [.. items], w, h, 0, Quick: true);
     }
 
     private static Stack Placeholder()
@@ -1457,7 +1458,7 @@ public sealed partial class TdUiController
             case TdUiMode.Towers:
             {
                 var m = _match();
-                string fusion = m.FusionUnlocked ? "Fusão disponível" : $"Fusão: patente {TdRank.DisplayName((TdRankLevel)m.Content.Fusion.MinRank)}";
+                string fusion = m.FusionUnlocked ? $"Fusão: até {m.FusionMaxComponents} torres" : $"Fusão: patente {TdRank.DisplayName((TdRankLevel)m.Content.Fusion.MinRank)}";
                 items.Add(new(new DipRect(16, 104, 470, 18), TdUiKind.Label, $"Torres em campo: {m.Towers.Count}  |  {fusion}", Tone: TdTone.Dim, SArg: "hdr"));
                 items.Add(new(new DipRect(500, 104, 204, 18), TdUiKind.Label, $"Venda devolve {Math.Round(m.Content.Stages.Rules.SellRefund * 100):0}%", Tone: TdTone.Dim, SArg: "hdrR"));
                 if (m.Towers.Count == 0)
@@ -1731,7 +1732,13 @@ public sealed partial class TdUiController
         var d = m.Content.Towers[t.DefIndex];
         string title = t.HasModule ? m.TowerDisplayName(t) : $"{d.Name} x{m.TowerCount(t.DefIndex)}";
         string? moduleId = t.HasModule ? m.Content.Towers[t.ModuleDefIndex].Id : null;
-        if (t.HasModule) s.Add(TdUiKind.Label, $"Fundida: {d.Name} + {m.Content.Towers[t.ModuleDefIndex].Name}", RowH - 4, tone: TdTone.Accent);
+        if (t.HasModule)
+        {
+            var names = t.Components().Select(i => m.Content.Towers[i].Name).ToArray();
+            s.Add(TdUiKind.Label, $"Fundida: {string.Join(" + ", names.Take(3))}", RowH - 4, tone: TdTone.Accent);
+            if (names.Length > 3) s.Add(TdUiKind.Label, $"+ {string.Join(" + ", names.Skip(3))}", RowH - 4, tone: TdTone.Accent);
+            if (m.RecipeBonus(t) is { } bonus) QuizText(s, "Receita: " + bonus.Text + ".", FuseFont, TdTone.Good, TdIcon.Star);
+        }
         s.Add(TdUiKind.Label, $"Alcance {d.Range:0}", RowH - 4, tone: TdTone.Dim);
         s.Add(TdUiKind.Label, $"Fraqueza: {d.WeaknessText}", TwoLineH - 8, tone: TdTone.Warn);
         if (!t.Placed)
@@ -1749,7 +1756,7 @@ public sealed partial class TdUiController
             }
             s.Y += RowH + 2;
         }
-        if (t.Placed && !t.HasModule)
+        if (CanReceiveModule(m, t))
         {
             bool unlocked = m.FusionUnlocked;
             s.Add(TdUiKind.Button, unlocked ? "Fundir com outra torre" : $"Fundir (patente {TdRank.DisplayName((TdRankLevel)m.Content.Fusion.MinRank)})", RowH, TdUiAction.FuseOpen, arg: t.Id, enabled: unlocked, tone: unlocked ? TdTone.Accent : TdTone.Dim);
@@ -1793,7 +1800,7 @@ public sealed partial class TdUiController
     {
         var s = new Stack(PopoverWidth);
         s.Add(TdUiKind.Label, $"Torres {m.Towers.Count}", RowH - 4, tone: TdTone.Dim);
-        s.Add(TdUiKind.Label, m.FusionUnlocked ? "Fusão disponível" : $"Fusão: patente {TdRank.DisplayName((TdRankLevel)m.Content.Fusion.MinRank)}", RowH, tone: TdTone.Dim);
+        s.Add(TdUiKind.Label, m.FusionUnlocked ? $"Fusão: até {m.FusionMaxComponents} torres" : $"Fusão: patente {TdRank.DisplayName((TdRankLevel)m.Content.Fusion.MinRank)}", RowH, tone: TdTone.Dim);
         if (m.Towers.Count == 0) s.Add(TdUiKind.Label, "Nenhuma torre. Use Construir.", RowH, tone: TdTone.Dim);
         float sellW = 98f;
         _towerScroll = Math.Clamp(_towerScroll, 0, Math.Max(0, m.Towers.Count - ModalTowerRows));

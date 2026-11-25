@@ -525,7 +525,7 @@ public sealed partial class TdUiController
         Card(TdIcon.Build, "Construir mostra tipos, funções e fraquezas.");
         Card(TdIcon.Build, "Arraste ao vazio para mover sem custo.");
         Card(TdIcon.Coin, "Arraste uma torre para fora da faixa para vender.");
-        Card(TdIcon.Star, "Torre sobre torre: fusão a partir de Júnior.");
+        Card(TdIcon.Star, "Na fusão: 2 torres no Estagiário, +1 por patente (até 6).");
         Card(TdIcon.Medal, "Torres liberam conforme a patente.");
         Card(TdIcon.Star, "Fusões ficam mais fortes e ganham nomes.");
         Card(TdIcon.Target, "Inspecione a torre para ajustar sua mira.");
@@ -554,8 +554,25 @@ public sealed partial class TdUiController
         Card(TdIcon.Alert, "Modo sombra (Configurações ou atalho): farma sem XP (35%).");
         Card(TdIcon.Alert, "Reiniciar mantém suas torres.");
         Card(TdIcon.Alert, "Recomeçar do zero apaga o progresso.");
+        AddRecipeBook(s, m);
         if (_onb is not null) s.Add(TdUiKind.Button, "Refazer tutorial", RowH + 2, TdUiAction.RedoTutorial, tone: TdTone.Good, icon: TdIcon.Play);
         return Finish("Como jogar", s, 0);
+    }
+
+    /// <summary>Receitas de fusão: descoberta progressiva (como o bestiário). As ainda não feitas só contam quantas faltam por tamanho.</summary>
+    private void AddRecipeBook(Stack s, TdMatchState m)
+    {
+        var all = m.Content.Fusion.Recipes ?? [];
+        if (all.Length == 0) return;
+        var known = all.Where(r => _host.EncounterCount("recipe:" + r.Id) > 0).ToArray();
+        s.Add(TdUiKind.Label, $"RECEITAS DE FUSÃO {known.Length}/{all.Length}", 18f, sarg: "help-section");
+        foreach (var r in known)
+        {
+            string parts = string.Join("+", r.Parts.Select(id => m.Content.Towers.First(t => t.Id == id).Name));
+            s.Add(TdUiKind.Label, r.Name, 15f, sarg: "help-card", sub: parts, icon: TdIcon.Star);
+        }
+        foreach (var size in all.Except(known).GroupBy(r => r.Parts.Length).OrderBy(g => g.Key))
+            s.Add(TdUiKind.Label, $"??? {size.Count()} receitas de {size.Key} torres", 15f, sarg: "help-card", tone: TdTone.Dim, icon: TdIcon.Lock);
     }
 
     // ================================================================ derrota ensina (RF-28.24) e guia da 1ª vitória

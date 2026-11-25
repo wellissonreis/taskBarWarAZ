@@ -15,11 +15,14 @@ public sealed partial class TdUiController
     public const string FusionTipKey = "fusion-discovery-done";
     public const float FuseWidth = 360f, FuseFont = 14f, FuseTitleFont = 15f, FuseButtonH = 32f;
     public const string FusionTipText = "Fusão liberada! Escolha uma torre na barra e solte sobre outra: ela funde.";
+    /// <summary>Máximo absoluto de torres numa fusão.</summary>
+    private const int FusionTop = 6;
 
     private int _fuseBase;         // > 0: cartão de fusão aberto sobre esta torre
     private string? _fuseType;     // módulo escolhido (preview); nulo = escolhendo
     private int _fuseAwait;        // torre cuja fusão foi enviada e espera o resultado
     private string? _fuseAwaitName;
+    private int _fuseAwaitCount;   // torres que a fusão enviada deve ter ao dar certo
     private string? _noticeTitle;
     private bool _fusionChoosingModule;
     private string? _fusionTargetModule;
@@ -42,15 +45,27 @@ public sealed partial class TdUiController
     {
         CommandReason.None => null,
         CommandReason.FusionLocked => $"Fusão libera na patente {TdRank.DisplayName((TdRankLevel)m.Content.Fusion.MinRank)}.",
+        CommandReason.FusionLimit => $"Sua patente funde até {c.Limit} torres; {c.Count} exigem {RankName(m, c.Count)}.",
         CommandReason.InvalidPhase => "Só dá para fundir em Preparo ou durante a Onda.",
         CommandReason.NotPlaced => "Torre sem posição: reposicione antes de fundir.",
-        CommandReason.AlreadyFused => "Esta torre já tem módulo (máximo de 2 componentes).",
-        CommandReason.TowerLocked => "Esse módulo exige uma patente maior.",
+        CommandReason.AlreadyFused => $"Máximo de {FusionTop} torres numa fusão.",
+        CommandReason.TowerLocked => "Uma das torres exige uma patente maior.",
         CommandReason.TowerTypeLimit => "Limite desse tipo atingido (conta também os módulos).",
         CommandReason.InsufficientCredits => $"Faltam ${c.Missing} créditos.",
         CommandReason.TowerNotFound => "A torre não existe mais.",
         _ => "Fusão indisponível agora.",
     };
+
+    private static string RankName(TdMatchState m, int count) => TdRank.DisplayName((TdRankLevel)m.FusionRankFor(count));
+
+    /// <summary>Quantas torres o resultado tem, quanto o limite da patente ainda permite e o que falta para passar dele.</summary>
+    public static string FusionCountText(TdMatchState m, in TdFusionCheck c)
+    {
+        if (c.Count > c.Limit)
+            return c.Count > FusionTop ? $"{c.Count} torres: máximo é {FusionTop}." : $"{c.Count} torres: limite {c.Limit}, exige {RankName(m, c.Count)}.";
+        int free = c.Limit - c.Count;
+        return free > 0 ? $"{c.Count} de {c.Limit} torres: cabe mais {free}." : $"{c.Count} de {c.Limit} torres: limite da patente.";
+    }
 
     /// <summary>Descrição curta do efeito do módulo (par nomeado ou regra genérica por papel). Mostra só o módulo, nunca promete a segunda torre inteira.</summary>
     public static string FusionEffectText(TdMatchState m, in TdFusionCheck c, string moduleName)
@@ -85,8 +100,9 @@ public sealed partial class TdUiController
     public static string DropReasonText(TdMatchState m, in TdFusionCheck c) => c.Reason switch
     {
         CommandReason.FusionLocked => $"só na patente {TdRank.DisplayName((TdRankLevel)m.Content.Fusion.MinRank)}",
-        CommandReason.AlreadyFused => "torre já fundida",
-        CommandReason.TowerLocked => "patente insuficiente para o módulo",
+        CommandReason.FusionLimit => $"{c.Count} torres exigem {RankName(m, c.Count)}",
+        CommandReason.AlreadyFused => $"máximo de {FusionTop} torres",
+        CommandReason.TowerLocked => "patente insuficiente",
         CommandReason.TowerTypeLimit => "limite do tipo",
         CommandReason.InsufficientCredits => $"faltam ${c.Missing}",
         CommandReason.InvalidPhase => "fora de Preparo/Onda",
@@ -99,6 +115,7 @@ public sealed partial class TdUiController
     {
         _fuseAwait = towerId;
         _fuseAwaitName = check.Name;
+        _fuseAwaitCount = check.Count;
         _fxTowerId = towerId;
         _fxStart = _now();
         _send(new FuseTower(towerId, moduleId));
@@ -174,10 +191,9 @@ public sealed partial class TdUiController
         _ghostValid = false;
         if (TdHitTester.Test(m, Math.Clamp(xDip, 0f, w - 1f), TdBand.HeightDip / 2f) is { Kind: HitKind.TdTower } hit && hit.TowerId != _dragTowerId)
         {
-            var (_, _, reason) = m.CheckFusionTowers(hit.TowerId, _dragTowerId);
             _dropTowerId = hit.TowerId;
-            _dropCheck = new TdFusionCheck(reason, 0, 0, m.FusionNameOfTowers(hit.TowerId, _dragTowerId), false, "");
-            _ghostValid = reason == CommandReason.None;
+            _dropCheck = m.CheckFusionDrag(hit.TowerId, _dragTowerId);
+            _ghostValid = _dropCheck.IsOk;
             int ti = FindTower(m, hit.TowerId);
             if (ti >= 0) _ghostX = m.Towers[ti].X;
         }
@@ -227,6 +243,7 @@ public sealed partial class TdUiController
         var (baseId, _, _) = m.CheckFusionTowers(target, dragged);
         _fuseAwait = baseId;
         _fuseAwaitName = check.Name;
+        _fuseAwaitCount = check.Count;
         _fxTowerId = baseId;
         _fxStart = _now();
         _send(new FuseTowers(target, dragged));
@@ -281,6 +298,7 @@ public sealed partial class TdUiController
                 if (!check.IsOk || ti < 0) { Changed?.Invoke(); break; } // preview já mostra o motivo; nada é enviado
                 _fuseAwait = _fuseBase;
                 _fuseAwaitName = check.Name;
+                _fuseAwaitCount = check.Count;
                 _send(new FuseTower(_fuseBase, _fuseType));
                 CloseFuse();
                 break;
@@ -301,7 +319,7 @@ public sealed partial class TdUiController
             _fuseAwaitName = null;
             if (!BossHidden)
             {
-                bool ok = ti >= 0 && m.Towers[ti].HasModule;
+                bool ok = ti >= 0 && m.Towers[ti].HasModule && m.Towers[ti].ComponentTotal >= _fuseAwaitCount;
                 if (ok) { _onb?.MarkTipSeen(FusionTipKey); _ftShown = _ftPending = false; }
                 _noticeTitle = ok ? "Torre fundida" : "Fusão recusada";
                 _noticeText = ok ? (ti >= 0 ? m.TowerDisplayName(m.Towers[ti]) : name ?? "") : "O Core recusou: confira créditos e limites.";
@@ -319,7 +337,8 @@ public sealed partial class TdUiController
     private void SyncFusionTip(TdMatchState m)
     {
         if (_onb is null) return;
-        if (!_ftShown && !_ftPending && m.FusionUnlocked && !_onb.TipSeen(FusionTipKey)) _ftPending = true;
+        // O convite só aparece de Júnior em diante: o começo fica calmo (a Ajuda explica a fusão de 2 do Estagiário).
+        if (!_ftShown && !_ftPending && m.FusionUnlocked && m.CurrentRankId > 0 && !_onb.TipSeen(FusionTipKey)) _ftPending = true;
         if (_ftPending && !_ftShown && CanShowFusionTip(m))
         {
             _ftShown = true;
@@ -340,7 +359,7 @@ public sealed partial class TdUiController
 
     private void ResetFusion(bool clearSeen)
     {
-        _fuseBase = _fuseAwait = _fxTowerId = _dropTowerId = _dragTowerId = 0;
+        _fuseBase = _fuseAwait = _fuseAwaitCount = _fxTowerId = _dropTowerId = _dragTowerId = 0;
         _fuseType = null;
         _fuseAwaitName = null;
         _ftShown = _ftPending = false;
@@ -368,11 +387,33 @@ public sealed partial class TdUiController
     private void TryFusion()
     {
         var m = _match();
-        int towerId = m.Towers.Where(t => t.Placed && !t.HasModule).Select(t => t.Id).FirstOrDefault();
+        int towerId = m.Towers.Where(t => CanReceiveModule(m, t)).Select(t => t.Id).FirstOrDefault();
         _ftShown = false;
         _ftPending = true;
         if (towerId > 0) OpenFuse(towerId);
-        else { _noticeTitle = "Fusão"; _noticeText = "Construa uma torre simples para usar como base."; _noticeUntil = _now() + StageNoticeSeconds; Changed?.Invoke(); }
+        else { _noticeTitle = "Fusão"; _noticeText = "Construa uma torre com espaço de fusão para usar como base."; _noticeUntil = _now() + StageNoticeSeconds; Changed?.Invoke(); }
+    }
+
+    private static bool CanReceiveModule(TdMatchState m, in TdTower t) => t.Placed && t.ComponentTotal < m.FusionMaxComponents;
+
+    /// <summary>Arrastando uma torre sobre outra: cartão no cantinho com nome da receita, quantidade, limite e o motivo do bloqueio.</summary>
+    public bool FuseDragCardOpen => _dragTowerId > 0 && _dragMoved && !_dragSell && _dropTowerId > 0 && !BossHidden;
+
+    private TdPopoverView BuildFuseDragCard(TdMatchState m)
+    {
+        var c = _dropCheck;
+        var s = new Stack(FuseWidth);
+        if (c.Name.Length > 0) QuizText(s, c.Name, FuseTitleFont, c.IsOk ? TdTone.Accent : TdTone.Normal);
+        if (c.Count > 0) QuizText(s, FusionCountText(m, c), FuseFont, c.Count > c.Limit ? TdTone.Bad : TdTone.Dim);
+        if (c.IsOk && c.Effect == "recipe" && DragRecipe(m) is { } bonus) QuizText(s, "Receita: " + bonus.Text + ".", FuseFont, TdTone.Good, TdIcon.Star);
+        if (FusionReasonText(m, c) is { } why) QuizText(s, why, FuseFont, TdTone.Bad, TdIcon.Alert);
+        return new TdPopoverView(c.IsOk ? "Soltar funde" : "Fusão bloqueada", [.. s.Items], s.Width, s.Y + Pad, 0f);
+    }
+
+    private TdFusionBonus? DragRecipe(TdMatchState m)
+    {
+        int a = FindTower(m, _dropTowerId), b = FindTower(m, _dragTowerId);
+        return a < 0 || b < 0 ? null : m.RecipeBonus([.. m.Towers[a].Components(), .. m.Towers[b].Components()]);
     }
 
     private void OpenFusionModuleChooser()
@@ -410,12 +451,15 @@ public sealed partial class TdUiController
         int ti = FindTower(m, _fuseBase);
         var t = m.Towers[ti];
         var baseDef = m.Content.Towers[t.DefIndex];
+        int[] parts = t.Components();
+        string baseName = t.HasModule ? m.TowerDisplayName(t) : baseDef.Name;
         var s = new Stack(FuseWidth);
         string? iconModule = null;
         string title = "Fundir";
         if (_fuseType is null)
         {
-            QuizText(s, $"{baseDef.Name}: escolha o módulo (a base mantém alcance e mira).", FuseFont, TdTone.Dim);
+            QuizText(s, $"{baseName}: escolha o módulo (a base mantém alcance e mira).", FuseFont, TdTone.Dim);
+            QuizText(s, $"Torres na fusão: {parts.Length} de {m.FusionMaxComponents} da sua patente.", FuseFont, TdTone.Dim);
             float half = (s.Width - 2 * Pad - 4f) / 2f;
             int col = 0;
             var towers = m.Content.Towers;
@@ -440,8 +484,17 @@ public sealed partial class TdUiController
             iconModule = md.Id;
             title = "Fundir: preview";
             QuizText(s, c.Name, FuseTitleFont, c.IsOk ? TdTone.Accent : TdTone.Normal);
-            QuizText(s, $"{baseDef.Name} + {md.Name}" + (c.Named ? "" : " (combinação genérica)"), FuseFont, TdTone.Dim);
-            QuizText(s, FusionEffectText(m, c, md.Name), FuseFont);
+            string list = string.Join(" + ", parts.Select(d => m.Content.Towers[d].Name).Append(md.Name));
+            QuizText(s, list + (c.Named ? "" : " (combinação genérica)"), FuseFont, TdTone.Dim);
+            var pair = m.FusionPair(t.DefIndex, Array.IndexOf(m.Content.Towers, md));
+            string moduleEffect = pair?.Effect ?? "generic:" + m.FusionRole(Array.IndexOf(m.Content.Towers, md));
+            QuizText(s, FusionEffectText(m, c with { Effect = moduleEffect }, md.Name), FuseFont);
+            if (c.Count > 2)
+            {
+                QuizText(s, FusionCountText(m, c), FuseFont, c.Count > c.Limit ? TdTone.Bad : TdTone.Dim);
+                if (m.RecipeBonus([.. parts, Array.IndexOf(m.Content.Towers, md)]) is { } bonus)
+                    QuizText(s, "Receita: " + bonus.Text + ".", FuseFont, TdTone.Good, TdIcon.Star);
+            }
             QuizText(s, $"Custo: ${c.Cost}  |  venda atual +${m.SellValue(_fuseBase)}", FuseFont, c.Reason == CommandReason.InsufficientCredits ? TdTone.Bad : TdTone.Good, TdIcon.Coin);
             if (FusionReasonText(m, c) is { } why) QuizText(s, why, FuseFont, TdTone.Bad, TdIcon.Alert);
             float half = (s.Width - 2 * Pad - 4f) / 2f;

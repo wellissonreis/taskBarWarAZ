@@ -112,7 +112,8 @@ public sealed class TdTutorialTourTests
             if (scroll.Offset == scroll.Total - scroll.Visible) break;
             Assert.True(ui.ScrollBy(1));
         } while (true);
-        Assert.Equal(5, titles.Count);
+        Assert.Equal(6, titles.Count);
+        Assert.Contains(titles, t => t.StartsWith("RECEITAS DE FUSÃO 0/", StringComparison.Ordinal));
         Assert.Contains("FASE / SELO", titles);
     }
 }
