@@ -69,21 +69,18 @@ public sealed class TdAlertGuardTests
     }
 
     [Fact]
-    public void Boss_key_and_user_pause_are_not_released_by_the_guard()
+    public void Legacy_auto_pause_setting_does_not_block_steps()
     {
         var r = new Rig();
-        r.RunUntilHeld();
-        r.App.EnterHidden(HiddenReason.User);
+        r.Host.Alerts.Settings.Enabled = true;
+        long before = r.Host.StepsExecuted;
         r.Run(10);
-        Assert.True(r.Host.Alerts.Holding);
-        r.App.LeaveHidden(HiddenReason.User);
-        Assert.True(r.Host.Alerts.Holding);
+        Assert.True(r.Host.StepsExecuted > before);
+        Assert.False(r.Host.Alerts.Holding);
         r.Host.OnCommand(new Pause()); r.Wake();
-        r.Host.SaveTower(); r.Run(5);
-        long f = r.Match.Frame;
-        r.Run(5);
-        Assert.True(r.Match.Paused);
-        Assert.Equal(f, r.Match.Frame); // a pausa do usuário continua valendo após Salvar
+        before = r.Host.StepsExecuted;
+        r.Run(1);
+        Assert.Equal(before, r.Host.StepsExecuted);
     }
 
     [Fact]

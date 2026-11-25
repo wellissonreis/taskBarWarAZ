@@ -214,26 +214,21 @@ public sealed class TdGameHostTests
     }
 
     [Fact]
-    public void Hiding_pauses_the_simulation_and_resuming_does_not_catch_up()
+    public void Hiding_does_not_pause_the_simulation()
     {
         var r = new Rig();
         r.Tower();
         r.Host.OnCommand(new StartWave());
         r.Wake();
-        r.Run(1);
-        long before = r.Host.StepsExecuted;
         foreach (var reason in new[] { HiddenReason.User, HiddenReason.Fullscreen, HiddenReason.SessionLocked })
         {
+            long before = r.Host.StepsExecuted;
             r.App.EnterHidden(reason);
-            r.Run(10);
-            Assert.Equal(before, r.Host.StepsExecuted);
-            Assert.Null(r.Host.NextDeadline);
-            Assert.False(r.Host.SimulationActive);
-            r.App.LeaveHidden(reason);
-            r.Wake();
+            r.Run(1);
+            Assert.True(r.Host.StepsExecuted > before);
+            Assert.NotNull(r.Host.NextDeadline);
             Assert.True(r.Host.SimulationActive);
-            Assert.InRange(r.Host.StepsExecuted - before, 0, 1); // sem tempo acumulado do período oculto
-            before = r.Host.StepsExecuted;
+            r.App.LeaveHidden(reason);
         }
     }
 
@@ -274,7 +269,7 @@ public sealed class TdGameHostTests
     }
 
     [Fact]
-    public void AutoStart_countdown_freezes_while_hidden()
+    public void AutoStart_countdown_continues_while_hidden()
     {
         var r = new Rig();
         r.Tower();
@@ -282,13 +277,7 @@ public sealed class TdGameHostTests
         r.Wake();
         r.Run(2);
         r.App.EnterHidden(HiddenReason.User);
-        r.Run(30);
-        Assert.Equal(MatchPhase.Preparo, r.Match.Phase);
-        r.App.LeaveHidden(HiddenReason.User);
-        r.Wake();
-        r.Run(1);
-        Assert.Equal(MatchPhase.Preparo, r.Match.Phase);
-        r.Run(3);
+        r.Run(4);
         Assert.Equal(MatchPhase.Onda, r.Match.Phase);
     }
 

@@ -357,7 +357,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
             controller.SceneLeftClick(x / k, y / k - TdBand.EdgeHeadroomDip, target);
             Kick();
         };
-        // TD.29b: ao abrir o app a modal central abre na aba Jogo com o jogo PAUSADO; fechar a modal retoma (Resume).
+        // A modal inicial abre sem interromper a simulação.
         controller.OpenStartupModal();
         Relayout();
         hudWindow.HandCursor = true; // só os botões e indicadores clicáveis recebem o ponteiro (o resto é transparente)
@@ -699,7 +699,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
     int ITdUiHost.LegacyTotal => td.Recorder.LegacyTotal;
     int ITdUiHost.PreviousLegacyTotal => td.Recorder.PreviousLegacyTotal;
     int ITdUiHost.PreviousBestRunWaves => td.Recorder.PreviousBestRunWaves;
-    bool ITdUiHost.SimulationRunning => runtime.App.SimulationRunning;
+    bool ITdUiHost.SimulationRunning => td.Host.SimulationActive;
     float ITdUiHost.EndCardAvailableHeight => game.Dock.Current is { } layout
         ? Math.Max(0, (layout.Scene.Top + TdBand.HeadroomRealDip(bandHeight) * Scale - layout.Monitor.WorkArea.Top) / UiScale - TdHudView.DefaultHeight - 4)
         : float.PositiveInfinity;

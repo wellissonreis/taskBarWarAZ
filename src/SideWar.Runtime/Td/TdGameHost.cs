@@ -32,8 +32,7 @@ public sealed record TdWaveRequest : IGameCommand;
 /// eventos → fim de partida. Sem presença, offline nem eventos ao vivo.
 /// <list type="bullet">
 /// <item>Preparo: 0 fps e nenhum <c>Step</c>, exceto com auto-início em contagem (a contagem só corre com Step).</item>
-/// <item>A simulação pausa sempre que <see cref="AppStateMachine.SimulationRunning"/> é falso (fullscreen, sessão bloqueada,
-/// ocultar por bandeja/hotkey, pausa do usuário): sem Step, sem deadline, sem acúmulo de tempo na volta.</item>
+/// <item>A simulação continua com a interface oculta e pausa somente por solicitação do usuário.</item>
 /// </list>
 /// </summary>
 public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
@@ -68,7 +67,7 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
 
     /// <summary>
     /// TD.28c: velocidade do jogo (1x, 2x, 3x): cada tick de 30 Hz executa N Steps. Determinístico (o Core só vê Steps e comandos entre eles;
-    /// o log guarda o Frame de cada comando, então o replay reproduz igual) e independente da pausa da modal (a pausa zera os ticks).
+    /// o log guarda o Frame de cada comando, então o replay reproduz igual) e independente das telas abertas.
     /// </summary>
     public int GameSpeed { get; set; } = 1;
 
@@ -110,13 +109,15 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
         new(startStage, seedState, seedStream, [.. _log], Match.Frame, Match.Options);
 
     /// <summary>Verdadeiro quando a partida está viva (Preparo/Onda) e nada pausa a simulação.</summary>
-    public bool SimulationActive => !IsShutdown && _app.SimulationRunning && Match.Phase is MatchPhase.Preparo or MatchPhase.Onda;
+    public bool SimulationActive => !IsShutdown && UserSimulationRunning && Match.Phase is MatchPhase.Preparo or MatchPhase.Onda;
 
     /// <summary>Precisa de Step: Onda, ou Preparo com a contagem de auto-início ligada (senão 0 fps).</summary>
     private bool NeedsSteps => Match.Phase == MatchPhase.Onda
         || (Match.Phase == MatchPhase.Preparo && (Match.AutoStart != AutoStartMode.Off || Match.Shadow));
 
-    private bool Running => !IsShutdown && _app.SimulationRunning && !Match.Paused && (Match.Shadow || !_guard.Holding) && NeedsSteps;
+    private bool UserSimulationRunning => (_app.PauseReasons & PauseReason.User) == 0;
+
+    private bool Running => !IsShutdown && UserSimulationRunning && !Match.Paused && NeedsSteps;
 
     public long? NextDeadline
     {
@@ -193,12 +194,11 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
         int seenEvents = Match.Events.Count;
         for (long i = 0; i < steps && NeedsSteps; i++)
         {
-            if (running && !Match.Shadow && _guard.Blocks(Match)) break; // protege ANTES de cada Step (lotes 2x/3x incluídos)
             Match.Step();
             StepsExecuted++;
             done++;
             if (!timed) continue;
-            // Alta velocidade: cartões e toasts (patente, base atacada, fase/vitória, runa) precisam aparecer e pausar já; o resto do lote vai ao próximo frame.
+            // Alta velocidade: cartões e toasts (patente, base atacada, fase/vitória, runa) precisam aparecer já; o resto do lote vai ao próximo frame.
             bool important = false;
             for (int e = seenEvents; e < Match.Events.Count; e++)
                 if (Match.Events[e].Type is TdEventType.BaseAttacked or TdEventType.ReputationGained or TdEventType.StageCleared or TdEventType.Victory or TdEventType.RuneAwakened) important = true;
@@ -236,7 +236,7 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
     /// </summary>
     private void UpdatePresence()
     {
-        if (_presence is null || !_app.SimulationRunning || Match.Phase != MatchPhase.Onda) return;
+        if (_presence is null || !UserSimulationRunning || Match.Phase != MatchPhase.Onda) return;
         bool present = _presence.IsPresent;
         if (present != Match.Present) Apply(new SetPresence(present));
         if (ShadowOnAbsent && !present && !Match.Shadow && Match.ShadowPending != true) Apply(new SetShadow(true));

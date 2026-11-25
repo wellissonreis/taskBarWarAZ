@@ -116,13 +116,13 @@ public sealed class TdHud29bTests
     }
 
     [Fact]
-    public void App_start_opens_the_game_tab_paused_and_closing_resumes()
+    public void App_start_opens_the_game_tab_without_pausing()
     {
         var r = new Rig();
         r.Ui.OpenStartupModal();
         Assert.Equal(TdUiMode.Menu, r.Ui.Mode);
         Assert.True(r.Ui.ModalOpen);
-        Assert.True(r.Match.Paused);
+        Assert.False(r.Match.Paused);
         r.Ui.Cancel();
         Assert.False(r.Ui.ModalOpen);
         Assert.False(r.Match.Paused);

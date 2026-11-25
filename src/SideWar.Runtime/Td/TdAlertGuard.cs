@@ -7,10 +7,10 @@ public sealed class TdAlertSettings
 {
     /// <summary>Exibe alertas preditivos (não fatais). NÃO desliga a proteção fatal.</summary>
     public bool Enabled { get; set; }
-    /// <summary>Pausa diante de alertas críticos e protege contra a derrota por distração.</summary>
+    /// <summary>Opção legada, ignorada.</summary>
     public bool AutoPause { get; set; }
     public bool Sound { get; set; }
-    /// <summary>Bit por <see cref="TdAlertType"/>: "não pausar por este tipo". A queda fatal ignora a máscara enquanto AutoPause estiver ligado.</summary>
+    /// <summary>Bit por <see cref="TdAlertType"/> para silenciar alertas.</summary>
     public int MutedMask { get; set; }
 
     /// <summary>Tipos da proteção contra derrota: não silenciáveis enquanto AutoPause estiver ligado.</summary>
@@ -30,10 +30,7 @@ public enum TdProtectionKind : byte { Held, Saved, LetFall, Dismissed }
 public readonly record struct TdProtectionEntry(long Frame, TdProtectionKind Kind, TdAlertType Type);
 
 /// <summary>
-/// Proteção contra derrota e alertas do host (SDD-38 §3-§4). Vive só no host: não altera o Core nem o hash. O host consulta
-/// <see cref="Blocks"/> ANTES de cada Step (inclusive em lotes 2x/3x): se o passo levaria à Derrota (simulado numa cópia, exato),
-/// ele NÃO é executado e a partida fica retida até o jogador escolher <see cref="Save"/> ou <see cref="LetFall"/>.
-/// Retenção não usa a pausa do Core: pausa do usuário, modais e boss key seguem independentes.
+/// Alertas informativos do host, sem interromper os passos da simulação.
 /// </summary>
 public sealed class TdAlertGuard
 {
@@ -72,23 +69,6 @@ public sealed class TdAlertGuard
         Holding = false; HoldAlert = null; Current = null; Raised = 0;
     }
 
-    /// <summary>Verdadeiro se o próximo Step deve ser impedido.</summary>
-    public bool Blocks(TdMatchState match)
-    {
-        if (Holding) return true;
-        if (!Settings.AutoPause || _fallAuthorized || match.Phase != MatchPhase.Onda || match.Paused) return false;
-        // Só no começo da corrida. Contadores diretos: WavesReached refaz a conta das fases concluídas e quebrava com fase repetida (travava o jogo).
-        if (match.StagesCleared > 0 || match.WaveNumber > DefeatWarningWaves) return false;
-        // Gatilho geométrico: inimigo novo passou da torre mais próxima do portal (ainda não reconhecido por Salvar).
-        foreach (int id in TdRiskAnalyzer.PastDefenseLine(match))
-            if (!_acknowledged.Contains(id))
-            {
-                Hold(match, TdAlertCatalog.Test(match, TdAlertType.PassedLastTower, out var g) ? g : default, TdAlertType.PassedLastTower);
-                return true;
-            }
-        return false;
-    }
-
     /// <summary>Salvar: libera a retenção; o risco é reavaliado antes de CADA Step e volta a reter se persistir.</summary>
     public void Save(TdMatchState match)
     {
@@ -118,23 +98,21 @@ public sealed class TdAlertGuard
     /// <summary>Avalia os alertas não fatais após os passos do OnWake: cooldown por tipo, limite por onda, configuração por tipo.</summary>
     public void Evaluate(TdMatchState match)
     {
-        if (Holding || !Settings.Enabled && !Settings.AutoPause) return;
+        if (!Settings.Enabled) return;
         if (match.WaveNumber != _wave) { _wave = match.WaveNumber; _shownThisWave = 0; }
-        foreach (var alert in TdAlertCatalog.Detect(match))
+        foreach (var alert in TdAlertCatalog.Detect(match).OrderBy(a => TdAlertSettings.IsProtection(a.Type)))
         {
-            if (TdAlertSettings.IsProtection(alert.Type)) continue; // tratado por Blocks, sem cooldown
+            if (Settings.IsMuted(alert.Type)) continue;
             bool damage = alert.Type is TdAlertType.ImminentLeak or TdAlertType.TowerDamage;
             if (damage && (_damageWarnings >= MaxDamageWarningsPerRun || match.Tick - _lastDamageWarning < CooldownTicks)) continue;
             if (alert.Severity == TdAlertSeverity.Tip && _shownTips.Contains(alert.Type)) continue;
             if (_lastShown.TryGetValue(alert.Type, out long last) && match.Tick - last < CooldownTicks) continue;
-            bool pauses = alert.Severity == TdAlertSeverity.Critical && Settings.AutoPause && !_fallAuthorized && !Settings.IsMuted(alert.Type);
-            if (!pauses && (!Settings.Enabled || _shownThisWave >= MaxNonFatalPerWave)) continue;
+            if (_shownThisWave >= MaxNonFatalPerWave) continue;
             _lastShown[alert.Type] = match.Tick;
             if (damage) { _damageWarnings++; _lastDamageWarning = match.Tick; }
             if (alert.Severity == TdAlertSeverity.Tip) _shownTips.Add(alert.Type);
-            if (!pauses) _shownThisWave++;
+            _shownThisWave++;
             Current = alert; Raised++;
-            if (pauses) Hold(match, alert, alert.Type);
             return;
         }
     }

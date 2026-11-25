@@ -359,7 +359,7 @@ public sealed partial class TdUiController
                 Changed?.Invoke();
                 break;
             case TdUiAction.Menu: Toggle(TdUiMode.Menu); break;
-            case TdUiAction.HudMinimize: Close(); if (_userPaused) { _userPaused = false; _send(new Resume()); } /* chip recolhido não mostra pausa: não deixar pausa invisível */ _host.SetHudMinimized(true); Changed?.Invoke(); break;
+            case TdUiAction.HudMinimize: Close(); _host.SetHudMinimized(true); Changed?.Invoke(); break;
             case TdUiAction.HudExpand:
             case TdUiAction.HudRestore:
                 if (_host.HudMinimized) { _host.SetHudMinimized(false); Changed?.Invoke(); }
@@ -784,20 +784,9 @@ public sealed partial class TdUiController
         Changed?.Invoke();
     }
 
-    private void UpdateModalPause()
-    {
-        int count = ModalOpen || (_demotionPending && !BossHidden) ? 1 : 0; // cartão escondido (boss key) não pode manter pausa invisível
-        if (_modalCount == count) return;
-        bool wasOpen = _modalCount > 0;
-        _modalCount = count;
-        // A pausa do usuário (botão Pausar) sobrevive à modal: ela já está pausada, então abrir não repete Pause e fechar não faz Resume.
-        if (wasOpen != (count > 0) && !_userPaused) _send(count > 0 ? new Pause() : new Resume());
-    }
+    private void UpdateModalPause() => _modalCount = ModalOpen || (_demotionPending && !BossHidden) ? 1 : 0;
 
-    /// <summary>
-    /// TD.29b: ao abrir o app a modal central abre na aba Jogo com o jogo PAUSADO (decisão do usuário); fechar a modal retoma (Resume).
-    /// Chamado uma vez pelo App depois de criar o controlador.
-    /// </summary>
+    /// <summary>Abre a tela inicial sem interromper a partida.</summary>
     public void OpenStartupModal() { if (_tutorial is { Active: true }) Close(); else SetMode(TdUiMode.Menu); }
 
     private void Toggle(TdUiMode mode) => SetMode(Mode == mode ? TdUiMode.None : mode);

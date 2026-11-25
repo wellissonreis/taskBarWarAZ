@@ -185,7 +185,7 @@ public sealed class TdRuneUiTests
         Assert.Equal(TdUiMode.Runes, r.Ui.Mode);
         Assert.True(r.Ui.ModalOpen);
         Assert.False(r.Ui.RuneWindowOpen);
-        Assert.True(r.Match.Paused);
+        Assert.False(r.Match.Paused);
     }
 
     [Fact]

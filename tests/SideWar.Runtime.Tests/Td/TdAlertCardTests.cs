@@ -92,62 +92,21 @@ public sealed class TdAlertCardTests
         public void RunUntil(Func<bool> done, double max = 600) { for (double t = 0; t < max && !done(); t++) Run(1); }
     }
 
-    private static Rig Held()
+    [Fact]
+    public void Alert_card_keeps_simulation_running_even_with_legacy_auto_pause()
     {
         var r = new Rig(autoPause: true, enabled: true);
-        r.RunUntil(() => r.Game.Alerts.Holding);
-        Assert.True(r.Game.Alerts.Holding);
-        return r;
-    }
-
-    [Fact]
-    public void Critical_card_offers_save_and_fall_and_does_not_collapse_on_outside_click()
-    {
-        var r = Held();
-        Assert.True(r.Ui.AlertCritical);
-        Assert.True(r.Ui.CornerPopover);
-        var p = r.Ui.BuildPopover()!;
-        Assert.Equal(TdTone.Bad, p.AlertTone);
-        Assert.Contains(p.Items, i => i.Action == TdUiAction.AlertSave && i.Text == "Salvar (voltar ao jogo)");
-        Assert.Contains(p.Items, i => i.Action == TdUiAction.AlertFall && i.Text == "Deixar cair");
-        Assert.DoesNotContain(p.Items, i => i.Action is TdUiAction.AlertDismiss or TdUiAction.AlertMute or TdUiAction.Close);
-        r.Ui.CollapseOutside();
-        r.Ui.Cancel(); // ESC também não decide pelo jogador
-        Assert.NotNull(r.Ui.BuildPopover());
-        Assert.True(r.Game.Alerts.Holding);
-    }
-
-    [Fact]
-    public void Save_releases_hold_and_closes_the_card()
-    {
-        var r = Held();
-        var save = r.Ui.BuildPopover()!.Items.First(i => i.Action == TdUiAction.AlertSave);
-        r.Ui.Activate(save);
-        Assert.Contains("save", r.Host.Calls);
-        Assert.False(r.Game.Alerts.Holding);
-        Assert.False(r.Ui.AlertCardOpen);
-    }
-
-    [Fact]
-    public void Fall_authorizes_defeat_and_closes_the_card()
-    {
-        var r = Held();
-        r.Ui.Activate(r.Ui.BuildPopover()!.Items.First(i => i.Action == TdUiAction.AlertFall));
-        Assert.Contains("fall", r.Host.Calls);
-        Assert.True(r.Game.Alerts.FallAuthorized);
-        Assert.False(r.Ui.AlertCardOpen);
-    }
-
-    [Fact]
-    public void Boss_key_hides_the_card_and_it_returns_afterwards()
-    {
-        var r = Held();
-        r.Ui.SetBossHidden(true);
-        Assert.False(r.Ui.AlertCardOpen);
-        Assert.Null(r.Ui.BuildPopover());
-        Assert.True(r.Game.Alerts.Holding); // a retenção continua: ausência nunca perde
-        r.Ui.SetBossHidden(false);
+        r.RunUntil(() => r.Game.Alerts.Current is not null);
+        r.Ui.Sync();
         Assert.True(r.Ui.AlertCardOpen);
+        long before = r.Game.StepsExecuted;
+        r.Run(1);
+        Assert.True(r.Game.StepsExecuted > before);
+        Assert.False(r.Game.Alerts.Holding);
+        r.Ui.SetBossHidden(true);
+        before = r.Game.StepsExecuted;
+        r.Run(1);
+        Assert.True(r.Game.StepsExecuted > before);
     }
 
     private static Rig Warning()
@@ -221,12 +180,10 @@ public sealed class TdAlertCardTests
         Assert.Equal(0f, d.Ui.AlertPulse);
     }
 
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public void Card_blocks_are_measured_without_overlap_and_fonts_are_compact(bool critical)
+    [Fact]
+    public void Card_blocks_are_measured_without_overlap_and_fonts_are_compact()
     {
-        var r = critical ? Held() : Warning();
+        var r = Warning();
         var p = r.Ui.BuildPopover()!;
         var blocks = p.Items.Where(i => i.Text != "X").ToArray();
         foreach (var b in blocks)

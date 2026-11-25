@@ -110,11 +110,11 @@ public sealed record TdSettings
 {
     /// <summary>Exibe alertas preditivos; independente da proteção automática.</summary>
     public bool AlertsEnabled { get; init; } = true;
-    /// <summary>Pausa diante de alertas críticos.</summary>
-    public bool AlertsAutoPause { get; init; } = true;
+    /// <summary>Opção legada, ignorada.</summary>
+    public bool AlertsAutoPause { get; init; }
     /// <summary>Som opcional dos alertas.</summary>
     public bool AlertsSound { get; init; }
-    /// <summary>Tipos de alerta (índice do <c>TdAlertType</c> = bit) em que o usuário escolheu "não pausar por este tipo".</summary>
+    /// <summary>Tipos de alerta (índice do <c>TdAlertType</c> = bit) silenciados pelo usuário.</summary>
     public int AlertsMutedMask { get; init; }
 
     public const int MinAutoStartSeconds = 5;

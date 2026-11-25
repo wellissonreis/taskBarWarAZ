@@ -88,7 +88,6 @@ public sealed partial class TdUiController
                 Toggle("shadowabsent", "Sombra ao ficar ausente", "Entra em modo sombra sozinho quando você fica ausente (desligado por padrão).");
                 Group("ALERTAS");
                 Toggle("alerts", "Avisar defesa em risco");
-                Toggle("autopause", "Pausar antes de perder", "Pausa automática: você escolhe Salvar ou Deixar cair.");
                 Toggle("alertsound", "Som curto no alerta");
                 Group("ALERTAS SILENCIADOS (DESMARQUE PARA REATIVAR)");
                 foreach (var t in Enum.GetValues<TdAlertType>())
@@ -161,7 +160,7 @@ public sealed partial class TdUiController
             "questions" => d.BonusQuestions ? 1 : 0, "income" => d.ShowIncome ? 1 : 0, "discreet" => d.DiscreetMode ? 1 : 0, "continuous" => d.ContinuousWaves ? 1 : 0,
             "pinned" => d.TowerPanelPinned ? 1 : 0, "autostart" => (int)d.AutoStartMode, "autoseconds" => d.AutoStartSeconds, "autorestart" => d.AutoRestart ? 1 : 0,
             "band" or "bandfine" => d.BandHeight, "corner" or "cornerfine" => d.CornerUiScale, "speed" => d.GameSpeed, "notice" => d.NoticeSize,
-            "sound" => d.Sound ? 1 : 0, "volume" => d.Volume, "alerts" => d.AlertsEnabled ? 1 : 0, "autopause" => d.AlertsAutoPause ? 1 : 0, "alertsound" => d.AlertsSound ? 1 : 0,
+            "sound" => d.Sound ? 1 : 0, "volume" => d.Volume, "alerts" => d.AlertsEnabled ? 1 : 0, "alertsound" => d.AlertsSound ? 1 : 0,
             "peek" => d.PeekOnHover ? 1 : 0, "peekop" => d.PeekOpacity, "absent" => d.FadeWhenAbsent ? 1 : 0, "absentop" => d.AbsentOpacity,
             "fade" => d.FadeWhenUnfocused ? 1 : 0, "fadepct" => d.FadePercent, "fpsp" => d.PresentFps, "fpsa" => d.AbsentFps,
             "saver" => d.SaverOnBattery ? 1 : 0, "forcesaver" => d.ForceSaver ? 1 : 0, "motion" => d.ReducedMotion ? 1 : 0, "record" => d.RecordCommands ? 1 : 0, "log" => d.LogLevel,
@@ -192,7 +191,7 @@ public sealed partial class TdUiController
             "continuous" => d with { ContinuousWaves = b }, "pinned" => d with { TowerPanelPinned = b }, "autostart" => d with { AutoStartMode = (AutoStartMode)v, AutoStart = b },
             "autoseconds" => d with { AutoStartSeconds = v }, "autorestart" => d with { AutoRestart = b }, "band" or "bandfine" => d with { BandHeight = v },
             "corner" or "cornerfine" => d with { CornerUiScale = v }, "speed" => d with { GameSpeed = v }, "notice" => d with { NoticeSize = v },
-            "sound" => d with { Sound = b }, "volume" => d with { Volume = v }, "alerts" => d with { AlertsEnabled = b }, "autopause" => d with { AlertsAutoPause = b },
+            "sound" => d with { Sound = b }, "volume" => d with { Volume = v }, "alerts" => d with { AlertsEnabled = b },
             "alertsound" => d with { AlertsSound = b }, "peek" => d with { PeekOnHover = b }, "peekop" => d with { PeekOpacity = v }, "absent" => d with { FadeWhenAbsent = b },
             "absentop" => d with { AbsentOpacity = v }, "fade" => d with { FadeWhenUnfocused = b }, "fadepct" => d with { FadePercent = v },
             "fpsp" => d with { PresentFps = v }, "fpsa" => d with { AbsentFps = v }, "saver" => d with { SaverOnBattery = b }, "forcesaver" => d with { ForceSaver = b },

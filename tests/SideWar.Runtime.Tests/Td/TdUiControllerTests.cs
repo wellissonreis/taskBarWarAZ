@@ -121,7 +121,7 @@ public sealed class TdUiControllerTests
     [Fact]
     public void Settings_sections_cover_every_old_window_option()
     {
-        string[] keys0 = ["mode", "hide", "uia", "autoscale", "questions", "income", "discreet", "continuous", "pinned", "autostart", "autoseconds", "autorestart", "band", "bandfine", "corner", "cornerfine", "speed", "alerts", "autopause", "alertsound"];
+        string[] keys0 = ["mode", "hide", "uia", "autoscale", "questions", "income", "discreet", "continuous", "pinned", "autostart", "autoseconds", "autorestart", "band", "bandfine", "corner", "cornerfine", "speed", "alerts", "alertsound"];
         var r = OpenSettings();
         var seen = new HashSet<string>();
         for (int guard = 0; guard < 30; guard++)
@@ -448,6 +448,23 @@ public sealed class TdUiControllerTests
         Assert.False(r.Ui.NoticeOpen);
     }
 
+    [Theory]
+    [InlineData(TdUiAction.Menu)]
+    [InlineData(TdUiAction.Settings)]
+    [InlineData(TdUiAction.HudRestore)]
+    public void Opening_ui_keeps_ticks_advancing(TdUiAction action)
+    {
+        var r = new Rig();
+        Assert.True(r.Match.Apply(new BuildTower("bolt", 500)).IsOk);
+        Assert.True(r.Match.Apply(new StartWave()).IsOk);
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", action));
+        Assert.True(r.Ui.ModalOpen);
+        long frame = r.Match.Frame;
+        r.Match.Step();
+        Assert.True(r.Match.Frame > frame);
+        Assert.DoesNotContain(r.Sent, c => c is Pause or Resume);
+    }
+
     [Fact]
     public void Demotion_pauses_until_continue_even_with_notices_disabled_and_outside_click()
     {
@@ -456,7 +473,7 @@ public sealed class TdUiControllerTests
         r.Ui.Sync();
         r.Host.Score = 4000;
         r.Ui.Sync();
-        Assert.True(r.Match.Paused);
+        Assert.False(r.Match.Paused);
         Assert.True(r.Ui.DemotionCardOpen);
         r.Ui.CollapseOutside();
         var card = r.Ui.BuildPopover()!;
@@ -474,13 +491,13 @@ public sealed class TdUiControllerTests
         r.Ui.Sync();
         r.Host.Score = 4000;
         r.Ui.Sync();
-        Assert.True(r.Match.Paused);
+        Assert.False(r.Match.Paused);
         r.Ui.SetBossHidden(true);
         Assert.False(r.Match.Paused); // cartão escondido: o jogo não fica pausado sem nada na tela
         Assert.Null(r.Ui.BuildPopover());
         r.Ui.SetBossHidden(false);
         Assert.True(r.Ui.DemotionCardOpen);
-        Assert.True(r.Match.Paused); // voltou o cartão, volta a pausa
+        Assert.False(r.Match.Paused); // voltou o cartão, volta a pausa
         r.Ui.Activate(Assert.Single(r.Ui.BuildPopover()!.Items, i => i.Action == TdUiAction.DemotionContinue));
         Assert.False(r.Match.Paused);
     }
@@ -493,7 +510,7 @@ public sealed class TdUiControllerTests
         r.Ui.Activate(Assert.Single(r.Ui.BuildHud().Items, i => i.Action == TdUiAction.PauseToggle));
         Assert.True(r.Match.Paused);
         r.Ui.Activate(Assert.Single(r.Ui.BuildHud().Items, i => i.Action == TdUiAction.HudMinimize));
-        Assert.False(r.Match.Paused); // chip recolhido não mostra pausa
+        Assert.True(r.Match.Paused);
     }
 
     [Fact]
@@ -738,11 +755,10 @@ public sealed class TdUiControllerTests
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
         var ability = r.Ui.BuildPopover()!.Items.First(i => i.Action == TdUiAction.ResumeAbility && i.SArg == "scale");
         Assert.True(ability.Enabled);
-        Assert.True(r.Match.Paused);
+        Assert.False(r.Match.Paused);
         r.Ui.Activate(ability);
         Assert.False(r.Ui.ModalOpen);
         Assert.False(r.Match.Paused);
-        Assert.IsType<Resume>(r.Sent[^2]);
         Assert.IsType<UseAbility>(r.Sent[^1]);
     }
 
@@ -755,9 +771,9 @@ public sealed class TdUiControllerTests
         for (int i = 0; i < 8; i++)
             r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.GameOption, i));
         Assert.Equal(new TdGameOptions(64, true, true, 80, false, false, false, true, 1), r.Host.GameOptions);
-        Assert.Single(r.Sent.OfType<Pause>());
+        Assert.Empty(r.Sent.OfType<Pause>());
         Assert.Empty(r.Sent.OfType<Resume>());
-        Assert.True(r.Match.Paused);
+        Assert.False(r.Match.Paused);
     }
 
     [Fact]
@@ -833,9 +849,9 @@ public sealed class TdUiControllerTests
             Assert.Equal(1, r.Ui.ModalCount);
             Assert.False(r.Ui.SceneLeftClick(300, 20, HitTarget.None));
         }
-        Assert.Single(r.Sent.OfType<Pause>());
+        Assert.Empty(r.Sent.OfType<Pause>());
         r.Ui.Cancel();
-        Assert.Single(r.Sent.OfType<Resume>());
+        Assert.Empty(r.Sent.OfType<Resume>());
     }
 
     [Fact]
@@ -843,7 +859,7 @@ public sealed class TdUiControllerTests
     {
         var r = new Rig();
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.HudRestore));
-        Assert.True(r.Match.Paused);
+        Assert.False(r.Match.Paused);
         var pop = r.Ui.BuildPopover()!;
         Assert.Equal(720, pop.Width);
         Assert.Equal(480, pop.Height);
@@ -853,10 +869,10 @@ public sealed class TdUiControllerTests
         Assert.Null(r.Ui.BuildPopover());
         r.Ui.SceneLeftClick(300, 20, HitTarget.None);
         Assert.Single(r.Match.Towers);
-        Assert.True(r.Match.Paused);
+        Assert.False(r.Match.Paused);
         Assert.Equal(TdUiMode.Build, r.Ui.Mode);
         Assert.Equal(1, r.Ui.ModalCount);
-        Assert.Equal(new[] { typeof(Pause), typeof(Resume), typeof(BuildTower), typeof(Pause) }, r.Sent.Select(c => c.GetType()));
+        Assert.Equal(new[] { typeof(BuildTower) }, r.Sent.Select(c => c.GetType()));
     }
 
     [Fact]
@@ -910,7 +926,7 @@ public sealed class TdUiControllerTests
         r.Ui.ClickPoint(300);
         typeof(TdMatchState).GetProperty("Credits")!.SetValue(r.Match, 0L);
         Assert.All(r.Ui.BuildPopover()!.Items.Where(i => i.Action == TdUiAction.ChooseTower), i => Assert.False(i.Enabled));
-        Assert.True(r.Match.Paused);
+        Assert.False(r.Match.Paused);
     }
 
     [Fact]
@@ -946,7 +962,7 @@ public sealed class TdUiControllerTests
         r.Ui.Activate(start);
         Assert.Equal(MatchPhase.Onda, r.Match.Phase);
         r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
-        Assert.True(r.Match.Paused);
+        Assert.False(r.Match.Paused);
         Assert.All(r.Ui.BuildPopover()!.Items.Where(i => i.Action == TdUiAction.Ability), i => Assert.False(i.Enabled));
         Assert.False(r.Ui.BuildHud().Items.First(i => i.Action == TdUiAction.StartWave).Enabled);
     }

@@ -15,7 +15,8 @@ public class SettingsTdTests
     {
         var old = ReadPayload("{\"td\":{\"autoRestart\":true}}").Td;
         Assert.True(old.AlertsEnabled);
-        Assert.True(old.AlertsAutoPause);
+        Assert.False(old.AlertsAutoPause);
+        Assert.False(ReadPayload("{\"td\":{\"alertsAutoPause\":true}}").Td.AlertsAutoPause);
         Assert.False(old.AlertsSound);
         Assert.True(old.AutoRestart);
 
@@ -24,7 +25,7 @@ public class SettingsTdTests
         Assert.True(store.Save(new AppSettings { Td = new TdSettings { AlertsEnabled = false, AlertsAutoPause = true, AlertsSound = true } }));
         var result = store.Load().Settings.Td;
         Assert.False(result.AlertsEnabled);
-        Assert.True(result.AlertsAutoPause);
+        Assert.False(result.AlertsAutoPause);
         Assert.True(result.AlertsSound);
     }
 

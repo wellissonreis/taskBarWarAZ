@@ -103,7 +103,6 @@ internal sealed class TdComposition
         Host.ShadowOnAbsent = settings.Td.ShadowOnAbsent;
         Host.GameSpeed = settings.Td.GameSpeed;
         Host.Alerts.Settings.Enabled = settings.Td.AlertsEnabled;
-        Host.Alerts.Settings.AutoPause = settings.Td.AlertsAutoPause;
         Host.Alerts.Settings.Sound = settings.Td.AlertsSound;
         Host.Alerts.Settings.MutedMask = settings.Td.AlertsMutedMask;
         _autoStartMode = settings.Td.AutoStartMode;

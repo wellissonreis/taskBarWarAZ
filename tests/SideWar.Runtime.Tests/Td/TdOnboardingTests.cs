@@ -278,7 +278,7 @@ public sealed class TdOnboardingTests
     {
         var r = new Rig(intro: false);
         r.Ui.OpenHowTo();
-        Assert.True(r.Match.Paused);
+        Assert.False(r.Match.Paused);
         Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.Action == TdUiAction.RedoTutorial);
         r.Click(TdUiAction.TutorialSkip);
         Assert.True(r.Store.Done);
