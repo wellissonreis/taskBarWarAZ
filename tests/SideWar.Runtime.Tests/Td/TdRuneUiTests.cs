@@ -40,12 +40,13 @@ public sealed class TdRuneUiTests
         public readonly List<IGameCommand> Sent = [];
         public readonly TdUiController Ui;
         public int Changes;
+        public double Now;
 
         public Rig()
         {
             Match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 1, Rng.Seed(7, 54), null, TdMatchOptions.Default);
             Match.Apply(new LayoutChanged(StripLayout.Create(Width, Width - 46, 88, 4, Width - 80, TowerHost.Band, [new FreeZone(32, Width - 32)])));
-            Ui = new TdUiController(() => Match, c => { Sent.Add(c); Match.Apply(c); }, new Host(), () => 0.0);
+            Ui = new TdUiController(() => Match, c => { Sent.Add(c); Match.Apply(c); }, new Host(), () => Now);
             Ui.Changed += () => Changes++;
             Ui.Sync();
         }
@@ -322,6 +323,45 @@ public sealed class TdRuneUiTests
             Assert.All(pop.Items.Where(i => i.Action != TdUiAction.RuneBranch).Select(i => i.Rect),
                 rc => Assert.True(rc.X + rc.W <= pop.Width + 0.01f && rc.Y + rc.H <= pop.Height + 0.01f));
         }
+    }
+
+    [Fact]
+    public void Clicking_branch_buys_path_over_time_and_stops_when_fragments_run_out()
+    {
+        var r = new Rig();
+        r.Ui.Activate(r.Rune);
+        var pathType = r.Match.Content.Runes.Types.Select(t => t.Id)
+            .First(t => TdRunePath.Find(r.Match.RuneWeb, r.Match.Frontier, r.Match.IsAwakened, r.Match.RuneCost, t).Count > 1);
+        var path = TdRunePath.Find(r.Match.RuneWeb, r.Match.Frontier, r.Match.IsAwakened, r.Match.RuneCost, pathType);
+        r.Fragments(r.Match.RuneCost(path[0]));
+        var chip = r.Ui.BuildPopover()!.Items.Single(i => i.Action == TdUiAction.RuneBranch && i.SArg == pathType);
+        r.Ui.Activate(chip);
+        Assert.True(r.Match.IsAwakened(path[0]));
+        Assert.False(r.Match.IsAwakened(path[1]));
+        r.Ui.Sync();
+        r.Now += 0.31;
+        r.Ui.Sync();
+        Assert.False(r.Match.IsAwakened(path[1]));
+        Assert.Contains(r.Ui.BuildPopover()!.Items, i => i.SArg == "rhintw" && i.Text.Contains("Faltam fragmentos"));
+        Assert.Single(r.Sent.OfType<AwakenRune>());
+    }
+
+    [Fact]
+    public void Clicking_branch_reaches_target_one_rune_at_a_time()
+    {
+        var r = new Rig(); r.Ui.Activate(r.Rune); r.Fragments(10000);
+        var type = r.Match.Content.Runes.Types.Select(t => t.Id)
+            .First(t => TdRunePath.Find(r.Match.RuneWeb, r.Match.Frontier, r.Match.IsAwakened, r.Match.RuneCost, t).Count > 1);
+        var path = TdRunePath.Find(r.Match.RuneWeb, r.Match.Frontier, r.Match.IsAwakened, r.Match.RuneCost, type);
+        r.Ui.Activate(r.Ui.BuildPopover()!.Items.Single(i => i.Action == TdUiAction.RuneBranch && i.SArg == type));
+        for (int i = 1; i < path.Count; i++)
+        {
+            r.Ui.Sync();
+            Assert.False(r.Match.IsAwakened(path[i]));
+            r.Now += 0.31; r.Ui.Sync();
+            Assert.True(r.Match.IsAwakened(path[i]));
+        }
+        Assert.Equal(path, r.Sent.OfType<AwakenRune>().Select(c => c.NodeId));
     }
 
     [Fact]

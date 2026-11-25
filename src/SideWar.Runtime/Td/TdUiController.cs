@@ -117,6 +117,11 @@ public sealed partial class TdUiController
     private int _mapSel;
     /// <summary>TD.29b: pausa pedida pelo botão Pausar do HUD (Pause/Resume reais do Core); zera a cada partida nova.</summary>
     private bool _userPaused;
+    private readonly Queue<string> _runePath = new();
+    private string? _runePathPending;
+    private double _runePathNext;
+    private string? _runePathNotice;
+    private double _runePathNoticeUntil;
     private string? _selectedRune;
     private string? _hoverRune;
     /// <summary>TD.30c: janela de runas do HUD (popover no cantinho, ancorado no botão Runas; nunca abre sozinha, não pausa e não toma foco).</summary>
@@ -390,9 +395,13 @@ public sealed partial class TdUiController
             case TdUiAction.SetSpeed when !ModalOpen || Mode == TdUiMode.Menu:
                 _host.SetGameOptions(_host.GameOptions with { GameSpeed = TdSpeed.Resolve(item.Arg, AllowedSpeeds) });
                 Changed?.Invoke(); break;
+            case TdUiAction.RuneBranch when item.SArg is not null:
+                StartRunePath(_match(), item.SArg);
+                break;
             case TdUiAction.SelectRune when item.SArg is not null:
             {
                 // TD.30c: clicar num nó disponível gasta 1 fragmento (o Core desperta exatamente esse nó); bloqueado/despertado só seleciona.
+                _runePath.Clear(); _runePathPending = null;
                 _selectedRune = item.SArg;
                 var rm = _match();
                 if (rm.Phase is MatchPhase.Preparo or MatchPhase.Onda && rm.Fragments >= rm.RuneCost(item.SArg) && !rm.IsAwakened(item.SArg) && rm.Frontier.Contains(item.SArg)) _send(new AwakenRune(item.SArg));
@@ -471,6 +480,7 @@ public sealed partial class TdUiController
             _noticeText = null;
             _userPaused = false;
             _demotionPending = false; // cartão de rebaixamento é da partida antiga
+            _runePath.Clear(); _runePathPending = null; _runePathNotice = null;
             _selectedRune = _lastRune = _hoverRune = _hoverBranch = null;
             RuneWindowOpen = false;
             ResetRuneCard(clearSeen: false);
@@ -490,6 +500,7 @@ public sealed partial class TdUiController
     Checked:
         TrackPhase(m);
         SyncRunes(m);
+        SyncRunePath(m);
         SyncNotice(m);
         SyncOnboarding(m);
         SyncQuiz(m);
@@ -612,6 +623,7 @@ public sealed partial class TdUiController
         ResetBuild();
         QuickTowersOpen = false;
         RuneWindowOpen = false;
+        _runePath.Clear(); _runePathPending = null; _runePathNotice = null;
         _hoverRune = _hoverBranch = null;
         _legendHint = false;
         _rcShown = false; // um cartão ainda pendente continua esperando a vez
@@ -1375,7 +1387,7 @@ public sealed partial class TdUiController
         items.Add(new(new DipRect(area.X + 14, area.Y + 12, 200, 24), TdUiKind.Label, frag.ToString(System.Globalization.CultureInfo.InvariantCulture), SArg: "rfrag"));
         items.Add(new(new DipRect(area.X + area.W - 214, area.Y + 12, 200, 34), TdUiKind.Label, $"{total}/{m.RuneWeb.Count} runas", SArg: "rtot"));
         items.Add(new(new DipRect(area.X + 14, area.Y + area.H - 24, area.W - 28, 16), TdUiKind.Label,
-            done ? "Teia completa." : m.CanAwakenAny ? "Clique numa runa tracejada para despertar · arraste/setas: mover · roda: zoom" : "Faltam fragmentos para a fronteira · arraste/setas: mover · roda: zoom",
+            RunePathNotice ?? (done ? "Teia completa." : m.CanAwakenAny ? "Clique numa runa tracejada para despertar · arraste/setas: mover · roda: zoom" : "Faltam fragmentos para a fronteira · arraste/setas: mover · roda: zoom"),
             SArg: "rhint"));
         AddRuneLegend(items, m, area.X, area.Y + area.H + 6f, area.W, ModalLegendHeight);
         return tip;
@@ -1401,7 +1413,7 @@ public sealed partial class TdUiController
         // TD.30e: a legenda de ramos cabe (8 chips compactos em 268 DIP) e a janela cresce só HudLegendHeight + 4.
         AddRuneLegend(items, m, area.X, area.Y + area.H + 4f, area.W, HudLegendHeight);
         float fy = area.Y + area.H + 4f + HudLegendHeight + 6f;
-        items.Add(new(new DipRect(10, fy, 168, 30), TdUiKind.Label, "Arraste para mover · roda para zoom", SArg: "rhintw"));
+        items.Add(new(new DipRect(10, fy, 168, 30), TdUiKind.Label, RunePathNotice ?? "Arraste para mover · roda para zoom", SArg: "rhintw"));
         items.Add(new(new DipRect(RuneWindowWidth - 10 - 100, fy, 100, 30), TdUiKind.Button, "Teia completa", TdUiAction.ModalTab, (int)TdUiMode.Runes, SArg: "rlink"));
         items.Add(new(new DipRect(160, 9, 24, 22), TdUiKind.Button, "Centralizar", TdUiAction.RecenterRunes, SArg: "rcenter", Tip: "Centralizar teia"));
         float boxH = fy + 30 + 10;
