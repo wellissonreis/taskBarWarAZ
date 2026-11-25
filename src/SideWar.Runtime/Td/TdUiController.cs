@@ -94,7 +94,8 @@ public sealed partial class TdUiController
     public string? NoticeText => NoticeOpen ? _noticeText : null;
     public void DismissNotice() { if (_noticeText is null) return; _noticeText = null; Changed?.Invoke(); }
     /// <summary>Qualquer popover pequeno ancorado ao chip: painel rápido, pergunta-bônus, aviso de fase ou cartão de fim. Nunca ativa janela.</summary>
-    public bool CornerPopover => DemotionCardOpen || QuickTowersOpen || RuneWindowOpen || EndCardOpen || NoticeOpen || RuneCardOpen || AlertCardOpen || FuseCardOpen || FuseDragCardOpen || FusionTipOpen || _fusionChoosingModule || FusionTargetActive || MutationWarnOpen || ((Mode == TdUiMode.None || QuickTowersOpen) && QuizActive);
+    public bool CornerPopover => DemotionCardOpen || QuickTowersOpen || RuneWindowOpen || EndCardOpen || NoticeOpen || RuneCardOpen || AlertCardOpen || FuseCardOpen || FuseDragCardOpen || FusionTipOpen || _fusionChoosingModule || FusionTargetActive || MutationWarnOpen || ((Mode == TdUiMode.None || QuickTowersOpen) && QuizActive)
+        || (_tutorial is { Active: true } && (Mode == TdUiMode.None || BuildActive));
     private int _chosenX = -1;       // X lógico já escolhido (passo "escolher a torre"); -1 = ainda no passo do ponto
     private int _moveTowerId;        // > 0: reposicionando uma torre SEM POSIÇÃO (sem escolha de tipo)
     private int _dropTowerId;       // > 0: o fantasma está sobre esta torre (preview de fusão)

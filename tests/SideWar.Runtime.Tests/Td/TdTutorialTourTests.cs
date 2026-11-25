@@ -24,8 +24,8 @@ public sealed class TdTutorialTourTests
         public bool Paused => false;
         public void TogglePause() { }
         public void RequestExit() { }
-        public bool HudMinimized => false;
-        public void SetHudMinimized(bool minimized) { }
+        public bool HudMinimized { get; private set; }
+        public void SetHudMinimized(bool minimized) => HudMinimized = minimized;
         public void StartStage(int stageId) { }
         public int StageCount => 6;
         public bool StageUnlocked(int stageId) => true;
@@ -39,17 +39,48 @@ public sealed class TdTutorialTourTests
         public bool NodePurchased(string nodeId) => false;
         public bool PurchaseNode(string nodeId) => false;
     }
-    private static TdUiController Create(Store store)
+    private static TdUiController Create(Store store, Host? host = null)
     {
         var match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 1, Rng.Seed(7, 54));
         match.Apply(new LayoutChanged(StripLayout.Create(1000, 954, 88, 4, 920, TowerHost.Band, [new FreeZone(32, 968)])));
-        var ui = new TdUiController(() => match, c => match.Apply(c), new Host(), () => 0, store);
+        var ui = new TdUiController(() => match, c => match.Apply(c), host ?? new Host(), () => 0, store);
         ui.Sync();
         ui.OpenStartupModal();
         return ui;
     }
     private static void Click(TdUiController ui, TdUiAction action) =>
         ui.Activate(new TdUiItem(default, TdUiKind.Button, "", action));
+
+    [Fact]
+    public void First_tower_tutorial_keeps_hud_and_band_accessible()
+    {
+        var host = new Host();
+        host.SetHudMinimized(true);
+        var ui = Create(new Store(), host);
+        Assert.True(ui.CornerPopover);
+        Assert.False(ui.ModalOpen);
+        var hud = ui.BuildHud();
+        var restore = hud.Items.First(i => i.Action == TdUiAction.HudRestore);
+        Assert.Equal(restore, hud.Items[hud.HitTest(restore.Rect.X + 1, restore.Rect.Y + 1)]);
+        ui.Activate(restore);
+        Assert.False(host.HudMinimized);
+        Assert.True(ui.CornerPopover);
+        hud = ui.BuildHud();
+        var towers = hud.Items.First(i => i.Action == TdUiAction.QuickTowers);
+        Assert.Equal(towers, hud.Items[hud.HitTest(towers.Rect.X + 1, towers.Rect.Y + 1)]);
+        ui.Activate(towers);
+        var pop = ui.BuildPopover()!;
+        var tower = pop.Items.First(i => i.Action == TdUiAction.ChooseTower && i.Enabled);
+        Assert.Equal(tower, pop.Items[pop.HitTest(tower.Rect.X + 1, tower.Rect.Y + 1)]);
+        ui.Activate(tower);
+        Assert.True(ui.BuildActive);
+        Assert.True(ui.CornerPopover);
+        Assert.False(ui.ModalOpen);
+        ui.SceneLeftClick(300, 20, HitTarget.None);
+        ui.Sync();
+        Assert.Contains(ui.BuildPopover()!.Items, i => i.Text.Contains("Inicie a onda"));
+        Assert.True(ui.CornerPopover);
+    }
 
     [Fact]
     public void Placement_is_required_and_invalid_points_explain_why()
