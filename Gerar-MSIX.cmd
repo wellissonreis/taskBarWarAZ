@@ -15,6 +15,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\windows\publis
 if errorlevel 1 goto :erro
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\windows\installer-msix\New-TesterKit.ps1" -MsixDir "%OUT%" -CertificatePath "%SIDEWAR_CERT%"
 if errorlevel 1 goto :erro
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\windows\installer-msix\Publish-Blob.ps1" -MsixDir "%OUT%"
+if errorlevel 1 goto :erro
 echo.
 echo SUCESSO. Kit para testadores: %OUT%\SideWar-teste.zip
 if "%SIDEWAR_NOPAUSE%"=="" start "" explorer "%OUT%"

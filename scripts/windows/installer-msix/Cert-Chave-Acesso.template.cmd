@@ -19,7 +19,7 @@ if errorlevel 1 (
   echo ERRO: nao foi possivel importar o certificado.
 ) else (
   echo.
-  echo SUCESSO: certificado confiavel. Abra SideWar-*.msix para instalar.
+  echo SUCESSO: certificado confiavel. Abra SideWar.appinstaller para instalar.
 )
 echo.
 pause

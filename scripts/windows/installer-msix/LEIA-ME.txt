@@ -13,8 +13,22 @@ Como instalar
 1. Extraia o .zip numa pasta e de duplo clique em Cert-Chave-Acesso.cmd
    (so uma vez). Aceite o pedido de administrador; ele apenas faz o Windows
    confiar no certificado de teste. Espere a mensagem "SUCESSO".
-2. De duplo clique em SideWar-*.msix e clique em Instalar.
+2. Instale pelo App Installer, de um destes dois jeitos (precisa de internet):
+   - pelo link (baixe e abra o arquivo):
+     https://taskbarwaraz.blob.core.windows.net/downloads/SideWar.appinstaller
+   - ou de duplo clique no SideWar.appinstaller que esta nesta pasta.
+   Clique em Instalar.
 3. Abra o SideWar pelo menu Iniciar.
+
+Atualizacao automatica
+- Instalado pelo .appinstaller, o SideWar se atualiza sozinho: o Windows
+  procura versao nova quando o jogo abre e de tempos em tempos. A versao nova
+  passa a valer na proxima vez que o jogo for aberto.
+- Ja tinha instalado pelo .msix? Abra o SideWar.appinstaller UMA vez e clique
+  em Instalar / Atualizar / Reinstalar. NAO desinstale antes: desinstalar
+  apaga os saves.
+- O SideWar-*.msix desta pasta e so uma reserva: instalar direto por ele nao
+  liga a atualizacao automatica.
 
 Como desinstalar
 - De duplo clique em Desinstalar-SideWar.cmd. Ele remove o app (os saves da
