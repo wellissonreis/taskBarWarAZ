@@ -116,9 +116,9 @@ public sealed partial class TdMatchState
         {
             long total = 0;
             int count = _content.Stages.Stages.Length;
-            int start = _stageNumber - _stageClears;
-            for (int i = 0; i < _stageClears; i++)
-                total += _content.Stages.Stages[(start - 1 + i) % count].Waves;
+            // Fases concluídas de fato: com a trava de patente a mesma fase se repete, então não dá para deduzi-las do número atual.
+            foreach (var done in _stageResults)
+                total += _content.Stages.Stages[(done.StageNumber - 1) % count].Waves;
             total += Phase is MatchPhase.Preparo or MatchPhase.Vitoria ? WaveNumber : Math.Max(0, WaveNumber - 1);
             return (int)Math.Min(int.MaxValue, total);
         }
