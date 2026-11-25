@@ -50,6 +50,8 @@ public sealed partial class TdUiController
     private double _noticeUntil;
     private double _noticeStarted;
     private int _seenStages = -1;
+    private TdRankLevel? _pendingPromotion;
+    private TdRankLevel _pendingPromotionPrevious;
     private TdRankLevel _seenRank;
     private int _seenRankScore;
     private TdRankLevel? _noticeRank;
@@ -92,9 +94,11 @@ public sealed partial class TdUiController
     private bool PinnedIdle => QuickTowersOpen && PanelPinned && !BuildActive;
     public bool NoticeOpen => _host.GameOptions.NoticeSize != 0 && _noticeText is not null && !BossHidden && _now() < _noticeUntil;
     public string? NoticeText => NoticeOpen ? _noticeText : null;
+    public bool PromotionOpen => NoticeOpen && _noticeTitle == "Promoção";
+    public bool PromotionPending => _pendingPromotion is not null;
     public void DismissNotice() { if (_noticeText is null) return; _noticeText = null; Changed?.Invoke(); }
     /// <summary>Qualquer popover pequeno ancorado ao chip: painel rápido, pergunta-bônus, aviso de fase ou cartão de fim. Nunca ativa janela.</summary>
-    public bool CornerPopover => DemotionCardOpen || QuickTowersOpen || RuneWindowOpen || EndCardOpen || NoticeOpen || RuneCardOpen || AlertCardOpen || FuseCardOpen || FuseDragCardOpen || FusionTipOpen || _fusionChoosingModule || FusionTargetActive || MutationWarnOpen || ((Mode == TdUiMode.None || QuickTowersOpen) && QuizActive)
+    public bool CornerPopover => DemotionCardOpen || QuickTowersOpen || RuneWindowOpen || EndCardOpen || (NoticeOpen && (!PromotionOpen || (!ModalOpen && !BuildActive && (!QuickTowersOpen || PinnedIdle) && !QuizActive))) || RuneCardOpen || AlertCardOpen || FuseCardOpen || FuseDragCardOpen || FusionTipOpen || _fusionChoosingModule || FusionTargetActive || MutationWarnOpen || ((Mode == TdUiMode.None || QuickTowersOpen) && QuizActive)
         || (_tutorial is { Active: true } && (Mode == TdUiMode.None || BuildActive));
     private int _chosenX = -1;       // X lógico já escolhido (passo "escolher a torre"); -1 = ainda no passo do ponto
     private int _moveTowerId;        // > 0: reposicionando uma torre SEM POSIÇÃO (sem escolha de tipo)
@@ -731,17 +735,31 @@ public sealed partial class TdUiController
             _noticeUntil = _now() + StageNoticeSeconds;
             Changed?.Invoke();
         }
-        if (promoted && !BossHidden)
+        if (demoted) _pendingPromotion = null;
+        if (PromotionOpen && !demoted && (BuildActive || (QuickTowersOpen && !PinnedIdle) || ModalOpen || QuizActive || AlertCardOpen || DemotionCardOpen || FuseDragCardOpen))
         {
-            _promotionPreviousRank = previousRank;
+            _pendingPromotionPrevious = _promotionPreviousRank;
+            _pendingPromotion = _noticeRank;
+            _noticeText = null;
+        }
+        if (promoted && !BossHidden && _host.GameOptions.NoticeSize != 0)
+        {
+            _pendingPromotionPrevious = _pendingPromotion is null ? previousRank : _pendingPromotionPrevious;
+            _pendingPromotion = rank;
+        }
+        if (_pendingPromotion is { } pending && !BossHidden && !BuildActive && !ModalOpen
+            && (!QuickTowersOpen || PinnedIdle) && !QuizActive && !AlertCardOpen && !DemotionCardOpen && !FuseDragCardOpen)
+        {
+            _promotionPreviousRank = _pendingPromotionPrevious;
+            _pendingPromotion = null;
             _noticeTitle = "Promoção";
-            _noticeText = $"Promovido a {TdRank.DisplayName(rank)}!";
+            _noticeText = $"Promovido a {TdRank.DisplayName(pending)}!";
             if (m.Options.InitialReputation is not null)
             {
-                var unlocked = m.Content.Stages.Stages.FirstOrDefault(s => s.MinRank == (int)rank);
+                var unlocked = m.Content.Stages.Stages.FirstOrDefault(s => s.MinRank == (int)pending);
                 if (unlocked is not null) _noticeText = $"{unlocked.Title} liberada";
             }
-            _noticeRank = rank;
+            _noticeRank = pending;
             _noticeStarted = _now();
             _noticeUntil = _now() + PromoNoticeSeconds;
             Changed?.Invoke();
@@ -1101,6 +1119,7 @@ public sealed partial class TdUiController
         if (DemotionCardOpen) return BuildDemotionCard();
         if (AlertCritical) return BuildAlertCard();
         if (FuseDragCardOpen) return BuildFuseDragCard(m);
+        if (PromotionOpen && !BuildActive && (Mode == TdUiMode.None || PinnedIdle) && !QuizActive) return BuildNotice();
         if (_outsideCollapsed) return null;
         if (AlertWarningOpen) return BuildAlertCard();
         if (!BuildActive && (Mode == TdUiMode.None || QuickTowersOpen) && _quizQ is not null && QuizPhaseOk(m)) return BuildQuiz(m);

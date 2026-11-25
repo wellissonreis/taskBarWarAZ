@@ -33,7 +33,8 @@ public sealed class TdTutorialTourTests
         public bool StageCrown(int stageId) => false;
         public int StageMedals(int stageId) => 0;
         public int StageBestScore(int stageId) => 0;
-        public TdRankProgress Rank => TdRank.Progress(0);
+        public int Score { get; set; }
+        public TdRankProgress Rank => TdRank.Progress(Score);
         public TdRecordOutcome LastOutcome => default;
         public int SealsAvailable => 0;
         public bool NodePurchased(string nodeId) => false;
@@ -50,6 +51,19 @@ public sealed class TdTutorialTourTests
     }
     private static void Click(TdUiController ui, TdUiAction action) =>
         ui.Activate(new TdUiItem(default, TdUiKind.Button, "", action));
+
+    [Fact]
+    public void Promotion_during_tutorial_is_a_corner_notice_without_pausing()
+    {
+        var host = new Host();
+        var ui = Create(new Store(), host);
+        Assert.Equal(TdTutorialStep.Tour, ui.Step);
+        host.Score = TdRank.Threshold(TdRankLevel.Junior);
+        ui.Sync();
+        Assert.Equal("PROMOÇÃO!", ui.BuildPopover()!.Title);
+        Assert.True(ui.CornerPopover);
+        Assert.False(ui.ModalOpen);
+    }
 
     [Fact]
     public void First_tower_tutorial_keeps_hud_and_band_accessible()

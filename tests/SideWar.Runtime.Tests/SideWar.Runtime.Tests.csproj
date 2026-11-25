@@ -7,6 +7,8 @@
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../src/SideWar.Runtime/SideWar.Runtime.csproj" />
+    <ProjectReference Include="../../src/SideWar.Persistence/SideWar.Persistence.csproj" />
+    <Compile Include="../../src/SideWar.App/Composition/TdProfileRecorder.cs" Link="TdProfileRecorder.cs" />
     <PackageReference Include="xunit.v3" />
     <PackageReference Include="xunit.runner.visualstudio" PrivateAssets="all" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />

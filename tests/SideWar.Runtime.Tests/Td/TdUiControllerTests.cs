@@ -317,7 +317,7 @@ public sealed class TdUiControllerTests
     [Fact]
     public void Promotion_announces_the_newly_unlocked_region()
     {
-        var r = new Rig();
+        var r = new Rig(0);
         r.Host.Score = 0;
         r.Match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 1, Rng.Seed(7, 54), null,
             TdMatchOptions.Default with { InitialReputation = 0 });
@@ -330,7 +330,7 @@ public sealed class TdUiControllerTests
     [Fact]
     public void Boss_rewind_notice_waits_for_simultaneous_promotion()
     {
-        var r = new Rig();
+        var r = new Rig(0);
         r.Host.Score = 0;
         r.Ui.Sync();
         typeof(TdMatchState).GetProperty("BossRewinds")!.SetValue(r.Match, 1);
@@ -527,6 +527,40 @@ public sealed class TdUiControllerTests
         Assert.True(r.Match.Paused);
         r.Ui.Activate(Assert.Single(r.Ui.BuildHud().Items, i => i.Action == TdUiAction.HudMinimize));
         Assert.True(r.Match.Paused);
+    }
+
+    [Fact]
+    public void Promotion_from_stage_xp_is_visible_after_outside_collapse()
+    {
+        var r = new Rig(TdRank.Threshold(TdRankLevel.Junior) - 1);
+        r.Ui.Sync();
+        r.Ui.CollapseOutside();
+        typeof(TdMatchState).GetMethod("ClearStageAndAdvance", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.Invoke(r.Match, null);
+        var gain = Assert.Single(r.Match.Events, e => e.Type == TdEventType.ReputationGained);
+        r.Host.Score += (int)gain.A;
+        r.Ui.Sync();
+        Assert.Equal("PROMOÇÃO!", r.Ui.BuildPopover()!.Title);
+        Assert.True(r.Ui.CornerPopover);
+        Assert.False(r.Ui.ModalOpen);
+        Assert.False(r.Match.Paused);
+    }
+
+    [Fact]
+    public void Promotion_waits_for_modal_before_starting_its_timer()
+    {
+        var r = new Rig(0);
+        r.Ui.Sync();
+        r.Ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
+        Assert.True(r.Ui.ModalOpen);
+        r.Host.Score = TdRank.Threshold(TdRankLevel.Junior);
+        r.Ui.Sync();
+        Assert.True(r.Ui.PromotionPending);
+        Assert.False(r.Ui.PromotionOpen);
+        r.Now += 10;
+        r.Ui.CollapseOutside();
+        r.Ui.Sync();
+        Assert.Equal("PROMOÇÃO!", r.Ui.BuildPopover()!.Title);
+        Assert.True(r.Ui.CornerPopover);
     }
 
     [Fact]

@@ -378,7 +378,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
 
     private void CollapseIfOutside(int x, int y)
     {
-        if (controller.NoticeOpen) { controller.DismissNotice(); Refresh(true); }
+        if (controller.NoticeOpen && !controller.PromotionOpen) { controller.DismissNotice(); Refresh(true); }
         if (disposed || bossHidden || (!expansionTracked && controller.CurrentTip is null) || game.Dock.Current is not { } layout) return;
         static bool Inside(PixelRect r, int x, int y) => x >= r.Left && x < r.Right && y >= r.Top && y < r.Bottom;
         if (Inside(layout.Scene, x, y) || (hudWindow is { IsVisible: true } && Inside(hudWindow.Bounds, x, y))
@@ -544,7 +544,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         PlayAlertSound();
         Refresh(false);
         var m = td.Host.Match;
-        bool busy = runtime.App.IsVisible && (m.Phase == MatchPhase.Onda || controller.PopoverOpen || controller.CurrentTip is not null || m.CountdownRemainingSeconds > 0 || controller.QuizActive || controller.Pulsing || controller.NoticeOpen || controller.RuneCardOpen || controller.AlertCardOpen);
+        bool busy = runtime.App.IsVisible && (m.Phase == MatchPhase.Onda || controller.PopoverOpen || controller.CurrentTip is not null || m.CountdownRemainingSeconds > 0 || controller.QuizActive || controller.Pulsing || controller.NoticeOpen || controller.PromotionPending || controller.RuneCardOpen || controller.AlertCardOpen);
         // TD.33d: a animação do dinheiro só agenda quadros enquanto há o que animar (≈30 fps, o teto estável do TD.28c); parado/pausado/oculto = nada.
         bool money = runtime.App.IsVisible && controller.MoneyAnimating;
         deadline = money ? clock.NowTicks + (long)(MoneyTickSeconds * clock.TicksPerSecond)
@@ -577,12 +577,6 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
             bool quick = controller.CornerPopover;
             int quickW = (int)MathF.Round(pop.Width * UiScale), quickH = (int)MathF.Round(pop.Height * UiScale);
             var bounds = quick ? new PixelRect(hudBounds.Right - quickW, Math.Max(work.Top, hudBounds.Top - quickH - 2), hudBounds.Right, Math.Max(work.Top, hudBounds.Top - quickH - 2) + quickH) : TdModalLayout.Bounds(work, ModalDpiScale, modalOffsetX, modalOffsetY);
-            if (quick && pop.Title == "PROMOÇÃO!")
-            {
-                int left = work.Left + (work.Right - work.Left - quickW) / 2;
-                int top = work.Top + (work.Bottom - work.Top - quickH) / 2;
-                bounds = new PixelRect(left, top, left + quickW, top + quickH);
-            }
             if (pop.RuneWindow)
             {
                 var rune = hud.Items.First(i => i.Action == TdUiAction.RuneWindow);
@@ -629,7 +623,7 @@ internal sealed class TdUiPresenter : ITdUiHost, ITdOnboardingStore, IDisposable
         }
         bool sceneInteractive = controller.BuildActive || controller.FusionTargetActive;
         if (sceneInteractive != buildApplied) { buildApplied = sceneInteractive; game.Mode.SetBuildMode(buildApplied); }
-        bool expanded = controller.PopoverOpen || controller.BuildActive || (popWindow.IsVisible && pop is not null);
+        bool expanded = controller.PopoverOpen || controller.BuildActive || (popWindow.IsVisible && pop is not null && !controller.PromotionOpen);
         if (expanded && !expansionTracked) expansionForeground = TdUiWindow.ForegroundWindow;
         expansionTracked = expanded;
         bool esc = controller.PopoverOpen;
