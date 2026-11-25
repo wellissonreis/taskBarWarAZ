@@ -17,7 +17,7 @@ public sealed class TdCombatTests
 
     private readonly record struct G(string Enemy, int Count, double Interval = 1.0, double Offset = 0.0);
 
-    /// <summary>Arena: a fase 6 (tudo liberado) com ondas autorais simples e muitos créditos; HP da onda 1 vale ×1,5 (fase 6).</summary>
+    /// <summary>Arena: a fase 6 (tudo liberado) com ondas autorais simples e muitos créditos; HP da onda 1 vale ×1,5.</summary>
     private static TdContent Arena(params G[][] waves)
     {
         var defs = waves.Select((w, i) => new TdWaveDef(i + 1, false, 1.0,
@@ -405,11 +405,15 @@ public sealed class TdCombatTests
     [Fact(DisplayName = "RF-28.8 Botnet: splits into 6 swarm at 66% and 33% HP and the wave still completes")]
     public void Boss_Botnet()
     {
-        var c = WithBoss(Arena([new G("botnet", 1)]), "botnet", b => b with { Hp = 400 });
+        // O conteúdo congelado multiplica o HP da fase 6 por 1,5, inclusive para chefes.
+        var c = WithBoss(Arena([new G("botnet", 1)]), "botnet", b => b with { Hp = 400 / 1.5 });
         var s = New(c);
         Build(s, "bolt", 1100);
         Build(s, "cannon", 1100);
+        Build(s, "cannon", 200); // impede que as crias escapem e ativem o recuo da onda final
         Go(s);
+        Until(s, () => s.Enemies.Any(e => e.IsBoss));
+        Assert.Equal(400, s.Enemies.Single(e => e.IsBoss).MaxHp, 6);
         Until(s, () => s.Events.Any(e => e.Type == TdEventType.BossSplit));
         Assert.True(s.Enemies.Count(e => _swarm(s, e)) >= 6);
         Until(s, () => s.Events.Count(e => e.Type == TdEventType.BossSplit) >= 2);
@@ -450,7 +454,7 @@ public sealed class TdCombatTests
 
     // ---------------------------------------------------------------- determinismo
 
-    private const ulong GoldenStage3 = 1588899201112558857UL;
+    private const ulong GoldenStage3 = 9613389578053969377UL;
 
     private static List<TdLogEntry> ScriptLog() => new List<TdLogEntry>
         {
