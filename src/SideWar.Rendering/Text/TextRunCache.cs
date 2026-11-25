@@ -16,7 +16,8 @@ internal sealed class TextRunCache : IDisposable
     private readonly Dictionary<(string Text, IntPtr Face, float Size, SKFontEdging Edging), Run> _runs = [];
     private readonly Dictionary<char, string> _oneChar = [];
 
-    internal readonly record struct Run(SKTextBlob Blob, float Width);
+    /// <summary><c>Blob</c> nulo = nada a desenhar (texto vazio ou sem glifo); a largura é então 0.</summary>
+    internal readonly record struct Run(SKTextBlob? Blob, float Width);
 
     /// <summary>Run do texto na fonte (cria no primeiro uso). O blob pertence ao cache: não descartar.</summary>
     public Run Get(string text, SKFont font)
@@ -24,7 +25,9 @@ internal sealed class TextRunCache : IDisposable
         var key = (text, font.Typeface.Handle, font.Size, font.Edging);
         if (_runs.TryGetValue(key, out var run)) return run;
         if (_runs.Count >= Capacity) Clear();
-        run = new Run(SKTextBlob.Create(text, font) ?? throw new InvalidOperationException("SKTextBlob.Create failed."), font.MeasureText(text));
+        // SKTextBlob.Create devolve null sem glifos: nunca lançar (derrubava o app ao subir a HUD).
+        var blob = text.Length == 0 ? null : SKTextBlob.Create(text, font);
+        run = new Run(blob, blob is null ? 0f : font.MeasureText(text));
         _runs[key] = run;
         return run;
     }
@@ -41,7 +44,7 @@ internal sealed class TextRunCache : IDisposable
 
     public void Clear()
     {
-        foreach (var run in _runs.Values) run.Blob.Dispose();
+        foreach (var run in _runs.Values) run.Blob?.Dispose();
         _runs.Clear();
     }
 

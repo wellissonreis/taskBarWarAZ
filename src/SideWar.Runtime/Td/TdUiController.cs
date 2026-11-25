@@ -946,7 +946,7 @@ public sealed partial class TdUiController
             string effTxt = slow ? $"≈{effective.ToString("0", System.Globalization.CultureInfo.InvariantCulture)}x" : TdSpeed.Label(speed);
             string cyc = $"Velocidade {TdSpeed.Label(speed)}: clique para a próxima" + (slow ? $" (efetiva ≈{effective.ToString("0", System.Globalization.CultureInfo.InvariantCulture)}x)" : "");
             Add(495 + grow, 9, 58, 22, TdUiKind.Button, TdSpeed.Label(speed), TdUiAction.SetSpeed, TdSpeed.Next(speed, allowed), enabled: !ModalOpen, selected: true, tip: cyc);
-            Add(555 + grow, 9, 40, 22, TdUiKind.Label, slow ? effTxt : "", tag: "speedeff", tip: "Velocidade efetiva real (abaixo da pedida: o PC não acompanha)");
+            if (slow) Add(555 + grow, 9, 40, 22, TdUiKind.Label, effTxt, tag: "speedeff", tip: "Velocidade efetiva real (abaixo da pedida: o PC não acompanha)");
         }
         else
         for (int i = 0; i < allowed.Length; i++)

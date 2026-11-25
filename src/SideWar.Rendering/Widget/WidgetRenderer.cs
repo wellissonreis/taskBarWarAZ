@@ -234,7 +234,7 @@ public sealed class WidgetRenderer : IDisposable
         baseline = (float)Math.Round(baseline);
         paint.Color = color;
         var run = _runs.Get(text, font);
-        if (TextEnabled) canvas.DrawText(run.Blob, x, baseline, paint);
+        if (TextEnabled && run.Blob is not null) canvas.DrawText(run.Blob, x, baseline, paint);
         float w = run.Width;
         SKFontMetrics fm = font.Metrics;
         _boxes.Add(new WidgetTextBox(text, new SKRect(x, baseline + fm.Ascent, x + w, baseline + fm.Descent)));

@@ -115,7 +115,7 @@ internal static class ArsenalCampaignDraw
         if (letterSpacingDip == 0f)
         {
             var run = kit.Runs.Get(text, font);
-            if (!TextSuppressed) c.DrawText(run.Blob, x, y, aa);
+            if (!TextSuppressed && run.Blob is not null) c.DrawText(run.Blob, x, y, aa);
             return run.Width;
         }
         float ls = MathF.Round(letterSpacingDip * s);
@@ -123,7 +123,7 @@ internal static class ArsenalCampaignDraw
         foreach (char ch in text)
         {
             var g = kit.Runs.Get(kit.Runs.Char(ch), font);
-            if (!TextSuppressed) c.DrawText(g.Blob, x, y, aa);
+            if (!TextSuppressed && g.Blob is not null) c.DrawText(g.Blob, x, y, aa);
             x += g.Width + ls;
         }
         return x - start;

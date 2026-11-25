@@ -167,7 +167,7 @@ public sealed class TdSpeedAndLiveBandTests
         Assert.Contains("efetiva", ui.BuildHud().Items.Single(i => i.Action == TdUiAction.SetSpeed && i.Selected).Tip);
         ui.CycleSpeed();
         Assert.Equal(1, host.GameOptions.GameSpeed);
-        Assert.Equal("", ui.BuildHud().Items.Single(i => i.SArg == "speedeff").Text);
+        Assert.DoesNotContain(ui.BuildHud().Items, i => i.SArg == "speedeff"); // sem rótulo vazio na HUD
         ui.Activate(new TdUiItem(default, TdUiKind.Button, "", TdUiAction.Menu));
         Assert.Equal(6, ui.BuildPopover()!.Items.Count(i => i.Action == TdUiAction.SetSpeed));
     }

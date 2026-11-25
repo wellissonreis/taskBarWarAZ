@@ -62,7 +62,7 @@ internal sealed class PanelPainter(Typography typography, int dpi) : IDisposable
     public void Text(SKCanvas c, string s, PanelFont face, float sizeDip, DipRect box, SKColor color,
         TextAlign align = TextAlign.Left, float letterSpacing = 0f)
     {
-        if (!TextEnabled) return;
+        if (!TextEnabled || string.IsNullOrEmpty(s)) return;
         var font = Font(face, sizeDip);
         text.Color = color;
         var ls = letterSpacing * Scale;
@@ -78,13 +78,13 @@ internal sealed class PanelPainter(Typography typography, int dpi) : IDisposable
         var y = Px(box.Y - OffsetY) + (float)Math.Round(-font.Metrics.Ascent);
         if (ls == 0f)
         {
-            c.DrawText(runs.Get(s, font).Blob, x, y, text);
+            if (runs.Get(s, font).Blob is { } blob) c.DrawText(blob, x, y, text);
             return;
         }
         foreach (var ch in s)
         {
             var g = runs.Get(runs.Char(ch), font);
-            c.DrawText(g.Blob, x, y, text);
+            if (g.Blob is not null) c.DrawText(g.Blob, x, y, text);
             x += g.Width + ls;
         }
     }
