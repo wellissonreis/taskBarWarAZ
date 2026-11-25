@@ -179,6 +179,10 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
         DrainCommands();
         UpdatePresence();
 
+        // Antes dos passos: se um deles lançar, o próximo prazo continua no futuro (sem laço girando sem espera).
+        _lastWake = now;
+        _started = true;
+
         bool running = Running;
         int ticks = _stepper.Advance(now, running);
         int speed = Math.Clamp(GameSpeed, 1, ExtraSpeeds ? TdSpeed.Max : 3);
@@ -203,8 +207,6 @@ public sealed class TdGameHost : ILoopParticipant, IGameCommandSink
         }
         if (ticks > 0) EffectiveSpeed = done / (double)ticks;
         if (running && Match.Phase == MatchPhase.Onda && !Match.Shadow) _guard.Evaluate(Match); // sombra: sem alertas nem pausa de proteção
-        _lastWake = now;
-        _started = true;
 
         if (Match.Events.Count > 0)
         {

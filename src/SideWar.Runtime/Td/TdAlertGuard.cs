@@ -77,7 +77,8 @@ public sealed class TdAlertGuard
     {
         if (Holding) return true;
         if (!Settings.AutoPause || _fallAuthorized || match.Phase != MatchPhase.Onda || match.Paused) return false;
-        if (match.WavesReached >= DefeatWarningWaves) return false;
+        // Só no começo da corrida. Contadores diretos: WavesReached refaz a conta das fases concluídas e quebrava com fase repetida (travava o jogo).
+        if (match.StagesCleared > 0 || match.WaveNumber > DefeatWarningWaves) return false;
         // Gatilho geométrico: inimigo novo passou da torre mais próxima do portal (ainda não reconhecido por Salvar).
         foreach (int id in TdRiskAnalyzer.PastDefenseLine(match))
             if (!_acknowledged.Contains(id))
