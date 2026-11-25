@@ -18,7 +18,7 @@ if errorlevel 1 goto :erro
 powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\windows\installer-msix\Publish-Blob.ps1" -MsixDir "%OUT%"
 if errorlevel 1 goto :erro
 echo.
-echo SUCESSO. Kit para testadores: %OUT%\SideWar-teste.zip
+echo SUCESSO. Kit para testadores: %OUT%\SideWar-*-teste.zip
 if "%SIDEWAR_NOPAUSE%"=="" start "" explorer "%OUT%"
 set "RC=0"
 goto :fim

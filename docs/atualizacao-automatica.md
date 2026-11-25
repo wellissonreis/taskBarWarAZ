@@ -4,7 +4,7 @@
 
 - `SideWar-<versao>.msix`
 - `SideWar.appinstaller` (nome fixo; aponta para o msix daquela versão e é validado pelo schema do Windows)
-- `SideWar-teste.zip` (kit para testadores)
+- `SideWar-<versao>-teste.zip` (kit para testadores)
 
 Hospedagem: <https://taskbarwaraz.blob.core.windows.net/downloads/> (leitura anônima).
 Link de instalação: <https://taskbarwaraz.blob.core.windows.net/downloads/SideWar.appinstaller>
