@@ -90,7 +90,8 @@ public sealed class TdContentTests
     public void ApprovedExistingCurve()
     {
         var c = TdContentLoader.LoadEmbedded();
-        Assert.Equal(1, c.Fusion.MinRank);
+        Assert.Equal(0, c.Fusion.MinRank); // Estagiário funde 2; o limite cresce com a patente
+        Assert.Equal([2, 3, 4, 5, 6, 6], c.Fusion.MaxComponentsByRank!);
         foreach (var (id, stage) in new[] { ("functions", 1), ("policy", 2), ("scaleset", 3) })
             Assert.Equal(stage - 1, c.Towers.Single(t => t.Id == id).MinRank);
         foreach (var (id, stage) in new[] { ("swarm", 1), ("flyer", 2), ("trojan", 3), ("regen", 4), ("synflood", 1), ("scanner", 2), ("slowloris", 3), ("fragment", 4), ("dnstunnel", 5), ("encrypted", 6) })

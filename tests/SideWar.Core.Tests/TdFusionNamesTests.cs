@@ -124,13 +124,14 @@ public sealed class TdFusionDragTests
         early.Apply(new LayoutChanged(StripLayout.Create(1000, 954, 88, 4, 920, TowerHost.Band, [new FreeZone(32, 968)])));
         typeof(TdMatchState).GetProperty("Credits")!.SetValue(early, 100000L);
         int e1 = Build(early, "bolt", 300), e2 = Build(early, "bolt", 600);
-        Assert.Equal(CommandReason.FusionLocked, early.Apply(new FuseTowers(e1, e2)).Reason);
+        Assert.True(early.Apply(new FuseTowers(e1, e2)).IsOk); // Estagiário funde 2
+        Assert.Equal(CommandReason.FusionLimit, early.Apply(new FuseTowers(e1, Build(early, "bolt", 800))).Reason);
 
         var m = Arena();
         int a = Build(m, "bolt", 300), b = Build(m, "frost", 600), c = Build(m, "dns", 800);
         Assert.False(m.Apply(new FuseTowers(a, a)).IsOk);
         Assert.True(m.Apply(new FuseTowers(a, b)).IsOk);
-        Assert.Equal(CommandReason.AlreadyFused, m.Apply(new FuseTowers(a, c)).Reason);
+        Assert.True(m.Apply(new FuseTowers(a, c)).IsOk); // a terceira torre entra na fusão
         Assert.Equal(CommandReason.TowerNotFound, m.Apply(new FuseTowers(a, b)).Reason); // b foi absorvida
     }
 

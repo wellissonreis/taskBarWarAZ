@@ -17,7 +17,7 @@ public sealed class TdRankUnlockTests
         m.Apply(new LayoutChanged(TdSanityBot.TypicalLayout()));
         typeof(TdMatchState).GetProperty("Credits")!.SetValue(m, 100000L);
         Assert.Equal(CommandReason.TowerLocked, m.Apply(new BuildTower("balancer", 300)).Reason);
-        Assert.False(m.FusionUnlocked);
+        Assert.Equal(2, m.FusionMaxComponents);
         Assert.False(m.AbilityStatuses.Single(a => a.Id == "firewall").Unlocked);
         typeof(TdMatchState).GetProperty("GateReputation")!.SetValue(m, TdRank.Threshold(TdRankLevel.Pleno));
         Assert.True(m.Apply(new BuildTower("balancer", 300)).IsOk);
@@ -28,7 +28,7 @@ public sealed class TdRankUnlockTests
         typeof(TdMatchState).GetProperty("GateReputation")!.SetValue(m, 0);
         Assert.Equal(2, m.Towers.Count);
         Assert.Equal(CommandReason.TowerLocked, m.Apply(new BuildTower("balancer", 900)).Reason);
-        Assert.Equal(CommandReason.FusionLocked, m.Apply(new FuseTower(baseId, "bolt")).Reason);
+        Assert.Equal(CommandReason.TowerLocked, m.Apply(new FuseTower(baseId, "bolt")).Reason); // o Balanceador é de Júnior
         Assert.False(m.AbilityStatuses.Single(a => a.Id == "firewall").Unlocked);
         typeof(TdMatchState).GetProperty("GateReputation")!.SetValue(m, TdRank.Threshold(TdRankLevel.Junior));
         Assert.Equal(CommandReason.TowerLocked, m.Apply(new FuseTower(baseId, "scaleset")).Reason);

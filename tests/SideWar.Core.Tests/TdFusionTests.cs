@@ -94,14 +94,13 @@ public sealed class TdFusionTests
         Assert.Equal(2, c.TowerCount(0));
     }
 
-    [Fact(DisplayName = "CA-37.1 rejected fusions (third component, locked, unknown, unplaced, credits) change nothing")]
+    [Fact(DisplayName = "CA-37.1 rejected fusions (above rank limit, unknown, unplaced, credits) change nothing")]
     public void Fuse_RejectionsAreAtomic()
     {
         var s = Arena();
         int id = Build(s, "bolt", 1100);
         Fuse(s, id, "frost");
         ulong h = s.ComputeStateHash(); long credits = s.Credits; ulong rng = s.RngState;
-        Assert.Equal(CommandReason.AlreadyFused, s.Apply(new FuseTower(id, "cannon")).Reason);
         Assert.Equal(CommandReason.TowerNotFound, s.Apply(new FuseTower(999, "cannon")).Reason);
         Assert.Equal(CommandReason.TowerNotFound, s.Apply(new FuseTower(id, "nada")).Reason);
         Assert.Equal(CommandReason.TowerNotFound, s.Apply(new FuseTower(id, null!)).Reason);
@@ -117,9 +116,12 @@ public sealed class TdFusionTests
         var early = Arena(stage: 1);
         int eid = Build(early, "bolt", 1100);
         ulong eh = early.ComputeStateHash();
-        Assert.Equal(CommandReason.FusionLocked, early.Apply(new FuseTower(eid, "frost")).Reason);
-        Assert.Equal(eh, early.ComputeStateHash());
-        Assert.False(early.FusionUnlocked);
+        Assert.NotEqual(0UL, eh);
+        typeof(TdMatchState).GetProperty("Credits")!.SetValue(early, 100000L);
+        Fuse(early, eid, "frost"); // Estagiário funde 2
+        ulong two = early.ComputeStateHash();
+        Assert.Equal(CommandReason.FusionLimit, early.Apply(new FuseTower(eid, "frost")).Reason);
+        Assert.Equal(two, early.ComputeStateHash());
     }
 
     [Fact(DisplayName = "CA-37.1 fusion needs a placed base; layout change keeps the hybrid and repositioning restores it")]
@@ -173,8 +175,7 @@ public sealed class TdFusionTests
         int id = s.Towers[0].Id;
         Fuse(s, id, module);
         Assert.Equal(TdMatchState.TechnicalTowerLimit, s.Towers.Count);
-        Assert.False(s.Apply(new FuseTower(id, module)).IsOk);
-        Assert.Equal(TdMatchState.TechnicalTowerLimit, s.Towers.Count);
+        Assert.Equal(2, s.Towers[0].ComponentTotal);
     }
 
     [Fact(DisplayName = "CA-37.2 at most two Cofre components in total, including hybrids and A+A")]
@@ -386,14 +387,14 @@ public sealed class TdFusionTests
             new(0, new BuildTower("bolt", 1100), 0),
             .. fuse ? [new TdLogEntry(0, new FuseTower(1, "frost"), 1)] : Array.Empty<TdLogEntry>(),
             new(1, new StartWave(), 0),
-            new(200, new FuseTower(1, "cannon"), 0), // rejeitada (já é híbrida) quando fuse; aceita quando não
+            new(200, new FuseTower(1, "cannon"), 0), // terceira torre quando fuse; segunda quando não
             new(300, new SellTower(1), 0),
         ];
         TdReplayResult Run(bool fuse) => TdReplayRunner.Run(content, new TdReplayScript(6, 9, 54, Log(fuse), 600, TdMatchOptions.Default with { InitialReputation = TdRank.Threshold(TdRankLevel.Arquiteto) }));
         var a = Run(true); var b = Run(true); var c = Run(false);
         Assert.Equal(a, b);
         Assert.NotEqual(a.StateHash, c.StateHash);
-        Assert.Equal(1, a.CommandsRejected);
+        Assert.Equal(0, a.CommandsRejected);
     }
 
     [Fact(DisplayName = "CA-37.7 hash of a simple tower does not include module data; fusion consumes no main RNG")]
@@ -433,6 +434,9 @@ public sealed class TdFusionTests
         Bad(With("\"effect\": \"hitSlow\"", "\"effect\": \"laser\""), "effect desconhecido 'laser'");
         Bad(With("\"module\": \"cannon\", \"name\": \"Raio explosivo\"", "\"module\": \"policy\", \"name\": \"Raio explosivo\""), "hitSplash exige");
         Bad(With("\"base\": \"balancer\"", "\"base\": \"nada\""), "torre inexistente");
-        Bad(With("\"minRank\": 1", "\"minRank\": 99"), "minRank");
+        Bad(With("\"minRank\": 0", "\"minRank\": 99"), "minRank");
+        Bad(With("[2, 3, 4, 5, 6, 6]", "[2, 3, 2, 5, 6, 6]"), "maxComponentsByRank");
+        Bad(With("\"parts\": [\"bolt\", \"bolt\", \"bolt\"]", "\"parts\": [\"frost\", \"cannon\", \"bolt\"]"), "combinação repetida");
+        Bad(With("\"damageAura\": {\"bp\": 1200}", "\"laser\": {\"bp\": 1200}"), "desconhecido 'laser'");
     }
 }
