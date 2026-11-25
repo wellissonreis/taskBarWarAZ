@@ -60,6 +60,9 @@ public sealed partial class TdUiController
     private long _seenLost;
     private double _attackNextAt = double.NegativeInfinity;
     private double _criticalNoticeUntil;
+    private TdMatchState? _rewindMatch;
+    private int _seenBossRewinds;
+    private int _pendingBossRewindWave;
     private bool _pinnedOpen;
     private bool _outsideCollapsed;
     /// <summary>TD.28b: atalho global "minimizar tudo" ativo: nenhum cartão, painel ou modal é aberto e a pergunta-bônus espera.</summary>
@@ -680,6 +683,10 @@ public sealed partial class TdUiController
 
     private void SyncNotice(TdMatchState m)
     {
+        if (!ReferenceEquals(_rewindMatch, m)) { _rewindMatch = m; _seenBossRewinds = m.BossRewinds; _pendingBossRewindWave = 0; }
+        bool rewound = m.BossRewinds > _seenBossRewinds;
+        _seenBossRewinds = m.BossRewinds;
+        if (rewound) _pendingBossRewindWave = Math.Max(1, m.TotalWaves - 10);
         var progress = _host.Rank;
         var rank = progress.Current;
         bool promoted = rank > _seenRank;
@@ -731,6 +738,15 @@ public sealed partial class TdUiController
             _noticeText = $"Rebaixado a {TdRank.DisplayName(rank)}";
             _noticeRank = rank;
             _noticeStarted = _now();
+            _noticeUntil = _now() + StageNoticeSeconds;
+            Changed?.Invoke();
+        }
+        else if (_pendingBossRewindWave > 0 && !BossHidden && !NoticeOpen)
+        {
+            _noticeTitle = null;
+            _noticeRank = null;
+            _noticeText = $"Chefe: voltou para a onda {_pendingBossRewindWave}";
+            _pendingBossRewindWave = 0;
             _noticeUntil = _now() + StageNoticeSeconds;
             Changed?.Invoke();
         }

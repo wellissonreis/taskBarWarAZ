@@ -328,6 +328,21 @@ public sealed class TdUiControllerTests
     }
 
     [Fact]
+    public void Boss_rewind_notice_waits_for_simultaneous_promotion()
+    {
+        var r = new Rig();
+        r.Host.Score = 0;
+        r.Ui.Sync();
+        typeof(TdMatchState).GetProperty("BossRewinds")!.SetValue(r.Match, 1);
+        r.Host.Score = TdRank.Threshold(TdRankLevel.Junior);
+        r.Ui.Sync();
+        Assert.Contains("Júnior", r.Ui.NoticeText);
+        r.Now += TdUiController.PromoNoticeSeconds + 1;
+        r.Ui.Sync();
+        Assert.Equal($"Chefe: voltou para a onda {r.Match.TotalWaves - 10}", r.Ui.NoticeText);
+    }
+
+    [Fact]
     public void Start_requires_a_placed_tower_without_onboarding()
     {
         var r = new Rig();

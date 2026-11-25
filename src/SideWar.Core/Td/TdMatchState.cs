@@ -49,6 +49,9 @@ public sealed partial class TdMatchState
     private int _countdownTicks;
     private bool _countdownActive;
     private bool _bonusAnswered;
+    private bool _finalWaveFailed;
+    /// <summary>Quantidade de recuos após dano na onda final.</summary>
+    public int BossRewinds { get; private set; }
 
     /// <summary>Teto de eventos retidos até <see cref="ClearEvents"/> (excedente é descartado).</summary>
     public const int MaxEvents = 4096;
@@ -118,7 +121,7 @@ public sealed partial class TdMatchState
             int count = _content.Stages.Stages.Length;
             // Fases concluídas de fato: com a trava de patente a mesma fase se repete, então não dá para deduzi-las do número atual.
             foreach (var done in _stageResults)
-                total += _content.Stages.Stages[(done.StageNumber - 1) % count].Waves;
+                total += _content.Stages.Stages[(Math.Max(1, done.StageNumber) - 1) % count].Waves;
             total += Phase is MatchPhase.Preparo or MatchPhase.Vitoria ? WaveNumber : Math.Max(0, WaveNumber - 1);
             return (int)Math.Min(int.MaxValue, total);
         }
@@ -510,6 +513,22 @@ public sealed partial class TdMatchState
         if (_active.Count > 0 || _enemies.Count > 0 || Phase != MatchPhase.Onda) return;
         if (WaveNumber >= _waves.Length)
         {
+            if (_finalWaveFailed)
+            {
+                _finalWaveFailed = false;
+                int target = Math.Max(1, WaveNumber - 10);
+                WaveNumber = target - 1;
+                BossRewinds++;
+                Emit(TdEventType.BossRewind, target);
+                if (_options.ContinuousWaves) BeginWave(target);
+                else
+                {
+                    Phase = MatchPhase.Preparo;
+                    RestartCountdown();
+                    StartImmediateIfReady();
+                }
+                return;
+            }
             if (_options.PersistentRun)
             {
                 ClearStageAndAdvance();

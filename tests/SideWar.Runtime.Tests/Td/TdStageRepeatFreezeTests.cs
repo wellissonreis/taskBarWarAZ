@@ -17,6 +17,15 @@ namespace SideWar.Runtime.Tests.Td;
 /// </summary>
 public sealed class TdStageRepeatFreezeTests
 {
+    [Fact]
+    public void WavesReached_handles_legacy_summary_with_zero_stage_number()
+    {
+        var match = TdMatchState.Create(TdContentLoader.LoadEmbedded(), 1, Rng.Seed(42, 54));
+        var results = (List<TdStageSummary>)typeof(TdMatchState).GetField("_stageResults", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(match)!;
+        results.Add(new TdStageSummary(0, 1, 0, 1, 0, false, TdMedals.None, 0, 0));
+        Assert.Equal(match.TotalWaves, match.WavesReached);
+    }
+
     [Theory(Timeout = 5000)]
     [InlineData(1)]
     [InlineData(3)]
@@ -43,6 +52,7 @@ public sealed class TdStageRepeatFreezeTests
         Assert.Equal(1, match.StageNumber);
         Assert.Equal(2, match.StagesCleared);
         Assert.Equal(MatchPhase.Onda, match.Phase);
+        Assert.Equal(2 * match.TotalWaves, match.WavesReached);
 
         long before = host.StepsExecuted;
         for (int i = 0; i < 10; i++)

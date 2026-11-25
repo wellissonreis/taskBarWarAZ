@@ -210,6 +210,8 @@ public enum TdEventType : byte
     EnemyEncountered,
     // Modo sombra ligado (A = 1) ou desligado (A = 0) na fronteira entre ondas.
     ShadowChanged,
+    // A = onda para a qual a fase voltou após dano na última onda.
+    BossRewind,
 }
 
 /// <summary>Evento observável (não entra no hash). <c>A</c>/<c>B</c>: valores do evento (onda, créditos, id etc.).</summary>

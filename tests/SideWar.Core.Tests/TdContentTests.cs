@@ -33,7 +33,8 @@ public sealed class TdContentTests
         Assert.Equal(3, c.Abilities.Length);
         Assert.Equal(3, c.Meta.Branches.Length);
         Assert.All(c.Meta.Branches, b => Assert.Equal(4, b.Nodes.Length));
-        Assert.Equal([60, 65, 80, 85, 70, 62], c.Waves.Stages.Select(s => s.Waves.Length));
+        Assert.Equal([84, 180, 303, 389, 475, 475], c.Waves.Stages.Select(s => s.Waves.Length));
+        Assert.Equal([84, 180, 303, 389, 475, 475], c.Stages.Stages.Select(s => s.Waves));
         Assert.Equal(20, c.Stages.Rules.CoreIntegrity);
         Assert.Equal(0.7, c.Stages.Rules.SellRefund);
         Assert.Equal(2, c.Towers.Single(t => t.Id == "scaleset").MinRank);
@@ -155,7 +156,7 @@ public sealed class TdContentTests
         AssertError(With("td-waves.json", "{\"enemy\": \"grunt\", \"count\": 1, \"offset\": 0.0, \"interval\": 7.6}", "{\"enemy\": \"flyer\", \"count\": 4, \"offset\": 0.0, \"interval\": 2.53}"), "só é introduzido na fase 2");
         AssertError(With("td-waves.json", "{\"enemy\": \"grunt\", \"count\": 1, \"offset\": 0.0, \"interval\": 7.6}", "{\"enemy\": \"fantasma\", \"count\": 4, \"offset\": 0.0, \"interval\": 2.53}"), "'fantasma' não existe");
         AssertError(With("td-waves.json", "{\"enemy\": \"grunt\", \"count\": 1, \"offset\": 0.0, \"interval\": 7.6}", "{\"enemy\": \"grunt\", \"count\": 40, \"offset\": 0.0, \"interval\": 2.53}"), "fora de [1, 32]");
-        AssertError(With("td-stages.json", "\"waves\": 60,", "\"waves\": 61,"), "td-waves.1");
+        AssertError(With("td-stages.json", "\"waves\": 84,", "\"waves\": 85,"), "td-waves.1");
         AssertError(With("td-waves.json", "\"number\": 5, \"rest\": true, \"bonusFactor\": 1.7, \"groups\": [{\"enemy\": \"grunt\", \"count\": 1,", "\"number\": 5, \"rest\": false, \"bonusFactor\": 1.0, \"groups\": [{\"enemy\": \"grunt\", \"count\": 1,"), "sem respiro");
     }
 

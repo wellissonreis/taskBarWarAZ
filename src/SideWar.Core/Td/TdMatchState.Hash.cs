@@ -19,6 +19,8 @@ public sealed partial class TdMatchState
         h.AddInt64(Tick);
         h.AddInt64(Frame);
         h.AddInt32(WaveNumber);
+        if (_finalWaveFailed) h.AddBool(true);
+        if (BossRewinds != 0) h.AddInt32(BossRewinds);
         h.AddInt32((int)Math.Min(int.MaxValue, ReputationLostTotal));
         h.AddInt32(_stageIntegrityLoss);
         h.AddInt32(_backupHealsThisStage);

@@ -59,12 +59,11 @@ public sealed partial class TdMatchState
         }
     }
 
-    /// <summary><c>HP(w) = hpBase × growth^(w−1) × (1 + step × (fase−1))</c>; potência por multiplicação iterativa (ADR-026). Chefes não escalam.</summary>
+    /// <summary>HP cresce linearmente por onda, inclusive para chefes, e mantém os fatores de fase e ciclo.</summary>
     private double ScaledHp(double baseHp, int wave)
     {
         var r = _content.Stages.Rules;
-        double hp = baseHp;
-        for (int i = 1; i < wave; i++) hp *= r.HpWaveGrowth;
+        double hp = baseHp * (1.0 + (r.HpWaveGrowth - 1.0) * (wave - 1));
         hp *= 1.0 + r.HpStageStep * (_stageNumber - 1);
         for (int c = Cycle; c > 0; c--) hp *= CycleHpGrowth; // infinito: cada volta completa pelas fases fica 40% mais dura (multiplicação iterativa, ADR-026)
         return hp;
@@ -104,6 +103,7 @@ public sealed partial class TdMatchState
             _stageIntegrityLoss = (int)Math.Min(int.MaxValue, (long)_stageIntegrityLoss + e.CoreDamage);
             _hasLeaked = true;
             WaveOf(e.Wave).Leaked = true;
+            if (e.CoreDamage > 0 && e.Wave == TotalWaves && WaveOf(e.Wave).Agenda.Any(s => s.IsBoss)) _finalWaveFailed = true;
             RecordLeak(e);
             Emit(TdEventType.EnemyLeaked, e.Id, e.CoreDamage);
             LoseReputation(e.CoreDamage); // sem game over: só perde XP de reputação

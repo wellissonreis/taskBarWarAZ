@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
-"""Gera src/SideWar.Core/Content/td-waves.json (fases longas, INFINITO) a partir das ondas autorais curtas.
+"""Gera src/SideWar.Core/Content/td-waves.json (fases longas, INFINITO).
 
-As ondas autorais (tools/content/td-waves-authored.json: 10 a 15 ondas por fase) são MOLDES ordenados por dificuldade. Cada fase
+O conteúdo de referência preserva as introduções e os chefes regionais já aprovados. Cada fase
 longa percorre os moldes devagar (interpolação linear de quantidades entre moldes vizinhos), com respiro a cada 5 ondas, pico a
 cada 10 e a última onda autoral (chefe) no fim. Determinístico: sem aleatoriedade. Uso: python3 tools/content/gen_td_waves.py
 """
 import json, math, pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-AUTHORED = ROOT / "tools/content/td-waves-authored.json"
+AUTHORED = ROOT / "tools/content/td-waves-reference.json"
 OUT = ROOT / "src/SideWar.Core/Content/td-waves.json"
 STAGES = ROOT / "src/SideWar.Core/Content/td-stages.json"
 
-# ondas por fase (alvo: ~25-40 min de jogo normal por fase; calibrado com o probe do SanityBot)
-LENGTHS = {1: 60, 2: 65, 3: 80, 4: 85, 5: 70, 6: 62}
+# Comprimentos calibrados com a progressão de XP do SanityBot em corrida contínua.
+LENGTHS = {1: 84, 2: 180, 3: 303, 4: 389, 5: 475, 6: 475}
 HEAD = {1: 7}  # ondas autorais mantidas ao pé da letra no começo (início calmo da fase 1, RITMO-INICIO)
 REST_EVERY = 5
 PEAK_EVERY = 10
@@ -118,8 +118,6 @@ def main():
     lines += ['  ]', '}']
     OUT.write_text("\n".join(lines) + "\n")
     st = json.loads(STAGES.read_text())
-    for s in st["stages"]:
-        s["waves"] = LENGTHS[s["id"]]
     # td-stages.json é editado à mão: só confere
     for s in st["stages"]:
         assert s["waves"] == LENGTHS[s["id"]]

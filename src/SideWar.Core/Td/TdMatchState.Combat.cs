@@ -738,7 +738,7 @@ public sealed partial class TdMatchState
         var st = _enemyStats[defIndex];
         Emit(TdEventType.EnemyEncountered, defIndex, 0);
         if (mutations != 0 && !st.IsBoss) Emit(TdEventType.EnemyEncountered, defIndex, 1);
-        double hp = st.IsBoss ? st.Hp : ScaledHp(st.Hp, wave);
+        double hp = ScaledHp(st.Hp, wave);
         var e = new TdEnemy
         {
             Id = _nextEnemyId++, Wave = wave, DefIndex = defIndex, IsBoss = st.IsBoss, X = x, Speed = st.Speed,
