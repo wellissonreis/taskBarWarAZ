@@ -18,10 +18,9 @@ try {
     $appInstaller = Join-Path $MsixDir 'SideWar.appinstaller'
     & (Join-Path $PSScriptRoot 'New-AppInstaller.ps1') -MsixPath $msix.FullName -OutputPath $appInstaller
     Copy-Item -LiteralPath $appInstaller -Destination $stage
-    # Cert publico embutido (base64 do .cer) no proprio .cmd; o zip tem exatamente 6 arquivos.
-    $b64 = [Convert]::ToBase64String([IO.File]::ReadAllBytes((Resolve-Path -LiteralPath $CertificatePath).Path))
-    $tpl = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Cert-Chave-Acesso.template.cmd'))
-    [IO.File]::WriteAllText((Join-Path $stage 'Cert-Chave-Acesso.cmd'), $tpl.Replace('@@CERT@@', $b64), [Text.UTF8Encoding]::new($false))
+    # Certificado publico (.cer) para o testador instalar; o zip tem exatamente 6 arquivos:
+    # msix, appinstaller, .cer, Desinstalar-SideWar.cmd, LEIA-ME.txt e PATCH-NOTES.txt.
+    Copy-Item -LiteralPath $CertificatePath -Destination (Join-Path $stage 'SideWar-Certificado.cer')
     # Desinstalador: nome do pacote + thumbprint do mesmo cert publico.
     $thumb = [Security.Cryptography.X509Certificates.X509Certificate2]::new((Resolve-Path -LiteralPath $CertificatePath).Path).Thumbprint
     $un = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Desinstalar-SideWar.template.cmd'))

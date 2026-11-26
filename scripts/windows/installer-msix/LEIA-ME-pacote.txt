@@ -1,9 +1,16 @@
 SideWar - como instalar (versão de teste)
 
-1. Dê duplo clique em Cert-Chave-Acesso.cmd e aceite o pedido de administrador.
-   Espere a mensagem "SUCESSO" (só é preciso uma vez).
-   Nunca instale o certificado .cer com duplo clique.
+PASSO 1 - Certificado (só uma vez)
+1. Dê duplo clique em SideWar-Certificado.cer.
+2. Clique em "Instalar Certificado".
+3. Escolha "Máquina Local", clique em Avançar e aceite o pedido de administrador.
+4. Marque "Colocar todos os certificados no repositório a seguir".
+5. Clique em "Procurar", escolha "Pessoas Confiáveis" e clique em OK.
+6. Clique em Avançar e depois em Concluir.
 
-2. Baixe o @@MSIX@@ para o computador e abra o arquivo local
-   (não abra pelo navegador). Ou abra o SideWar.appinstaller
-   (precisa de internet; liga a atualização automática).
+ATENÇÃO: "Usuário Atual" ou "Selecionar automaticamente" NÃO funcionam.
+
+PASSO 2 - Instalar o jogo
+- Baixe o @@MSIX@@ para o computador e abra o arquivo local
+  (não abra pelo navegador).
+- Ou abra o SideWar.appinstaller (precisa de internet; liga a atualização automática).

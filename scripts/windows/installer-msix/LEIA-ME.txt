@@ -10,10 +10,13 @@ Requisitos
 - 64 bits (x64)
 
 Como instalar
-1. Extraia o .zip numa pasta e de duplo clique em Cert-Chave-Acesso.cmd
-   (so uma vez). Aceite o pedido de administrador; ele apenas faz o Windows
-   confiar no certificado de teste. Espere a mensagem "SUCESSO".
-   Nunca instale um arquivo .cer com duplo clique: ele vai para o lugar errado.
+1. Extraia o .zip numa pasta e confie no certificado de teste (so uma vez):
+   a) de duplo clique em SideWar-Certificado.cer;
+   b) clique em Instalar Certificado;
+   c) escolha Maquina Local, Avancar, e aceite o pedido de administrador;
+   d) marque "Colocar todos os certificados no repositorio a seguir";
+   e) Procurar > Pessoas Confiaveis > OK > Avancar > Concluir.
+   "Usuario Atual" ou "Selecionar automaticamente" NAO funcionam.
 2. Instale pelo App Installer, de um destes dois jeitos (precisa de internet):
    - pelo link (baixe e abra o arquivo):
      https://taskbarwaraz.blob.core.windows.net/downloads/SideWar.appinstaller

@@ -149,16 +149,15 @@ if ($Mode -eq 'SideLoad') {
     $dist = (Resolve-Path -LiteralPath $DistributionPath).ProviderPath
     Copy-Item -LiteralPath $final -Destination (Join-Path $dist $finalName) -Force
     Copy-Item -LiteralPath $appInstaller -Destination (Join-Path $dist 'SideWar.appinstaller') -Force
-    # CRLF sem CR duplo, qualquer que seja o fim de linha do checkout. RawData = somente o certificado publico.
-    $utf8 = [Text.UTF8Encoding]::new($false)
-    $cmd = [IO.File]::ReadAllText((Join-Path $kitSource 'Cert-Chave-Acesso.template.cmd')).Replace('@@CERT@@', [Convert]::ToBase64String($cert.RawData))
-    [IO.File]::WriteAllText((Join-Path $dist 'Cert-Chave-Acesso.cmd'), ($cmd -replace '\r*\n', "`r`n"), $utf8)
+    # RawData = somente o certificado publico, mesmo que o arquivo informado tenha mais conteudo.
+    $cerName = 'SideWar-Certificado.cer'
+    [IO.File]::WriteAllBytes((Join-Path $dist $cerName), $cert.RawData)
     # BOM para o Bloco de Notas mostrar os acentos.
     $readme = [IO.File]::ReadAllText((Join-Path $kitSource 'LEIA-ME-pacote.txt')).Replace('@@MSIX@@', $finalName)
     [IO.File]::WriteAllText((Join-Path $dist 'LEIA-ME.txt'), ($readme -replace '\r*\n', "`r`n"), [Text.UTF8Encoding]::new($true))
-    # So depois de tudo gravado: remove msix antigos, .cer solto e zips de kit.
+    # So depois de tudo gravado: remove msix antigos, o .cmd antigo, outros .cer e zips de kit.
     Get-ChildItem -LiteralPath $dist -File |
-        Where-Object { $_.Name -ne $finalName -and ($_.Name -like 'SideWar-*.msix' -or $_.Name -like 'SideWar-*-teste.zip' -or $_.Extension -eq '.cer') } |
+        Where-Object { $_.Name -ne $finalName -and $_.Name -ne $cerName -and ($_.Name -like 'SideWar-*.msix' -or $_.Name -like 'SideWar-*-teste.zip' -or $_.Name -eq 'Cert-Chave-Acesso.cmd' -or $_.Extension -eq '.cer') } |
         Remove-Item -Force
     Write-Host "Pasta de distribuicao: $dist"
 }

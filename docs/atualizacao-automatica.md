@@ -10,10 +10,11 @@
 
 Ao fim de `publish-msix.ps1 -Mode SideLoad` (chamado pelo `Gerar-MSIX.cmd`), a pasta
 `C:\dev\SideWar-Pacotes` (parâmetro `-DistributionPath`) fica com a versão atual:
-`SideWar-<versao>.msix`, `SideWar.appinstaller`, `Cert-Chave-Acesso.cmd` e `LEIA-ME.txt`.
-Msix antigos, zips de kit e `.cer` soltos são removidos dela. Envie essa pasta ao testador:
-o certificado vai embutido no `.cmd`; o `.cer` instalado com duplo clique vai para o
-repositório errado e o MSIX não instala.
+`SideWar-<versao>.msix`, `SideWar.appinstaller`, `SideWar-Certificado.cer` (somente o certificado público) e `LEIA-ME.txt`.
+Msix antigos, zips de kit, outros `.cer` e o antigo `Cert-Chave-Acesso.cmd` (bloqueado por
+antivírus) são removidos dela. Envie essa pasta ao testador. O `.cer` precisa ir para
+**Máquina Local > Pessoas Confiáveis**; "Usuário Atual" ou "Selecionar automaticamente" fazem o
+MSIX não instalar (passo a passo no `LEIA-ME.txt`).
 
 O `SideWar.appinstaller` baixa o msix do Blob: só funciona depois de a versão ser publicada.
 
@@ -50,7 +51,8 @@ Quando o SAS vencer, o envio falha com `HTTP 403`: gere outro e atualize a vari�
 
 ## Instalação e atualização
 
-- Quem instala precisa confiar no certificado de teste (`Cert-Chave-Acesso.cmd`, uma vez).
+- Quem instala precisa confiar no certificado de teste (`SideWar-Certificado.cer` em Máquina Local > Pessoas
+  Confiáveis, uma vez).
 - Só instalações feitas pelo `.appinstaller` se atualizam sozinhas. Quem instalou direto pelo
   `.msix` abre o `.appinstaller` uma vez, sem desinstalar antes (desinstalar apaga os saves).
 - O Windows verifica ao abrir o jogo e em segundo plano; a versão nova vale na próxima abertura.
