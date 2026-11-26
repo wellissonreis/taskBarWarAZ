@@ -31,12 +31,47 @@ Vale fora do modo clássico (`TdMatchOptions.UsesCampaignRules`). Os valores por
 
 | Região | hpStart | hpEnd | bossHp |
 |---|---:|---:|---:|
-| 1 | 1 | 6 | 4 |
-| 2 | 4 | 13 | 4 |
-| 3 | 6 | 11 | 4,5 |
-| 4 | 7 | 11 | 1,2 |
-| 5 | 9 | 15 | 2 |
-| 6 | 10 | 14 | 1,2 |
+| 1 | 1 | 9 | 4,2 |
+| 2 | 4 | 13 | 3,4 |
+| 3 | 4,2 | 7,7 | 2 |
+| 4 | 4,7 | 7,5 | 1,2 |
+| 5 | 4,5 | 7,5 | 1,3 |
+| 6 | 3,5 | 5,8 | 1,2 |
+
+## Retorno decrescente das runas (BAL-2)
+
+Fora do modo clássico, o total de Alcance, dano do Raio, dano do Canhão e Créditos passa por `bruto × joelho / (bruto + joelho)` (inteiro). Joelhos em `td-runes.json`. Totais com a teia 128/128:
+
+| Efeito | Antes | Depois | Joelho |
+|---|---:|---:|---:|
+| Alcance | +39% | +7,95% | 1000 pb |
+| Dano do Raio | +28,5% | +7,40% | 1000 pb |
+| Dano do Canhão | +27% | +7,29% | 1000 pb |
+| Créditos por onda | 20 | 0,17 | 30 centésimos |
+
+A queda dos créditos é necessária: com as runas de créditos lineares (1 crédito por poder) e todo o resto igual ao instalado, a formação simples volta a vencer as fases 1 e 2 em Casual com 59 runas (3 de 3 seeds cada), porque compra uma torre a mais na fase 1 (9 em vez de 8) e duas a mais na fase 2 (13 em vez de 11). Valores intermediários não foram medidos.
+
+## Simulação com economia real (BAL-2)
+
+Harness: `tests/SideWar.Core.Tests/TdBalanceHarnessTests.cs`, fora da suíte normal:
+
+```
+dotnet test tests/SideWar.Core.Tests -c Release --filter Category=Balance -- xUnit.Explicit=on
+```
+
+Nada é injetado: créditos iniciais, bônus de onda, ouro e runas são os do jogo; a teia fica fixa na contagem do cenário. "Simples" são até 20 torres Raio/Canhão alternadas, sem fusão. "Estratégica" são torres escolhidas pelos contras de cada região, com fusões e mira no mais forte contra chefe. "Vence" é concluir a região sem o chefe chegar à base e com menos de 3 voltas da última onda; pode haver vazamento. Seeds 1 a 3. Os cenários f6 são a campanha contínua desde a fase 1, com torres e créditos mantidos. Antes = 76b4509.
+
+| Cenário | Antes: vitórias | Antes: dano vazado | Depois: vitórias | Depois: dano vazado |
+|---|---:|---|---:|---|
+| Fase 1 Casual, 59 runas, simples | 3/3 | 0 | **0/3** | 5 (chefe chega à base) |
+| Fase 1 Casual, 59 runas, estratégica | 3/3 | 0 | 3/3 | 0 |
+| Fase 2 Casual, 59 runas, simples | 3/3 | 0 | **0/3** | 7 (chefe chega à base) |
+| Fase 2 Casual, 59 runas, estratégica | 3/3 | 16 | 3/3 | 20 |
+| Fase 1 Extremo, 0 runas (Estagiário), estratégica | 3/3 | 19 a 20 | 3/3 | 26 |
+| Campanha até a fase 6, 128/128, estratégica | 0/3 | 5 (para na fase 3) | **3/3** | 1 a 5 |
+| Campanha até a fase 6, 127/128, estratégica | 0/3 | 5 (para na fase 3) | **0/3** | 17 a 23 (chefe final imune) |
+
+Limites da medição: as formações são roteiros fixos, não jogadores ótimos; um jogador pode encontrar formação simples melhor que a medida ou vencer com folga maior. A estratégica ainda vaza na fase 2 e no Extremo da fase 1 (perde XP, mas conclui). Na campanha, a trava de patente faz regiões se repetirem, e a seed 2 usa 2 voltas da última onda. As curvas das regiões 3 a 6 ficaram abaixo das anteriores ao BAL-2, e a curva da região 6 é menor que a da região 5, porque com os valores antigos o roteiro não passava da fase 3.
 
 ### XP de patente
 

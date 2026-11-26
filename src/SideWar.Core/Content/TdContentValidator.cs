@@ -453,7 +453,7 @@ public static class TdContentValidator
 
     /// <summary>Efeitos que o Core sabe aplicar; cada tipo de runa do JSON aponta para um deles.</summary>
     internal static readonly string[] RuneEffects =
-        ["rangeBp", "boltDamageBp", "waveCredits", "frostSlowTenths", "xpShield", "cannonDamageBp", "abilityCooldownBp", "firewallTenths", "xpGainBp"];
+        ["rangeBp", "boltDamageBp", "waveCreditHundredths", "frostSlowTenths", "xpShield", "cannonDamageBp", "abilityCooldownBp", "firewallTenths", "xpGainBp"];
     internal const int WebRings = 8;
     internal const int WebSectors = 16;
 
@@ -467,6 +467,7 @@ public static class TdContentValidator
             Req(e, Text(t.Name) && Text(t.Text), $"{f}.types.{t.Id}: name e text não podem ser vazios");
             Req(e, RuneEffects.Contains(t.Effect), $"{f}.types.{t.Id}.effect desconhecido '{t.Effect}'");
             Req(e, t.Value != 0, $"{f}.types.{t.Id}.value deve ser != 0");
+            Req(e, t.Knee == 0 || (t.Knee > 0 && t.Value > 0), $"{f}.types.{t.Id}.knee deve ser 0, ou > 0 em runa de valor positivo");
         }
         Req(e, r.Types.Select(t => t.Effect).Distinct(StringComparer.Ordinal).Count() == r.Types.Length, $"{f}.types: um tipo por efeito");
         var typeIds = r.Types.Select(t => t.Id).ToHashSet(StringComparer.Ordinal);

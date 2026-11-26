@@ -2,12 +2,12 @@
   "creditSources": {"startingCreditsBonus": 80, "waveBonusBase": 16, "waveBonusPerWave": 0, "noLeakBase": 4, "noLeakPerWave": 0, "bonusQuestionBase": 25, "bonusQuestionPerWave": 0, "bossCredits": 30},
   "ringCosts": [1, 2, 5, 12, 24, 48, 80, 125],
   "types": [
-    {"id": "range", "name": "Alcance", "effect": "rangeBp", "value": 100, "text": "+1% de alcance em todas as torres."},
-    {"id": "bolt", "name": "Raio", "effect": "boltDamageBp", "value": 75, "text": "+0,75% de dano do Raio."},
-    {"id": "credits", "name": "Créditos", "effect": "waveCredits", "value": 1, "text": "+1 crédito ao fim de cada onda."},
+    {"id": "range", "name": "Alcance", "effect": "rangeBp", "value": 100, "knee": 1000, "text": "Mais alcance nas torres (rende menos a cada runa)."},
+    {"id": "bolt", "name": "Raio", "effect": "boltDamageBp", "value": 75, "knee": 1000, "text": "Mais dano do Raio (rende menos a cada runa)."},
+    {"id": "credits", "name": "Créditos", "effect": "waveCreditHundredths", "value": 2, "knee": 30, "text": "Mais créditos por onda (rende menos a cada runa)."},
     {"id": "frost", "name": "Gelo", "effect": "frostSlowTenths", "value": 1, "text": "+0,1 s de lentidão do Gelo."},
     {"id": "core", "name": "Núcleo", "effect": "xpShield", "value": 1, "text": "-1% de XP de reputação perdida."},
-    {"id": "cannon", "name": "Canhão", "effect": "cannonDamageBp", "value": 75, "text": "+0,75% de dano do Canhão."},
+    {"id": "cannon", "name": "Canhão", "effect": "cannonDamageBp", "value": 75, "knee": 1000, "text": "Mais dano do Canhão (rende menos a cada runa)."},
     {"id": "cooldown", "name": "Recarga", "effect": "abilityCooldownBp", "value": -85, "text": "-0,85% no tempo de recarga das habilidades."},
     {"id": "shield", "name": "Escudo", "effect": "firewallTenths", "value": 1, "text": "Firewall dura +0,1 s."},
     {"id": "xp", "name": "Reputação", "effect": "xpGainBp", "value": 100, "text": "+1% de XP de reputação ganho."}

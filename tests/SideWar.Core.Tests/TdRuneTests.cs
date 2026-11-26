@@ -60,7 +60,8 @@ public sealed class TdRuneTests
         Assert.Equal(r.Types.Select(t => t.Id).Order(), r.Nodes.Select(n => n.Type).Distinct().Order()); // todos os tipos aparecem
         Assert.All(r.Nodes, n => Assert.True(n.X is >= 0 and <= 1 && n.Y is >= 0 and <= 1));
         Assert.Equal(["range", "bolt", "credits", "frost", "core", "cannon", "cooldown", "shield", "xp"], r.Types.Select(t => t.Id));
-        Assert.Equal([100, 75, 1, 1, 1, 75, -85, 1, 100], r.Types.Select(t => t.Value));
+        Assert.Equal([100, 75, 2, 1, 1, 75, -85, 1, 100], r.Types.Select(t => t.Value));
+        Assert.Equal([1000, 1000, 30, 0, 0, 1000, 0, 0, 0], r.Types.Select(t => t.Knee)); // retorno decrescente (BAL-2)
         Assert.Equal([1, 2, 5, 12, 24, 48, 80, 125], r.RingCosts);
         Assert.Equal((1, 1, 2), (Base.Stages.Rules.Fragments.PerWave, Base.Stages.Rules.Fragments.PerQuestion, Base.Stages.Rules.Fragments.PerBoss));
     }
@@ -70,7 +71,7 @@ public sealed class TdRuneTests
     {
         var r = Base.Runes;
         // totais máximos da teia antiga (32 nós): alcance 2000, Raio 1500, créditos 9, Gelo 18, Núcleo 21, Canhão 1500, recarga -1600, Escudo 5
-        var oldTotals = new Dictionary<string, int> { ["range"] = 2000, ["bolt"] = 1500, ["credits"] = 9, ["frost"] = 18, ["core"] = 21, ["cannon"] = 1500, ["cooldown"] = -1600, ["shield"] = 5, ["xp"] = 1400 };
+        var oldTotals = new Dictionary<string, int> { ["range"] = 2000, ["bolt"] = 1500, ["credits"] = 900, ["frost"] = 18, ["core"] = 21, ["cannon"] = 1500, ["cooldown"] = -1600, ["shield"] = 5, ["xp"] = 1400 };
         foreach (var ty in r.Types)
         {
             int total = r.Nodes.Where(n => n.Type == ty.Id).Sum(n => ty.Value * n.Power);
@@ -245,8 +246,8 @@ public sealed class TdRuneTests
         int cores = s.AwakenedOfType("core");
         Assert.True(cores > 0);
         Assert.Equal(Math.Min(TdReputation.MaxShieldPercent, cores * 1), s.XpShieldPercent);
-        // todas despertadas (ou ao menos as de crédito): bônus de onda inclui +1 por runa de Créditos
-        int credits = s.AwakenedOfType("credits");
+        // todas despertadas (ou ao menos as de crédito): bônus de onda inclui a parcela das runas de Créditos
+        Assert.True(s.RuneEffectTotal("waveCreditHundredths") > 0);
         s.ClearEvents();
         int guard = 0;
         long bonus = 0;
@@ -257,9 +258,44 @@ public sealed class TdRuneTests
         }
         Assert.True(bonus > 0);
         var done = s.Events.First(e => e.Type == TdEventType.WaveCompleted);
-        long noLeak = bonus - s.WaveBonusFor((int)done.A) - 1L * credits; // o que sobra é o bônus "sem vazar" (ou 0)
+        long noLeak = bonus - s.WaveBonusFor((int)done.A) - s.RuneWaveCredits((int)done.A); // o que sobra é o bônus "sem vazar" (ou 0)
         var src = Base.Runes.CreditSources;
         Assert.True(noLeak == 0 || noLeak == src.NoLeakBase + (long)src.NoLeakPerWave * done.A, $"sobra {noLeak}");
+    }
+
+    [Theory]
+    [InlineData("rangeBp", 3900, 795)]
+    [InlineData("boltDamageBp", 2850, 740)]
+    [InlineData("cannonDamageBp", 2700, 729)]
+    [InlineData("waveCreditHundredths", 40, 17)]
+    public void Offensive_range_and_credit_runes_have_diminishing_returns_outside_classic(string effect, int raw, int applied)
+    {
+        var options = TdMatchOptions.Default with { InitialAwakened = UInt128.MaxValue };
+        var m = TdMatchState.Create(Base, 1, Rng.Seed(1, 54), null, options);
+        Assert.Equal(applied, m.RuneEffectTotal(effect));
+        var classic = TdMatchState.Create(Base, 1, Rng.Seed(1, 54), null, TdMatchOptions.Classic);
+        typeof(TdMatchState).GetField("_awakened", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.SetValue(classic, UInt128.MaxValue);
+        typeof(TdMatchState).GetMethod("RebuildRuneEffects", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.Invoke(classic, null);
+        Assert.Equal(raw, classic.RuneEffectTotal(effect));
+        if (effect == "waveCreditHundredths")
+            Assert.Equal(raw / 2, classic.RuneWaveCredits(1)); // modo clássico: 1 crédito por poder
+        // cada degrau igual de bruto rende menos que o anterior, sem nunca regredir
+        int knee = Base.Runes.Types.Single(t => t.Effect == effect).Knee;
+        int step = raw / 4, previous = 0, gain = int.MaxValue;
+        for (int i = 1; i <= 4; i++)
+        {
+            int now = TdMatchState.DiminishedRune(step * i, knee);
+            Assert.True(now >= previous && now - previous <= gain, $"{effect} degrau {i}");
+            gain = now - previous;
+            previous = now;
+        }
+    }
+
+    [Fact]
+    public void Credit_rune_fractions_add_up_over_the_waves()
+    {
+        var m = TdMatchState.Create(Base, 1, Rng.Seed(1, 54), null, TdMatchOptions.Default with { InitialAwakened = UInt128.MaxValue });
+        Assert.Equal(100L * m.RuneEffectTotal("waveCreditHundredths") / 100, Enumerable.Range(1, 100).Sum(w => m.RuneWaveCredits(w)));
     }
 
     [Fact]

@@ -154,6 +154,20 @@ public sealed partial class TdMatchState
         Fragments = Sat.Add(Fragments, amount);
     }
 
+    /// <summary>Efeito de teia após o retorno decrescente (inteiro, sem arredondar para cima).</summary>
+    public static int DiminishedRune(int raw, int knee) => knee <= 0 ? raw : (int)((long)raw * knee / ((long)raw + knee));
+
+    /// <summary>Total aplicado do efeito de runa (já com o retorno decrescente).</summary>
+    public int RuneEffectTotal(string effect) => Rune(effect);
+
+    /// <summary>Créditos das runas na onda: o total é em centésimos e a fração se completa nas ondas seguintes (sem estado extra).</summary>
+    public long RuneWaveCredits(int wave)
+    {
+        long hundredths = Rune("waveCreditHundredths");
+        if (!_options.UsesCampaignRules) hundredths *= 50; // clássico: 1 crédito por unidade de poder, como antes
+        return wave * hundredths / 100 - (wave - 1) * hundredths / 100;
+    }
+
     private int Rune(string effect) => _runeEffects.GetValueOrDefault(effect);
 
     private void RebuildRuneEffects()
@@ -166,6 +180,11 @@ public sealed partial class TdMatchState
             foreach (var t in types)
                 if (t.Id == n.Type) _runeEffects[t.Effect] = _runeEffects.GetValueOrDefault(t.Effect) + t.Value * n.Power;
         }
+        // Retorno decrescente (BAL-2): bruto × joelho / (bruto + joelho); cada runa a mais rende menos. O clássico fica linear.
+        if (_options.UsesCampaignRules)
+            foreach (var t in types)
+                if (t.Knee > 0 && _runeEffects.TryGetValue(t.Effect, out int raw))
+                    _runeEffects[t.Effect] = DiminishedRune(raw, t.Knee);
         // Atualiza efeitos dos nós existentes, preservando vida e temporizadores em curso.
         for (int i = 0; i < _nodes.Count; i++)
         {

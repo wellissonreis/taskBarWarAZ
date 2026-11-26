@@ -79,7 +79,7 @@ public sealed record TdMetaDef(int SealsPerStar, int SealsPerChallenge, TdMetaBr
 // ---------------------------------------------------------------- runas (SDD-29 §4)
 
 /// <summary>Tipo de runa da teia (TD.29a): <c>Effect</c> é o identificador do efeito e <c>Value</c> o valor por runa despertada (bp, créditos ou décimos de segundo).</summary>
-public sealed record TdRuneTypeDef(string Id, string Name, string Effect, int Value, string Text);
+public sealed record TdRuneTypeDef(string Id, string Name, string Effect, int Value, string Text, int Knee = 0);
 
 /// <summary>
 /// Nó fixo da teia: anel (0 a 7), setor (0 a 15), tipo (id de <see cref="TdRuneTypeDef"/>), posição normalizada (0 a 1) para a UI e

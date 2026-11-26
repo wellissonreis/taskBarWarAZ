@@ -178,7 +178,7 @@ public sealed partial class TdMatchState
             _active.RemoveAt(i);
             long bonus = WaveBonusFor(w.Number);
             if (!w.Leaked) bonus += _content.Runes.CreditSources.NoLeakBase + (long)_content.Runes.CreditSources.NoLeakPerWave * w.Number;
-            bonus += (long)Rune("waveCredits"); // runas de Créditos (TD.29a)
+            bonus += RuneWaveCredits(w.Number); // runas de Créditos (TD.29a)
             bonus = Income(bonus);
             Credits = Simulation.Sat.Add(Credits, bonus);
             foreach (var tower in _towers)
