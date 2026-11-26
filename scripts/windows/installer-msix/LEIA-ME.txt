@@ -13,6 +13,7 @@ Como instalar
 1. Extraia o .zip numa pasta e de duplo clique em Cert-Chave-Acesso.cmd
    (so uma vez). Aceite o pedido de administrador; ele apenas faz o Windows
    confiar no certificado de teste. Espere a mensagem "SUCESSO".
+   Nunca instale um arquivo .cer com duplo clique: ele vai para o lugar errado.
 2. Instale pelo App Installer, de um destes dois jeitos (precisa de internet):
    - pelo link (baixe e abra o arquivo):
      https://taskbarwaraz.blob.core.windows.net/downloads/SideWar.appinstaller

@@ -9,6 +9,8 @@ param(
     # already be available in CurrentUser\My. This script never imports certificates.
     [string]$CertificatePath = '',
     [string]$SourceRevisionId = '',
+    # SideLoad: pasta de distribuicao, mantida somente com a versao atual.
+    [string]$DistributionPath = 'C:\dev\SideWar-Pacotes',
     # Runs the existing build.ps1/test.ps1 (Release) first; skip only for a deliberate quick repackage.
     [switch]$SkipChecks
 )
@@ -137,3 +139,26 @@ Remove-Item -LiteralPath $runOutput -Recurse -Force -ErrorAction SilentlyContinu
 $hash = (Get-FileHash -LiteralPath $final -Algorithm SHA256).Hash.ToLowerInvariant()
 [IO.File]::WriteAllText((Join-Path $output 'SHA256SUMS.txt'), "$hash *$finalName`n", [Text.UTF8Encoding]::new($false))
 Write-Host "Pacote: $final`nSHA256: $hash"
+
+if ($Mode -eq 'SideLoad') {
+    $kitSource = Join-Path $PSScriptRoot 'installer-msix'
+    $appInstaller = Join-Path $output 'SideWar.appinstaller'
+    & (Join-Path $kitSource 'New-AppInstaller.ps1') -MsixPath $final -OutputPath $appInstaller
+
+    New-Item -ItemType Directory -Force -Path $DistributionPath | Out-Null
+    $dist = (Resolve-Path -LiteralPath $DistributionPath).ProviderPath
+    Copy-Item -LiteralPath $final -Destination (Join-Path $dist $finalName) -Force
+    Copy-Item -LiteralPath $appInstaller -Destination (Join-Path $dist 'SideWar.appinstaller') -Force
+    # CRLF sem CR duplo, qualquer que seja o fim de linha do checkout. RawData = somente o certificado publico.
+    $utf8 = [Text.UTF8Encoding]::new($false)
+    $cmd = [IO.File]::ReadAllText((Join-Path $kitSource 'Cert-Chave-Acesso.template.cmd')).Replace('@@CERT@@', [Convert]::ToBase64String($cert.RawData))
+    [IO.File]::WriteAllText((Join-Path $dist 'Cert-Chave-Acesso.cmd'), ($cmd -replace '\r*\n', "`r`n"), $utf8)
+    # BOM para o Bloco de Notas mostrar os acentos.
+    $readme = [IO.File]::ReadAllText((Join-Path $kitSource 'LEIA-ME-pacote.txt')).Replace('@@MSIX@@', $finalName)
+    [IO.File]::WriteAllText((Join-Path $dist 'LEIA-ME.txt'), ($readme -replace '\r*\n', "`r`n"), [Text.UTF8Encoding]::new($true))
+    # So depois de tudo gravado: remove msix antigos, .cer solto e zips de kit.
+    Get-ChildItem -LiteralPath $dist -File |
+        Where-Object { $_.Name -ne $finalName -and ($_.Name -like 'SideWar-*.msix' -or $_.Name -like 'SideWar-*-teste.zip' -or $_.Extension -eq '.cer') } |
+        Remove-Item -Force
+    Write-Host "Pasta de distribuicao: $dist"
+}

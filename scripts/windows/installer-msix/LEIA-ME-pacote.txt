@@ -1,0 +1,9 @@
+SideWar - como instalar (versão de teste)
+
+1. Dê duplo clique em Cert-Chave-Acesso.cmd e aceite o pedido de administrador.
+   Espere a mensagem "SUCESSO" (só é preciso uma vez).
+   Nunca instale o certificado .cer com duplo clique.
+
+2. Baixe o @@MSIX@@ para o computador e abra o arquivo local
+   (não abra pelo navegador). Ou abra o SideWar.appinstaller
+   (precisa de internet; liga a atualização automática).

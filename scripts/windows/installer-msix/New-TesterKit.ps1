@@ -27,7 +27,11 @@ try {
     $un = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'Desinstalar-SideWar.template.cmd'))
     [IO.File]::WriteAllText((Join-Path $stage 'Desinstalar-SideWar.cmd'), $un.Replace('@@PKG@@', $IdentityName).Replace('@@THUMB@@', $thumb), [Text.UTF8Encoding]::new($false))
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'LEIA-ME.txt') -Destination $stage
-    Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\..\..\docs\patch-notes\2026-11-25.md') -Destination (Join-Path $stage 'PATCH-NOTES.txt')
+    # Nota mais recente: o nome AAAA-MM-DD.md ordena por data.
+    $notes = Get-ChildItem -LiteralPath (Join-Path $PSScriptRoot '..\..\..\docs\patch-notes') -File -Filter '????-??-??.md' |
+        Sort-Object Name -Descending | Select-Object -First 1
+    if (-not $notes) { throw 'Nenhuma nota em docs/patch-notes.' }
+    Copy-Item -LiteralPath $notes.FullName -Destination (Join-Path $stage 'PATCH-NOTES.txt')
     $zip = Join-Path $MsixDir ($msix.BaseName + '-teste.zip')
     if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip -Force }
     Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip

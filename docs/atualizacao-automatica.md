@@ -4,7 +4,18 @@
 
 - `SideWar-<versao>.msix`
 - `SideWar.appinstaller` (nome fixo; aponta para o msix daquela versão e é validado pelo schema do Windows)
-- `SideWar-<versao>-teste.zip` (kit para testadores)
+- `SideWar-<versao>-teste.zip` (kit para testadores; somente com `SIDEWAR_ZIP=1`)
+
+## Pasta de distribuição
+
+Ao fim de `publish-msix.ps1 -Mode SideLoad` (chamado pelo `Gerar-MSIX.cmd`), a pasta
+`C:\dev\SideWar-Pacotes` (parâmetro `-DistributionPath`) fica com a versão atual:
+`SideWar-<versao>.msix`, `SideWar.appinstaller`, `Cert-Chave-Acesso.cmd` e `LEIA-ME.txt`.
+Msix antigos, zips de kit e `.cer` soltos são removidos dela. Envie essa pasta ao testador:
+o certificado vai embutido no `.cmd`; o `.cer` instalado com duplo clique vai para o
+repositório errado e o MSIX não instala.
+
+O `SideWar.appinstaller` baixa o msix do Blob: só funciona depois de a versão ser publicada.
 
 Hospedagem: <https://taskbarwaraz.blob.core.windows.net/downloads/> (leitura anônima).
 Link de instalação: <https://taskbarwaraz.blob.core.windows.net/downloads/SideWar.appinstaller>

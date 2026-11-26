@@ -3,3 +3,4 @@
 *.png binary
 *.cmd text eol=crlf
 scripts/windows/installer-msix/LEIA-ME.txt text eol=crlf
+scripts/windows/installer-msix/LEIA-ME-pacote.txt text eol=crlf
